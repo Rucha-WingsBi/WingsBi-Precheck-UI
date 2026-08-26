@@ -22,6 +22,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Container,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -1133,61 +1134,70 @@ export default function ScriptExecutor() {
   ) : "Script executed successfully.");
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "100%", mx: "auto" }}>
-      {/* Header and Back Button */}
-      <Box sx={{ mb: 0.5, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "#A8005A" }}>
-          Script Executor
-        </Typography>
-      </Box>
-
-      {/* Modern custom styled Tabs */}
-      <Tabs
-        value={activeTab}
-        onChange={(_, val) => setActiveTab(val)}
-        textColor="primary"
-        indicatorColor="primary"
-        sx={{
-          mb: 3,
-          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-          "& .MuiTabs-indicator": {
-            backgroundColor: "#A8005A",
-            height: 3,
-            borderRadius: 2,
-          },
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 600,
-            fontSize: "1rem",
-            color: "text.secondary",
-            px: 4,
-            py: 1.5,
-            transition: "all 0.2s ease",
-            "&:hover": {
-              color: "#A8005A",
-              backgroundColor: "rgba(168, 0, 90, 0.04)",
-            },
-            "&.Mui-selected": {
-              color: "#A8005A",
-            },
-          },
-        }}
-      >
-        <Tab label="Master Data" value={TABS.MASTER_DATA} />
-        <Tab label="Old QR Code" value={TABS.QR_CODE} />
-        <Tab label="New Std QR Code" value={TABS.STD_QR_CODE} />
-      </Tabs>
-
-      <Stack spacing={3}>
-        {/* ROW 1: Notes Section (Full Width) */}
-        <Card
-          elevation={1}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        backgroundColor: "#f8fafc",
+        position: "relative",
+        p: { xs: 1, md: 1.5 },
+      }}
+    >
+      <Container maxWidth="xl" sx={{ pt: 1.5, pb: 1 }}>
+        {/* Header and Tabs Navigation */}
+        <Box
           sx={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: 3,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+            mb: 1.5,
           }}
         >
+          <Typography
+            variant="h5"
+            sx={{
+              color: "primary.main",
+              fontWeight: 600,
+              fontSize: { xs: "1.25rem", md: "1.4rem" },
+            }}
+          >
+            Script Executor
+          </Typography>
+
+          <Tabs
+            value={activeTab}
+            onChange={(_, val) => setActiveTab(val)}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 36,
+              "& .MuiTab-root": {
+                minHeight: 36,
+                py: 0.5,
+                px: 2.5,
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+              },
+            }}
+          >
+            <Tab label="Master Data" value={TABS.MASTER_DATA} />
+            <Tab label="Old QR Code" value={TABS.QR_CODE} />
+            <Tab label="New Std QR Code" value={TABS.STD_QR_CODE} />
+          </Tabs>
+        </Box>
+
+        <Stack spacing={2}>
+          {/* ROW 1: Notes Section (Full Width) */}
+          <Card
+            elevation={0}
+            sx={{
+              border: "1px solid #e2e8f0",
+              borderRadius: 2,
+              backgroundColor: "white",
+            }}
+          >
           <CardContent sx={{ p: 3 }}>
             <Grid container spacing={3}>
               {/* Instructions Panel */}
@@ -2175,6 +2185,7 @@ export default function ScriptExecutor() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      </Container>
     </Box>
   );
 }
