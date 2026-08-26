@@ -41,7 +41,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Tabs,
+  Tab,
 } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   QrCode as QrCodeIcon,
   Download as DownloadIcon,
@@ -97,6 +100,8 @@ const useAppDispatch: () => AppDispatch = useDispatch;
 export default function BarcodeGeneration() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const dispatch = useAppDispatch();
 
@@ -1196,7 +1201,55 @@ export default function BarcodeGeneration() {
           </Box>
         </Backdrop>
 
-        {/* Header */}
+        {/* Header Navigation Tabs */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+            mb: 1.5,
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              color: "primary.main",
+              fontWeight: 600,
+              fontSize: { xs: "1.25rem", md: "1.4rem" },
+            }}
+          >
+            Generate QR Code
+          </Typography>
+
+          <Tabs
+            value={location.pathname.includes("generate-new") ? "generate-std" : "generate"}
+            onChange={(_, newValue) => {
+              if (newValue === "generate-std") {
+                navigate("/qrcode/generate-new");
+              } else {
+                navigate("/qrcode/generate");
+              }
+            }}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 36,
+              "& .MuiTab-root": {
+                minHeight: 36,
+                py: 0.5,
+                px: 2.5,
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+              },
+            }}
+          >
+            <Tab label="Generate QR Code" value="generate" />
+            <Tab label="Generate STD QR Code" value="generate-std" />
+          </Tabs>
+        </Box>
 
         {/* Success/Error Messages */}
         {successMessage && (
@@ -1217,13 +1270,13 @@ export default function BarcodeGeneration() {
         {/* Main Form */}
         <Card elevation={2} sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography
+            {/* <Typography
               variant="h6"
               gutterBottom
               sx={{ color: "primary.main", fontWeight: 600, mb: 3 }}
             >
               Add Manufacturing Item
-            </Typography>
+            </Typography> */}
 
             <form onSubmit={handleSubmit(onSubmit)}>
               {/* Row 1: PO Number, LN Item Code, Drawing Number */}

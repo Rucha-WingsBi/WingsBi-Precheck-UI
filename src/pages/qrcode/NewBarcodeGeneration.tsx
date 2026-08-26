@@ -36,7 +36,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tabs,
+  Tab,
 } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   QrCode as QrCodeIcon,
   Download as DownloadIcon,
@@ -142,6 +145,8 @@ const createDefaultValues = (): NewQRCodeFormData => ({
 const NewBarcodeGeneration: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
   // TanStack Query Hooks for Master Data
@@ -844,19 +849,59 @@ const NewBarcodeGeneration: React.FC = () => {
           mx: "auto",
         }}
       >
+        {/* Header Navigation Tabs */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+            mb: 1.5,
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              color: "primary.main",
+              fontWeight: 600,
+              fontSize: { xs: "1.25rem", md: "1.4rem" },
+            }}
+          >
+            Generate Standard QR Code
+          </Typography>
+
+          <Tabs
+            value={location.pathname.includes("generate-new") ? "generate-std" : "generate"}
+            onChange={(_, newValue) => {
+              if (newValue === "generate") {
+                navigate("/qrcode/generate");
+              } else {
+                navigate("/qrcode/generate-new");
+              }
+            }}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 36,
+              "& .MuiTab-root": {
+                minHeight: 36,
+                py: 0.5,
+                px: 2.5,
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+              },
+            }}
+          >
+            <Tab label="Generate QR Code" value="generate" />
+            <Tab label="Generate STD QR Code" value="generate-std" />
+          </Tabs>
+        </Box>
         <Card elevation={2} sx={{ width: "100%", maxWidth: "100%" }}>
           <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  color: "primary.main",
-                  fontWeight: 600,
-                  fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-                }}
-              >
-                Generate Standard QR Code
-              </Typography>
+           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+              
               <ToggleButtonGroup
                 value={componentType}
                 exclusive
@@ -868,11 +913,12 @@ const NewBarcodeGeneration: React.FC = () => {
                 size="small"
                 color="primary"
                 sx={{
-                  gap: 20,
+                  gap: 1,
                   "& .MuiToggleButton-root": {
                     minWidth: 120,
                     textTransform: "none",
                     fontWeight: 600,
+                   
                     borderRadius: "12px !important",
                     border: "1px solid !important",
                     borderColor: "divider !important",
@@ -889,8 +935,8 @@ const NewBarcodeGeneration: React.FC = () => {
                   },
                 }}
               >
-                <ToggleButton value="FIM" sx={{ gap: 10 }}>FIM</ToggleButton>
-                <ToggleButton value="SI" sx={{ gap: 10 }}>Purchase Item</ToggleButton>
+                <ToggleButton value="FIM">FIM</ToggleButton>
+                <ToggleButton value="SI">Purchase Item</ToggleButton>
               </ToggleButtonGroup>
             </Box>
 

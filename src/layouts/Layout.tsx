@@ -263,12 +263,12 @@ export default function Layout() {
           path: "/qrcode/generate",
 
         },
-        {
-          text: "Generate STD QR Code",
-          icon: <AddIcon />,
-          path: "/qrcode/generate-new",
+        // {
+        //   text: "Generate STD QR Code",
+        //   icon: <AddIcon />,
+        //   path: "/qrcode/generate-new",
 
-        },
+        // },
       ],
     },
     {
