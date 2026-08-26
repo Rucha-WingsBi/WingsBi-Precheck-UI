@@ -20,7 +20,10 @@ import {
   Settings as SettingIcon,
   Science as ScienceIcon,
   Terminal as TerminalIcon,
-  
+  FactCheck as FactCheckIcon,
+  MenuBook as MenuBookIcon,
+  Category as CategoryIcon,
+  ReceiptLong as ReceiptLongIcon,
 } from "@mui/icons-material";
 import type { RootState } from "../store/store";
 import { usePageAccess } from "../hooks/useMasterData";
@@ -96,7 +99,7 @@ const Dashboard: React.FC = () => {
       title: "Make Pre-check",
       pageName: "Make Precheck",
       description: "Access and manage make pre-check related tasks",
-      icon: <AssignmentIcon sx={{ fontSize: 40 }} />,
+      icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#2196F3",
       route: "/precheck/make",
     },
@@ -104,7 +107,7 @@ const Dashboard: React.FC = () => {
       title: "View Precheck",
       pageName: "View Precheck",
       description: "Access and view precheck details and status",
-      icon: <ProjectIcon sx={{ fontSize: 40 }} />,
+      icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#3F51B5", // Indigo
       route: "/precheck/view",
     },
@@ -112,7 +115,7 @@ const Dashboard: React.FC = () => {
       title: "Material Requisition",
       pageName: "Material Requisition",
       description: "Add and view Material Requisition details",
-      icon: <AssignmentIcon sx={{ fontSize: 40 }} />,
+      icon: <ReceiptLongIcon sx={{ fontSize: 40 }} />,
       color: "#3fb1b5ff",
       route: "/materialrequisition",
     },
@@ -130,7 +133,7 @@ const Dashboard: React.FC = () => {
       title: "Generate SOP",
       pageName: "View SOP",
       description: "Access and manage SOP Generation related tasks",
-      icon: <DescriptionIcon sx={{ fontSize: 40 }} />,
+      icon: <MenuBookIcon sx={{ fontSize: 40 }} />,
       color: "#F44336", // Red
       route: "/sop/view",
     },
@@ -154,7 +157,7 @@ const Dashboard: React.FC = () => {
       title:"Components",
       pageName:"Components",
       description:"Access and manage Components related tasks",
-      icon:<ProjectIcon sx={{frontSize:40}}/>,
+      icon:<CategoryIcon sx={{fontSize: 40 }}/>,
       color:"#f1b40bff",
       route:"/components/assembly",
     },

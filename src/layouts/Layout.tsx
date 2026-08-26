@@ -52,6 +52,10 @@ import {
   Archive as ArchiveIcon,
   PlaylistAddCheck as PlaylistAddCheckIcon,
   Terminal as TerminalIcon,
+  FactCheck as FactCheckIcon,
+  MenuBook as MenuBookIcon,
+  Category as CategoryIcon,
+  ReceiptLong as ReceiptLongIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -268,7 +272,7 @@ export default function Layout() {
     },
     {
       text: "Precheck",
-      icon: <AssignmentIcon />,
+      icon: <FactCheckIcon />,
       path: "/precheck",
       subItems: [
         {
@@ -315,7 +319,7 @@ export default function Layout() {
     },
     {
       text: "SOP",
-      icon: <ArticleIcon />,
+      icon: <MenuBookIcon />,
       path: "/sop",
       subItems: [
         { text: "View SOP", icon: <VisibilityIcon />, path: "/sop/view" },
@@ -328,7 +332,7 @@ export default function Layout() {
     },
     {
       text: "Components",
-      icon: <DescriptionIcon />,
+      icon: <CategoryIcon />,
       path: "/components",
       subItems: [
         {
@@ -345,7 +349,7 @@ export default function Layout() {
     },
     {
       text: "Material Requisition",
-      icon: <AssignmentIcon />,
+      icon: <ReceiptLongIcon />,
       path: "/materialrequisition",
     },
     {
