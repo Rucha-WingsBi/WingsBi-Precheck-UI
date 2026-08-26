@@ -205,21 +205,21 @@ export default function Layout() {
           path: "/production-order",
 
         },
-        {
-          text: "Pending For Precheck",
-          icon: <PlaylistAddCheckIcon />,
-          path:
-            user?.role === STORE_ROLE
-              ? "/precheck/pending/store"
-              : "/precheck/pending/qc",
+        // {
+        //   text: "Pending For Precheck",
+        //   icon: <PlaylistAddCheckIcon />,
+        //   path:
+        //     user?.role === STORE_ROLE
+        //       ? "/precheck/pending/store"
+        //       : "/precheck/pending/qc",
 
-        },
-        {
-          text: "View Order Details",
-          icon: <VisibilityIcon />,
-          path: "/production-order/view",
+        // },
+        // {
+        //   text: "View Order Details",
+        //   icon: <VisibilityIcon />,
+        //   path: "/production-order/view",
 
-        },
+        // },
         // {
         //   text: "Edit Order Details",
         //   icon: <EditIcon />,
@@ -291,12 +291,12 @@ export default function Layout() {
         //   path: "/precheck/make-order",
         //  
         // },
-        {
-          text: "Make Precheck",
-          icon: <AddIcon />,
-          path: "/precheck/make",
+        // {
+        //   text: "Make Precheck",
+        //   icon: <AddIcon />,
+        //   path: "/precheck/make",
 
-        },
+        // },
         {
           text: "Store In",
           icon: <StoreIcon />,
@@ -362,18 +362,18 @@ export default function Layout() {
       icon: <SettingsIcon />,
       path: "/adminmaster",
       subItems: [
-        {
-          text: "Archive",
-          icon: <ArchiveIcon />,
-          path: "/adminmaster/archive",
+        // {
+        //   text: "Archive",
+        //   icon: <ArchiveIcon />,
+        //   path: "/adminmaster/archive",
 
-        },
-        {
-          text: "Update Components",
-          icon: <SettingsIcon />,
-          path: "/adminmaster/updatecomponents",
+        // },
+        // {
+        //   text: "Update Components",
+        //   icon: <SettingsIcon />,
+        //   path: "/adminmaster/updatecomponents",
 
-        },
+        // },
         {
           text: "User Management",
           icon: <AssignmentIcon />,

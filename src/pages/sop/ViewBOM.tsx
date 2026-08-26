@@ -22,7 +22,10 @@ import {
   Autocomplete,
   CircularProgress,
   Alert,
+  Tabs,
+  Tab,
 } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search as SearchIcon,
   GetApp as ExportIcon,
@@ -51,6 +54,8 @@ interface AssemblyOption {
 
 const ViewBOM: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Redux state
   const {
@@ -301,17 +306,54 @@ const ViewBOM: React.FC = () => {
       }}
     >
       <Container maxWidth="xl" sx={{ pt: 1.5, pb: 1 }}>
-        <Typography
-          variant="h5"
+        <Box
           sx={{
-            color: "primary.main",
-            fontWeight: 600,
-            fontSize: { xs: "1.25rem", md: "1.4rem" },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
             mb: 1,
           }}
         >
-          View BOM Details
-        </Typography>
+          <Typography
+            variant="h5"
+            sx={{
+              color: "primary.main",
+              fontWeight: 600,
+              fontSize: { xs: "1.25rem", md: "1.4rem" },
+            }}
+          >
+            View BOM Details
+          </Typography>
+
+          <Tabs
+            value={location.pathname.includes("viewBOM") ? "bom" : "sop"}
+            onChange={(_, newValue) => {
+              if (newValue === "sop") {
+                navigate("/sop/view");
+              } else {
+                navigate("/sop/viewBOM");
+              }
+            }}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 36,
+              "& .MuiTab-root": {
+                minHeight: 36,
+                py: 0.5,
+                px: 2.5,
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+              },
+            }}
+          >
+            <Tab label="View SOP" value="sop" />
+            <Tab label="View BOM" value="bom" />
+          </Tabs>
+        </Box>
         {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 1, py: 0 }} onClose={() => dispatch(clearError())}>

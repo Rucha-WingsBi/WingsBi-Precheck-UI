@@ -33,6 +33,7 @@ import {
   Download as DownloadIcon,
   History as HistoryIcon,
   Visibility as VisibilityIcon,
+  PlaylistAddCheck as PlaylistAddCheckIcon,
   Today as TodayIcon,
   CalendarMonth as CalendarMonthIcon,
   DateRange as DateRangeIcon,
@@ -61,6 +62,8 @@ import type { RootState } from "../../store/store";
 import * as XLSX from "xlsx";
 import api from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
+import { usePageAccess } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
 import { getAutosizedColumns } from "../../utils/gridUtils";
 
 interface ProductionOrder {
@@ -106,6 +109,10 @@ const normalizeKey = (key: string) =>
 
 const ProductionOrderUpload: React.FC = () => {
   const navigate = useNavigate();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: pageAccessData } = usePageAccess(
+    user?.roleid ? Number(user.roleid) : null,
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
@@ -767,22 +774,22 @@ const ProductionOrderUpload: React.FC = () => {
       headerAlign: "center",
       align: "center",
     },
-    {
-      field: "startIdNumber",
-      headerName: "Start ID",
-      flex: 0.7,
-      minWidth: 60,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "endIdNumber",
-      headerName: "End ID",
-      flex: 0.7,
-      minWidth: 60,
-      headerAlign: "center",
-      align: "center",
-    },
+    // {
+    //   field: "startIdNumber",
+    //   headerName: "Start ID",
+    //   flex: 0.7,
+    //   minWidth: 60,
+    //   headerAlign: "center",
+    //   align: "center",
+    // },
+    // {
+    //   field: "endIdNumber",
+    //   headerName: "End ID",
+    //   flex: 0.7,
+    //   minWidth: 60,
+    //   headerAlign: "center",
+    //   align: "center",
+    // },
     {
       field: "quantity",
       headerName: "Qty",
@@ -846,15 +853,15 @@ const ProductionOrderUpload: React.FC = () => {
       align: "center",
       valueFormatter: (params) => formatDate(params.value),
     },
-    {
-      field: "modifiedDate",
-      headerName: "Modified Date",
-      flex: 1.2,
-      minWidth: 90,
-      headerAlign: "center",
-      align: "center",
-      valueFormatter: (params) => formatDate(params.value),
-    },
+    // {
+    //   field: "modifiedDate",
+    //   headerName: "Modified Date",
+    //   flex: 1.2,
+    //   minWidth: 90,
+    //   headerAlign: "center",
+    //   align: "center",
+    //   valueFormatter: (params) => formatDate(params.value),
+    // },
     {
       field: "days",
       headerName: "Aging Days",
@@ -875,81 +882,128 @@ const ProductionOrderUpload: React.FC = () => {
       },
     },
     {
-      field: "actions",
-      headerName: "Actions",
-      flex: 1,
-      minWidth: 60,
-      headerAlign: "center",
-      align: "center",
-      sortable: false,
-      renderCell: (params) => {
-        const isConfirming = deleteConfirmId === params.row.id;
-        const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
-
-        return (
-          <Box
-            sx={{
-              display: "flex",
-              gap: 0.5,
-              "& .MuiIconButton-root": {
-                outline: "none",
-              },
-            }}
-          >
-            {isConfirming ? (
-              <>
-                <Tooltip title="Confirm Delete">
-                  <IconButton
-                    size="small"
-                    color="success"
-                    onClick={() => deleteMutation.mutate(params.row)}
-                  >
-                    <CheckIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Cancel">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => setDeleteConfirmId(null)}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <IconButton
-                  size="small"
-                  color="secondary"
-                  onClick={() =>
-                    navigate(
-                      `/production-order/edit/${params.row.id}?from=${encodeURIComponent(location.pathname)}`,
-                      {
-                        state: { ...params.row, from: location.pathname },
-                      },
-                    )
-                  }
-                  disabled={!canDeleteOrEdit}
-                  title="Edit Production Order"
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => setDeleteConfirmId(params.row.id)}
-                  disabled={!canDeleteOrEdit}
-                  title="Delete Production Order"
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </>
-            )}
-          </Box>
-        );
-      },
-    },
+         field: "actions",
+         headerName: "Actions",
+         flex: 1,
+         minWidth: 200,
+         sortable: false,
+         headerAlign: "center",
+         align: "center",
+         renderCell: (params) => {
+           const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
+           const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+           const isConfirming = deleteConfirmId === params.row.id;
+           const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
+   
+           return (
+             <Box
+               sx={{
+                 display: "flex",
+                 gap: 0.5,
+                 "& .MuiIconButton-root": {
+                   outline: "none",
+                 },
+               }}
+             >
+               {isConfirming ? (
+                 <>
+                   <Tooltip title="Confirm Delete">
+                     <IconButton
+                       size="small"
+                       color="success"
+                       onClick={() => deleteMutation.mutate(params.row)}
+                     >
+                       <CheckIcon fontSize="small" />
+                     </IconButton>
+                   </Tooltip>
+                   <Tooltip title="Cancel">
+                     <IconButton
+                       size="small"
+                       color="error"
+                       onClick={() => setDeleteConfirmId(null)}
+                     >
+                       <CloseIcon fontSize="small" />
+                     </IconButton>
+                   </Tooltip>
+                 </>
+               ) : (
+                 <>
+                   <Tooltip
+                     title={
+                       hasViewAccess
+                         ? "View BOM Details"
+                         : "You do not have permission to view precheck details"
+                     }
+                     PopperProps={{ disablePortal: true }}
+                     disableFocusListener
+                   >
+                     <span>
+                       <IconButton
+                         size="small"
+                         color="primary"
+                         onClick={() =>
+                           navigate("/production-order/view", { state: params.row })
+                         }
+                         disabled={!hasViewAccess}
+                       >
+                         <VisibilityIcon fontSize="small" />
+                       </IconButton>
+                     </span>
+                   </Tooltip>
+                   <Tooltip
+                     title={
+                       hasMakeAccess
+                         ? "Make Precheck"
+                         : "You do not have permission to perform precheck"
+                     }
+                     PopperProps={{ disablePortal: true }}
+                     disableFocusListener
+                   >
+                     <span>
+                       <IconButton
+                         size="small"
+                         color="success"
+                         onClick={() =>
+                           navigate("/precheck/make", { state: params.row })
+                         }
+                         disabled={!hasMakeAccess}
+                       >
+                         <PlaylistAddCheckIcon fontSize="small" />
+                       </IconButton>
+                     </span>
+                   </Tooltip>
+                   <IconButton
+                     size="small"
+                     color="secondary"
+                     onClick={() =>
+                       navigate(
+                         `/production-order/edit/${params.row.id}?from=${encodeURIComponent(location.pathname)}`,
+                         {
+                           state: { ...params.row, from: location.pathname },
+                         },
+                       )
+                     }
+                     disabled={!canDeleteOrEdit}
+                     title="Edit Production Order"
+                   >
+                     <EditIcon fontSize="small" />
+                   </IconButton>
+                   <IconButton
+                     size="small"
+                     color="error"
+                     onClick={() => setDeleteConfirmId(params.row.id)}
+                     disabled={!canDeleteOrEdit}
+                     title="Delete Production Order"
+                   >
+                     <DeleteIcon fontSize="small" />
+                   </IconButton>
+                 </>
+               )}
+             </Box>
+           );
+         },
+   
+       },
   ];
 
   const uploadTableRows = insertedRows.length > 0 ? insertedRows : previewRows;
