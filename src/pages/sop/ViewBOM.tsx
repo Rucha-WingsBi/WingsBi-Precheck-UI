@@ -24,6 +24,11 @@ import {
   Alert,
   Tabs,
   Tab,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -31,6 +36,8 @@ import {
   GetApp as ExportIcon,
   Refresh as ResetIcon,
   TableChart as TableIcon,
+  FilterList as FilterIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 import {
   getBomDetails,
@@ -52,7 +59,10 @@ interface AssemblyOption {
   lnItemCode?: string;
 }
 
-const ViewBOM: React.FC = () => {
+const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [showFilters, setShowFilters] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -299,61 +309,68 @@ const ViewBOM: React.FC = () => {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
-        backgroundColor: "#f8fafc",
+        minHeight: hideHeader ? "auto" : "100vh",
+        backgroundColor: hideHeader ? "transparent" : "#f8fafc",
         position: "relative",
-        p: { xs: 1, md: 1.5 },
+        p: hideHeader ? 0 : { xs: 1, md: 1.5 },
       }}
     >
-      <Container maxWidth="xl" sx={{ pt: 1.5, pb: 1 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 2,
-            mb: 1,
-          }}
-        >
-          <Typography
-            variant="h5"
+      <Container maxWidth="xl" disableGutters={hideHeader} sx={{ pt: hideHeader ? 0 : 1.5, pb: hideHeader ? 0 : 1 }}>
+        {/* Header Navigation Bar with Tabs */}
+        {!hideHeader && (
+          <Box
             sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", md: "1.4rem" },
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              mb: 1.5,
+              flexWrap: "wrap",
+              gap: { xs: 2, sm: 4, md: 6 },
+              borderBottom: 1,
+              borderColor: "divider",
+              pb: 0.5,
             }}
           >
-            View BOM Details
-          </Typography>
+            <Typography
+              variant="h4"
+              color="primary.main"
+              fontWeight={600}
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+            >
+              View BOM Details
+            </Typography>
 
-          <Tabs
-            value={location.pathname.includes("viewBOM") ? "bom" : "sop"}
-            onChange={(_, newValue) => {
-              if (newValue === "sop") {
-                navigate("/sop/view");
-              } else {
-                navigate("/sop/viewBOM");
-              }
-            }}
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              minHeight: 36,
-              "& .MuiTab-root": {
-                minHeight: 36,
-                py: 0.5,
-                px: 2.5,
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-              },
-            }}
-          >
-            <Tab label="View SOP" value="sop" />
-            <Tab label="View BOM" value="bom" />
-          </Tabs>
-        </Box>
+            <Tabs
+              value={location.pathname.includes("viewBOM") ? "bom" : "sop"}
+              onChange={(_, newValue) => {
+                if (newValue === "sop") {
+                  navigate("/sop/view");
+                } else {
+                  navigate("/sop/viewBOM");
+                }
+              }}
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{
+                "& .MuiTab-root": {
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  textTransform: "none",
+                  minWidth: 100,
+                },
+                "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "primary.main",
+                  height: 3,
+                  borderRadius: "3px 3px 0 0",
+                },
+              }}
+            >
+              <Tab label="View SOP" value="sop" />
+              <Tab label="View BOM" value="bom" />
+            </Tabs>
+          </Box>
+        )}
         {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 1, py: 0 }} onClose={() => dispatch(clearError())}>
@@ -365,166 +382,213 @@ const ViewBOM: React.FC = () => {
         <Card
           elevation={0}
           sx={{
+            mb: 2,
             border: "1px solid #e2e8f0",
             borderRadius: 2,
             overflow: "hidden",
             background: "white",
-            p: 1,
-            mb: 1.5,
           }}
         >
-          <Grid container spacing={1} alignItems="end">
-            {/* Assembly Number - Autocomplete */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Autocomplete
-                value={selectedAssembly}
-                onChange={handleAssemblyChange}
-                inputValue={assemblyInputValue}
-                onInputChange={handleAssemblyInputChange}
-                options={assemblySearchResults || []}
-                getOptionLabel={(option) =>
-                  option.drawingNumber
-                    ? `${option.drawingNumber}${option.lnItemCode ? ` - ${option.lnItemCode}` : ""
-                    }`
-                    : ""
-                }
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                loading={isSearchingAssembly}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Assembly Number / LN Item Code"
-                    placeholder="Type to search assembly Number or LN item code..."
-                    size="small"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isSearchingAssembly ? (
-                            <CircularProgress color="inherit" size={18} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#d1d5db",
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#A8005A",
-                      },
-                    }}
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.drawingNumber}
-                      {option.lnItemCode && (
-                        <Box component="span" sx={{ color: "text.secondary", fontWeight: 400, ml: 1 }}>
-                          - {option.lnItemCode}
-                        </Box>
-                      )}
-                    </Typography>
-                  </li>
-                )}
-                noOptionsText={
-                  assemblyInputValue.length < 3
-                    ? "Type at least 3 characters"
-                    : "No assemblies found"
-                }
-                freeSolo={false}
-                sx={{ width: "100%" }}
-              />
-            </Grid>
-
-            {/* Action Buttons */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  justifyContent: { xs: "center", md: "flex-start" },
-                  flexWrap: "no-wrap",
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  startIcon={<ResetIcon />}
-                  onClick={handleReset}
-                  size="small"
+          <Accordion
+            expanded={showFilters || !isMobile}
+            onChange={() => isMobile && setShowFilters(!showFilters)}
+            sx={{
+              boxShadow: "none",
+              "&:before": { display: "none" },
+            }}
+          >
+            <AccordionSummary
+              expandIcon={isMobile ? <ExpandMoreIcon /> : null}
+              sx={{
+                backgroundColor: "#f8fafc",
+                borderBottom: "1px solid #e2e8f0",
+                py: 0.5,
+                minHeight: "36px !important",
+                "& .MuiAccordionSummary-content": {
+                  alignItems: "center",
+                  margin: "4px 0 !important",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <FilterIcon sx={{ color: "#A8005A", fontSize: 20 }} />
+                <Typography
+                  variant="h6"
                   sx={{
-                    minWidth: { xs: 80, md: 90 },
-                    py: 0.75,
-                    px: 1.5,
-                    borderColor: "#6b7280",
-                    color: "#6b7280",
-                    fontSize: "0.75rem",
-                    "&:hover": {
-                      borderColor: "#374151",
-                      backgroundColor: "#f9fafb",
-                      color: "#374151",
-                    },
+                    fontSize: { xs: "0.9rem", md: "1rem" },
+                    fontWeight: 500,
+                    color: "#1e293b",
                   }}
                 >
-                  Reset
-                </Button>
-
-                <Button
-                  variant="contained"
-                  startIcon={
-                    isBomLoading ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <SearchIcon />
-                    )
-                  }
-                  onClick={handleSubmit(handleSearch)}
-                  disabled={!selectedAssembly || isBomLoading}
-                  size="small"
-                  sx={{
-                    minWidth: { xs: 90, md: 100 },
-                    py: 0.75,
-                    px: 1.5,
-                    fontSize: "0.75rem",
-                    backgroundColor: "#2563eb",
-                    "&:hover": { backgroundColor: "#1d4ed8" },
-                    "&:disabled": { backgroundColor: "#94a3b8" },
-                    boxShadow: "0 1px 4px rgba(37, 99, 235, 0.3)",
-                  }}
-                >
-                  {isBomLoading ? "Searching..." : "Search"}
-                </Button>
-
-                <Button
-                  variant="contained"
-                  startIcon={
-                    isExporting ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <ExportIcon />
-                    )
-                  }
-                  onClick={handleExport}
-                  disabled={bomData.length === 0 || isExporting}
-                  size="small"
-                  sx={{
-                    minWidth: { xs: 90, md: 100 },
-                    py: 0.75,
-                    px: 1.5,
-                    fontSize: "0.75rem",
-                    backgroundColor: "#A8005A",
-                    "&:hover": { backgroundColor: "#920050" },
-                    "&:disabled": { backgroundColor: "#d1a3c0" },
-                    boxShadow: "0 1px 4px rgba(168, 0, 90, 0.3)",
-                  }}
-                >
-                  {isExporting ? "Exporting..." : "Export"}
-                </Button>
+                  Search Filters
+                </Typography>
               </Box>
-            </Grid>
-          </Grid>
+            </AccordionSummary>
+
+            <AccordionDetails sx={{ p: { xs: 1.5, md: 2 } }}>
+              <Grid container spacing={1} alignItems="end">
+                {/* Assembly Number - Autocomplete */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Autocomplete
+                    value={selectedAssembly}
+                    onChange={handleAssemblyChange}
+                    inputValue={assemblyInputValue}
+                    onInputChange={handleAssemblyInputChange}
+                    options={assemblySearchResults || []}
+                    getOptionLabel={(option) =>
+                      option.drawingNumber
+                        ? `${option.drawingNumber}${option.lnItemCode ? ` - ${option.lnItemCode}` : ""}`
+                        : ""
+                    }
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    loading={isSearchingAssembly}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Assembly Number / LN Item Code"
+                        placeholder="Type to search assembly Number or LN item code..."
+                        size="small"
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {isSearchingAssembly ? (
+                                <CircularProgress color="inherit" size={18} />
+                              ) : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                        sx={{
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "#d1d5db",
+                          },
+                          "&:hover .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "#A8005A",
+                          },
+                        }}
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {option.drawingNumber}
+                          {option.lnItemCode && (
+                            <Box component="span" sx={{ color: "text.secondary", fontWeight: 400, ml: 1 }}>
+                              - {option.lnItemCode}
+                            </Box>
+                          )}
+                        </Typography>
+                      </li>
+                    )}
+                    noOptionsText={
+                      assemblyInputValue.length < 3
+                        ? "Type at least 3 characters"
+                        : "No assemblies found"
+                    }
+                    freeSolo={false}
+                    sx={{ width: "100%" }}
+                  />
+                </Grid>
+
+                {/* Action Buttons */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      justifyContent: { xs: "center", md: "flex-start" },
+                      flexWrap: "no-wrap",
+                    }}
+                  >
+                    <Button
+                      variant="outlined"
+                      startIcon={<ResetIcon />}
+                      onClick={handleReset}
+                      size="small"
+                      sx={{
+                        minWidth: { xs: 80, md: 90 },
+                        py: 0.75,
+                        px: 1.5,
+                        borderColor: "#6b7280",
+                        color: "#6b7280",
+                        fontSize: "0.75rem",
+                        "&:hover": {
+                          borderColor: "#374151",
+                          backgroundColor: "#f9fafb",
+                          color: "#374151",
+                        },
+                      }}
+                    >
+                      Reset
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      startIcon={
+                        isBomLoading ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <SearchIcon fontSize="small" />
+                        )
+                      }
+                      onClick={handleSearch}
+                      disabled={isBomLoading || !selectedAssembly}
+                      size="small"
+                      sx={{
+                        minWidth: { xs: 85, md: 95 },
+                        py: 0.75,
+                        px: 1.5,
+                        backgroundColor:
+                          isBomLoading || !selectedAssembly
+                            ? "#cbd5e1"
+                            : "#A8005A",
+                        color: "white",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        "&:hover": {
+                          backgroundColor: "#860048",
+                        },
+                      }}
+                    >
+                      Search
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      startIcon={
+                        isExporting ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <ExportIcon fontSize="small" />
+                        )
+                      }
+                      onClick={handleExport}
+                      disabled={isExporting || bomData.length === 0}
+                      size="small"
+                      sx={{
+                        minWidth: { xs: 85, md: 95 },
+                        py: 0.75,
+                        px: 1.5,
+                        backgroundColor:
+                          isExporting || bomData.length === 0
+                            ? "#cbd5e1"
+                            : "#A8005A",
+                        color: "white",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        "&:hover": {
+                          backgroundColor: "#860048",
+                        },
+                      }}
+                    >
+                      Export
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </AccordionDetails>
+          </Accordion>
         </Card>
 
         {/* Results Section */}

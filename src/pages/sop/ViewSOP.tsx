@@ -6,10 +6,6 @@ import {
   TextField,
   Button,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   Autocomplete,
   CircularProgress,
@@ -24,7 +20,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Tooltip,
   Tabs,
   Tab,
 } from "@mui/material";
@@ -49,6 +44,7 @@ import {
 } from "../../store/slices/sopSlice";
 import { useProductionSeries, useDrawingNumbers } from "../../hooks/useMasterData";
 import TreeTable from "../../components/TreeTable/TreeTable";
+import ViewBOM from "./ViewBOM";
 
 interface FormData {
   prodSeriesId: number;
@@ -60,6 +56,7 @@ const ViewSOP: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const [activeTab, setActiveTab] = useState<"sop" | "bom">("sop");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
@@ -733,56 +730,47 @@ const ViewSOP: React.FC = () => {
 
   return (
 
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "#f8fafc",
-        position: "relative",
-        p: { xs: 1, md: 1.5 },
-      }}
-    >
-      <Container maxWidth="xl" sx={{ pt: 1.5, pb: 1 }}>
+    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
+        {/* Header Navigation Bar with Tabs */}
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
             flexWrap: "wrap",
-            gap: 2,
-            mb: 1,
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
           }}
         >
           <Typography
-            variant="h5"
-            sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", md: "1.4rem" },
-            }}
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
           >
-            View SOP
+            {activeTab === "bom" ? "View BOM Details" : "View SOP"}
           </Typography>
 
           <Tabs
-            value={location.pathname.includes("viewBOM") ? "bom" : "sop"}
-            onChange={(_, newValue) => {
-              if (newValue === "bom") {
-                navigate("/sop/viewBOM");
-              } else {
-                navigate("/sop/view");
-              }
-            }}
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
             textColor="primary"
             indicatorColor="primary"
             sx={{
-              minHeight: 36,
               "& .MuiTab-root": {
-                minHeight: 36,
-                py: 0.5,
-                px: 2.5,
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
               },
             }}
           >
@@ -790,6 +778,9 @@ const ViewSOP: React.FC = () => {
             <Tab label="View BOM" value="bom" />
           </Tabs>
         </Box>
+
+        {activeTab === "sop" ? (
+          <>
         {/* Success/Error Messages */}
         <Fade in={!!(successMessage || error)}>
           <Box sx={{ mb: 2 }}>
@@ -1301,8 +1292,6 @@ const ViewSOP: React.FC = () => {
             </Box>
           </Box>
         </Card>
-      </Container>
-
       {/* Loading Backdrop */}
       <Backdrop
         sx={{
@@ -1364,6 +1353,10 @@ const ViewSOP: React.FC = () => {
           </Box>
         </Card>
       </Backdrop>
+          </>
+        ) : (
+          <ViewBOM hideHeader />
+        )}
     </Box>
   );
 };

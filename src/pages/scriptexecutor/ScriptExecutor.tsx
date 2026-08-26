@@ -22,7 +22,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Container,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -1134,33 +1133,26 @@ export default function ScriptExecutor() {
   ) : "Script executed successfully.");
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "#f8fafc",
-        position: "relative",
-        p: { xs: 1, md: 1.5 },
-      }}
-    >
-      <Container maxWidth="xl" sx={{ pt: 1.5, pb: 1 }}>
-        {/* Header and Tabs Navigation */}
+    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
+        {/* Header Navigation Bar with Tabs */}
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 2,
+            alignItems: "flex-end",
             mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
           }}
         >
           <Typography
-            variant="h5"
-            sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", md: "1.4rem" },
-            }}
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
           >
             Script Executor
           </Typography>
@@ -1171,14 +1163,17 @@ export default function ScriptExecutor() {
             textColor="primary"
             indicatorColor="primary"
             sx={{
-              minHeight: 36,
               "& .MuiTab-root": {
-                minHeight: 36,
-                py: 0.5,
-                px: 2.5,
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
               },
             }}
           >
@@ -2185,7 +2180,6 @@ export default function ScriptExecutor() {
           {snackbar.message}
         </Alert>
       </Snackbar>
-      </Container>
     </Box>
   );
 }

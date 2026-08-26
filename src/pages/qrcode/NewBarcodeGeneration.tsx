@@ -142,7 +142,7 @@ const createDefaultValues = (): NewQRCodeFormData => ({
   partAssemblyId: "",
 });
 
-const NewBarcodeGeneration: React.FC = () => {
+const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
@@ -844,60 +844,66 @@ const NewBarcodeGeneration: React.FC = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
-          p: { xs: 1, sm: 2, md: 3 },
+          p: hideHeader ? 0 : { xs: 1, sm: 2, md: 3 },
           maxWidth: "100%",
           mx: "auto",
         }}
       >
         {/* Header Navigation Tabs */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 2,
-            mb: 1.5,
-          }}
-        >
-          <Typography
-            variant="h5"
+        {!hideHeader && (
+          <Box
             sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", md: "1.4rem" },
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              mb: 1.5,
+              flexWrap: "wrap",
+              gap: { xs: 2, sm: 4, md: 6 },
+              borderBottom: 1,
+              borderColor: "divider",
+              pb: 0.5,
             }}
           >
-            Generate Standard QR Code
-          </Typography>
+            <Typography
+              variant="h4"
+              color="primary.main"
+              fontWeight={600}
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+            >
+              Generate Standard QR Code
+            </Typography>
 
-          <Tabs
-            value={location.pathname.includes("generate-new") ? "generate-std" : "generate"}
-            onChange={(_, newValue) => {
-              if (newValue === "generate") {
-                navigate("/qrcode/generate");
-              } else {
-                navigate("/qrcode/generate-new");
-              }
-            }}
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              minHeight: 36,
-              "& .MuiTab-root": {
-                minHeight: 36,
-                py: 0.5,
-                px: 2.5,
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-              },
-            }}
-          >
-            <Tab label="Generate QR Code" value="generate" />
-            <Tab label="Generate STD QR Code" value="generate-std" />
-          </Tabs>
-        </Box>
+            <Tabs
+              value={location.pathname.includes("generate-new") ? "generate-std" : "generate"}
+              onChange={(_, newValue) => {
+                if (newValue === "generate") {
+                  navigate("/qrcode/generate");
+                } else {
+                  navigate("/qrcode/generate-new");
+                }
+              }}
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{
+                "& .MuiTab-root": {
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  textTransform: "none",
+                  minWidth: 100,
+                },
+                "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "primary.main",
+                  height: 3,
+                  borderRadius: "3px 3px 0 0",
+                },
+              }}
+            >
+              <Tab label="Generate QR Code" value="generate" />
+              <Tab label="Generate STD QR Code" value="generate-std" />
+            </Tabs>
+          </Box>
+        )}
         <Card elevation={2} sx={{ width: "100%", maxWidth: "100%" }}>
           <CardContent>
            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>

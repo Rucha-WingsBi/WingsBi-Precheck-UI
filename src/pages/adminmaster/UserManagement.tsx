@@ -16,7 +16,6 @@ import {
   Stack,
   MenuItem,
   Switch,
-  FormControlLabel,
   Tabs,
   Tab,
   Grid,
@@ -328,7 +327,7 @@ export default function UserManagement() {
       field: "srNo",
       headerName: "Sr No",
       width: 70,
-      renderCell: (params) =>
+      renderCell: (params: any) =>
         params.api.getSortedRowIds().indexOf(params.id) + 1,
     },
     { field: "userName", headerName: "Full Name", flex: 1.5, minWidth: 150 },
@@ -387,7 +386,7 @@ export default function UserManagement() {
       headerName: "Approve User",
       width: 130,
       sortable: false,
-      renderCell: (params) => {
+      renderCell: (params: any) => {
         const isAdmin = userRole === "Admin";
 
         return (
@@ -417,14 +416,14 @@ export default function UserManagement() {
         );
       },
     },
-  ];
+  ].map((c) => ({ ...c, align: "center", headerAlign: "center" }));
 
   const userColumns: GridColDef[] = [
     {
       field: "srNo",
       headerName: "Sr No",
       width: 70,
-      renderCell: (params) =>
+      renderCell: (params: any) =>
         params.api.getSortedRowIds().indexOf(params.id) + 1,
     },
     { field: "userName", headerName: "Full Name", flex: 1.5, minWidth: 150 },
@@ -446,7 +445,7 @@ export default function UserManagement() {
       field: "isActive",
       headerName: "Status",
       width: 100,
-      renderCell: (params) => (
+      renderCell: (params: any) => (
         <Typography
           variant="body2"
           sx={{
@@ -463,7 +462,7 @@ export default function UserManagement() {
       headerName: "Deactivate User",
       width: 140,
       sortable: false,
-      renderCell: (params) => {
+      renderCell: (params: any) => {
         const isAdmin = userRole === "Admin";
         const isSelf = Number(params.row.id) === Number(currentUser?.id);
 
@@ -505,7 +504,7 @@ export default function UserManagement() {
       headerName: "Actions",
       width: 80,
       sortable: false,
-      renderCell: (params) => {
+      renderCell: (params: any) => {
         const isAdmin = userRole === "Admin";
         const isActive = Boolean(params.row.isActive);
 
@@ -536,7 +535,7 @@ export default function UserManagement() {
         );
       },
     },
-  ];
+  ].map((c) => ({ ...c, align: "center", headerAlign: "center" }));
 
   if (isUsersLoading || isPendingUsersLoading) {
     return (
@@ -565,105 +564,158 @@ export default function UserManagement() {
         >
           User Management
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Typography variant="body2" color="text.secondary">
-            Total Users: {users.length}
-          </Typography>
-          {userRole === "Admin" && (<Button
-            variant="contained"
-            size="small"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleAddUserOpen}
-            sx={{
-              fontWeight: 600,
-              backgroundColor: "#6B288A",
-              "&:hover": { backgroundColor: "#4A1964" },
-              textTransform: "none",
-              borderRadius: 1.5,
-              px: 2.5,
-            }}
-          >
-            Add User
-          </Button>
-          )}
-        </Stack>
+        <Typography variant="body2" color="text.secondary">
+          Total Users: {users.length}
+        </Typography>
       </Stack>
 
-      <Card elevation={2}>
-        <Box sx={{ borderBottom: 1, borderColor: "divider", px: 2, pt: 1, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+      <Card
+        elevation={0}
+        sx={{
+          border: "1px solid #e2e8f0",
+          borderRadius: 3,
+          overflow: "hidden",
+          background: "white",
+        }}
+      >
+        <Box
+          sx={{
+            borderBottom: "1px solid #e2e8f0",
+            px: 3,
+            pt: 1.5,
+            pb: 0.5,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+            backgroundColor: "white",
+          }}
+        >
           <Tabs
             value={mainTab}
-            onChange={(e, newValue) => setMainTab(newValue)}
+            onChange={(_e, newValue) => setMainTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
             sx={{
               "& .MuiTab-root": {
                 fontWeight: 600,
+                fontSize: "0.875rem",
                 textTransform: "none",
-                fontSize: "0.9rem",
+                minWidth: 100,
+                color: "#64748b",
               },
-              "& .Mui-selected": {
-                color: "#6B288A !important",
-              },
+              "& .MuiTab-root.Mui-selected": { color: "#6B288A" },
               "& .MuiTabs-indicator": {
                 backgroundColor: "#6B288A",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
               },
             }}
           >
             <Tab label="All Users" />
             <Tab label={`Pending Approval (${pendingUsersCount})`} />
           </Tabs>
-          <TextField
-            placeholder="Search by name..."
-            size="small"
-            variant="outlined"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{
-              mb: 1,
-              width: { xs: "100%", sm: 260 },
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-              },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Box>
-        <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-          <Box sx={{ width: "100%" }}>
-            <DataGrid
-              autoHeight
-              rows={displayedUsers}
-              columns={mainTab === 0 ? userColumns : pendingColumns}
-              loading={mainTab === 0 ? isUsersLoading : isPendingUsersLoading}
-              initialState={{
-                pagination: {
-                  paginationModel: { pageSize: 10 },
+
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              placeholder="Search by name..."
+              size="small"
+              variant="outlined"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{
+                width: { xs: "100%", sm: 240 },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  backgroundColor: "#f8fafc",
                 },
               }}
-              pageSizeOptions={[5, 10, 25, 50]}
-              disableRowSelectionOnClick
-              sx={{
-                border: "none",
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "rgba(168, 0, 90, 0.04)",
-                  borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-                },
-                "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-                },
-                "& .MuiDataGrid-cell:focus": { outline: "none" },
-                "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-                "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-                "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" fontSize="small" />
+                  </InputAdornment>
+                ),
               }}
             />
-          </Box>
+            {userRole === "Admin" && (
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleAddUserOpen}
+                sx={{
+                  fontWeight: 600,
+                  backgroundColor: "#6B288A",
+                  "&:hover": { backgroundColor: "#4A1964" },
+                  textTransform: "none",
+                  borderRadius: 1,
+                  px: 2.5,
+                  py: 0.8,
+                }}
+              >
+                Add User
+              </Button>
+            )}
+          </Stack>
+        </Box>
+
+        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "#f8fafc" }}>
+          <Card
+            elevation={0}
+            sx={{
+              border: "1px solid #e2e8f0",
+              borderRadius: 3,
+              overflow: "hidden",
+              background: "white",
+            }}
+          >
+            <Box sx={{ width: "100%" }}>
+              <DataGrid
+                autoHeight
+                rows={displayedUsers}
+                columns={mainTab === 0 ? userColumns : pendingColumns}
+                loading={mainTab === 0 ? isUsersLoading : isPendingUsersLoading}
+                initialState={{
+                  pagination: {
+                    paginationModel: { pageSize: 10 },
+                  },
+                }}
+                pageSizeOptions={[5, 10, 25, 50]}
+                disableRowSelectionOnClick
+                sx={{
+                  border: "none",
+                  "& .MuiDataGrid-columnHeaders": {
+                    backgroundColor: "#f8fafc",
+                    borderBottom: "1px solid #e2e8f0",
+                    color: "#475569",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitle": {
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    color: "#475569",
+                  },
+                  "& .MuiDataGrid-cell": {
+                    fontSize: "0.75rem",
+                    color: "#334155",
+                    borderBottom: "1px solid #f1f5f9",
+                  },
+                  "& .MuiDataGrid-row": {
+                    "&:nth-of-type(even)": { backgroundColor: "#fafafa" },
+                    "&:hover": { backgroundColor: "#f1f5f9" },
+                    transition: "background-color 0.2s ease",
+                  },
+                  "& .MuiDataGrid-cell:focus": { outline: "none" },
+                  "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+                  "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
+                  "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+                }}
+              />
+            </Box>
+          </Card>
         </CardContent>
       </Card>
 

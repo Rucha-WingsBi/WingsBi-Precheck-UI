@@ -324,11 +324,11 @@ export default function Layout() {
       path: "/sop",
       subItems: [
         { text: "View SOP", icon: <VisibilityIcon />, path: "/sop/view" },
-        {
-          text: "View BOM Details",
-          icon: <VisibilityIcon />,
-          path: "/sop/viewBOM",
-        },
+        // {
+        //   text: "View BOM Details",
+        //   icon: <VisibilityIcon />,
+        //   path: "/sop/viewBOM",
+        // },
       ],
     },
     {
@@ -341,11 +341,11 @@ export default function Layout() {
           icon: <VisibilityIcon />,
           path: "/components",
         },
-        {
-          text: "View Assembly",
-          icon: <VisibilityIcon />,
-          path: "/components/assembly",
-        },
+        // {
+        //   text: "View Assembly",
+        //   icon: <VisibilityIcon />,
+        //   path: "/components/assembly",
+        // },
       ],
     },
     {

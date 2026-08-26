@@ -5,7 +5,6 @@ import {
   Typography,
   List,
   ListItem,
-  ListItemText,
   Chip,
   Divider,
 } from '@mui/material';
@@ -26,7 +25,12 @@ interface QRCodeErrorDisplayProps {
 const QRCodeErrorDisplay: React.FC<QRCodeErrorDisplayProps> = ({ error, onClose }) => {
   if (!error) return null;
 
-  if (error.type === 'simple_error') {
+  const errorMessage = typeof error === 'string' ? error : (error as any)?.message;
+  if (!errorMessage || typeof errorMessage !== 'string' || !errorMessage.trim()) {
+    return null;
+  }
+
+  if (typeof error === 'string' || (error as any).type === 'simple_error' || !(error as any).type) {
     return (
       <Alert
         severity="error"
@@ -34,7 +38,7 @@ const QRCodeErrorDisplay: React.FC<QRCodeErrorDisplayProps> = ({ error, onClose 
         icon={<ErrorOutlineIcon />}
         sx={{ mb: 2 }}
       >
-        {error.message}
+        {errorMessage}
       </Alert>
     );
   }

@@ -93,6 +93,7 @@ import {
 import debounce from "lodash/debounce";
 import QRCodeErrorDisplay from "../../components/QRCodeErrorDisplay";
 import { useDebounce } from "../../hooks/useDebounce";
+import NewBarcodeGeneration from "./NewBarcodeGeneration";
 
 // Create typed versions of the hooks
 const useAppDispatch: () => AppDispatch = useDispatch;
@@ -102,6 +103,7 @@ export default function BarcodeGeneration() {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
   const location = useLocation();
+  const [activeTab, setActiveTab] = useState<number>(0);
 
   const dispatch = useAppDispatch();
 
@@ -1183,7 +1185,7 @@ export default function BarcodeGeneration() {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
-          p: { xs: 1, sm: 2, md: 3 },
+          p: { xs: 1, sm: 1.5, md: 2 },
           maxWidth: "100%",
           mx: "auto",
         }}
@@ -1205,62 +1207,62 @@ export default function BarcodeGeneration() {
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 2,
+            alignItems: "flex-end",
             mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
           }}
         >
           <Typography
-            variant="h5"
-            sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", md: "1.4rem" },
-            }}
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
           >
-            Generate QR Code
+            {activeTab === 0 ? "Generate QR Code" : "Generate Standard QR Code"}
           </Typography>
 
           <Tabs
-            value={location.pathname.includes("generate-new") ? "generate-std" : "generate"}
-            onChange={(_, newValue) => {
-              if (newValue === "generate-std") {
-                navigate("/qrcode/generate-new");
-              } else {
-                navigate("/qrcode/generate");
-              }
-            }}
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
             textColor="primary"
             indicatorColor="primary"
             sx={{
-              minHeight: 36,
               "& .MuiTab-root": {
-                minHeight: 36,
-                py: 0.5,
-                px: 2.5,
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
               },
             }}
           >
-            <Tab label="Generate QR Code" value="generate" />
-            <Tab label="Generate STD QR Code" value="generate-std" />
+            <Tab label="Generate QR Code" value={0} />
+            <Tab label="Generate STD QR Code" value={1} />
           </Tabs>
         </Box>
 
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <Alert
-            severity="success"
-            sx={{ mb: 3 }}
-            onClose={() => setSuccessMessage("")}
-          >
-            {successMessage}
-          </Alert>
-        )}
+        {activeTab === 0 ? (
+          <>
+            {/* Success/Error Messages */}
+            {successMessage && (
+              <Alert
+                severity="success"
+                sx={{ mb: 3 }}
+                onClose={() => setSuccessMessage("")}
+              >
+                {successMessage}
+              </Alert>
+            )}
 
         <QRCodeErrorDisplay
           error={error}
@@ -3519,6 +3521,10 @@ export default function BarcodeGeneration() {
             </Button>
           </DialogActions>
         </Dialog>
+        </>
+        ) : (
+          <NewBarcodeGeneration hideHeader />
+        )}
       </Box>
     </LocalizationProvider>
   );

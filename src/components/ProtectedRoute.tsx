@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Box, CircularProgress } from '@mui/material';
 import type { RootState } from '../store/store';
@@ -13,6 +13,10 @@ const routeToPageMap: Record<string, string> = {
   '/precheck/make': 'Make Precheck',
   '/precheck/store-in': 'Store In',
   '/precheck/stored-components': 'Stored In Components',
+  '/precheck/available-in-store': 'Available In Store',
+  '/precheck/available-store': 'Available In Store',
+  '/precheck/consumed': 'View Consumed In',
+  '/precheck/view-consumed': 'View Consumed In',
   '/precheck/make-order': 'Make Order',
   '/precheck/pending': 'Pending For Precheck',
   '/production-order/view': 'View Order Details',
@@ -20,19 +24,26 @@ const routeToPageMap: Record<string, string> = {
   '/production-order': 'Upload Orders',
   '/adminmaster/archive': 'Archive',
   '/adminmaster/updatecomponents': 'Update Components',
+  '/adminmaster/update-components': 'Update Components',
   '/adminmaster/usermanagement': 'User Management',
+  '/adminmaster/user-management': 'User Management',
   '/adminmaster/rolemanagement': 'Role Management',
+  '/adminmaster/role-management': 'Role Management',
   '/adminmaster/addcomponents': 'Add Components',
+  '/adminmaster/add-components': 'Add Components',
   '/materialrequisition': 'Material Requisition',
+  '/material-requisition': 'Material Requisition',
   '/scriptexecutor': 'Script Executor',
+  '/script-executor': 'Script Executor',
   '/sop/view': 'View SOP',
   '/sop/viewBOM': 'View BOM Details',
+  '/components/view-assembly': 'View Components',
   '/components/assembly': 'View Components',
   '/components': 'View Components',
 };
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
@@ -100,8 +111,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }
 
-  return <>{children}</>;
+  return children ? <>{children}</> : <Outlet />;
 };
 
 export default ProtectedRoute;
- 

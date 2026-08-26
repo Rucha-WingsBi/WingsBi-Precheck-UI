@@ -127,7 +127,15 @@ function GenericTable<T extends { id: number }>({
   loading,
 }: GenericTableProps<T>) {
   return (
-    <Card elevation={2}>
+    <Card
+      elevation={0}
+      sx={{
+        border: "1px solid #e2e8f0",
+        borderRadius: 3,
+        overflow: "hidden",
+        background: "white",
+      }}
+    >
       <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
         <Box sx={{ width: "100%" }}>
           <DataGrid
@@ -146,11 +154,26 @@ function GenericTable<T extends { id: number }>({
             sx={{
               border: "none",
               "& .MuiDataGrid-columnHeaders": {
-                backgroundColor: "rgba(168, 0, 90, 0.04)",
-                borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                backgroundColor: "#f8fafc",
+                borderBottom: "2px solid #e2e8f0",
+                color: "#1e293b",
+                fontWeight: 700,
+                fontSize: "0.75rem",
+              },
+              "& .MuiDataGrid-columnHeaderTitle": {
+                fontWeight: 700,
+                fontSize: "0.75rem",
+                color: "#1e293b",
               },
               "& .MuiDataGrid-cell": {
-                borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                fontSize: "0.75rem",
+                color: "#1e293b",
+                borderBottom: "1px solid #e2e8f0",
+              },
+              "& .MuiDataGrid-row": {
+                "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
+                "&:hover": { backgroundColor: "#f1f5f9" },
+                transition: "background-color 0.2s ease",
               },
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-cell:focus-within": { outline: "none" },
@@ -1654,7 +1677,16 @@ export default function AddComponents() {
       </Stack>
 
       {/* Tabs */}
-      <Card elevation={2} sx={{ mb: 0 }}>
+      <Card
+        elevation={0}
+        sx={{
+          mb: 0,
+          border: "1px solid #e2e8f0",
+          borderRadius: 3,
+          overflow: "hidden",
+          background: "white",
+        }}
+      >
         {/* Tab bar with inline add on the right */}
         <Box
           sx={{
@@ -1662,7 +1694,7 @@ export default function AddComponents() {
             borderColor: "divider",
             px: 2,
             pt: 1,
-            backgroundColor: "rgba(168, 0, 90, 0.02)",
+            backgroundColor: "#f8fafc",
             display: "flex",
             alignItems: "center",
           }}

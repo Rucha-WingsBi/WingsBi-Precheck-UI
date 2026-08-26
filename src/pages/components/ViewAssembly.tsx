@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -21,7 +22,10 @@ import {
   DialogActions,
   Snackbar,
   Autocomplete,
+  Tabs,
+  Tab,
 } from "@mui/material";
+import ViewComponents from "./ViewComponents";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -30,7 +34,9 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import api from "../../services/api";
 import debounce from "lodash/debounce";
 
-const ViewAssembly: React.FC = () => {
+const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "N/A";
@@ -539,16 +545,69 @@ const ViewAssembly: React.FC = () => {
 
 
 
+  const activeTab = location.pathname.includes("assembly") ? "assembly" : "components";
+
   return (
-    <Box sx={{ p: 3, width: "100%", overflow: "hidden" }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="h4"
-          sx={{ fontWeight: "bold", color: "#A8005A" }}
+    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+      {!hideHeader && (
+        <Box
+          sx={{
+            display: "flex",
+            justify: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
+          }}
         >
-          View Assembly Drawing Relationships
-        </Typography>
-      </Box>
+          <Typography
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+          >
+            {activeTab === "components" ? "View Component Details" : "View Assembly Details"}
+          </Typography>
+
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => {
+              if (newValue === "components") {
+                navigate("/components/view");
+              } else {
+                navigate("/components/assembly");
+              }
+            }}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
+              },
+            }}
+          >
+            <Tab label="View Component" value="components" />
+            <Tab label="View Assembly" value="assembly" />
+          </Tabs>
+        </Box>
+      )}
+
+      {activeTab === "components" ? (
+        <ViewComponents hideHeader />
+      ) : (
+        <>
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <form onSubmit={handleSearch}>
@@ -1047,6 +1106,8 @@ const ViewAssembly: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+        </>
+      )}
     </Box>
   );
 };

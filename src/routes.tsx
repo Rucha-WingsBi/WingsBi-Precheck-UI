@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react";
 import { CircularProgress, Box } from "@mui/material";
 import Layout from "./layouts/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ViewBOM from "./pages/sop/ViewBOM";
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -41,16 +40,12 @@ const AvailableInStore = lazy(
 
 // Lazy-loaded IR/MSN Pages
 const GenerateIRMSN = lazy(() => import("./pages/irmsn/GenerateIRMSN"));
-//const SearchUpdateIRMSN = lazy(() => import("./pages/irmsn/SearchUpdateIRMSN"));
 const ViewIRMSN = lazy(() => import("./pages/irmsn/ViewIRMSN"));
 const EditIRMSN = lazy(() => import("./pages/irmsn/EditIRMSN"));
 
 // Lazy-loaded QR Code Pages
 const BarcodeGeneration = lazy(
   () => import("./pages/qrcode/BarcodeGeneration")
-);
-const NewBarcodeGeneration = lazy(
-  () => import("./pages/qrcode/NewBarcodeGeneration")
 );
 const ViewBarcode = lazy(() => import("./pages/qrcode/ViewBarcode"));
 const UpdateBarcode = lazy(() => import("./pages/qrcode/UpdateBarcode"));
@@ -60,7 +55,6 @@ const ViewSOP = lazy(() => import("./pages/sop/ViewSOP"));
 
 // Lazy-loaded Settings Pages
 const Settings = lazy(() => import("./pages/settings/Settings"));
-
 
 // Lazy-loaded Components Pages
 const ViewComponents = lazy(() => import("./pages/components/ViewComponents"));
@@ -84,129 +78,127 @@ const UpdateDrawingNumber = lazy(
   () => import("./pages/adminmaster/UpdateDrawingNumber")
 );
 const Archive = lazy(() => import("./pages/adminmaster/Archive"));
-
-// Lazy-loaded Material Requisition Pages
-const MaterialRequisition = lazy(() => import("./pages/materialrequisition/MaterialRequisition"));
-// const InsertLNItemCode = lazy(() => import('./pages/adminmaster/InsertLNItemCode'));
-// const LNItemCodeAssembly = lazy(() => import('./pages/adminmaster/LNItemCodeAssembly'));
-// const UserRole = lazy(() => import('./pages/adminmaster/UserRole'));
-const UserManagement = lazy(() => import("./pages/adminmaster/UserManagement"));
-const RoleManagement = lazy(() => import("./pages/adminmaster/RoleManagement"));
-const AddComponents = lazy(() => import("./pages/adminmaster/AddComponents"));
-const ScriptExecutor = lazy(() => import("./pages/scriptexecutor/ScriptExecutor"));
+const MaterialRequisition = lazy(
+  () => import("./pages/materialrequisition/MaterialRequisition")
+);
+const AddComponents = lazy(
+  () => import("./pages/adminmaster/AddComponents")
+);
+const UserManagement = lazy(
+  () => import("./pages/adminmaster/UserManagement")
+);
+const RoleManagement = lazy(
+  () => import("./pages/adminmaster/RoleManagement")
+);
+const ScriptExecutor = lazy(
+  () => import("./pages/scriptexecutor/ScriptExecutor")
+);
 
 export default function AppRoutes() {
   return (
-    <Routes>
-      {/* Public Routes - wrapped in Suspense */}
-      <Route path="/login" element={<Suspense fallback={<LoadingFallback />}><Login /></Suspense>} />
-      <Route path="/register" element={<Suspense fallback={<LoadingFallback />}><Register /></Suspense>} />
-      <Route path="/forgot-password" element={<Suspense fallback={<LoadingFallback />}><ForgetPassword /></Suspense>} />
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forget-password" element={<ForgetPassword />} />
 
-      {/* Protected Routes - Suspense is inside Layout around Outlet */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+        {/* Protected Dashboard/App Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* Precheck Module */}
-          <Route path="precheck">
-            <Route index element={<Precheck />} />
-            <Route path="view" element={<ViewPrecheck />} />
-            <Route path="make" element={<MakePrecheck />} />
-            <Route path="store-in" element={<StoreIn />} />
-            <Route path="stored-components" element={<StoredInComponents />} />
-            <Route path="available-in-store" element={<AvailableInStore />} />
-            <Route path="make-order" element={<MakeOrder />} />
-            <Route path="consumed" element={<ViewConsumedIn />} />
-            <Route path="pending">
-              <Route path="qc" element={<PendingForPrecheck />} />
+            {/* Precheck Module */}
+            <Route path="precheck">
+              <Route index element={<Precheck />} />
+              <Route path="make-order" element={<MakeOrder />} />
+              <Route path="available-store" element={<AvailableInStore />} />
+              <Route path="available-in-store" element={<AvailableInStore />} />
+              <Route path="view" element={<ViewPrecheck />} />
+              <Route path="consumed" element={<ViewConsumedIn />} />
+              <Route path="view-consumed" element={<ViewConsumedIn />} />
+              <Route path="make" element={<MakePrecheck />} />
+              <Route path="store-in" element={<StoreIn />} />
+              <Route path="stored-components" element={<StoredInComponents />} />
+            </Route>
+
+            {/* Archive Module */}
+            <Route path="archive" element={<Archive />} />
+
+            {/* IR/MSN Module */}
+            <Route path="irmsn">
+              <Route index element={<ViewIRMSN />} />
+              <Route path="generate" element={<GenerateIRMSN />} />
+              <Route path="view" element={<ViewIRMSN />} />
+              <Route path="edit/:type/:id" element={<EditIRMSN />} />
+            </Route>
+
+            {/* QR Code Module */}
+            <Route path="qrcode">
+              <Route index element={<ViewBarcode />} />
+              <Route path="generate" element={<BarcodeGeneration />} />
+              <Route path="generate-new" element={<BarcodeGeneration />} />
+              <Route path="view" element={<ViewBarcode />} />
+              <Route path="update/:id" element={<UpdateBarcode />} />
+            </Route>
+
+            {/* SOP Module */}
+            <Route path="sop">
+              <Route index element={<ViewSOP />} />
+              <Route path="view" element={<ViewSOP />} />
+              <Route path="viewBOM" element={<ViewSOP />} />
+            </Route>
+
+            {/* Settings Module */}
+            <Route path="settings">
+              <Route index element={<Settings />} />
+            </Route>
+
+            {/* Components Module */}
+            <Route path="components">
+              <Route index element={<ViewComponents />} />
+              <Route path="view" element={<ViewComponents />} />
+              <Route path="assembly" element={<ViewAssembly />} />
+              <Route path="view-assembly" element={<ViewAssembly />} />
+            </Route>
+
+            {/* AdminMaster Module */}
+            <Route path="production-order">
+              <Route index element={<ViewOrder />} />
+              <Route path="upload" element={<ProductionOrderUpload />} />
+              <Route path="view" element={<ViewOrder />} />
+              <Route path="edit" element={<EditProductionOrder />} />
               <Route path="store" element={<PendingForPrecheck />} />
             </Route>
-          </Route>
 
-          {/* Archive Module */}
-          <Route path="archive" element={<Archive />} />
+            <Route path="adminmaster">
+              <Route path="update-components" element={<UpdateComponents />} />
+              <Route path="updatecomponents" element={<UpdateComponents />} />
+              <Route path="updatecomponents/:id" element={<UpdateComponents />} />
+              <Route path="update-drawing" element={<UpdateDrawingNumber />} />
+              <Route path="add-components" element={<AddComponents />} />
+              <Route path="addcomponents" element={<AddComponents />} />
+              <Route path="user-management" element={<UserManagement />} />
+              <Route path="usermanagement" element={<UserManagement />} />
+              <Route path="role-management" element={<RoleManagement />} />
+              <Route path="rolemanagement" element={<RoleManagement />} />
+              <Route path="archive" element={<Archive />} />
+            </Route>
 
-          {/* IR/MSN Module */}
-          <Route path="irmsn">
-            <Route index element={<ViewIRMSN />} />
-            <Route path="generate" element={<GenerateIRMSN />} />
-            {/* <Route path="search-update" element={<SearchUpdateIRMSN />} /> */}
-            <Route path="view" element={<ViewIRMSN />} />
-            <Route path="edit/:type/:id" element={<EditIRMSN />} />
-          </Route>
+            {/* Material Requisition Module */}
+            <Route path="material-requisition" element={<MaterialRequisition />} />
+            <Route path="materialrequisition" element={<MaterialRequisition />} />
 
-          {/* QR Code Module */}
-          <Route path="qrcode">
-            <Route index element={<ViewBarcode />} />
-            <Route path="generate" element={<BarcodeGeneration />} />
-            <Route path="generate-new" element={<NewBarcodeGeneration />} />
-            <Route path="view" element={<ViewBarcode />} />
-            <Route path="update/:id" element={<UpdateBarcode />} />
-          </Route>
-
-          {/* SOP Module */}
-          <Route path="sop">
-            <Route index element={<ViewSOP />} />
-            <Route path="view" element={<ViewSOP />} />
-            <Route path="viewBOM" element={<ViewBOM />} />
-            {/* <Route path="generate" element={<SOPGeneration />} />
-            <Route path="assembly" element={<SOPAssemblyGeneration />} /> */}
-          </Route>
-
-          {/* Settings Module */}
-          <Route path="settings">
-            <Route index element={<Settings />} />
-          </Route>
-
-          {/* Components Module */}
-          <Route path="components">
-            <Route index element={<ViewComponents />} />
-            <Route path="assembly" element={<ViewAssembly />} />
-          </Route>
-
-          {/* Material Requisition Module */}
-          <Route path="materialrequisition">
-            <Route index element={<MaterialRequisition />} />
-          </Route>
-
-          {/* Production Order Module */}
-          <Route path="production-order">
-            <Route index element={<ProductionOrderUpload />} />
-            <Route path="view" element={<ViewOrder />} />
-            <Route path="edit/:id" element={<EditProductionOrder />} />
-            <Route path="pending-for-precheck" element={<PendingForPrecheck />} />
-          </Route>
-
-          {/* Script Executor Module */}
-          <Route path="scriptexecutor" element={<ScriptExecutor />} />
-
-          {/* Admin Master Module */}
-          <Route path="/adminmaster">
-            <Route index element={<Navigate to="/adminmaster/rolemanagement" replace />} />
-            <Route path="productionorder" element={<ProductionOrderUpload />} />
-            <Route path="archive" element={<Archive />} />
-            {/* <Route path="insertlnitemcode" element={<InsertLnitemcode />} />
-            <Route path="lnitemcodeassembly" element={<LnItemCodeAssembly />} /> */}
-            <Route path="updatecomponents/:id" element={<UpdateComponents />} />
-            <Route path="updatecomponents" element={<UpdateComponents />} />
-            <Route path="update-drawingnumber/:id" element={<UpdateDrawingNumber />} />
-            <Route path="update-drawingnumber" element={<UpdateDrawingNumber />} />
-            <Route path="usermanagement" element={<UserManagement />} />
-            <Route path="rolemanagement" element={<RoleManagement />} />
-            <Route path="addcomponents" element={<AddComponents />} />
+            {/* Script Executor Module */}
+            <Route path="script-executor" element={<ScriptExecutor />} />
+            <Route path="scriptexecutor" element={<ScriptExecutor />} />
           </Route>
         </Route>
 
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Catch-all Route */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+    </Suspense>
   );
 }

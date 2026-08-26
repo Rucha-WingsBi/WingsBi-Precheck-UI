@@ -220,10 +220,18 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
                       setPageAccessOpen(true);
                     }}
                     sx={{
-                      minHeight: "28px !important",
-                      py: "0.2px !important",
-                      px: "1.5px !important",
+                      color: "#6B288A",
+                      borderColor: "#c084fc",
+                      fontWeight: 600,
+                      borderRadius: 4,
                       fontSize: "0.75rem !important",
+                      px: 2,
+                      py: 0.3,
+                      textTransform: "none",
+                      "&:hover": {
+                        borderColor: "#6B288A",
+                        backgroundColor: "rgba(107, 40, 138, 0.04)",
+                      },
                     }}
                   >
                     Edit
@@ -336,7 +344,15 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
 
   return (
     <>
-      <Card elevation={2}>
+      <Card
+        elevation={0}
+        sx={{
+          border: "1px solid #e2e8f0",
+          borderRadius: 3,
+          overflow: "hidden",
+          background: "white",
+        }}
+      >
         <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
           <Box sx={{ width: "100%" }}>
             <DataGrid
@@ -353,11 +369,26 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
               sx={{
                 border: "none",
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "rgba(168, 0, 90, 0.04)",
-                  borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                  backgroundColor: "#f8fafc",
+                  borderBottom: "2px solid #e2e8f0",
+                  color: "#1e293b",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                },
+                "& .MuiDataGrid-columnHeaderTitle": {
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  color: "#1e293b",
                 },
                 "& .MuiDataGrid-cell": {
-                  borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                  fontSize: "0.75rem",
+                  color: "#1e293b",
+                  borderBottom: "1px solid #e2e8f0",
+                },
+                "& .MuiDataGrid-row": {
+                  "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
+                  "&:hover": { backgroundColor: "#f1f5f9" },
+                  transition: "background-color 0.2s ease",
                 },
                 "& .MuiDataGrid-cell:focus": { outline: "none" },
                 "& .MuiDataGrid-cell:focus-within": { outline: "none" },
@@ -667,7 +698,15 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(
           </Alert>
         )}
 
-        <Card elevation={2}>
+        <Card
+          elevation={0}
+          sx={{
+            border: "1px solid #e2e8f0",
+            borderRadius: 3,
+            overflow: "hidden",
+            background: "white",
+          }}
+        >
           <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
             <Box sx={{ width: "100%" }}>
               <DataGrid
@@ -684,11 +723,26 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(
                 sx={{
                   border: "none",
                   "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "rgba(168, 0, 90, 0.04)",
-                    borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                    backgroundColor: "#f8fafc",
+                    borderBottom: "2px solid #e2e8f0",
+                    color: "#1e293b",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitle": {
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    color: "#1e293b",
                   },
                   "& .MuiDataGrid-cell": {
-                    borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                    fontSize: "0.75rem",
+                    color: "#1e293b",
+                    borderBottom: "1px solid #e2e8f0",
+                  },
+                  "& .MuiDataGrid-row": {
+                    "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
+                    "&:hover": { backgroundColor: "#f1f5f9" },
+                    transition: "background-color 0.2s ease",
                   },
                   "& .MuiDataGrid-cell:focus": { outline: "none" },
                   "& .MuiDataGrid-cell:focus-within": { outline: "none" },
@@ -786,16 +840,26 @@ export default function RoleManagement() {
         </Typography>
       </Stack>
 
-      <Card elevation={2} sx={{ mb: 0 }}>
+      <Card
+        elevation={0}
+        sx={{
+          mb: 0,
+          border: "1px solid #e2e8f0",
+          borderRadius: 3,
+          overflow: "hidden",
+          background: "white",
+        }}
+      >
         <Box
           sx={{
-            borderBottom: 1,
-            borderColor: "divider",
-            px: 2,
-            pt: 1,
-            backgroundColor: "rgba(168, 0, 90, 0.02)",
+            borderBottom: "1px solid #e2e8f0",
+            px: 3,
+            pt: 1.5,
+            pb: 0.5,
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "white",
           }}
         >
           <Tabs
@@ -811,10 +875,11 @@ export default function RoleManagement() {
                 fontSize: "0.875rem",
                 textTransform: "none",
                 minWidth: 100,
+                color: "#64748b",
               },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTab-root.Mui-selected": { color: "#6B288A" },
               "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
+                backgroundColor: "#6B288A",
                 height: 3,
                 borderRadius: "3px 3px 0 0",
               },
@@ -824,7 +889,7 @@ export default function RoleManagement() {
             <Tab label="Department" />
           </Tabs>
 
-          <Box sx={{ ml: 2, mb: 1 }}>
+          <Box sx={{ ml: 2, mb: 0.5 }}>
             <Button
               variant="contained"
               size="small"
@@ -832,8 +897,12 @@ export default function RoleManagement() {
               onClick={handleOpenAdd}
               sx={{
                 fontWeight: 600,
+                backgroundColor: "#6B288A",
+                "&:hover": { backgroundColor: "#4A1964" },
                 textTransform: "none",
-                "&:focus": { outline: "none" },
+                borderRadius: 1,
+                px: 2.5,
+                py: 0.8,
                 whiteSpace: "nowrap",
               }}
             >
@@ -842,7 +911,7 @@ export default function RoleManagement() {
           </Box>
         </Box>
 
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "#f8fafc" }}>
           <TabPanel value={activeTab} index={0}>
             <RoleTab ref={roleRef} showSnackbar={showSnackbar} />
           </TabPanel>
