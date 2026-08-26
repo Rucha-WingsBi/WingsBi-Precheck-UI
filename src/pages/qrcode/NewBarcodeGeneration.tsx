@@ -839,9 +839,8 @@ const NewBarcodeGeneration: React.FC = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
-          p: { xs: 1, sm: 1.5, md: 2 },
-          maxWidth: 1400,
-          width: "100%",
+          p: { xs: 1, sm: 2, md: 3 },
+          maxWidth: "100%",
           mx: "auto",
         }}
       >

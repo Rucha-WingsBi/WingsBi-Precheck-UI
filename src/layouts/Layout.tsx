@@ -78,6 +78,7 @@ import {
 } from "../store/slices/sopSlice";
 import { usePageAccess } from "../hooks/useMasterData";
 import type { PageAccessItem } from "../types";
+import BreadcrumbsNav from "../components/BreadcrumbsNav";
 const drawerWidth = 255;
 const drawerCollapsedWidth = 60;
 
@@ -877,6 +878,7 @@ export default function Layout() {
 
       <Main>
         <Toolbar />
+        <BreadcrumbsNav />
         <Box
           sx={{
             p: 0,
