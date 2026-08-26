@@ -97,8 +97,8 @@ const Main = styled("main")(({ theme }) => ({
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: theme.zIndex.drawer + 2,
-  background: "linear-gradient(135deg, #A8005A 0%, #d63384 100%)",
-  boxShadow: "0 2px 8px rgba(168, 0, 90, 0.2)",
+  background: "linear-gradient(90deg, #9C1B68 0%, #80145A 100%)",
+  boxShadow: "0 2px 8px rgba(128, 20, 90, 0.25)",
   [theme.breakpoints.up("lg")]: {
     paddingLeft: 0,
   },
@@ -122,13 +122,13 @@ const StyledDrawer = styled(Drawer, {
       duration: theme.transitions.duration.enteringScreen,
     }),
     overflowX: "hidden",
-    background: "linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)",
-    borderRight: "1px solid rgba(0, 0, 0, 0.12)",
-    boxShadow: "2px 0 8px rgba(0,0,0,0.05)",
+    background: "#ffffff",
+    borderRight: "1px solid rgba(0, 0, 0, 0.08)",
+    boxShadow: "2px 0 8px rgba(0, 0, 0, 0.03)",
     position: "fixed",
     top: 0,
     height: "100vh",
-    zIndex: 1200,
+    zIndex: 1100,
   },
 }));
 
@@ -139,7 +139,7 @@ const LogoBox = styled(Box, {
   alignItems: "center",
   padding: theme.spacing(0, 1),
   minHeight: 64,
-  background: "linear-gradient(135deg, #A8005A 0%, #d63384 100%)",
+  background: "linear-gradient(90deg, #9C1B68 0%, #80145A 100%)",
   color: "white",
   cursor: "pointer",
   justifyContent: open ? "space-between" : "center",
@@ -148,7 +148,7 @@ const LogoBox = styled(Box, {
     duration: theme.transitions.duration.enteringScreen,
   }),
   "&:hover": {
-    background: "linear-gradient(135deg, #920050 0%, #c02a5b 100%)",
+    background: "linear-gradient(90deg, #8A155B 0%, #700F4E 100%)",
   },
 }));
 
@@ -530,39 +530,7 @@ export default function Layout() {
 
   const drawerContent = (isDesktopVersion: boolean = false) => (
     <>
-      <LogoBox
-        open={isDesktopVersion ? isSidebarOpen : true}
-        onClick={isDesktopVersion ? handleLogoClick : handleDrawerToggle}
-      >
-        {(!isDesktopVersion || isSidebarOpen) && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              overflow: "hidden",
-            }}
-          ></Box>
-        )}
-
-        <IconButton
-          sx={{
-            color: "white",
-            padding: 0.5,
-          }}
-        >
-          {isDesktopVersion ? (
-            isSidebarOpen ? (
-              <ChevronLeftIcon />
-            ) : (
-              <ChevronRightIcon />
-            )
-          ) : (
-            <ChevronLeftIcon />
-          )}
-        </IconButton>
-      </LogoBox>
-
+      <Toolbar />
       <List sx={{ flex: 1, py: 1 }}>
         {getFilteredMenuItems().map((item) => (
           <Box key={item.text}>
@@ -583,11 +551,13 @@ export default function Layout() {
                     borderRadius: 2,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      backgroundColor: "rgba(168, 0, 90, 0.08)",
+                      backgroundColor: location.pathname.startsWith(item.path)
+                        ? "#EAE0F0"
+                        : "rgba(128, 20, 90, 0.05)",
                       transform: "translateX(4px)",
                     },
                     backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(168, 0, 90, 0.12)"
+                      ? "#EAE0F0"
                       : "transparent",
                   }}
                 >
@@ -597,8 +567,8 @@ export default function Layout() {
                       mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
                       justifyContent: "center",
                       color: location.pathname.startsWith(item.path)
-                        ? "#A8005A"
-                        : "text.secondary",
+                        ? "#80145A"
+                        : "#555555",
                     }}
                   >
                     {item.icon}
@@ -614,8 +584,8 @@ export default function Layout() {
                           ? 600
                           : 500,
                         color: location.pathname.startsWith(item.path)
-                          ? "#A8005A"
-                          : "text.primary",
+                          ? "#80145A"
+                          : "#333333",
                       },
                     }}
                   />
@@ -720,34 +690,47 @@ export default function Layout() {
             <MenuIcon />
           </IconButton>
 
-          {/* Godrej Aerospace Title */}
+          {/* Wingsbi Title */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
             }}
           >
-            <img
-              src="/assets/logo.jpg"
-              alt="Logo"
-              style={{ height: 32, marginRight: 8, borderRadius: 10 }}
-            />
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <Typography
-                variant="h6"
-                noWrap
-                component="div"
-                sx={{
-                  fontWeight: 600,
-                  letterSpacing: 0.5,
-                  color: "white",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                Godrej Aerospace
-              </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "#ffffff",
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                mr: 1.5,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
+                overflow: "hidden",
+                p: 0.5,
+              }}
+            >
+              <img
+                src="/assets/logo.svg"
+                alt="Wingsbi Logo"
+                style={{ height: 24, width: "auto" }}
+              />
             </Box>
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: 0.5,
+                color: "#ffffff",
+                fontSize: "1.25rem",
+              }}
+            >
+              Wingsbi
+            </Typography>
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <Typography

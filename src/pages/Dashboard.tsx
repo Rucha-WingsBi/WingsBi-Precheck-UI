@@ -195,29 +195,31 @@ const Dashboard: React.FC = () => {
       <Typography
         variant="h4"
         sx={{
-          fontWeight: 600,
+          fontWeight: 700,
           color: "primary.main",
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-          mb: 1,
+          fontSize: { xs: "1.35rem", sm: "1.6rem" },
+          mb: 2.5,
         }}
       >
         Dashboard
       </Typography>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2.5}>
         {filteredCards.map((card, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
             <Card
               sx={{
                 height: "100%",
                 cursor: "pointer",
-                transition: "all 0.3s ease-in-out",
+                transition: "all 0.25s ease-in-out",
+                borderRadius: 3,
+                bgcolor: "background.paper",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                border: "1px solid #EBEBEB",
                 "&:hover": {
                   transform: "translateY(-4px)",
-                  boxShadow: 6,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                 },
-                border: "1px solid",
-                borderColor: "divider",
               }}
               onClick={() => handleCardClick(card.route)}
             >
@@ -226,17 +228,19 @@ const Dashboard: React.FC = () => {
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
-                  p: 3,
+                  p: 2.5,
                 }}
               >
                 <Avatar
                   sx={{
                     bgcolor: card.color,
-                    width: 56,
-                    height: 56,
+                    width: 52,
+                    height: 52,
                     mb: 2,
+                    boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
                     "& .MuiSvgIcon-root": {
-                      fontSize: "2rem",
+                      fontSize: "1.75rem",
+                      color: "#ffffff",
                     },
                   }}
                 >
@@ -246,14 +250,13 @@ const Dashboard: React.FC = () => {
                   variant="h6"
                   component="h2"
                   gutterBottom
-                  sx={{ fontWeight: 600 }}
+                  sx={{ fontWeight: 600, fontSize: "1.05rem", color: "#2B2B2B" }}
                 >
                   {card.title}
                 </Typography>
                 <Typography
                   variant="body2"
-                  color="text.secondary"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: 1, fontSize: "0.825rem", color: "#666666", lineHeight: 1.4 }}
                 >
                   {card.description}
                 </Typography>

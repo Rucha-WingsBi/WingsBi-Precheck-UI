@@ -98,7 +98,7 @@ const Login: React.FC = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        background: "linear-gradient(135deg, #a8005a 0%, #c2185b 100%)",
+        background: "linear-gradient(135deg, #80145A 0%, #9C1B68 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -109,38 +109,48 @@ const Login: React.FC = () => {
           maxWidth: 420,  
           width: "100%",
           mx: 2,
-          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.1)",
-          borderRadius: 2,
+          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.15)",
+          borderRadius: 3,
           overflow: "hidden",
         }}
       >
         {/* Header */}
         <Box
           sx={{
-            bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #800B4C 0%, #B5106D 100%)",
+            background: "linear-gradient(90deg, #9C1B68 0%, #80145A 100%)",
             p: 3,
-            pb: 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
           }}
         >
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "center",
+              bgcolor: "white",
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+              p: 0.6,
+              overflow: "hidden",
             }}
           >
             <Box
               component="img"
-              src="/assets/logo.jpg"
-              alt="Logo"
+              src="/assets/logo.svg"
+              alt="Wingsbi Logo"
               sx={{
-                height: 50,
+                height: 28,
                 width: "auto",
-                borderRadius: 2,
               }}
             />
           </Box>
+          <Typography variant="h5" color="white" fontWeight="700" letterSpacing={0.5}>
+            Wingsbi
+          </Typography>
         </Box>
 
         {/* Form */}

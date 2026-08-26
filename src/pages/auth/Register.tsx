@@ -162,7 +162,7 @@ const Register = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        background: "linear-gradient(135deg, #a8005a 0%, #c2185b 100%)",
+        background: "linear-gradient(135deg, #80145A 0%, #9C1B68 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -174,18 +174,16 @@ const Register = () => {
           maxWidth: 650,
           width: "100%",
           mx: 2,
-          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.1)",
-          borderRadius: 2,
+          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.15)",
+          borderRadius: 3,
           overflow: "hidden",
         }}
       >
         {/* Header */}
         <Box
           sx={{
-            bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #800B4C 0%, #B5106D 100%)",
-            p: 2,
-            pb: 2.5,
+            background: "linear-gradient(90deg, #9C1B68 0%, #80145A 100%)",
+            p: 2.5,
             display: "flex",
             flexDirection: "row",
             justifyContent: "space-between",
@@ -197,16 +195,29 @@ const Register = () => {
           </Typography>
 
           <Box
-            component="img"
-            src="/assets/logo.jpg"
-            alt="Godrej Logo"
             sx={{
-              height: 40,
-              width: "auto",
-              mb: 0, // removed margin-bottom since it's now inline
-              borderRadius: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "white",
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
+              p: 0.5,
+              overflow: "hidden",
             }}
-          />
+          >
+            <Box
+              component="img"
+              src="/assets/logo.svg"
+              alt="Wingsbi Logo"
+              sx={{
+                height: 24,
+                width: "auto",
+              }}
+            />
+          </Box>
         </Box>
 
         {/* Form */}

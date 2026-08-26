@@ -145,7 +145,7 @@ const ForgetPassword: React.FC = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        background: "linear-gradient(135deg, #a8005a 0%, #c2185b 100%)",
+        background: "linear-gradient(135deg, #80145A 0%, #9C1B68 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -156,22 +156,20 @@ const ForgetPassword: React.FC = () => {
           maxWidth: 520,
           width: "100%",
           mx: 2,
-          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.1)",
-          borderRadius: 2,
+          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.15)",
+          borderRadius: 3,
           overflow: "hidden",
         }}
       >
         {/* Header */}
         <Box
           sx={{
-            bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #800B4C 0%, #B5106D 100%)",
+            background: "linear-gradient(90deg, #9C1B68 0%, #80145A 100%)",
             p: 3,
-            pb: 4,
             display: "flex",
             flexDirection: "row",
             justifyContent: "space-between",
-            alignItems: "center", // vertically center-align items
+            alignItems: "center",
           }}
         >
           <Typography variant="h5" color="white" fontWeight="600">
@@ -179,15 +177,29 @@ const ForgetPassword: React.FC = () => {
           </Typography>
 
           <Box
-            component="img"
-            src="/assets/logo.jpg"
-            alt="Logo"
             sx={{
-              height: 50,
-              width: "auto",
-              borderRadius: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "white",
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
+              p: 0.5,
+              overflow: "hidden",
             }}
-          />
+          >
+            <Box
+              component="img"
+              src="/assets/logo.svg"
+              alt="Wingsbi Logo"
+              sx={{
+                height: 26,
+                width: "auto",
+              }}
+            />
+          </Box>
         </Box>
 
         {/* Form */}
