@@ -98,7 +98,7 @@ const Login: React.FC = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        background: "linear-gradient(135deg, #a8005a 0%, #c2185b 100%)",
+        backgroundColor: "#D82578",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -118,7 +118,7 @@ const Login: React.FC = () => {
         <Box
           sx={{
             bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #800B4C 0%, #B5106D 100%)",
+            background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
             p: 3,
             pb: 4,
           }}
@@ -254,8 +254,8 @@ const Login: React.FC = () => {
                 mt: 2,
                 py: 1.5,
                 fontWeight: 600,
-                backgroundColor: "#a8005a",
-                "&:hover": { backgroundColor: "#8e004b" },
+                backgroundColor: "#6B288A",
+                "&:hover": { backgroundColor: "#4A1964" },
               }}
             >
               {isLoading ? "Logging in..." : "Login"}

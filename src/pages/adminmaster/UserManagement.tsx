@@ -400,11 +400,11 @@ export default function UserManagement() {
                 disabled={!isAdmin || approveUserMutation.isPending}
                 sx={{
                   fontWeight: 600,
-                  backgroundColor: "#a8005a",
+                  backgroundColor: "#6B288A",
                   "&.Mui-disabled": {
                     backgroundColor: "rgba(0, 0, 0, 0.12)",
                   },
-                  "&:hover": { backgroundColor: "#8e004b" },
+                  "&:hover": { backgroundColor: "#4A1964" },
                   textTransform: "none",
                   borderRadius: 1,
                   px: 2,
@@ -577,8 +577,8 @@ export default function UserManagement() {
             onClick={handleAddUserOpen}
             sx={{
               fontWeight: 600,
-              backgroundColor: "#a8005a",
-              "&:hover": { backgroundColor: "#8e004b" },
+              backgroundColor: "#6B288A",
+              "&:hover": { backgroundColor: "#4A1964" },
               textTransform: "none",
               borderRadius: 1.5,
               px: 2.5,
@@ -602,10 +602,10 @@ export default function UserManagement() {
                 fontSize: "0.9rem",
               },
               "& .Mui-selected": {
-                color: "#a8005a !important",
+                color: "#6B288A !important",
               },
               "& .MuiTabs-indicator": {
-                backgroundColor: "#a8005a",
+                backgroundColor: "#6B288A",
               },
             }}
           >
@@ -701,10 +701,10 @@ export default function UserManagement() {
                     fontSize: "1rem",
                   },
                   "& .Mui-selected": {
-                    color: "#a8005a !important",
+                    color: "#6B288A !important",
                   },
                   "& .MuiTabs-indicator": {
-                    backgroundColor: "#a8005a",
+                    backgroundColor: "#6B288A",
                   },
                 }}
               >
@@ -1164,8 +1164,8 @@ export default function UserManagement() {
                   : createUserMutation.isPending
             }
             sx={{
-              backgroundColor: "#a8005a",
-              "&:hover": { backgroundColor: "#8e004b" },
+              backgroundColor: "#6B288A",
+              "&:hover": { backgroundColor: "#4A1964" },
             }}
           >
             {dialogMode === "edit"

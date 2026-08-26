@@ -17,15 +17,15 @@ let theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#a8005a',
-      light: '#c2185b',
-      dark: '#800B4C',
+      main: '#6B288A',
+      light: '#8E3AB0',
+      dark: '#4A1964',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#B5106D',
-      light: '#c2185b',
-      dark: '#800B4C',
+      main: '#D82578',
+      light: '#F04C95',
+      dark: '#9D1352',
       contrastText: '#ffffff',
     },
     error: {
@@ -39,9 +39,9 @@ let theme = createTheme({
       dark: '#e65100',
     },
     info: {
-      main: '#a8005a',
-      light: '#c2185b',
-      dark: '#800B4C',
+      main: '#1E4D92',
+      light: '#3B75C4',
+      dark: '#133363',
     },
     success: {
       main: '#2e7d32',
@@ -49,7 +49,7 @@ let theme = createTheme({
       dark: '#1b5e20',
     },
     background: {
-      default: '#fafafa',
+      default: '#EEF1F6',
       paper: '#ffffff',
     },
     text: {
@@ -418,7 +418,7 @@ let theme = createTheme({
         },
       },
     },
-     MuiGrid: {
+    MuiGrid: {
       styleOverrides: {
         container: {
           '@media (min-width:2560px)': {
@@ -437,4 +437,5 @@ theme = responsiveFontSizes(theme, {
   factor: 2,
 });
 
-export { theme }; 
+export { theme };
+export default theme;

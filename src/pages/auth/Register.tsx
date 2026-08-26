@@ -162,7 +162,7 @@ const Register = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        background: "linear-gradient(135deg, #a8005a 0%, #c2185b 100%)",
+        backgroundColor: "#D82578",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -183,7 +183,7 @@ const Register = () => {
         <Box
           sx={{
             bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #800B4C 0%, #B5106D 100%)",
+            background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
             p: 2,
             pb: 2.5,
             display: "flex",
@@ -199,7 +199,7 @@ const Register = () => {
           <Box
             component="img"
             src="/assets/logo.jpg"
-            alt="Godrej Logo"
+            alt="Wingsbi Logo"
             sx={{
               height: 40,
               width: "auto",
@@ -662,8 +662,8 @@ const Register = () => {
                   px: 3,
                   fontWeight: 600,
                   minWidth: "100px",
-                  backgroundColor: "#a8005a",
-                  "&:hover": { backgroundColor: "#8e004b" },
+                  backgroundColor: "#6B288A",
+                  "&:hover": { backgroundColor: "#4A1964" },
                 }}
               >
                 {isLoading ? "Registering..." : "Register"}

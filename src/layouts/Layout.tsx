@@ -97,8 +97,8 @@ const Main = styled("main")(({ theme }) => ({
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: theme.zIndex.drawer + 2,
-  background: "linear-gradient(135deg, #A8005A 0%, #d63384 100%)",
-  boxShadow: "0 2px 8px rgba(168, 0, 90, 0.2)",
+  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+  boxShadow: "0 4px 15px rgba(107, 40, 138, 0.25)",
   [theme.breakpoints.up("lg")]: {
     paddingLeft: 0,
   },
@@ -122,8 +122,8 @@ const StyledDrawer = styled(Drawer, {
       duration: theme.transitions.duration.enteringScreen,
     }),
     overflowX: "hidden",
-    background: "linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)",
-    borderRight: "1px solid rgba(0, 0, 0, 0.12)",
+    background: "#ffffff",
+    borderRight: "1px solid rgba(0, 0, 0, 0.08)",
     boxShadow: "2px 0 8px rgba(0,0,0,0.05)",
     position: "fixed",
     top: 0,
@@ -139,7 +139,7 @@ const LogoBox = styled(Box, {
   alignItems: "center",
   padding: theme.spacing(0, 1),
   minHeight: 64,
-  background: "linear-gradient(135deg, #A8005A 0%, #d63384 100%)",
+  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
   color: "white",
   cursor: "pointer",
   justifyContent: open ? "space-between" : "center",
@@ -148,7 +148,7 @@ const LogoBox = styled(Box, {
     duration: theme.transitions.duration.enteringScreen,
   }),
   "&:hover": {
-    background: "linear-gradient(135deg, #920050 0%, #c02a5b 100%)",
+    background: "linear-gradient(90deg, #4A1964 0%, #9D1352 100%)",
   },
 }));
 
@@ -583,11 +583,11 @@ export default function Layout() {
                     borderRadius: 2,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      backgroundColor: "rgba(168, 0, 90, 0.08)",
+                      backgroundColor: "rgba(107, 40, 138, 0.08)",
                       transform: "translateX(4px)",
                     },
                     backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(168, 0, 90, 0.12)"
+                      ? "rgba(107, 40, 138, 0.12)"
                       : "transparent",
                   }}
                 >
@@ -597,7 +597,7 @@ export default function Layout() {
                       mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
                       justifyContent: "center",
                       color: location.pathname.startsWith(item.path)
-                        ? "#A8005A"
+                        ? "#6B288A"
                         : "text.secondary",
                     }}
                   >
@@ -614,7 +614,7 @@ export default function Layout() {
                           ? 600
                           : 500,
                         color: location.pathname.startsWith(item.path)
-                          ? "#A8005A"
+                          ? "#6B288A"
                           : "text.primary",
                       },
                     }}
@@ -657,12 +657,12 @@ export default function Layout() {
                         borderRadius: 2,
                         transition: "all 0.2s ease",
                         "&:hover": {
-                          backgroundColor: "rgba(168, 0, 90, 0.05)",
+                          backgroundColor: "rgba(107, 40, 138, 0.05)",
                           transform: "translateX(4px)",
                         },
                         backgroundColor:
                           location.pathname === subItem.path
-                            ? "rgba(168, 0, 90, 0.08)"
+                            ? "rgba(107, 40, 138, 0.1)"
                             : "transparent",
                       }}
                     >
@@ -671,7 +671,7 @@ export default function Layout() {
                           minWidth: 32,
                           color:
                             location.pathname === subItem.path
-                              ? "#A8005A"
+                              ? "#6B288A"
                               : "text.secondary",
                         }}
                       >
@@ -686,7 +686,7 @@ export default function Layout() {
                               location.pathname === subItem.path ? 600 : 400,
                             color:
                               location.pathname === subItem.path
-                                ? "#A8005A"
+                                ? "#6B288A"
                                 : "text.secondary",
                           },
                         }}
@@ -729,7 +729,7 @@ export default function Layout() {
           >
             <img
               src="/assets/logo.jpg"
-              alt="Logo"
+              alt="Wingsbi Logo"
               style={{ height: 32, marginRight: 8, borderRadius: 10 }}
             />
             <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -745,7 +745,7 @@ export default function Layout() {
                   alignItems: "center",
                 }}
               >
-                Godrej Aerospace
+                Wingsbi
               </Typography>
             </Box>
           </Box>
