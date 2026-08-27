@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -33,7 +34,15 @@ import api from "../../services/api";
 import { useAllDrawingNumbers, useLnItemCodeSearch, useProductionSeries } from "../../hooks/useMasterData";
 import { type DrawingNumber, type ProductionSeries } from "../../types";
 
-const AvailableInStore: React.FC = () => {
+const StoredInComponents = React.lazy(() => import("./StoredInComponents"));
+
+const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [storeTab, setStoreTab] = useState<"available" | "stored">(
+    location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available"
+  );
+
   // Tab state: 1 = RM Store, 2 = RFG Store
   const [activeTab, setActiveTab] = useState<number>(1);
 
@@ -397,7 +406,7 @@ const AvailableInStore: React.FC = () => {
     <Box
       sx={{
         flexGrow: 1,
-        p: 1,
+        p: hideHeader ? 0 : 1,
         animation: "fadeIn 0.5s ease-out",
         "@keyframes fadeIn": {
           from: { opacity: 0, transform: "translateY(10px)" },
@@ -405,29 +414,61 @@ const AvailableInStore: React.FC = () => {
         },
       }}
     >
-      {/* Title & Header Section */}
-      <Box
-        sx={{
-          mb: 1.5,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      {!hideHeader && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
+          }}
+        >
           <Typography
             variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+          >
+            {storeTab === "available" ? "Available In Store" : "Stored In Components"}
+          </Typography>
+
+          <Tabs
+            value={storeTab}
+            onChange={(_, newValue) => setStoreTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
             sx={{
-              fontWeight: 700,
-              color: "primary.main",
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 140,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
+              },
             }}
           >
-            Available In Store
-          </Typography>
+            <Tab label="Available In Store" value="available" />
+            <Tab label="Stored In Components" value="stored" />
+          </Tabs>
         </Box>
-      </Box>
+      )}
+
+      {storeTab === "stored" ? (
+        <React.Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />}>
+          <StoredInComponents hideHeader />
+        </React.Suspense>
+      ) : (
+        <>
 
       {/* Tabs for RM Store & RFG Store */}
       <Tabs
@@ -869,6 +910,8 @@ const AvailableInStore: React.FC = () => {
           </Grid>
         )}
       </Grid>
+      </>
+      )}
     </Box>
   );
 };

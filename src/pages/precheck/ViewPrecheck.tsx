@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -22,6 +23,8 @@ import {
   IconButton,
   Collapse,
   Chip,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   Visibility as VisibilityIcon,
@@ -53,8 +56,15 @@ import { useDebounce } from "../../hooks/useDebounce";
 import type { RootState, AppDispatch } from "../../store/store";
 import debounce from "lodash.debounce";
 
-const ViewPrecheck: React.FC = () => {
+const ViewConsumedIn = React.lazy(() => import("./ViewConsumedIn"));
+
+const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<"precheck" | "consumed">(
+    location.pathname.includes("consumed") ? "consumed" : "precheck"
+  );
   const { isLoading } = useSelector((state: RootState) => state.precheck);
 
   const [poSearchText, setPOSearchText] = useState("");
@@ -415,27 +425,62 @@ const ViewPrecheck: React.FC = () => {
   const isResetEnabled = isSearchCriteriaFilled || searchResults.length > 0;
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
-      <Box
-        sx={{
-          mb: 1,
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <Typography
-          variant="h4"
+    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+      {!hideHeader && (
+        <Box
           sx={{
-            color: "primary.main",
-            fontWeight: 600,
-            fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
           }}
         >
-          View Precheck
-        </Typography>
-      </Box>
+          <Typography
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+          >
+            {activeTab === "precheck" ? "View Precheck Details" : "View Consumed In Details"}
+          </Typography>
+
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 120,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
+              },
+            }}
+          >
+            <Tab label="View Precheck" value="precheck" />
+            <Tab label="View Consumed In" value="consumed" />
+          </Tabs>
+        </Box>
+      )}
+
+      {activeTab === "consumed" ? (
+        <React.Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />}>
+          <ViewConsumedIn hideHeader />
+        </React.Suspense>
+      ) : (
+        <>
 
       {/* Precheck Form Controls */}
       <Card elevation={2} sx={{ mb: 2 }}>
@@ -1316,6 +1361,8 @@ const ViewPrecheck: React.FC = () => {
           />
         )}
       </Paper>
+      </>
+      )}
     </Box>
   );
 };

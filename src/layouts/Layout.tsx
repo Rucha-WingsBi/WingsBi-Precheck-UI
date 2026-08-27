@@ -280,11 +280,11 @@ export default function Layout() {
           icon: <VisibilityIcon />,
           path: "/precheck/view",
         },
-        {
-          text: "View Consumed In",
-          icon: <SearchIcon />,
-          path: "/precheck/consumed",
-        },
+        // {
+        //   text: "View Consumed In",
+        //   icon: <SearchIcon />,
+        //   path: "/precheck/consumed",
+        // },
         // {
         //   text: "Make Order",
         //   icon: <ShoppingCartIcon />,
@@ -309,12 +309,12 @@ export default function Layout() {
           path: "/precheck/available-in-store",
 
         },
-        {
-          text: "Stored In Components",
-          icon: <VisibilityIcon />,
-          path: "/precheck/stored-components",
+        // {
+        //   text: "Stored In Components",
+        //   icon: <VisibilityIcon />,
+        //   path: "/precheck/stored-components",
 
-        },
+        // },
       ],
     },
     {

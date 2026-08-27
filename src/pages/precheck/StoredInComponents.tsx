@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -19,6 +20,8 @@ import {
   IconButton,
   Collapse,
   Autocomplete,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -176,8 +179,15 @@ const Row = ({ component }: { component: StoredComponent }) => {
   );
 };
 
-const StoredInComponents: React.FC = () => {
+const AvailableInStore = React.lazy(() => import("./AvailableInStore"));
+
+const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [storeTab, setStoreTab] = useState<"available" | "stored">(
+    location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available"
+  );
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDrawingNo, setSelectedDrawingNo] = useState('');
@@ -377,13 +387,65 @@ const StoredInComponents: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
-        <Typography variant="h4" color="primary.main" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.5rem' }, mb: 0.5 }}>
-          Stored In Components
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          View and export components stored on specific dates
-        </Typography>
+      <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+        {!hideHeader && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              mb: 1.5,
+              flexWrap: "wrap",
+              gap: { xs: 2, sm: 4, md: 6 },
+              borderBottom: 1,
+              borderColor: "divider",
+              pb: 0.5,
+            }}
+          >
+            <Typography
+              variant="h4"
+              color="primary.main"
+              fontWeight={600}
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+            >
+              {storeTab === "available" ? "Available In Store" : "Stored In Components"}
+            </Typography>
+
+            <Tabs
+              value={storeTab}
+              onChange={(_, newValue) => setStoreTab(newValue)}
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{
+                "& .MuiTab-root": {
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  textTransform: "none",
+                  minWidth: 140,
+                },
+                "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "primary.main",
+                  height: 3,
+                  borderRadius: "3px 3px 0 0",
+                },
+              }}
+            >
+              <Tab label="Available In Store" value="available" />
+              <Tab label="Stored In Components" value="stored" />
+            </Tabs>
+          </Box>
+        )}
+
+        {storeTab === "available" ? (
+          <React.Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />}>
+            <AvailableInStore hideHeader />
+          </React.Suspense>
+        ) : (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
+              View and export components stored on specific dates
+            </Typography>
 
         <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 3 }}>
           {/* Date Selection and Search Controls */}
@@ -635,6 +697,8 @@ const StoredInComponents: React.FC = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+        </>
+        )}
       </Box>
     </LocalizationProvider>
   );

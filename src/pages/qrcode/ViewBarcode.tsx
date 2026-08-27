@@ -1136,7 +1136,7 @@ const ViewBarcode: React.FC = () => {
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'flex-start',
+            justifyContent: 'space-between',
             alignItems: 'flex-end',
             mb: 1.5,
             flexWrap: 'wrap',

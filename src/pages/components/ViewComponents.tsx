@@ -412,7 +412,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         <Box
           sx={{
             display: "flex",
-            justify: "space-between",
+            justifyContent: "space-between",
             alignItems: "flex-end",
             mb: 1.5,
             flexWrap: "wrap",
