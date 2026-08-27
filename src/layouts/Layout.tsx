@@ -203,8 +203,7 @@ export default function Layout() {
         {
           text: "Upload Orders",
           icon: <AddIcon />,
-          path: "/production-order",
-
+          path: "/production-order/upload",
         },
         // {
         //   text: "Pending For Precheck",
@@ -348,11 +347,11 @@ export default function Layout() {
         // },
       ],
     },
-    {
-      text: "Material Requisition",
-      icon: <ReceiptLongIcon />,
-      path: "/materialrequisition",
-    },
+    // {
+    //   text: "Material Requisition",
+    //   icon: <ReceiptLongIcon />,
+    //   path: "/materialrequisition",
+    // },
     {
       text: "Script Executor",
       icon: <TerminalIcon />,

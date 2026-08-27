@@ -882,128 +882,128 @@ const ProductionOrderUpload: React.FC = () => {
       },
     },
     {
-         field: "actions",
-         headerName: "Actions",
-         flex: 1,
-         minWidth: 200,
-         sortable: false,
-         headerAlign: "center",
-         align: "center",
-         renderCell: (params) => {
-           const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
-           const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
-           const isConfirming = deleteConfirmId === params.row.id;
-           const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
-   
-           return (
-             <Box
-               sx={{
-                 display: "flex",
-                 gap: 0.5,
-                 "& .MuiIconButton-root": {
-                   outline: "none",
-                 },
-               }}
-             >
-               {isConfirming ? (
-                 <>
-                   <Tooltip title="Confirm Delete">
-                     <IconButton
-                       size="small"
-                       color="success"
-                       onClick={() => deleteMutation.mutate(params.row)}
-                     >
-                       <CheckIcon fontSize="small" />
-                     </IconButton>
-                   </Tooltip>
-                   <Tooltip title="Cancel">
-                     <IconButton
-                       size="small"
-                       color="error"
-                       onClick={() => setDeleteConfirmId(null)}
-                     >
-                       <CloseIcon fontSize="small" />
-                     </IconButton>
-                   </Tooltip>
-                 </>
-               ) : (
-                 <>
-                   <Tooltip
-                     title={
-                       hasViewAccess
-                         ? "View BOM Details"
-                         : "You do not have permission to view precheck details"
-                     }
-                     PopperProps={{ disablePortal: true }}
-                     disableFocusListener
-                   >
-                     <span>
-                       <IconButton
-                         size="small"
-                         color="primary"
-                         onClick={() =>
-                           navigate("/production-order/view", { state: params.row })
-                         }
-                         disabled={!hasViewAccess}
-                       >
-                         <VisibilityIcon fontSize="small" />
-                       </IconButton>
-                     </span>
-                   </Tooltip>
-                   <Tooltip
-                     title={
-                       hasMakeAccess
-                         ? "Make Precheck"
-                         : "You do not have permission to perform precheck"
-                     }
-                     PopperProps={{ disablePortal: true }}
-                     disableFocusListener
-                   >
-                     <span>
-                       <IconButton
-                         size="small"
-                         color="success"
-                         onClick={() =>
-                           navigate("/precheck/make", { state: params.row })
-                         }
-                         disabled={!hasMakeAccess}
-                       >
-                         <PlaylistAddCheckIcon fontSize="small" />
-                       </IconButton>
-                     </span>
-                   </Tooltip>
-                   <IconButton
-                     size="small"
-                     color="secondary"
-                     onClick={() =>
-                       navigate(
-                         `/production-order/edit/${params.row.id}?from=${encodeURIComponent(location.pathname)}`,
-                         {
-                           state: { ...params.row, from: location.pathname },
-                         },
-                       )
-                     }
-                     disabled={!canDeleteOrEdit}
-                     title="Edit Production Order"
-                   >
-                     <EditIcon fontSize="small" />
-                   </IconButton>
-                   <IconButton
-                     size="small"
-                     color="error"
-                     onClick={() => setDeleteConfirmId(params.row.id)}
-                     disabled={!canDeleteOrEdit}
-                     title="Delete Production Order"
-                   >
-                     <DeleteIcon fontSize="small" />
-                   </IconButton>
-                 </>
-               )}
-             </Box>
-           );
-         },
-   
-       },
+      field: "actions",
+      headerName: "Actions",
+      flex: 1,
+      minWidth: 200,
+      sortable: false,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params) => {
+        const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
+        const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+        const isConfirming = deleteConfirmId === params.row.id;
+        const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
+
+        return (
+          <Box
+            sx={{
+              display: "flex",
+              gap: 0.5,
+              "& .MuiIconButton-root": {
+                outline: "none",
+              },
+            }}
+          >
+            {isConfirming ? (
+              <>
+                <Tooltip title="Confirm Delete">
+                  <IconButton
+                    size="small"
+                    color="success"
+                    onClick={() => deleteMutation.mutate(params.row)}
+                  >
+                    <CheckIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Cancel">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => setDeleteConfirmId(null)}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <>
+                <Tooltip
+                  title={
+                    hasViewAccess
+                      ? "View BOM Details"
+                      : "You do not have permission to view precheck details"
+                  }
+                  PopperProps={{ disablePortal: true }}
+                  disableFocusListener
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() =>
+                        navigate("/production-order/view", { state: params.row })
+                      }
+                      disabled={!hasViewAccess}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  title={
+                    hasMakeAccess
+                      ? "Make Precheck"
+                      : "You do not have permission to perform precheck"
+                  }
+                  PopperProps={{ disablePortal: true }}
+                  disableFocusListener
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="success"
+                      onClick={() =>
+                        navigate("/precheck/make", { state: params.row })
+                      }
+                      disabled={!hasMakeAccess}
+                    >
+                      <PlaylistAddCheckIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <IconButton
+                  size="small"
+                  color="secondary"
+                  onClick={() =>
+                    navigate(
+                      `/production-order/edit/${params.row.id}?from=${encodeURIComponent(location.pathname)}`,
+                      {
+                        state: { ...params.row, from: location.pathname },
+                      },
+                    )
+                  }
+                  disabled={!canDeleteOrEdit}
+                  title="Edit Production Order"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => setDeleteConfirmId(params.row.id)}
+                  disabled={!canDeleteOrEdit}
+                  title="Delete Production Order"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </>
+            )}
+          </Box>
+        );
+      },
+
+    },
   ];
 
   const uploadTableRows = insertedRows.length > 0 ? insertedRows : previewRows;

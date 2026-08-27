@@ -19,6 +19,7 @@ const routeToPageMap: Record<string, string> = {
   '/precheck/view-consumed': 'View Consumed In',
   '/precheck/make-order': 'Make Order',
   '/precheck/pending': 'Pending For Precheck',
+  '/production-order/upload': 'Upload Orders',
   '/production-order/view': 'View Order Details',
   '/production-order/edit': 'Upload Orders',
   '/production-order': 'Upload Orders',

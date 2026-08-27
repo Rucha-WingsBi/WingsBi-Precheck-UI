@@ -71,7 +71,7 @@ const Dashboard: React.FC = () => {
       icon: <ShoppingCartIcon sx={{ fontSize: 40 }} />,
       color: "#df2e78ff",
       route: isAccessible("Upload Orders")
-        ? "/production-order"
+        ? "/production-order/upload"
         : isAccessible("Pending For Precheck")
           ? user?.role === "Store"
             ? "/precheck/pending/store"

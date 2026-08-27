@@ -6,7 +6,7 @@ import React, {
   useRef,
 } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useOutletContext } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -70,6 +70,7 @@ import AddBomDrawingDialog from "./make-precheck/AddBomDrawingDialog";
 
 const MakePrecheck: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const { isSidebarOpen = false } = useOutletContext<{ isSidebarOpen?: boolean }>() || {};
@@ -1737,8 +1738,7 @@ const MakePrecheck: React.FC = () => {
         onDownloadTemplate={handleDownloadTemplate}
         onMakePrecheck={handleMakePrecheck}
         onSubmitPrecheck={handleSubmitPrecheck}
-        onPrevId={handlePrevId}
-        onNextId={handleNextId}
+        onReject={() => navigate("/materialrequisition")}
         isAdminOrHead={isAdminOrHead}
         isAddEnabled={isSubmitEnabled}
         onAddBomDrawingClick={() => setAddBomDrawingOpen(true)}
