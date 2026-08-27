@@ -1140,7 +1140,7 @@ const ViewBarcode: React.FC = () => {
             alignItems: 'flex-end',
             mb: 1.5,
             flexWrap: 'wrap',
-            gap: { xs: 2, sm: 4, md: 6 },
+            gap: { xs: 1, sm: 2, md: 3 },
             borderBottom: 1,
             borderColor: 'divider',
             pb: 0.5

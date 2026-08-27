@@ -40,7 +40,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const navigate = useNavigate();
   const location = useLocation();
   const [storeTab, setStoreTab] = useState<"available" | "stored">(
-    location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available"
+    hideHeader ? "available" : (location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available")
   );
 
   // Tab state: 1 = RM Store, 2 = RFG Store
@@ -406,7 +406,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     <Box
       sx={{
         flexGrow: 1,
-        p: hideHeader ? 0 : 1,
+        p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 },
         animation: "fadeIn 0.5s ease-out",
         "@keyframes fadeIn": {
           from: { opacity: 0, transform: "translateY(10px)" },
@@ -422,7 +422,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
             alignItems: "flex-end",
             mb: 1.5,
             flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
+            gap: { xs: 1, sm: 2, md: 3 },
             borderBottom: 1,
             borderColor: "divider",
             pb: 0.5,
@@ -477,7 +477,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         textColor="primary"
         indicatorColor="primary"
         sx={{
-          mb: 3,
+          mb: 2,
           borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
           "& .MuiTabs-indicator": {
             backgroundColor: "primary.main",
@@ -489,8 +489,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
             fontWeight: 600,
             fontSize: "1rem",
             color: "text.secondary",
-            px: 4,
-            py: 1.5,
+            px: 3,
+            py: 1,
             transition: "all 0.2s ease",
             "&:hover": {
               color: "primary.main",
@@ -508,29 +508,29 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {/* Main Dashboard Layout */}
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {/* Search Filter Controls Card */}
         <Grid item xs={12}>
           <Paper
             elevation={0}
             sx={{
-              p: 3,
+              p: { xs: 1.5, md: 2 },
               borderRadius: "16px",
               border: "1px solid rgba(0, 0, 0, 0.08)",
               boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: "text.primary" }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
               Filter & Search Available QR Codes
             </Typography>
 
-            <Grid container spacing={3} alignItems="center">
+            <Grid container spacing={2} alignItems="center">
               {/* Drawing Number Autocomplete */}
               <Grid item xs={12} sm="auto">
                 <Autocomplete

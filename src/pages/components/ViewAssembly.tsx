@@ -557,7 +557,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             alignItems: "flex-end",
             mb: 1.5,
             flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
+            gap: { xs: 1, sm: 2, md: 3 },
             borderBottom: 1,
             borderColor: "divider",
             pb: 0.5,
@@ -609,7 +609,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       ) : (
         <>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
         <form onSubmit={handleSearch}>
           <Grid container spacing={2} alignItems="center" sx={{ maxWidth: 950 }}>
             <Grid item xs={12} sm={6} md={6}>

@@ -1243,9 +1243,9 @@ const UpdateBarcode: React.FC = () => {
               <Button
                 type="button"
                 variant="outlined"
-                size="medium"
+                size="small"
                 onClick={handleCancel}
-                sx={{ minWidth: 120, py: 1.5, height: 40 }}
+                sx={{ minWidth: 100 }}
               >
                 Cancel
               </Button>
@@ -1253,9 +1253,9 @@ const UpdateBarcode: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                size="medium"
+                size="small"
                 disabled={loading}
-                sx={{ minWidth: 200, py: 1.5, height: 40 }}
+                sx={{ minWidth: 140 }}
               >
                 {loading ? "Updating..." : "Update"}
               </Button>

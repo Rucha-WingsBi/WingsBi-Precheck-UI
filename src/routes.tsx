@@ -168,7 +168,7 @@ export default function AppRoutes() {
               <Route index element={<ViewOrder />} />
               <Route path="upload" element={<ProductionOrderUpload />} />
               <Route path="view" element={<ViewOrder />} />
-              <Route path="edit" element={<EditProductionOrder />} />
+              <Route path="edit/:id" element={<EditProductionOrder />} />
               <Route path="store" element={<PendingForPrecheck />} />
             </Route>
 

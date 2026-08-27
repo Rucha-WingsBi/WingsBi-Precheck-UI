@@ -416,7 +416,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             alignItems: "flex-end",
             mb: 1.5,
             flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
+            gap: { xs: 1, sm: 2, md: 3 },
             borderBottom: 1,
             borderColor: "divider",
             pb: 0.5,
@@ -463,12 +463,12 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         </Box>
       )}
 
-      <Paper sx={{ p: 3, mb: 3, width: "100%", overflow: "hidden" }}>
+      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2, width: "100%", overflow: "hidden" }}>
         <Box
           sx={{
             display: "flex",
-            gap: 2,
-            mb: 3,
+            gap: 1.5,
+            mb: 2,
             flexWrap: "wrap",
             alignItems: "center",
           }}
@@ -484,7 +484,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
               maxWidth: 400,
               flexGrow: 1,
               "& .MuiOutlinedInput-root": {
-                height: 50,
+                height: 40,
               }
             }}
             InputProps={{
@@ -504,7 +504,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             disabled={!searchQuery}
             size="small"
             sx={{
-              height: 50,
+              height: 40,
             }}
           >
             Clear Search
@@ -513,7 +513,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
         <Box
           sx={{
-            mb: 2,
+            mb: 1.5,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",

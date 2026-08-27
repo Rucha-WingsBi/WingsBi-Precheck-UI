@@ -186,7 +186,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
   const navigate = useNavigate();
   const location = useLocation();
   const [storeTab, setStoreTab] = useState<"available" | "stored">(
-    location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available"
+    hideHeader ? "stored" : (location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available")
   );
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -447,7 +447,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               View and export components stored on specific dates
             </Typography>
 
-        <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 3 }}>
+        <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
           {/* Date Selection and Search Controls */}
           <Box
             sx={{

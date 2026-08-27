@@ -765,7 +765,7 @@ export default function GenerateIRMSN() {
         size="medium"
         onClick={handleReset}
         startIcon={<RefreshIcon />}
-        sx={{ minWidth: 120, py: 1.5, height: 40 }}
+        sx={{ minWidth: 100, height: 32 }}
       >
         Reset
       </Button>
@@ -773,7 +773,7 @@ export default function GenerateIRMSN() {
       <Button
         type="submit"
         variant="contained"
-        size="medium"
+        size="small"
         disabled={isLoading}
         startIcon={
           isLoading ? (
@@ -782,7 +782,7 @@ export default function GenerateIRMSN() {
             <AddIcon />
           )
         }
-        sx={{ minWidth: 200, py: 1.5, height: 40 }}
+        sx={{ minWidth: 160, height: 32 }}
       >
         {isLoading ? "Generating..." : "Generate IR/MSN"}
       </Button>

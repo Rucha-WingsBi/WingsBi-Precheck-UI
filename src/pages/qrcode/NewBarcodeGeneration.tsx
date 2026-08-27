@@ -810,7 +810,7 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
   const handleReset = () => {
     reset(createDefaultValues());
     setSelectedDrawing(null);
-   
+
     setSelectedIRNumber(null);
     setSelectedMSNNumber(null);
     setSuccessMessage("");
@@ -834,7 +834,7 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
     setDrawingInputValue("");
     setLnSearchTerm("");
     setBulkIdNumber("");
-    
+
     dispatch(clearError());
     dispatch(clearGeneratedNumber());
     dispatch(clearQRCodeList());
@@ -906,8 +906,8 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
         )}
         <Card elevation={2} sx={{ width: "100%", maxWidth: "100%" }}>
           <CardContent>
-           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-              
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+
               <ToggleButtonGroup
                 value={componentType}
                 exclusive
@@ -924,7 +924,7 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                     minWidth: 120,
                     textTransform: "none",
                     fontWeight: 600,
-                   
+
                     borderRadius: "12px !important",
                     border: "1px solid !important",
                     borderColor: "divider !important",
@@ -1566,7 +1566,7 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                                         .length > 1 && (
                                         <Chip
                                           label={`+${selectedDrawing.parentDrawingNumbers
-                                              .length - 1
+                                            .length - 1
                                             } more`}
                                           size="small"
                                           color="info"
@@ -1936,232 +1936,232 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                         position: "relative",
                       }}
                     >
-                    <Table
-                      size="small"
-                      sx={{
-                        "& .MuiTableCell-root": {
-                          borderBottom: "1px solid",
-                          borderColor: "divider",
-                          textAlign: "center",
-                          px: 1,
-                        },
-                        "& thead th": {
-                          fontWeight: 600,
-                          backgroundColor: "grey.100",
-                          height: 40,
-                          fontSize: "0.875rem",
-                          whiteSpace: "nowrap",
-                        },
-                      }}
-                    >
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>
-                            <b>Sr.No</b>
-                          </TableCell>
-                          <TableCell>
-                            <b>ID No</b>
-                          </TableCell>
-                          <TableCell>
-                            <b>Quantity</b>
-                          </TableCell>
-                          <TableCell>
-                            <b>Size</b>
-                          </TableCell>
-                          <TableCell>
-                            <b>MRIR</b>
-                          </TableCell>
-                          <TableCell>
-                            <b>HEAT / LOT / BATCH No</b>
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-
-                      <TableBody>
-                        {QrTableRows.map((row, index) => (
-                          <TableRow key={row.srNo}>
-                            <TableCell>{row.srNo}</TableCell>
-
-                            {/* ID No */}
+                      <Table
+                        size="small"
+                        sx={{
+                          "& .MuiTableCell-root": {
+                            borderBottom: "1px solid",
+                            borderColor: "divider",
+                            textAlign: "center",
+                            px: 1,
+                          },
+                          "& thead th": {
+                            fontWeight: 600,
+                            backgroundColor: "grey.100",
+                            height: 40,
+                            fontSize: "0.875rem",
+                            whiteSpace: "nowrap",
+                          },
+                        }}
+                      >
+                        <TableHead>
+                          <TableRow>
                             <TableCell>
-                              <TextField
-                                value={row.idNo}
-                                size="small"
-                                fullWidth
-                                sx={{
-                                  "& .MuiInputBase-root": {
-                                    height: 32,
-                                  },
-                                  "& input": {
-                                    fontSize: "0.875rem",
-                                    padding: "4px 8px",
-                                    textAlign: "center",
-                                  },
-                                }}
-                                onChange={(e) =>
-                                  handleQrTableChange(
-                                    index,
-                                    "idNo",
-                                    e.target.value,
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleEnterKey(e, index, false)
-                                }
-                              />
+                              <b>Sr.No</b>
                             </TableCell>
-
-                             {/* Quantity */}
-                             <TableCell>
-                              <TextField
-                                value={row.quantity}
-                                type="number"
-                                size="small"
-                                fullWidth
-                                inputProps={{ min: 0, step: "any" }}
-                                sx={{
-                                  "& .MuiInputBase-root": {
-                                    height: 32,
-                                  },
-                                  "& input": {
-                                    fontSize: "0.875rem",
-                                    padding: "4px 8px",
-                                    textAlign: "center",
-                                  },
-                                }}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) =>
-                                  handleQrTableChange(
-                                    index,
-                                    "quantity",
-                                    e.target.value
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleEnterKey(e, index, false)
-                                }
-                              />
-                            </TableCell>
-
-                            {/* Size */}
                             <TableCell>
-                              <TextField
-                                value={row.size}
-                                size="small"
-                                fullWidth
-                                inputProps={{
-                                  autoComplete: "off",
-                                }}
-                                sx={{
-                                  "& .MuiInputBase-root": {
-                                    height: 32,
-                                  },
-                                  "& input": {
-                                    fontSize: "0.875rem",
-                                    padding: "4px 8px",
-                                    textAlign: "center",
-                                  },
-                                }}
-                                onChange={(e) =>
-                                  handleQrTableChange(
-                                    index,
-                                    "size",
-                                    e.target.value,
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleEnterKey(e, index, false)
-                                }
-                              />
+                              <b>ID No</b>
                             </TableCell>
-
-                            {/* MIRIR */}
                             <TableCell>
-                              <TextField
-                                value={row.mirir}
-                                size="small"
-                                fullWidth
-                                sx={{
-                                  "& .MuiInputBase-root": {
-                                    height: 32,
-                                  },
-                                  "& input": {
-                                    fontSize: "0.875rem",
-                                    padding: "4px 8px",
-                                    textAlign: "center",
-                                  },
-                                }}
-                                onChange={(e) =>
-                                  handleQrTableChange(
-                                    index,
-                                    "mirir",
-                                    e.target.value,
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleEnterKey(e, index, false)
-                                }
-                              />
+                              <b>Quantity</b>
                             </TableCell>
-
-                            {/* Heat / Lot / Batch */}
                             <TableCell>
-                              <TextField
-                                value={row.heatLotBatchNo}
-                                size="small"
-                                fullWidth
-                                sx={{
-                                  "& .MuiInputBase-root": {
-                                    height: 32,
-                                  },
-                                  "& input": {
-                                    fontSize: "0.875rem",
-                                    padding: "4px 8px",
-                                    textAlign: "center",
-                                  },
-                                }}
-                                onChange={(e) =>
-                                  handleQrTableChange(
-                                    index,
-                                    "heatLotBatchNo",
-                                    e.target.value,
-                                  )
-                                }
-                                onKeyDown={(e) =>
-                                  handleEnterKey(e, index, true)
-                                }
-                              />
+                              <b>Size</b>
+                            </TableCell>
+                            <TableCell>
+                              <b>MRIR</b>
+                            </TableCell>
+                            <TableCell>
+                              <b>HEAT / LOT / BATCH No</b>
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <Tooltip title="Add Row" arrow>
-                    <IconButton
-                      onClick={addNewQrRow}
-                      sx={{
-                        backgroundColor: "#A8005A",
-                        color: "#fff",
-                        width: 36,
-                        height: 36,
-                        mb: 0.5,
-                        boxShadow: "0px 4px 10px rgba(168, 0, 90, 0.3)",
-                        transition: "all 0.2s ease-in-out",
-                        "&:hover": {
-                          backgroundColor: "#800044",
-                          transform: "scale(1.1)",
-                          boxShadow: "0px 6px 14px rgba(168, 0, 90, 0.4)",
-                        },
-                        "&:active": {
-                          transform: "scale(0.95)",
-                        },
-                      }}
-                    >
-                      <AddIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
+                        </TableHead>
+
+                        <TableBody>
+                          {QrTableRows.map((row, index) => (
+                            <TableRow key={row.srNo}>
+                              <TableCell>{row.srNo}</TableCell>
+
+                              {/* ID No */}
+                              <TableCell>
+                                <TextField
+                                  value={row.idNo}
+                                  size="small"
+                                  fullWidth
+                                  sx={{
+                                    "& .MuiInputBase-root": {
+                                      height: 32,
+                                    },
+                                    "& input": {
+                                      fontSize: "0.875rem",
+                                      padding: "4px 8px",
+                                      textAlign: "center",
+                                    },
+                                  }}
+                                  onChange={(e) =>
+                                    handleQrTableChange(
+                                      index,
+                                      "idNo",
+                                      e.target.value,
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleEnterKey(e, index, false)
+                                  }
+                                />
+                              </TableCell>
+
+                              {/* Quantity */}
+                              <TableCell>
+                                <TextField
+                                  value={row.quantity}
+                                  type="number"
+                                  size="small"
+                                  fullWidth
+                                  inputProps={{ min: 0, step: "any" }}
+                                  sx={{
+                                    "& .MuiInputBase-root": {
+                                      height: 32,
+                                    },
+                                    "& input": {
+                                      fontSize: "0.875rem",
+                                      padding: "4px 8px",
+                                      textAlign: "center",
+                                    },
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  onChange={(e) =>
+                                    handleQrTableChange(
+                                      index,
+                                      "quantity",
+                                      e.target.value
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleEnterKey(e, index, false)
+                                  }
+                                />
+                              </TableCell>
+
+                              {/* Size */}
+                              <TableCell>
+                                <TextField
+                                  value={row.size}
+                                  size="small"
+                                  fullWidth
+                                  inputProps={{
+                                    autoComplete: "off",
+                                  }}
+                                  sx={{
+                                    "& .MuiInputBase-root": {
+                                      height: 32,
+                                    },
+                                    "& input": {
+                                      fontSize: "0.875rem",
+                                      padding: "4px 8px",
+                                      textAlign: "center",
+                                    },
+                                  }}
+                                  onChange={(e) =>
+                                    handleQrTableChange(
+                                      index,
+                                      "size",
+                                      e.target.value,
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleEnterKey(e, index, false)
+                                  }
+                                />
+                              </TableCell>
+
+                              {/* MIRIR */}
+                              <TableCell>
+                                <TextField
+                                  value={row.mirir}
+                                  size="small"
+                                  fullWidth
+                                  sx={{
+                                    "& .MuiInputBase-root": {
+                                      height: 32,
+                                    },
+                                    "& input": {
+                                      fontSize: "0.875rem",
+                                      padding: "4px 8px",
+                                      textAlign: "center",
+                                    },
+                                  }}
+                                  onChange={(e) =>
+                                    handleQrTableChange(
+                                      index,
+                                      "mirir",
+                                      e.target.value,
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleEnterKey(e, index, false)
+                                  }
+                                />
+                              </TableCell>
+
+                              {/* Heat / Lot / Batch */}
+                              <TableCell>
+                                <TextField
+                                  value={row.heatLotBatchNo}
+                                  size="small"
+                                  fullWidth
+                                  sx={{
+                                    "& .MuiInputBase-root": {
+                                      height: 32,
+                                    },
+                                    "& input": {
+                                      fontSize: "0.875rem",
+                                      padding: "4px 8px",
+                                      textAlign: "center",
+                                    },
+                                  }}
+                                  onChange={(e) =>
+                                    handleQrTableChange(
+                                      index,
+                                      "heatLotBatchNo",
+                                      e.target.value,
+                                    )
+                                  }
+                                  onKeyDown={(e) =>
+                                    handleEnterKey(e, index, true)
+                                  }
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    <Tooltip title="Add Row" arrow>
+                      <IconButton
+                        onClick={addNewQrRow}
+                        sx={{
+                          backgroundColor: "#A8005A",
+                          color: "#fff",
+                          width: 36,
+                          height: 36,
+                          mb: 0.5,
+                          boxShadow: "0px 4px 10px rgba(168, 0, 90, 0.3)",
+                          transition: "all 0.2s ease-in-out",
+                          "&:hover": {
+                            backgroundColor: "#800044",
+                            transform: "scale(1.1)",
+                            boxShadow: "0px 6px 14px rgba(168, 0, 90, 0.4)",
+                          },
+                          "&:active": {
+                            transform: "scale(0.95)",
+                          },
+                        }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
 
                   {/* Total Quantity Display */}
                   <Box
