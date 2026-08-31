@@ -1464,14 +1464,14 @@ const ProductionOrderUpload: React.FC = () => {
                         textField: { size: "small", sx: { width: 180 } },
                       }}
                     />
-                    <Button
+                    {/* <Button
                       size="small"
                       variant="outlined"
                       startIcon={<TodayIcon />}
                       onClick={() => setFilterDate(new Date())}
                     >
                       Today
-                    </Button>
+                    </Button> */}
                   </>
                 ) : (
                   <>

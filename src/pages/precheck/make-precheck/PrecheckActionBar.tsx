@@ -232,6 +232,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
           }}
           size="small"
           onClick={onReject}
+          disabled={!onReject || isLoadingLocal}
           startIcon={<CancelIcon />}
         >
           Reject
