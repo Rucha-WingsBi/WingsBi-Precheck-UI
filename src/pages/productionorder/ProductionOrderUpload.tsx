@@ -3,7 +3,7 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
+
   Typography,
   Alert,
   LinearProgress,
@@ -11,37 +11,45 @@ import {
   Paper,
   Stack,
   Divider,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  ToggleButtonGroup,
-  ToggleButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
   DialogActions,
-  Tooltip,
   IconButton,
   TextField,
   Snackbar,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
+  Grid,
+  Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
-  Refresh as RefreshIcon,
   Download as DownloadIcon,
   History as HistoryIcon,
   Visibility as VisibilityIcon,
   PlaylistAddCheck as PlaylistAddCheckIcon,
-  Today as TodayIcon,
-  CalendarMonth as CalendarMonthIcon,
   DateRange as DateRangeIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  ArrowBack as ArrowBackIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -107,6 +115,182 @@ interface StatusCount {
 const normalizeKey = (key: string) =>
   key.toLowerCase().replace(/\s+/g, "").replace(/_/g, "").trim();
 
+const statusOptions = [
+  { id: 4, label: "Pending-Planner" },
+  { id: 1, label: "Pending" },
+  { id: 2, label: "Partial" },
+  { id: 3, label: "Completed" },
+];
+
+const RowActionsMenu: React.FC<{
+  row: any;
+  pageAccessData: any;
+  deleteConfirmId: number | null;
+  setDeleteConfirmId: (id: number | null) => void;
+  deleteMutation: any;
+}> = ({ row, pageAccessData, deleteConfirmId, setDeleteConfirmId, deleteMutation }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleOpen = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setAnchorEl(e.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
+  const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+  const isConfirming = deleteConfirmId === row.id;
+  const canDeleteOrEdit = row.precheckStatus === 1 || row.precheckStatus === 4;
+
+  if (isConfirming) {
+    return (
+      <Box sx={{ display: "flex", gap: 0.5 }}>
+        <Tooltip title="Confirm Delete">
+          <IconButton
+            size="small"
+            color="success"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteMutation.mutate(row);
+            }}
+          >
+            <CheckIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Cancel">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteConfirmId(null);
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+      <IconButton
+        size="small"
+        onClick={handleOpen}
+        sx={{
+          color: "action.active",
+          "&:hover": { backgroundColor: "action.hover" },
+        }}
+      >
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        PaperProps={{
+          elevation: 3,
+          sx: { minWidth: 170, borderRadius: 2, py: 0.5 },
+        }}
+      >
+        <MenuItem
+          disabled={!hasViewAccess}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+            navigate("/production-order/view", { state: row });
+          }}
+        >
+          <ListItemIcon>
+            <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText primary="View Availabe QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+        </MenuItem>
+
+        <MenuItem
+          disabled={!hasMakeAccess}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+            navigate("/precheck/make", { state: row });
+          }}
+        >
+          <ListItemIcon>
+            <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText primary="Make Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+        </MenuItem>
+
+        <MenuItem
+          disabled={!canDeleteOrEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+            navigate(`/production-order/edit/${row.id}?from=${encodeURIComponent(location.pathname)}`, {
+              state: { ...row, from: location.pathname },
+            });
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" color={canDeleteOrEdit ? "secondary" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText primary="Edit Order" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+        </MenuItem>
+
+        <MenuItem
+          disabled={!canDeleteOrEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+            setDeleteConfirmId(row.id);
+          }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color={canDeleteOrEdit ? "error" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText
+            primary="Delete Order"
+            primaryTypographyProps={{
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              color: canDeleteOrEdit ? "error.main" : undefined,
+            }}
+          />
+        </MenuItem>
+      </Menu>
+    </Box>
+  );
+};
+
+const ALL_EXPORTABLE_COLUMNS = [
+  { key: "sr", label: "Sr No" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "projectNumber", label: "Project" },
+  { key: "projectDescription", label: "Project Description" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "itemDescription", label: "Item Description" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "startIdNumber", label: "Start ID" },
+  { key: "endIdNumber", label: "End ID" },
+  { key: "quantity", label: "Qty" },
+  { key: "mrirNumber", label: "MRIR No" },
+  { key: "buildNumber", label: "Build No" },
+  { key: "status", label: "Status" },
+  { key: "createdDate", label: "Created Date" },
+  { key: "agingDays", label: "Aging Days" },
+];
+
 const ProductionOrderUpload: React.FC = () => {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
@@ -115,13 +299,181 @@ const ProductionOrderUpload: React.FC = () => {
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
+  const [showColumnPreview, setShowColumnPreview] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [insertedRows, setInsertedRows] = useState<any[]>([]);
   const location = useLocation();
+
+  // Export Modal state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleOpenExportDialog = () => {
+    setExportMode("all");
+    setSelectedExportColumns([]);
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    if (selectedExportColumns.includes(colKey)) {
+      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
+    } else {
+      setSelectedExportColumns([...selectedExportColumns, colKey]);
+    }
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleConfirmExportData = async () => {
+    const activeColumns =
+      exportMode === "all"
+        ? ALL_EXPORTABLE_COLUMNS
+        : ALL_EXPORTABLE_COLUMNS.filter((col) => selectedExportColumns.includes(col.key));
+
+    if (exportMode === "custom" && activeColumns.length === 0) {
+      showSnackbar("Please select at least one column to export.", "error");
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      // Build API query parameters with selected columns sent in payload
+      const columnKeys = activeColumns.map((c) => c.key);
+      const columnLabels = activeColumns.map((c) => c.label);
+      const baseParams = buildQueryParams();
+
+      const exportParams = {
+        ...baseParams,
+        columns: columnKeys.join(","),
+        columnNames: columnLabels.join(","),
+        selectedColumns: columnKeys,
+        exportAll: exportMode === "all",
+      };
+
+      let exportedViaApi = false;
+      try {
+        const response = await api.get("/api/ProductionOrder/Export", {
+          params: exportParams,
+          responseType: "blob",
+        });
+
+        if (response.status === 200 && response.data && response.data.size > 0) {
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `Production_Orders_Export_${Date.now()}.xlsx`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          exportedViaApi = true;
+        }
+      } catch (apiErr) {
+        console.warn("Server API export fallback to client-side XLSX generation:", apiErr);
+      }
+
+      // Non-blocking fallback client-side excel generation
+      if (!exportedViaApi) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const rowsToExport = filteredRows || [];
+
+        const excelData = rowsToExport.map((row: any, index: number) => {
+          const rowData: Record<string, any> = {};
+
+          activeColumns.forEach((col) => {
+            switch (col.key) {
+              case "sr":
+                rowData["Sr No"] = index + 1;
+                break;
+              case "productionOrderNumber":
+                rowData["PO Number"] = row.productionOrderNumber || row.productionorder || "-";
+                break;
+              case "projectNumber":
+                rowData["Project"] = row.projectNumber || row.projectcode || "-";
+                break;
+              case "projectDescription":
+                rowData["Project Description"] = row.projectDescription || row.projectdescription || "-";
+                break;
+              case "lnItemCode":
+                rowData["LN Item Code"] = row.lnItemCode || row.itemcode || "-";
+                break;
+              case "itemDescription":
+                rowData["Item Description"] = row.itemDescription || row.itemdescription || "-";
+                break;
+              case "drawingNumber":
+                rowData["Drawing Number"] = row.drawingNumber || row.drawingnumber || "-";
+                break;
+              case "productionSeries":
+                rowData["Prod Series"] = row.productionSeries || row.series || "-";
+                break;
+              case "startIdNumber":
+                rowData["Start ID"] = row.startIdNumber || row.id_num || "-";
+                break;
+              case "endIdNumber":
+                rowData["End ID"] = row.endIdNumber || row.end_id || "-";
+                break;
+              case "quantity":
+                rowData["Qty"] = row.quantity || 0;
+                break;
+              case "mrirNumber":
+                rowData["MRIR No"] = row.mrirNumber || row.mrirnumber || "-";
+                break;
+              case "buildNumber":
+                rowData["Build No"] = row.buildNumber || row.buildnumber || "-";
+                break;
+              case "status":
+                rowData["Status"] = row.precheckStatusName || row.status || "Pending";
+                break;
+              case "createdDate":
+                rowData["Created Date"] = formatDate(row.createdDate);
+                break;
+              case "agingDays": {
+                if (!row.createdDate) {
+                  rowData["Aging Days"] = "-";
+                } else {
+                  const created = new Date(row.createdDate);
+                  const diffDays = Math.floor((new Date().getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+                  rowData["Aging Days"] = diffDays;
+                }
+                break;
+              }
+              default:
+                break;
+            }
+          });
+
+          return rowData;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Production Orders");
+        XLSX.writeFile(workbook, `Production_Orders_Export_${Date.now()}.xlsx`);
+      }
+
+      setExportDialogOpen(false);
+      showSnackbar("Data exported successfully to Excel");
+    } catch (err) {
+      console.error("Export error:", err);
+      showSnackbar("Failed to export data. Please try again.", "error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const [view, setView] = useState<"upload" | "history">(
     location.state?.view || "history",
   );
-  const [uploadMode, setUploadMode] = useState<"import" | "update">("import");
 
   const queryClient = useQueryClient();
 
@@ -138,34 +490,17 @@ const ProductionOrderUpload: React.FC = () => {
   }, [location.state, location.pathname, navigate, queryClient]);
 
   // Filter states
-  const [dateFilterMode, setDateFilterMode] = useState<"single" | "range">(
-    "single",
-  );
-  const [filterDate, setFilterDate] = useState<Date | null>(null);
+  const [showDateFields, setShowDateFields] = useState(false);
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
-  const [statusFilter, setStatusFilter] = useState<number | "">("");
-  const [poNumber, setPoNumber] = useState("");
-  const [lnItemCode, setLnItemCode] = useState("");
-  const [drawingNo, setDrawingNo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
   });
 
-  const hasActiveFilters = !!(
-    (dateFilterMode === "single" && filterDate) ||
-    (dateFilterMode === "range" && (fromDate || toDate)) ||
-    statusFilter !== "" ||
-    poNumber.trim() ||
-    lnItemCode.trim() ||
-    drawingNo.trim()
-  );
-
   // Debounced values for server-side filtering
-  const debouncedPoNumber = useDebounce(poNumber, 500);
-  const debouncedLnItemCode = useDebounce(lnItemCode, 500);
-  const debouncedDrawingNo = useDebounce(drawingNo, 500);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -192,30 +527,26 @@ const ProductionOrderUpload: React.FC = () => {
   const buildQueryParams = () => {
     const params: any = {};
 
-    // Date Filters
-    if (dateFilterMode === "single" && filterDate) {
-      params.dateFilterType = "single";
-      params.filterDate = format(filterDate, "yyyy-MM-dd");
-    } else if (dateFilterMode === "range" && fromDate && toDate) {
+    // Date Filters (Range mode)
+    if (fromDate && toDate) {
       params.dateFilterType = "range";
       params.fromDate = format(fromDate, "yyyy-MM-dd");
       params.toDate = format(toDate, "yyyy-MM-dd");
     }
 
-    // Status Filter
-    if (statusFilter !== "") {
-      params.precheckStatus = statusFilter;
-    }
+    // Text Filters & Status (Server-side)
+    if (debouncedSearchQuery?.trim()) {
+      const term = debouncedSearchQuery.trim();
+      params.searchQuery = term;
+      params.poNumber = term;
+      params.lnItemCode = term;
+      params.drawingNumber = term;
 
-    // Text Filters (Server-side)
-    if (debouncedPoNumber?.trim()) {
-      params.poNumber = debouncedPoNumber.trim();
-    }
-    if (debouncedLnItemCode?.trim()) {
-      params.lnItemCode = debouncedLnItemCode.trim();
-    }
-    if (debouncedDrawingNo?.trim()) {
-      params.drawingNumber = debouncedDrawingNo.trim();
+      const termLower = term.toLowerCase();
+      if ("pending-planner".includes(termLower)) params.precheckStatus = 4;
+      else if ("pending".includes(termLower)) params.precheckStatus = 1;
+      else if ("partial".includes(termLower)) params.precheckStatus = 2;
+      else if ("completed".includes(termLower)) params.precheckStatus = 3;
     }
 
     return params;
@@ -229,14 +560,9 @@ const ProductionOrderUpload: React.FC = () => {
   } = useQuery<ProductionOrder[]>({
     queryKey: [
       "productionOrders",
-      dateFilterMode,
-      filterDate,
       fromDate,
       toDate,
-      statusFilter,
-      debouncedPoNumber,
-      debouncedLnItemCode,
-      debouncedDrawingNo,
+      debouncedSearchQuery,
     ],
     queryFn: async () => {
       const params = buildQueryParams();
@@ -250,14 +576,9 @@ const ProductionOrderUpload: React.FC = () => {
   const { data: statusCounts } = useQuery<StatusCount>({
     queryKey: [
       "productionOrderCounts",
-      dateFilterMode,
-      filterDate,
       fromDate,
       toDate,
-      statusFilter,
-      debouncedPoNumber,
-      debouncedLnItemCode,
-      debouncedDrawingNo,
+      debouncedSearchQuery,
     ],
     queryFn: async () => {
       const params = buildQueryParams();
@@ -276,15 +597,25 @@ const ProductionOrderUpload: React.FC = () => {
     uploadedCount: 0,
   };
 
-  // Use server data directly (Pure Server-Side Filtering) with Client-Side Fallback for Drawing No
+  // Use server data directly (Pure Server-Side Filtering) with Client-Side Fallback
   const filteredRows = React.useMemo(() => {
     const rows = productionOrders || [];
-    if (!debouncedDrawingNo?.trim()) return rows;
-    const term = debouncedDrawingNo.trim().toLowerCase();
-    return rows.filter((row) =>
-      row.drawingNumber?.toLowerCase().includes(term)
+    if (!debouncedSearchQuery?.trim()) return rows;
+    const term = debouncedSearchQuery.trim().toLowerCase();
+    return rows.filter(
+      (row) =>
+        row.productionOrderNumber?.toLowerCase().includes(term) ||
+        row.lnItemCode?.toLowerCase().includes(term) ||
+        row.drawingNumber?.toLowerCase().includes(term) ||
+        row.projectNumber?.toLowerCase().includes(term) ||
+        row.itemDescription?.toLowerCase().includes(term) ||
+        row.precheckStatusName?.toLowerCase().includes(term) ||
+        (row.precheckStatus === 4 && "pending-planner".includes(term)) ||
+        (row.precheckStatus === 1 && "pending".includes(term)) ||
+        (row.precheckStatus === 2 && "partial".includes(term)) ||
+        (row.precheckStatus === 3 && "completed".includes(term)),
     );
-  }, [productionOrders, debouncedDrawingNo]);
+  }, [productionOrders, debouncedSearchQuery]);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -297,59 +628,70 @@ const ProductionOrderUpload: React.FC = () => {
       return response.data;
     },
     onSuccess: async (data) => {
-      setUploadResult(data.result);
-      const response = await api.get("/api/ProductionOrder/GetAll");
-      const allRows = response.data;
-      const insertedPONumbers = data.result.insertedPONumbers || [];
-      const importedCount = data.result.imported || 0;
+      const result = data.result || {};
+      setUploadResult(result);
 
-      let newRows: ProductionOrder[] = [];
+      const errors = result.errors || [];
+      const importedCount = result.imported || 0;
 
-      if (insertedPONumbers.length > 0) {
-        newRows = allRows.filter((row: ProductionOrder) =>
-          insertedPONumbers.includes(row.productionOrderNumber),
-        );
-      } else if (importedCount > 0) {
-        // Fallback: If no explicit IDs, assume the most recently created IDs are the new ones.
-        // Sort by ID descending to get the newest first.
-        const sortedRows = [...allRows].sort((a, b) => b.id - a.id);
-        newRows = sortedRows.slice(0, importedCount);
+      // Do NOT show success popup if errors occurred or 0 items were imported
+      if (errors.length > 0) {
+        return;
       }
 
-      const formattedRows = newRows.map((row: ProductionOrder) => ({
-        id: row.id,
-        sr: row.id,
-        productionorder: row.productionOrderNumber,
-        projectcode: row.projectNumber,
-        projectdescription: row.projectDescription,
-        itemcode: row.lnItemCode,
-        itemdescription: row.itemDescription,
-        series: row.productionSeries,
-        id_num: row.startIdNumber,
-        end_id: row.endIdNumber,
-        quantity: row.quantity,
-        mrirnumber: row.mrirNumber,
-        buildnumber: row.buildNumber,
-        min: (row as any).min || (row as any).minNumber || (row as any).minNo || "-",
-        snagsheetno: row.snagSheetNo,
-        status:
-          row.precheckStatusName ||
-          (row.precheckStatus === 4
-            ? "Pending-Planner"
-            : row.precheckStatus === 1
-              ? "Pending"
-              : row.precheckStatus === 2
-                ? "Partial"
-                : row.precheckStatus === 3
-                  ? "Completed"
-                  : "Uploaded"),
-      }));
+      if (importedCount > 0) {
+        const response = await api.get("/api/ProductionOrder/GetAll");
+        const allRows = response.data;
+        const insertedPONumbers = result.insertedPONumbers || [];
 
-      setInsertedRows(formattedRows);
-      setPreviewRows([]);
-      setSelectedFile(null);
-      setShowSuccessPopup(true);
-      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+        let newRows: ProductionOrder[] = [];
+
+        if (insertedPONumbers.length > 0) {
+          newRows = allRows.filter((row: ProductionOrder) =>
+            insertedPONumbers.includes(row.productionOrderNumber),
+          );
+        } else {
+          // Fallback: If no explicit IDs, assume the most recently created IDs are the new ones.
+          // Sort by ID descending to get the newest first.
+          const sortedRows = [...allRows].sort((a, b) => b.id - a.id);
+          newRows = sortedRows.slice(0, importedCount);
+        }
+
+        const formattedRows = newRows.map((row: ProductionOrder) => ({
+          id: row.id,
+          sr: row.id,
+          productionorder: row.productionOrderNumber,
+          projectcode: row.projectNumber,
+          projectdescription: row.projectDescription,
+          itemcode: row.lnItemCode,
+          itemdescription: row.itemDescription,
+          series: row.productionSeries,
+          id_num: row.startIdNumber,
+          end_id: row.endIdNumber,
+          quantity: row.quantity,
+          mrirnumber: row.mrirNumber,
+          buildnumber: row.buildNumber,
+          min: (row as any).min || (row as any).minNumber || (row as any).minNo || "-",
+          snagsheetno: row.snagSheetNo,
+          status:
+            row.precheckStatusName ||
+            (row.precheckStatus === 4
+              ? "Pending-Planner"
+              : row.precheckStatus === 1
+                ? "Pending"
+                : row.precheckStatus === 2
+                  ? "Partial"
+                  : row.precheckStatus === 3
+                    ? "Completed"
+                    : "Uploaded"),
+        }));
+
+        setInsertedRows(formattedRows);
+        setPreviewRows([]);
+        setSelectedFile(null);
+        setShowSuccessPopup(true);
+        queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+      }
     },
 
     onError: (error: any) => {
@@ -385,18 +727,10 @@ const ProductionOrderUpload: React.FC = () => {
     },
   });
 
-  const handleRefresh = () => {
-    setFilterModel({ items: [] });
-    refetch();
-  };
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const [isDragging, setIsDragging] = useState(false);
 
+  const processFile = (file: File) => {
     if (!file.name.endsWith(".xls") && !file.name.endsWith(".xlsx")) {
       alert("Only .xls and .xlsx files are allowed");
       return;
@@ -405,6 +739,7 @@ const ProductionOrderUpload: React.FC = () => {
     setInsertedRows([]);
     setSelectedFile(file);
     setUploadResult(null);
+    setShowColumnPreview(false);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -425,7 +760,6 @@ const ProductionOrderUpload: React.FC = () => {
           newRow["snagsheetno"] = newRow["snagsheetnumber"];
         }
 
-        // Map MIN column variations (e.g. MIN, MIN Number, MIN No)
         const minVal =
           newRow["min"] ??
           newRow["minnumber"] ??
@@ -492,29 +826,37 @@ const ProductionOrderUpload: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFile(files[0]);
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) return;
-    if (uploadMode === "update") {
-      try {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-
-        await api.post("/api/ProductionOrder/UpdateMinStatus", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-
-        setPreviewRows([]);
-        setSelectedFile(null);
-        setShowSuccessPopup(true);
-        queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-        refetch();
-      } catch (error: any) {
-        alert(error.response?.data?.message || "Update failed");
-      }
-
-      return;
-    }
-
     uploadMutation.mutate(selectedFile);
   };
 
@@ -536,41 +878,8 @@ const ProductionOrderUpload: React.FC = () => {
     }
   };
 
-  const handleExportExcel = async () => {
-    try {
-      // Use the helper which now uses debounced values (pure server-side)
-      const params = buildQueryParams();
-
-      // if (filterModel && filterModel.items) {
-      //   filterModel.items.forEach((item) => {
-      //     if (item.value) {
-      //       params[item.field] = item.value;
-      //     }
-      //   });
-      // }
-
-      // Add confirmation to prevent accidental/auto exports
-      const confirmExport = window.confirm(
-        "Do you want to export the Production Order data?",
-      );
-      if (!confirmExport) return;
-
-      const response = await api.get("/api/ProductionOrder/Export", {
-        params,
-        responseType: "blob",
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "Production_Order_Data.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error("Error Exporting Data:", error);
-      alert("Failed to Export Data. Please try again.");
-    }
+  const handleExportExcel = () => {
+    handleOpenExportDialog();
   };
 
   const previewColumns: GridColDef[] = [
@@ -720,7 +1029,7 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "sr",
       headerName: "Sr No",
-      width: 20,
+      width: 70,
       headerAlign: "center",
       align: "center",
     },
@@ -884,125 +1193,19 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "actions",
       headerName: "Actions",
-      flex: 1,
-      minWidth: 200,
+      width: 90,
       sortable: false,
       headerAlign: "center",
       align: "center",
-      renderCell: (params) => {
-        const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
-        const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
-        const isConfirming = deleteConfirmId === params.row.id;
-        const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
-
-        return (
-          <Box
-            sx={{
-              display: "flex",
-              gap: 0.5,
-              "& .MuiIconButton-root": {
-                outline: "none",
-              },
-            }}
-          >
-            {isConfirming ? (
-              <>
-                <Tooltip title="Confirm Delete">
-                  <IconButton
-                    size="small"
-                    color="success"
-                    onClick={() => deleteMutation.mutate(params.row)}
-                  >
-                    <CheckIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Cancel">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => setDeleteConfirmId(null)}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <Tooltip
-                  title={
-                    hasViewAccess
-                      ? "View BOM Details"
-                      : "You do not have permission to view precheck details"
-                  }
-                  PopperProps={{ disablePortal: true }}
-                  disableFocusListener
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() =>
-                        navigate("/production-order/view", { state: params.row })
-                      }
-                      disabled={!hasViewAccess}
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  title={
-                    hasMakeAccess
-                      ? "Make Precheck"
-                      : "You do not have permission to perform precheck"
-                  }
-                  PopperProps={{ disablePortal: true }}
-                  disableFocusListener
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      color="success"
-                      onClick={() =>
-                        navigate("/precheck/make", { state: params.row })
-                      }
-                      disabled={!hasMakeAccess}
-                    >
-                      <PlaylistAddCheckIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <IconButton
-                  size="small"
-                  color="secondary"
-                  onClick={() =>
-                    navigate(
-                      `/production-order/edit/${params.row.id}?from=${encodeURIComponent(location.pathname)}`,
-                      {
-                        state: { ...params.row, from: location.pathname },
-                      },
-                    )
-                  }
-                  disabled={!canDeleteOrEdit}
-                  title="Edit Production Order"
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => setDeleteConfirmId(params.row.id)}
-                  disabled={!canDeleteOrEdit}
-                  title="Delete Production Order"
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </>
-            )}
-          </Box>
-        );
-      },
-
+      renderCell: (params) => (
+        <RowActionsMenu
+          row={params.row}
+          pageAccessData={pageAccessData}
+          deleteConfirmId={deleteConfirmId}
+          setDeleteConfirmId={setDeleteConfirmId}
+          deleteMutation={deleteMutation}
+        />
+      ),
     },
   ];
 
@@ -1013,7 +1216,7 @@ const ProductionOrderUpload: React.FC = () => {
   }, [previewColumns, uploadTableRows]);
 
   const autosizedHistoryColumns = React.useMemo(() => {
-    const historyRows = (filteredRows || []).map((item, index) => ({
+    const historyRows = (filteredRows || []).map((item: any, index: number) => ({
       ...item,
       sr: index + 1,
     }));
@@ -1029,7 +1232,7 @@ const ProductionOrderUpload: React.FC = () => {
         flexDirection: "column",
         width: "100%",
         maxWidth: "100%",
-        overflow: "hidden",
+        overflowY: "auto",
         scrollbarGutter: "stable",
       }}
     >
@@ -1037,238 +1240,337 @@ const ProductionOrderUpload: React.FC = () => {
         direction="row"
         justifyContent="space-between"
         alignItems="center"
-        sx={{ mb: 0.25, flexShrink: 0 }}
+        sx={{ mb: 1, flexShrink: 0 }}
       >
-        <Box>
+        <Box display="flex" alignItems="center" gap={1}>
+          {view === "upload" && (
+            <IconButton
+              onClick={() => setView("history")}
+              size="small"
+              sx={{ color: "primary.main" }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          )}
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 600,
               color: "primary.main",
+              fontWeight: 600,
               fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
             }}
           >
-            Production Order Management
+            {view === "history" ? "Production Order History" : "Upload Production Order"}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1}>
-          {view === "history" && (
-            <Button
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          {view === "upload" && (
+            <Chip
+              icon={<HistoryIcon sx={{ fontSize: "1.75rem " }} />}
+              label={`${(productionOrders?.length || 0).toLocaleString()} orders uploaded`}
               variant="outlined"
-              size="small"
-              startIcon={<UploadIcon />}
-              onClick={() => {
-                setView("upload");
-                setUploadMode("import");
+              size="medium"
+              onClick={() => setView("history")}
+              sx={{
+                borderRadius: 3,
+                px: 1.5,
+                height: 48,
+                fontSize: "0.925rem",
+                fontWeight: 600,
+                borderColor: "#cbd5e1",
+                color: "#334155",
+                backgroundColor: "#ffffff",
+                cursor: "pointer",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                "&:hover": { backgroundColor: "#f8fafc", borderColor: "#94a3b8" },
               }}
-            >
-              Import
-            </Button>
+            />
           )}
-
           {view === "history" && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<UploadIcon />}
-              onClick={() => {
-                setView("upload");
-                setUploadMode("update");
-              }}
-            >
-              Update
-            </Button>
-          )}
-          <Button
-            variant={view === "history" ? "contained" : "outlined"}
-            size="small"
-            startIcon={<HistoryIcon sx={{ fontSize: "1rem !important" }} />}
-            onClick={() => {
-              setView("history");
-            }}
-            sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
-          >
-            History ({productionOrders?.length || 0})
-          </Button>
-          {view === "history" && (
-            <Button
-              variant={view === "history" ? "contained" : "outlined"}
-              size="small"
-              color="success"
-              onClick={handleExportExcel}
-              startIcon={<DownloadIcon sx={{ fontSize: "1rem !important" }} />}
-              sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
-            >
-              Export
-            </Button>
+            <>
+              <Box
+                onClick={() => setView("upload")}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  cursor: "pointer",
+                  color: "primary.main",
+                  transition: "color 0.2s",
+                  "&:hover": {
+                    color: "primary.dark",
+                  },
+                }}
+              >
+                <IconButton
+                  size="small"
+                  color="primary"
+                  sx={{ p: 0.5 }}
+                >
+                  <ArrowBackIcon fontSize="small" />
+                </IconButton>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Upload Order
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                color="success"
+                onClick={handleExportExcel}
+                startIcon={<DownloadIcon sx={{ fontSize: "1rem !important" }} />}
+                sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
+              >
+                Export
+              </Button>
+            </>
           )}
         </Stack>
       </Stack>
 
       {view === "upload" && (
-        <Card
-          elevation={1}
-          sx={{ mb: 0.5, flexShrink: 0 }}
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            width: "100%",
+            mt: 1,
+          }}
         >
-          <CardContent
-            sx={{
-              py: 0.5,
-              px: 0.5,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              minHeight: 48,
-              boxSizing: "border-box",
-              "&:last-child": { pb: 0.5 }
-            }}
-          >
+          {/* Top Validation Error Alert */}
+          {uploadResult && uploadResult.errors.length > 0 && (
+            <Alert
+              severity="error"
+              sx={{
+                width: "100%",
+                mb: 2,
+                borderRadius: 3,
+                boxShadow: "0 4px 12px rgba(220, 38, 38, 0.12)",
+                border: "1px solid",
+                borderColor: "#fca5a5",
+                backgroundColor: "#fef2f2",
+                "& .MuiAlert-message": { width: "100%", pr: 1 },
+              }}
+              onClose={() => setUploadResult(null)}
+            >
+              <Typography variant="subtitle2" fontWeight="700" color="#991b1b" sx={{ mb: 0.75, fontSize: "0.95rem" }}>
+                Upload Validation Errors ({uploadResult.errors.length}):
+              </Typography>
+              <Box
+                sx={{
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  width: "100%",
+                  pr: 1.5,
+                  "&::-webkit-scrollbar": {
+                    width: "6px",
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    backgroundColor: "#fee2e2",
+                    borderRadius: "3px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#f87171",
+                    borderRadius: "3px",
+                    "&:hover": {
+                      backgroundColor: "#ef4444",
+                    },
+                  },
+                }}
+              >
+                {uploadResult.errors.map((err, idx) => (
+                  <Typography key={idx} variant="body2" color="#b91c1c" sx={{ my: 0.35, fontSize: "0.85rem", lineHeight: 1.4 }}>
+                    • {err}
+                  </Typography>
+                ))}
+              </Box>
+            </Alert>
+          )}
+
+          <Card elevation={0} sx={{ width: "100%", maxWidth: "100%", borderRadius: 4, background: "transparent" }}>
             <Box
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
               sx={{
                 display: "flex",
-                gap: 2,
+                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "space-between",
+                justifyContent: "center",
+                py: showColumnPreview ? 2.5 : 12,
+                px: 5,
+                borderRadius: 4,
+                border: "2px dashed",
+                borderColor: isDragging ? "#6d28d9" : "#a78bfa",
+                backgroundColor: isDragging ? "#ede9fe" : "#f5f3ff",
+                cursor: "pointer",
+                transition: "all 0.2s ease-in-out",
+                textAlign: "center",
+                minHeight: showColumnPreview ? 180 : 540,
+                "&:hover": {
+                  backgroundColor: "#ede9fe",
+                  borderColor: "#7c3aed",
+                },
               }}
             >
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <Box>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    size="small"
-                    startIcon={<UploadIcon />}
-                    sx={{ px: 0 }}
-                  //disabled={view === "history"}
-                  >
-                    {selectedFile
-                      ? "Change Excel"
-                      : uploadMode === "update"
-                        ? "Select Excel for Update"
-                        : "Select Excel File"}
-                    <input
-                      type="file"
-                      hidden
-                      accept=".xlsx,.xls"
-                      onChange={handleFileChange}
-                    // disabled={view === "history"}
-                    />
-                  </Button>
-                </Box>
+              <input
+                ref={fileInputRef}
+                type="file"
+                hidden
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+              />
 
-                {selectedFile && (
+              {/* Soft Purple Circular Icon Container */}
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: "50%",
+                  backgroundColor: "#ede9fe",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6d28d9",
+                  mb: 2.5,
+                }}
+              >
+                <UploadIcon sx={{ fontSize: 32 }} />
+              </Box>
+
+              {/* Main Title */}
+              <Typography
+                variant="h5"
+                fontWeight="700"
+                color="#1e1b4b"
+                sx={{ fontSize: "1.35rem", mb: 1 }}
+              >
+                Click to upload or drag & drop your Excel file
+              </Typography>
+
+              {/* Subtitle */}
+              <Typography variant="body1" color="#64748b" sx={{ fontSize: "0.95rem", mb: 2.5 }}>
+                Supports .xlsx and .xls · up to 10MB
+              </Typography>
+
+              {/* File Chip if selected */}
+              {selectedFile && (
+                <Box
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  sx={{ mb: 2 }}
+                >
                   <Chip
                     label={selectedFile.name}
-                    color="primary"
+                    color="secondary"
                     variant="filled"
-                    size="small"
-                    onDelete={() => {
+                    size="medium"
+                    onDelete={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
                       setSelectedFile(null);
                       setPreviewRows([]);
+                      setShowColumnPreview(false);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
                     }}
-                    sx={{ maxWidth: 200 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    sx={{ fontWeight: 600, bgcolor: "#7c3aed", color: "#fff", py: 0.5, px: 0.5 }}
                   />
-                )}
+                </Box>
+              )}
 
-                {selectedFile && (
-                  <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-                )}
-
-                {selectedFile && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 700,
-                        color: "success.main",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      STEP 2:
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      onClick={handleUpload}
-                      disabled={uploadMutation.isPending}
-                      color="success"
-                      size="small"
-                      startIcon={<UploadIcon />}
-                      sx={{ px: 2, fontWeight: 600, height: 30 }}
-                    >
-                      {uploadMutation.isPending ? "Importing..." : "Confirm"}
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                {uploadResult && (
-                  <Alert
-                    severity={
-                      uploadResult.imported === 0 && uploadResult.errors.length > 0
-                        ? "error"
-                        : uploadResult.errors.length > 0
-                          ? "warning"
-                          : "success"
-                    }
-                    onClose={() => setUploadResult(null)}
-                    sx={{
-                      py: 0,
-                      px: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      "& .MuiAlert-message": { py: 0.25 },
-                      "& .MuiAlert-icon": { py: 0.25, mr: 0.5, fontSize: "1.1rem" },
-                      "& .MuiAlert-action": { py: 0, my: 0, mr: -0.5 }
-                    }}
+              {/* Post-Upload Controls (Preview & Confirm) */}
+              {selectedFile && (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={1.5}
+                  mb={1.5}
+                  flexWrap="wrap"
+                  justifyContent="center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Typography variant="body2" color="#475569" fontWeight="500" sx={{ fontSize: "0.85rem" }}>
+                    Do you want to preview columns?
+                  </Typography>
+                  <Button
+                    variant={showColumnPreview ? "contained" : "outlined"}
+                    color="secondary"
+                    size="small"
+                    startIcon={<VisibilityIcon />}
+                    onClick={() => setShowColumnPreview(!showColumnPreview)}
+                    sx={{ height: 32, fontWeight: 600, borderRadius: 2 }}
                   >
-                    <Typography variant="caption" fontWeight="600" sx={{ whiteSpace: "nowrap" }}>
-                      Import Summary: {uploadResult.imported} Imported | {uploadResult.skipped} Skipped
-                    </Typography>
-                  </Alert>
-                )}
+                    {showColumnPreview ? "Hide Preview" : "Preview Columns"}
+                  </Button>
 
-                <Button
-                  variant="text"
-                  color="primary"
-                  size="small"
-                  startIcon={<DownloadIcon fontSize="small" />}
-                  onClick={handleDownloadTemplate}
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="small"
+                    startIcon={<CheckIcon />}
+                    onClick={handleUpload}
+                    disabled={uploadMutation.isPending}
+                    sx={{ height: 32, px: 2.5, fontWeight: 700, borderRadius: 2 }}
+                  >
+                    {uploadMutation.isPending ? "Importing..." : "Confirm Import"}
+                  </Button>
+                </Box>
+              )}
+
+              {/* Divider Line */}
+              <Divider sx={{ width: "90%", borderColor: "#ddd6fe", my: 2 }} />
+
+              {/* Footer Template Download Link */}
+              <Typography
+                variant="body2"
+                color="#64748b"
+                sx={{ fontSize: "0.9rem" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Don't have the template?{" "}
+                <Typography
+                  component="span"
+                  variant="body2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadTemplate();
+                  }}
                   sx={{
-                    fontWeight: 600,
+                    color: "#5b21b6",
+                    fontWeight: 700,
+                    cursor: "pointer",
                     textDecoration: "underline",
-                    fontSize: "0.75rem",
-                    whiteSpace: "nowrap",
+                    "&:hover": { color: "#4c1d95" },
                   }}
                 >
-                  Template
-                </Button>
-              </Box>
+                  Click here to download it
+                </Typography>
+              </Typography>
+
+              {uploadMutation.isPending && (
+                <LinearProgress sx={{ width: "90%", mt: 2, borderRadius: 1 }} />
+              )}
             </Box>
-
-            {uploadMutation.isPending && <LinearProgress sx={{ mt: 2 }} />}
-
-            {view === "upload" && uploadResult && uploadResult.errors.length > 0 && (
-              <Alert
-                severity="error"
-                sx={{ mt: 1 }}
-                onClose={() => setUploadResult(null)}
-              >
-                <Box sx={{ maxHeight: 150, overflow: "auto" }}>
-                  {uploadResult.errors.map((err, idx) => (
-                    <Typography
-                      key={idx}
-                      variant="body2"
-                      color="error"
-                      sx={{ my: 0.5 }}
-                    >
-                      • {err}
-                    </Typography>
-                  ))}
-                </Box>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+          </Card>
+        </Box>
       )}
 
       <Dialog
@@ -1292,9 +1594,7 @@ const ProductionOrderUpload: React.FC = () => {
         >
           <CheckCircleOutlineIcon color="success" sx={{ fontSize: 48 }} />
           <Typography variant="h6" fontWeight="600">
-            {uploadMode === "update"
-              ? "Update Successful!"
-              : "Upload Successful!"}
+            Upload Successful!
           </Typography>
         </DialogTitle>
         <DialogContent>
@@ -1302,9 +1602,7 @@ const ProductionOrderUpload: React.FC = () => {
             id="alert-dialog-description"
             sx={{ textAlign: "center", mt: 1 }}
           >
-            {uploadMode === "update"
-              ? "Your production orders have been successfully updated."
-              : "Your production orders have been successfully imported."}
+            Your production orders have been successfully imported.
             <br />
             Please check the history to verify the details.
           </DialogContentText>
@@ -1333,67 +1631,73 @@ const ProductionOrderUpload: React.FC = () => {
       </Dialog>
 
       {view === "upload" ? (
-        <Box
-          sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            width: "100%",
-            maxWidth: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mb: 0.25,
-              fontWeight: 600,
-              color: "text.primary",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              flexShrink: 0,
-            }}
-          >
-            <VisibilityIcon color="primary" fontSize="small" />
-            {previewRows.length > 0
-              ? `Excel Content Preview (${previewRows.length} rows)`
-              : "Choose a file to preview its content here"}
-          </Typography>
-          <Paper
-            elevation={2}
+        showColumnPreview && (
+          <Box
             sx={{
               flexGrow: 1,
-              minHeight: 0,
+              minHeight: 650,
+              height: 650,
               width: "100%",
-              overflow: "hidden",
+              maxWidth: "100%",
+              display: "flex",
+              flexDirection: "column",
+              mt: 1,
             }}
           >
-            <DataGrid
-              rows={uploadTableRows}
-              columns={autosizedPreviewColumns}
-              pageSizeOptions={[5, 10, 25, 50]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 50 } },
-              }}
-              density="compact"
-              disableColumnFilter
-              disableRowSelectionOnClick
+            <Typography
+              variant="subtitle2"
               sx={{
-                border: "none",
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "grey.100",
-                  color: "text.primary",
-                  fontWeight: 800,
-                  fontSize: "0.875rem",
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.875rem",
-                },
+                mb: 0.5,
+                fontWeight: 600,
+                color: "text.primary",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexShrink: 0,
               }}
-            />
-          </Paper>
-        </Box>
+            >
+              <VisibilityIcon color="primary" fontSize="small" />
+              {previewRows.length > 0
+                ? `Excel Content Preview (${previewRows.length} rows)`
+                : "Choose a file to preview its content here"}
+            </Typography>
+            <Paper
+              elevation={2}
+              sx={{
+                flexGrow: 1,
+                minHeight: 600,
+                height: 600,
+                width: "100%",
+                overflow: "hidden",
+              }}
+            >
+              <DataGrid
+                rows={uploadTableRows}
+                columns={autosizedPreviewColumns}
+                pageSizeOptions={[5, 10, 25, 50]}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 50 } },
+                }}
+                density="compact"
+                disableColumnMenu
+                disableColumnFilter
+                disableRowSelectionOnClick
+                sx={{
+                  border: "none",
+                  "& .MuiDataGrid-columnHeaders": {
+                    backgroundColor: "grey.100",
+                    color: "text.primary",
+                    fontWeight: 800,
+                    fontSize: "0.875rem",
+                  },
+                  "& .MuiDataGrid-cell": {
+                    fontSize: "0.875rem",
+                  },
+                }}
+              />
+            </Paper>
+          </Box>
+        )
       ) : (
         <Box
           sx={{
@@ -1405,20 +1709,7 @@ const ProductionOrderUpload: React.FC = () => {
             flexDirection: "column",
           }}
         >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mb: 0.25,
-              fontWeight: 600,
-              color: "text.primary",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              flexShrink: 0,
-            }}
-          >
-            Production Orders History
-          </Typography>
+
 
           {/* Filter Controls */}
           <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -1429,51 +1720,49 @@ const ProductionOrderUpload: React.FC = () => {
                 flexWrap="wrap"
                 alignItems="center"
               >
-                {/* Date Filter Mode Toggle */}
-                <ToggleButtonGroup
-                  value={dateFilterMode}
-                  exclusive
-                  onChange={(_, newMode) => {
-                    if (newMode !== null) {
-                      setDateFilterMode(newMode);
-                      setFilterDate(null);
-                      setFromDate(null);
-                      setToDate(null);
-                    }
-                  }}
-                  size="small"
-                >
-                  <ToggleButton value="single">
-                    <CalendarMonthIcon fontSize="small" sx={{ mr: 0.5 }} />
-                    Single Date
-                  </ToggleButton>
-                  <ToggleButton value="range">
-                    <DateRangeIcon fontSize="small" sx={{ mr: 0.5 }} />
-                    Date Range
-                  </ToggleButton>
-                </ToggleButtonGroup>
 
-                {/* Date Pickers based on mode */}
-                {dateFilterMode === "single" ? (
-                  <>
-                    <DatePicker
-                      label="Filter Date"
-                      value={filterDate}
-                      onChange={(newValue) => setFilterDate(newValue)}
-                      slotProps={{
-                        textField: { size: "small", sx: { width: 180 } },
-                      }}
-                    />
-                    {/* <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<TodayIcon />}
-                      onClick={() => setFilterDate(new Date())}
-                    >
-                      Today
-                    </Button> */}
-                  </>
-                ) : (
+
+                {/* Unified Status / PO / LN Item / Drawing No Search Bar */}
+                <TextField
+
+                  placeholder="Search Status, PO, LN Item, Drawing No..."
+                  variant="outlined"
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{ width: 380 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchQuery ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchQuery("")}
+                          edge="end"
+                        >
+                          <ClearIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  }}
+
+                />
+                {/* Date Filter Button & Range Fields */}
+                <Button
+                  size="small"
+                  variant={showDateFields || fromDate || toDate ? "contained" : "outlined"}
+                  startIcon={<DateRangeIcon fontSize="small" />}
+                  onClick={() => setShowDateFields(!showDateFields)}
+                  sx={{ height: 40, px: 1.5 }}
+                >
+                  Date
+                </Button>
+
+                {(showDateFields || fromDate || toDate) && (
                   <>
                     <DatePicker
                       label="From Date"
@@ -1493,70 +1782,6 @@ const ProductionOrderUpload: React.FC = () => {
                     />
                   </>
                 )}
-
-                {/* Status Filter */}
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={statusFilter}
-                    label="Status"
-                    onChange={(e) =>
-                      setStatusFilter(e.target.value as number | "")
-                    }
-                  >
-                    <MenuItem value="">All</MenuItem>
-                    <MenuItem value={4}>Pending-Planner</MenuItem>
-                    <MenuItem value={1}>Pending</MenuItem>
-                    <MenuItem value={2}>Partial</MenuItem>
-                    <MenuItem value={3}>Completed</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <TextField
-                  label="PO Number"
-                  variant="outlined"
-                  size="small"
-                  value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
-                  sx={{ width: 120 }}
-                />
-
-                <TextField
-                  label="LN Item Code"
-                  variant="outlined"
-                  size="small"
-                  value={lnItemCode}
-                  onChange={(e) => setLnItemCode(e.target.value)}
-                  sx={{ width: 120 }}
-                />
-
-                <TextField
-                  label="Drawing No"
-                  variant="outlined"
-                  size="small"
-                  value={drawingNo}
-                  onChange={(e) => setDrawingNo(e.target.value)}
-                  sx={{ width: 150 }}
-                />
-
-                {/* Clear Filters Button */}
-                <Button
-                  size="small"
-                  variant="text"
-                  color="error"
-                  disabled={!hasActiveFilters}
-                  onClick={() => {
-                    setFilterDate(null);
-                    setFromDate(null);
-                    setToDate(null);
-                    setStatusFilter("");
-                    setPoNumber("");
-                    setLnItemCode("");
-                    setDrawingNo("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
               </Stack>
             </Paper>
           </LocalizationProvider>
@@ -1571,15 +1796,6 @@ const ProductionOrderUpload: React.FC = () => {
               overflow: "hidden",
             }}
           >
-            <Box sx={{ position: "absolute", right: 8, top: 4, zIndex: 1 }}>
-              <IconButton
-                onClick={handleRefresh}
-                disabled={isHistoryLoading}
-                size="small"
-              >
-                <RefreshIcon fontSize="small" color="primary" />
-              </IconButton>
-            </Box>
             <DataGrid
               rows={(filteredRows || []).map((item, index) => ({
                 ...item,
@@ -1593,6 +1809,7 @@ const ProductionOrderUpload: React.FC = () => {
               }}
               filterModel={filterModel}
               onFilterModelChange={(newModel) => setFilterModel(newModel)}
+              disableColumnMenu
               disableColumnFilter
               density="compact"
               disableRowSelectionOnClick
@@ -1669,6 +1886,139 @@ const ProductionOrderUpload: React.FC = () => {
           </Paper>
         </Box>
       )}
+
+      {/* Export Options Modal */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, p: 1 },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <DownloadIcon color="primary" />
+            <Typography variant="h6" fontWeight="700" color="primary.main">
+              Export Production Order Data
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="text.secondary" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns([]);
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < ALL_EXPORTABLE_COLUMNS.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${ALL_EXPORTABLE_COLUMNS.length} selected`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {ALL_EXPORTABLE_COLUMNS.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isExporting}
+            sx={{ minWidth: 110, fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            color="success"
+            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+            onClick={handleConfirmExportData}
+            disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+            sx={{ minWidth: 110, fontWeight: 600 }}
+          >
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Snackbar
         open={snackbar.open}
         autoHideDuration={snackbar.severity === 'error' ? null : 6000}

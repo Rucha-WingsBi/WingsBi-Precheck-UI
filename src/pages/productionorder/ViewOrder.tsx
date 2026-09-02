@@ -489,7 +489,7 @@ const ViewOrder: React.FC = () => {
                 fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
               }}
             >
-              View Production Order{poFromState ? ` - ${poFromState}` : ""}
+              View Availabele QR Codes {poFromState ? ` - ${poFromState}` : ""}
             </Typography>
           </Stack>
 
