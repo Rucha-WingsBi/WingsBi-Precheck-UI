@@ -26,12 +26,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Select,
-  MenuItem,
-  InputLabel,
-  Grid,
-  Tabs,
-  Tab,
+  Chip,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -39,15 +34,13 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
-import { getBarcodeDetails, getBarcodeDetailsWithParameters, viewConsumedQrDetails, clearBarcodeDetails, exportViewQrCode, getAllFanManSerialNumbers, disableQRCode, bulkUpdateQRCode, clearError } from '../../store/slices/qrcodeSlice';
-import { useProductionSeries, useDrawingNumbers, useLnItemCodeSearch, useAllDrawingNumbers, useQRUsers, useQRIdNumbers, useUnits, useIRNumbers, useMSNNumbers } from '../../hooks/useMasterData';
-import { usePONumbers, type ProductionOrderMaster } from '../../hooks/usePONumbers';
-import { useDebounce } from '../../hooks/useDebounce';
+import { getBarcodeDetails, getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, getAllFanManSerialNumbers, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
+import { useProductionSeries, useQRUsers } from '../../hooks/useMasterData';
+import { type ProductionOrderMaster } from '../../hooks/usePONumbers';
 
 import { type RootState } from '../../store/store';
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from '../../store/store';
-import debounce from 'lodash.debounce';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReplayIcon from '@mui/icons-material/Replay';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -78,18 +71,18 @@ const formatDate = (dateString: string) => {
   }
 };
 
-const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, isConsumed, returnFilters }: {
+const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, returnFilters }: {
   barcodeDetails: any;
   isSelected: boolean;
   onSelect: (checked: boolean) => void;
   onSplit?: () => void;
   showBatchId?: boolean;
   onDisable?: () => void;
-  isConsumed?: boolean;
   returnFilters?: any;
 }) => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const isConsumed = barcodeDetails?.qrCodeStatus?.toLowerCase() === 'consumed';
 
   const handleEdit = () => {
     const idParam = barcodeDetails?.qrCodeNumber || barcodeDetails?.id || '';
@@ -289,7 +282,6 @@ const ViewBarcode: React.FC = () => {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'available' | 'consumed'>('available');
 
   // Keep track of the last search query and parameters to refresh correctly
   const [lastSearchType, setLastSearchType] = useState<'none' | 'query' | 'parameters'>('none');
@@ -302,16 +294,7 @@ const ViewBarcode: React.FC = () => {
   const [disableRemarks, setDisableRemarks] = useState('');
   const [remarksError, setRemarksError] = useState(false);
 
-  // Bulk Update dialog states
-  const [bulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
-  const [newIdNumber, setNewIdNumber] = useState<string>('');
-  const [newProjectNumber, setNewProjectNumber] = useState<string>('');
-  const [newUnitId, setNewUnitId] = useState<string | number>('');
-  const [newMrirNumber, setNewMrirNumber] = useState<string>('');
-  const [newIrNumberId, setNewIrNumberId] = useState<string | number>('');
-  const [newMsnNumberId, setNewMsnNumberId] = useState<string | number>('');
-
-  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any>(null);
+  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
   const [selectedLnItem, setSelectedLnItem] = useState<any>(null);
   const [selectedDrawingNumber, setSelectedDrawingNumber] = useState<any>(null);
   const [drawingSearchText, setDrawingSearchText] = useState('');
@@ -323,32 +306,23 @@ const ViewBarcode: React.FC = () => {
   const [toDate, setToDate] = useState<Date | null>(null);
 
   const [poSearchText, setPOSearchText] = useState("");
-  const debouncedPOSearch = useDebounce(poSearchText, 500);
-  const { data: poNumbers = [] } = usePONumbers(debouncedPOSearch);
-
   const [selectedPO, setSelectedPO] = useState<ProductionOrderMaster | null>(null);
 
-  const { fanManSerialNumbers } = useSelector((state: RootState) => state.qrcode);
   const [selectedFanMan, setSelectedFanMan] = useState<string | null>(null);
 
   const { data: productionSeriesData = [] } = useProductionSeries();
-  const { data: drawingNumbersData = [], isLoading: drawingLoading } = useDrawingNumbers('', drawingSearchText);
-  const { data: allDrawingNumbers = [] } = useAllDrawingNumbers();
-  const { isLoading: isLnSearchLoading } = useLnItemCodeSearch(debouncedLnSearch);
 
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<any[]>([]);
   const { data: users = [] } = useQRUsers();
 
   const [selectedFromId, setSelectedFromId] = useState<string | null>(null);
   const [selectedToId, setSelectedToId] = useState<string | null>(null);
-  const { data: idNumbers = [] } = useQRIdNumbers();
 
   // Processing lock for QR code scanner
   const isProcessing = React.useRef(false);
   const scannerTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const currentFilters = React.useMemo(() => ({
-    activeTab,
     searchQuery,
     selectedProductionSeries,
     selectedLnItem,
@@ -368,7 +342,6 @@ const ViewBarcode: React.FC = () => {
     lastSearchQuery,
     lastSearchParams,
   }), [
-    activeTab,
     searchQuery,
     selectedProductionSeries,
     selectedLnItem,
@@ -392,7 +365,6 @@ const ViewBarcode: React.FC = () => {
   useEffect(() => {
     const returnFilters = (location.state as any)?.returnFilters;
     if (returnFilters) {
-      if (returnFilters.activeTab) setActiveTab(returnFilters.activeTab);
       if (returnFilters.searchQuery !== undefined) setSearchQuery(returnFilters.searchQuery);
       if (returnFilters.selectedProductionSeries !== undefined) setSelectedProductionSeries(returnFilters.selectedProductionSeries);
       if (returnFilters.selectedLnItem !== undefined) setSelectedLnItem(returnFilters.selectedLnItem);
@@ -415,25 +387,12 @@ const ViewBarcode: React.FC = () => {
 
       navigate(location.pathname, { replace: true, state: null });
 
-      const tab = returnFilters.activeTab || 'available';
       if (returnFilters.lastSearchType === 'query' && returnFilters.lastSearchQuery) {
-        if (tab === 'consumed') {
-          dispatch(getBarcodeDetails({ qrCodeNumber: returnFilters.lastSearchQuery, qrCodeStatusId: 2 }));
-        } else {
-          dispatch(getBarcodeDetails(returnFilters.lastSearchQuery));
-        }
+        dispatch(getBarcodeDetails(returnFilters.lastSearchQuery));
       } else if (returnFilters.lastSearchType === 'parameters' && returnFilters.lastSearchParams) {
-        if (tab === 'consumed') {
-          dispatch(viewConsumedQrDetails(returnFilters.lastSearchParams));
-        } else {
-          dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams));
-        }
+        dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams as any));
       } else if (returnFilters.searchQuery?.trim()) {
-        if (tab === 'consumed') {
-          dispatch(getBarcodeDetails({ qrCodeNumber: returnFilters.searchQuery.trim(), qrCodeStatusId: 2 }));
-        } else {
-          dispatch(getBarcodeDetails(returnFilters.searchQuery.trim()));
-        }
+        dispatch(getBarcodeDetails(returnFilters.searchQuery.trim()));
       } else {
         const drawing = returnFilters.selectedDrawingNumber || returnFilters.selectedLnItem;
         const hasFilter = returnFilters.selectedFanMan || returnFilters.selectedProductionSeries || returnFilters.selectedLnItem || returnFilters.selectedDrawingNumber || returnFilters.selectedPO || returnFilters.fromDate || returnFilters.toDate || returnFilters.selectedUser || returnFilters.selectedFromId || returnFilters.selectedToId;
@@ -450,27 +409,11 @@ const ViewBarcode: React.FC = () => {
             toBatchId: returnFilters.selectedToId || undefined,
             fanManNumber: returnFilters.selectedFanMan || undefined,
           };
-          if (tab === 'consumed') {
-            dispatch(viewConsumedQrDetails(params));
-          } else {
-            dispatch(getBarcodeDetailsWithParameters(params));
-          }
+          dispatch(getBarcodeDetailsWithParameters(params as any));
         }
       }
     }
   }, []);
-
-  const debouncedDrawingSearch = React.useMemo(
-    () => debounce((searchValue: string) => {
-      setDrawingSearchText(searchValue);
-    }, 300),
-    []
-  );
-
-  const updateDebouncedLnSearch = React.useMemo(
-    () => debounce((value: string) => setDebouncedLnSearch(value), 300),
-    []
-  );
 
   const { barcodeDetails, loading, error, isDownloading } = useSelector((state: RootState) => state.qrcode);
 
@@ -499,59 +442,35 @@ const ViewBarcode: React.FC = () => {
     });
   }, [barcodeDetails]);
 
-  const availableCount = React.useMemo(() => {
-    return sortedBarcodeDetails.filter(
-      (item) => item.qrCodeStatus?.toLowerCase() !== 'consumed'
-    ).length;
-  }, [sortedBarcodeDetails]);
-
-  const consumedCount = React.useMemo(() => {
-    return sortedBarcodeDetails.filter(
-      (item) => item.qrCodeStatus?.toLowerCase() === 'consumed'
-    ).length;
-  }, [sortedBarcodeDetails]);
-
   const filteredBarcodeDetails = React.useMemo(() => {
-    return sortedBarcodeDetails.filter((item) => {
-      const status = item.qrCodeStatus?.toLowerCase();
-      if (activeTab === 'consumed') {
-        return status === 'consumed';
-      } else {
-        return status !== 'consumed';
-      }
+    if (!searchQuery.trim()) return sortedBarcodeDetails;
+    const query = searchQuery.trim().toLowerCase();
+
+    return sortedBarcodeDetails.filter((item: any) => {
+      const qrCodeNumber = (item.qrCodeNumber || item.id || "").toString().toLowerCase();
+      const poNumber = (item.productionOrderNumber || item.poNumber || item.productionorder || "").toString().toLowerCase();
+      const drawingNumber = (item.drawingNumber || item.drawingnumber || "").toString().toLowerCase();
+      const lnItemCode = (item.lnItemCode || item.itemcode || "").toString().toLowerCase();
+      const idNumber = (item.idNumber || item.id_num || item.startIdNumber || item.endIdNumber || "").toString().toLowerCase();
+      const projectNumber = (item.projectNumber || item.projectcode || item.projectDescription || "").toString().toLowerCase();
+      const nomenclature = (item.nomenclature || item.itemDescription || "").toString().toLowerCase();
+
+      return (
+        qrCodeNumber.includes(query) ||
+        poNumber.includes(query) ||
+        drawingNumber.includes(query) ||
+        lnItemCode.includes(query) ||
+        idNumber.includes(query) ||
+        projectNumber.includes(query) ||
+        nomenclature.includes(query)
+      );
     });
-  }, [sortedBarcodeDetails, activeTab]);
+  }, [sortedBarcodeDetails, searchQuery]);
 
   useEffect(() => {
     setDisplayedData(filteredBarcodeDetails);
     setPage(0);
   }, [filteredBarcodeDetails]);
-
-  const firstSelectedBarcodeItem = React.useMemo(() => {
-    if (selectedQRCodes.length === 0) return null;
-    return displayedData.find((item) => {
-      const itemId = (item.id || item.qrCodeNumber)?.toString();
-      return selectedQRCodes.map(String).includes(itemId);
-    }) || null;
-  }, [selectedQRCodes, displayedData]);
-
-  const { data: units = [] } = useUnits();
-
-  const { data: irNumbers = [] } = useIRNumbers(
-    "",
-    undefined,
-    firstSelectedBarcodeItem?.productionOrderNumber || undefined,
-    firstSelectedBarcodeItem?.lnItemCode || undefined,
-    firstSelectedBarcodeItem?.productionSeries || undefined
-  );
-
-  const { data: msnNumbers = [] } = useMSNNumbers(
-    "",
-    undefined,
-    firstSelectedBarcodeItem?.productionOrderNumber || undefined,
-    firstSelectedBarcodeItem?.lnItemCode || undefined,
-    firstSelectedBarcodeItem?.productionSeries || undefined
-  );
 
   const showBatchIdColumn = React.useMemo(() => {
     return displayedData.some(item => (item.componentType === 'Batch' || item.componentType === 'BATCH') && item.unitName === 'ECH' && item.batchId);
@@ -659,7 +578,7 @@ const ViewBarcode: React.FC = () => {
     }
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -679,25 +598,24 @@ const ViewBarcode: React.FC = () => {
   const handleFilterSearch = () => {
     // Prefer selectedDrawingNumber; fall back to selectedLnItem for drawingNumberId/lnItemCodeId
     const drawing = selectedDrawingNumber || selectedLnItem;
+    const prodSeriesIds = selectedProductionSeries.map((s: any) => s.id || s).filter(Boolean);
+    const userIds = selectedUser.map((u: any) => u.id || u).filter(Boolean);
+
     const params = {
-      prodSeriesId: selectedProductionSeries?.id,
+      prodSeriesId: prodSeriesIds.length > 0 ? prodSeriesIds.join(',') : undefined,
       drawingNumberId: drawing?.id,
       lnItemCodeId: drawing?.lnItemCodeId,
       productionOrderNumber: selectedPO?.productionOrderNumber || undefined,
       fromDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
       toDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
-      createdBy: selectedUser?.id || undefined,
+      createdBy: userIds.length > 0 ? userIds.join(',') : undefined,
       fromBatchId: selectedFromId || undefined,
       toBatchId: selectedToId || undefined,
       fanManNumber: selectedFanMan || undefined,
     };
     setLastSearchType('parameters');
     setLastSearchParams(params);
-    if (activeTab === 'consumed') {
-      dispatch(viewConsumedQrDetails(params));
-    } else {
-      dispatch(getBarcodeDetailsWithParameters(params));
-    }
+    dispatch(getBarcodeDetailsWithParameters(params as any));
   };
 
   const handleCloseSnackbar = () => {
@@ -713,44 +631,30 @@ const ViewBarcode: React.FC = () => {
 
   const handleRefresh = () => {
     if (lastSearchType === 'query' && lastSearchQuery) {
-      if (activeTab === 'consumed') {
-        dispatch(getBarcodeDetails({ qrCodeNumber: lastSearchQuery, qrCodeStatusId: 2 }));
-      } else {
-        dispatch(getBarcodeDetails(lastSearchQuery));
-      }
+      dispatch(getBarcodeDetails(lastSearchQuery));
     } else if (lastSearchType === 'parameters' && lastSearchParams) {
-      if (activeTab === 'consumed') {
-        dispatch(viewConsumedQrDetails(lastSearchParams));
-      } else {
-        dispatch(getBarcodeDetailsWithParameters(lastSearchParams));
-      }
+      dispatch(getBarcodeDetailsWithParameters(lastSearchParams as any));
     } else if (searchQuery.trim()) {
-      if (activeTab === 'consumed') {
-        dispatch(getBarcodeDetails({ qrCodeNumber: searchQuery.trim(), qrCodeStatusId: 2 }));
-      } else {
-        dispatch(getBarcodeDetails(searchQuery.trim()));
-      }
+      dispatch(getBarcodeDetails(searchQuery.trim()));
     } else {
       const drawing = selectedDrawingNumber || selectedLnItem;
-      const hasFilter = selectedFanMan || selectedProductionSeries || selectedLnItem || selectedDrawingNumber || selectedPO || fromDate || toDate || selectedUser || selectedFromId || selectedToId;
+      const hasFilter = selectedFanMan || selectedProductionSeries.length > 0 || selectedLnItem || selectedDrawingNumber || selectedPO || fromDate || toDate || selectedUser.length > 0 || selectedFromId || selectedToId;
       if (hasFilter) {
+        const prodSeriesIds = selectedProductionSeries.map((s: any) => s.id || s).filter(Boolean);
+        const userIds = selectedUser.map((u: any) => u.id || u).filter(Boolean);
         const params = {
-          prodSeriesId: selectedProductionSeries?.id,
+          prodSeriesId: prodSeriesIds.length > 0 ? prodSeriesIds.join(',') : undefined,
           drawingNumberId: drawing?.id,
           lnItemCodeId: drawing?.lnItemCodeId,
           productionOrderNumber: selectedPO?.productionOrderNumber || undefined,
           fromDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
           toDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
-          createdBy: selectedUser?.id || undefined,
+          createdBy: userIds.length > 0 ? userIds.join(',') : undefined,
           fromBatchId: selectedFromId || undefined,
           toBatchId: selectedToId || undefined,
           fanManNumber: selectedFanMan || undefined,
         };
-        if (activeTab === 'consumed') {
-          dispatch(viewConsumedQrDetails(params));
-        } else {
-          dispatch(getBarcodeDetailsWithParameters(params));
-        }
+        dispatch(getBarcodeDetailsWithParameters(params as any));
       }
     }
   };
@@ -780,127 +684,6 @@ const ViewBarcode: React.FC = () => {
       setSnackbar({
         open: true,
         message: err || 'Failed to disable QR Code',
-        severity: 'error'
-      });
-    }
-  };
-
-  const isUpdateEnabled = React.useMemo(() => {
-    if (selectedQRCodes.length === 0) return false;
-
-    // Filter displayedData to find selected items safely
-    const selectedItems = displayedData.filter((item) => {
-      const itemId = (item.id || item.qrCodeNumber)?.toString();
-      return selectedQRCodes.map(String).includes(itemId);
-    });
-
-    if (selectedItems.length !== selectedQRCodes.length || selectedItems.length === 0) return false;
-
-    // Only allow update when all selected QR codes have componentType "ID" (case-insensitive)
-    const hasOnlyIdType = selectedItems.every(
-      (item) => item.componentType?.toUpperCase() === 'ID'
-    );
-    if (!hasOnlyIdType) return false;
-
-    const firstItem = selectedItems[0];
-    const firstFormattedDate = formatDate(firstItem.createdDate);
-
-    return selectedItems.every(
-      (item) =>
-        item.lnItemCode === firstItem.lnItemCode &&
-        item.drawingNumber === firstItem.drawingNumber &&
-        item.componentType === firstItem.componentType &&
-        item.productionSeries === firstItem.productionSeries &&
-        item.productionOrderNumber === firstItem.productionOrderNumber &&
-        formatDate(item.createdDate) === firstFormattedDate
-    );
-  }, [selectedQRCodes, displayedData]);
-
-  const handleOpenBulkUpdateDialog = () => {
-    // Preset the selection if homogeneous
-    const selectedItems = displayedData.filter((item) =>
-      selectedQRCodes.includes(item.id || item.qrCodeNumber)
-    );
-    if (selectedItems.length > 0) {
-      const first = selectedItems[0];
-      setNewIdNumber(first.idNumber || '');
-      setNewProjectNumber(first.projectNumber || '');
-
-      let unitVal = first.unitId || '';
-      if (!unitVal && first.unitName && units.length > 0) {
-        const uMatch = units.find((u: any) => u.unitName === first.unitName);
-        if (uMatch) unitVal = uMatch.id;
-      }
-      setNewUnitId(unitVal);
-
-      setNewMrirNumber(first.mrirNumber || '');
-
-      let irVal = first.irNumberId || '';
-      if (!irVal && first.irNumber && irNumbers.length > 0) {
-        const irMatch = irNumbers.find((i: any) => i.irNumber === first.irNumber);
-        if (irMatch) irVal = irMatch.id;
-      }
-      setNewIrNumberId(irVal);
-
-      let msnVal = first.msnNumberId || '';
-      if (!msnVal && first.msnNumber && msnNumbers.length > 0) {
-        const msnMatch = msnNumbers.find((m: any) => m.msnNumber === first.msnNumber);
-        if (msnMatch) msnVal = msnMatch.id;
-      }
-      setNewMsnNumberId(msnVal);
-    } else {
-      setNewIdNumber('');
-      setNewProjectNumber('');
-      setNewUnitId('');
-      setNewMrirNumber('');
-      setNewIrNumberId('');
-      setNewMsnNumberId('');
-    }
-    setBulkUpdateDialogOpen(true);
-  };
-
-  const confirmBulkUpdate = async () => {
-    // Map unique IDs back to QR Code numbers for the API call
-    const qrCodeNumbers = Array.from(
-      new Set(
-        displayedData
-          .filter((item) => selectedQRCodes.includes(item.id || item.qrCodeNumber))
-          .map((item) => item.qrCodeNumber)
-          .filter((num) => num)
-      )
-    );
-
-    const cleanId = (val: any) => {
-      if (!val || val === 'NA' || val === 'Not-Applicable') return undefined;
-      const num = Number(val);
-      return isNaN(num) ? undefined : num;
-    };
-
-    try {
-      const payload: any = {
-        qrCodeNumbers,
-
-        projectNumber: newProjectNumber.trim() || undefined,
-        unitId: cleanId(newUnitId),
-        mrirNumber: newMrirNumber.trim() || undefined,
-        irNumberId: cleanId(newIrNumberId),
-        msnNumberId: cleanId(newMsnNumberId),
-      };
-
-      await dispatch(bulkUpdateQRCode(payload)).unwrap();
-
-      setBulkUpdateDialogOpen(false);
-      setSelectedQRCodes([]);
-      setSnackbar({
-        open: true,
-        message: 'QR codes updated successfully!',
-        severity: 'success'
-      });
-      handleRefresh();
-    } catch (err: any) {
-      setSnackbar({
-        open: true,
-        message: err || 'Failed to bulk update QR codes',
         severity: 'error'
       });
     }
@@ -955,7 +738,6 @@ const ViewBarcode: React.FC = () => {
       const result = await dispatch(exportViewQrCode({
         qrCodeNumber: qrCodeNumbers,
         batchId: batchIds.length > 0 ? batchIds : undefined,
-        qrCodeStatusId: activeTab === 'consumed' ? 2 : undefined
       }));
 
       if (exportViewQrCode.fulfilled.match(result)) {
@@ -980,12 +762,9 @@ const ViewBarcode: React.FC = () => {
     }
   };
 
-  const clearFilters = (keepTabValue?: 'available' | 'consumed') => {
-    if (!keepTabValue) {
-      setActiveTab('available');
-    }
+  const clearFilters = () => {
     setSearchQuery('');
-    setSelectedProductionSeries(null);
+    setSelectedProductionSeries([]);
     setSelectedLnItem(null);
     setSelectedDrawingNumber(null);
     setDrawingSearchText('');
@@ -996,7 +775,7 @@ const ViewBarcode: React.FC = () => {
     setSelectedQRCodes([]);
     setSelectedPO(null);
     setPOSearchText('');
-    setSelectedUser(null);
+    setSelectedUser([]);
     setSelectedFromId(null);
     setSelectedToId(null);
     setSelectedFanMan(null);
@@ -1015,7 +794,7 @@ const ViewBarcode: React.FC = () => {
   };
 
   const handleReset = () => {
-    clearFilters(activeTab);
+    clearFilters();
   };
 
   const processBarcodeScan = React.useCallback(async (barcode: string, isFanMan: boolean = false) => {
@@ -1027,27 +806,19 @@ const ViewBarcode: React.FC = () => {
         const params = { fanManNumber: barcode.trim() };
         setLastSearchType('parameters');
         setLastSearchParams(params);
-        if (activeTab === 'consumed') {
-          await dispatch(viewConsumedQrDetails(params)).unwrap();
-        } else {
-          await dispatch(getBarcodeDetailsWithParameters(params)).unwrap();
-        }
+        await dispatch(getBarcodeDetailsWithParameters(params)).unwrap();
       } else {
         const query = barcode.trim();
         setLastSearchType('query');
         setLastSearchQuery(query);
-        if (activeTab === 'consumed') {
-          await dispatch(getBarcodeDetails({ qrCodeNumber: query, qrCodeStatusId: 2 })).unwrap();
-        } else {
-          await dispatch(getBarcodeDetails(query)).unwrap();
-        }
+        await dispatch(getBarcodeDetails(query)).unwrap();
       }
     } catch (err) {
       console.error("Error fetching barcode details:", err);
     } finally {
       isProcessing.current = false;
     }
-  }, [dispatch, setLastSearchType, setLastSearchQuery, setLastSearchParams, activeTab]);
+  }, [dispatch, setLastSearchType, setLastSearchQuery, setLastSearchParams]);
 
   // Smart QR Code processing logic for View Barcode
   useEffect(() => {
@@ -1118,10 +889,10 @@ const ViewBarcode: React.FC = () => {
   const isResetEnabled = !!(
     searchQuery.trim() ||
     selectedPO ||
-    selectedProductionSeries ||
+    selectedProductionSeries.length > 0 ||
     selectedLnItem ||
     selectedDrawingNumber ||
-    selectedUser ||
+    selectedUser.length > 0 ||
     selectedFromId ||
     selectedToId ||
     selectedFanMan ||
@@ -1132,73 +903,41 @@ const ViewBarcode: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
+      <Box sx={{ p: { xs: 0.5, sm: 1 } }}>
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            mb: 1.5,
+            alignItems: 'center',
+            mb: 0.75,
             flexWrap: 'wrap',
-            gap: { xs: 1, sm: 2, md: 3 },
+            gap: 1,
             borderBottom: 1,
             borderColor: 'divider',
-            pb: 0.5
+            pb: 0.25
           }}
         >
           <Box>
-            <Typography variant="h4" color="primary.main" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.5rem' }, mb: 0.5 }}>
+            <Typography variant="h4" color="primary.main" fontWeight={600} sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
               View QR Code
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {activeTab === 'consumed'
-                ? 'View and download consumed QR codes'
-                : 'View and download existing QR codes'}
-            </Typography>
           </Box>
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => {
-              setActiveTab(newValue);
-              clearFilters(newValue);
-            }}
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 100,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-            }}
-          >
-            <Tab label="Available QR" value="available" />
-            <Tab label="Consumed QR" value="consumed" />
-          </Tabs>
         </Box>
 
-        <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 1 }}>
+        <Paper sx={{ p: { xs: 1, sm: 1.25 }, mt: 0.5 }}>
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              mb: 2,
-              flexDirection: { xs: 'column', sm: 'row' },
-              width: '100%',
-              flexWrap: 'wrap'
+              gap: 1.25,
+              mb: 1,
+              flexWrap: 'wrap',
+              width: '100%'
             }}
           >
             <TextField
               size="small"
-              placeholder="Search QR Code ID"
+              placeholder="Search by QR Code, PO No, Drawing No, LN Item Code, ID No, Project No..."
               value={searchQuery}
               onChange={(e) => {
                 if (error) dispatch(clearError());
@@ -1208,302 +947,186 @@ const ViewBarcode: React.FC = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon color="action" />
+                    <SearchIcon color="action" fontSize="small" />
                   </InputAdornment>
                 ),
                 endAdornment: loading && (
                   <InputAdornment position="end">
-                    <CircularProgress size={20} />
+                    <CircularProgress size={18} />
                   </InputAdornment>
                 ),
               }}
               sx={{
-                width: { xs: '100%', sm: '20%' },
-                minWidth: { sm: '210px' }
+                flex: { xs: '1 1 100%', sm: '1 1 260px', md: '1 1 300px' },
+                minWidth: { xs: '100%', sm: '240px' }
               }}
               error={!!error && !!searchQuery.trim()}
               helperText={(searchQuery.trim() && error?.message) || ''}
             />
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                display: { xs: 'none', sm: 'block' }
-              }}
-            >
-              OR
-            </Typography>
-
-            <Box sx={{
-              display: 'flex',
-              gap: 1,
-              alignItems: 'center',
-              width: { xs: '100%', sm: 'auto' },
-              flexDirection: { xs: 'column', sm: 'row' },
-              flexWrap: 'wrap'
-            }}>
-
-
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '200px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={poNumbers || []}
-                  getOptionLabel={(option) => {
-                    if (typeof option === 'string') return option;
-                    return option.productionOrderNumber || "";
-                  }}
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options.slice(0, 100);
-                    const searchLower = inputValue.toLowerCase();
-                    const filtered = options.filter((option) => {
-                      return (
-                        option.productionOrderNumber?.toLowerCase().includes(searchLower) ||
-                        option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                        option.drawingNumber?.toLowerCase().includes(searchLower)
-                      );
-                    });
-                    return filtered.slice(0, 100);
-                  }}
-                  value={selectedPO}
-                  onInputChange={(_, value) => setPOSearchText(value)}
-                  onChange={(_, newValue) => {
-                    setSelectedPO(newValue && typeof newValue !== 'string' ? newValue : null);
-                  }}
-                  renderOption={(props, option) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <li {...optionProps} key={key}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5, width: '100%' }}>
-                          <Typography variant="body2" fontWeight="600" color="primary">
-                            PO: {option.productionOrderNumber}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {option.lnItemCode && `LN: ${option.lnItemCode}`}
-                            {option.drawingNumber && ` | Drawing: ${option.drawingNumber}`}
-                          </Typography>
-                        </Box>
-                      </li>
-                    );
-                  }}
-                  renderInput={(params) => <TextField {...params} label="PO Number Filter" size="small" />}
-                />
-              </FormControl>
-
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '110px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={productionSeriesData}
-                  getOptionLabel={(option) => {
-                    if (typeof option === "string") return option;
-                    return option.productionSeries || '';
-                  }}
-                  value={selectedProductionSeries}
-                  onChange={(_, value) => setSelectedProductionSeries(value)}
-                  isOptionEqualToValue={(option, value) => option.id === (value?.id || '')}
-                  renderInput={(params) => <TextField {...params} label="Prod Series" size="small" />}
-                />
-              </FormControl>
-
-              <FormControl sx={{ minWidth: { xs: '100%', sm: 270 }, maxWidth: { sm: 270 } }} size="small">
-                <Autocomplete
-                  size="small"
-                  options={allDrawingNumbers}
-                  groupBy={(option: any) => option.lnItemCode || "No LN Code"}
-                  getOptionLabel={(option: any) => {
-                    if (typeof option === "string") return option;
-                    return option.lnItemCode || "";
-                  }}
-                  value={selectedLnItem}
-                  loading={isLnSearchLoading}
-                  freeSolo={false}
-                  onInputChange={(_, value) => {
-                    updateDebouncedLnSearch(value);
-                  }}
-                  onChange={(_: any, value: any) => {
-                    setSelectedLnItem(value);
-                    // Auto-fill Drawing Number when LN is selected
-                    if (value) {
-                      setSelectedDrawingNumber(value);
+            <FormControl size="small" sx={{ flex: { xs: '1 1 calc(50% - 6px)', sm: '0 0 140px' }, minWidth: 120 }}>
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                renderTags={() => null}
+                size="small"
+                options={productionSeriesData}
+                getOptionLabel={(option) => {
+                  if (typeof option === "string") return option;
+                  return option.productionSeries || '';
+                }}
+                value={selectedProductionSeries}
+                onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
+                isOptionEqualToValue={(option, value) => (option.id || option) === (value?.id || value)}
+                ListboxProps={{
+                  sx: {
+                    py: 0.5,
+                    '& .MuiAutocomplete-option': {
+                      minHeight: '30px !important',
+                      py: '2px !important',
+                      px: '8px !important',
+                      fontSize: '0.85rem'
                     }
-                  }}
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options.slice(0, 100);
-                    const searchLower = inputValue.toLowerCase();
-                    const filtered = options.filter((option: any) =>
-                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                      option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                      option.nomenclature?.toLowerCase().includes(searchLower)
-                    );
-                    return filtered.slice(0, 100);
-                  }}
-                  renderOption={(props: any, option: any) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <li {...optionProps} key={key}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5, width: '100%' }}>
-                          <Typography variant="body2" fontWeight="500" sx={{ fontSize: '0.85rem', color: 'text.primary' }}>
-                            Drawing: {option.drawingNumber}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem' }}>
-                            {option.nomenclature} | Type: {option.componentType}
-                          </Typography>
-                        </Box>
-                      </li>
-                    );
-                  }}
-                  renderGroup={(params) => (
-                    <li key={params.key}>
-                      <Typography variant="subtitle2" fontWeight="800" sx={{ px: 2, py: 0.5, backgroundColor: 'grey.200', color: 'primary.main', fontSize: '0.95rem', letterSpacing: '0.5px' }}>
-                        LN CODE: {params.group}
-                      </Typography>
-                      <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
+                  }
+                }}
+                renderOption={(props, option, { selected }) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Checkbox
+                        size="small"
+                        sx={{ p: '2px', mr: 0.75 }}
+                        checked={selected}
+                      />
+                      {typeof option === "string" ? option : option.productionSeries}
                     </li>
-                  )}
-                  renderInput={(params: any) => (
-                    <TextField {...params} label="LN Item Code"
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {isLnSearchLoading ? <CircularProgress color="inherit" size={16} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </FormControl>
+                  );
+                }}
+                renderInput={(params) => <TextField {...params} label="Prod Series" placeholder={selectedProductionSeries.length > 0 ? `${selectedProductionSeries.length} selected` : "Select"} size="small" />}
+              />
+            </FormControl>
 
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '220px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={drawingNumbersData}
-                  getOptionLabel={(option) => {
-                    if (typeof option === "string") return option;
-                    return option.drawingNumber || '';
-                  }}
-                  value={selectedDrawingNumber}
-                  loading={drawingLoading}
-                  onInputChange={(_: any, value: string) => {
-                    if (value.length >= 3) debouncedDrawingSearch(value);
-                  }}
-                  onChange={(_: any, value: any) => {
-                    setSelectedDrawingNumber(value);
-                    // Auto-fill LN Item Code when Drawing is selected
-                    if (value) {
-                      const match = allDrawingNumbers.find((d: any) => d.id === value.id);
-                      if (match) setSelectedLnItem(match);
+            <FormControl size="small" sx={{ flex: { xs: '1 1 calc(50% - 6px)', sm: '0 0 150px' }, minWidth: 130 }}>
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                renderTags={() => null}
+                size="small"
+                options={users || []}
+                getOptionLabel={(option: any) => {
+                  if (typeof option === 'string') return option;
+                  return option.userName || option.username || "";
+                }}
+                value={selectedUser}
+                onChange={(_, newValue) => setSelectedUser(newValue)}
+                isOptionEqualToValue={(option, value) => (option.id || option) === (value?.id || value)}
+                ListboxProps={{
+                  sx: {
+                    py: 0.5,
+                    '& .MuiAutocomplete-option': {
+                      minHeight: '30px !important',
+                      py: '2px !important',
+                      px: '8px !important',
+                      fontSize: '0.85rem'
                     }
-                  }}
-                  isOptionEqualToValue={(option, value) => option.id === (value?.id || '')}
-                  renderOption={(props: any, option: any) => (
-                    <li {...props}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5 }}>
-                        <Typography variant="body2">{option.drawingNumber}</Typography>
-                        <Typography variant="caption" color="text.secondary">{option.nomenclature || ''} | {option.componentType || ''}</Typography>
-                      </Box>
+                  }
+                }}
+                renderOption={(props, option, { selected }) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Checkbox
+                        size="small"
+                        sx={{ p: '2px', mr: 0.75 }}
+                        checked={selected}
+                      />
+                      {typeof option === 'string' ? option : (option.userName || option.username || "")}
                     </li>
-                  )}
-                  renderInput={(params: any) => <TextField {...params} label="Drawing Number" />}
-                />
-              </FormControl>
-
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '140px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={users || []}
-                  getOptionLabel={(option: any) => {
-                    if (typeof option === 'string') return option;
-                    return option.userName || option.username || "";
-                  }}
-                  value={selectedUser}
-                  onChange={(_, newValue) => setSelectedUser(newValue)}
-                  renderInput={(params) => <TextField {...params} label="Generated By" />}
-                />
-              </FormControl>
-
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '120px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={idNumbers || []}
-                  getOptionLabel={(option: any) => option?.toString() || ""}
-                  value={selectedFromId}
-                  onChange={(_, newValue) => setSelectedFromId(newValue)}
-                  renderInput={(params) => <TextField {...params} label="From ID Number" />}
-                />
-              </FormControl>
-
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '120px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={idNumbers || []}
-                  getOptionLabel={(option: any) => option?.toString() || ""}
-                  value={selectedToId}
-                  onChange={(_, newValue) => setSelectedToId(newValue)}
-                  renderInput={(params) => <TextField {...params} label="To ID Number" />}
-                />
-              </FormControl>
-              <FormControl size="small" sx={{ width: { xs: '100%', sm: '130px' } }}>
-                <Autocomplete
-                  size="small"
-                  options={fanManSerialNumbers}
-                  getOptionLabel={(option) => option}
-                  value={selectedFanMan}
-                  onChange={(_, newValue) => {
-                    setSelectedFanMan(newValue);
-                  }}
-                  renderInput={(params) => <TextField {...params} label="FAN/MAN " />}
-                />
-              </FormControl>
-
-              <DatePicker
-                label="From Date"
-                value={fromDate}
-                onChange={(newValue) => setFromDate(newValue)}
-                slotProps={{ textField: { size: "small", sx: { width: 140 } } }}
+                  );
+                }}
+                renderInput={(params) => <TextField {...params} label="Generated By" placeholder={selectedUser.length > 0 ? `${selectedUser.length} selected` : "Select"} size="small" />}
               />
-              <DatePicker
-                label="To Date"
-                value={toDate}
-                onChange={(newValue) => setToDate(newValue)}
-                slotProps={{ textField: { size: "small", sx: { width: 140 } } }}
-              />
+            </FormControl>
 
-              <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-start' }, mt: { xs: 1, sm: 0 } }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleFilterSearch}
-                  size="small"
-                  disabled={!!searchQuery || (!selectedFanMan && !selectedProductionSeries && !selectedLnItem && !selectedDrawingNumber && !selectedPO && !fromDate && !toDate && !selectedUser && !selectedFromId && !selectedToId)}
-                  sx={{ height: '40px', minWidth: '80px' }}
-                >
-                  Search
-                </Button>
-                <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownload} size="small" disabled={isDownloading || selectedQRCodes.length === 0} sx={{ height: '40px', minWidth: '100px' }}>
-                  {isDownloading ? 'Downloading' : 'Download'}
-                </Button>
-                {activeTab !== 'consumed' && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<EditIcon />}
-                    onClick={handleOpenBulkUpdateDialog}
-                    size="small"
-                    disabled={!isUpdateEnabled}
-                    sx={{ height: '40px', minWidth: '100px' }}
-                  >
-                    Update
-                  </Button>
-                )}
-                <Button variant="contained" color="error" startIcon={<ReplayIcon />} onClick={handleReset} size="small" disabled={!isResetEnabled} sx={{ height: '40px', minWidth: '80px' }}>
-                  Reset
-                </Button>
-              </Box>
+            <DatePicker
+              label="From Date"
+              value={fromDate}
+              onChange={(newValue) => setFromDate(newValue)}
+              slotProps={{ textField: { size: "small", sx: { flex: { xs: '1 1 calc(50% - 6px)', sm: '0 0 135px' }, minWidth: 120 } } }}
+            />
+            <DatePicker
+              label="To Date"
+              value={toDate}
+              onChange={(newValue) => setToDate(newValue)}
+              slotProps={{ textField: { size: "small", sx: { flex: { xs: '1 1 calc(50% - 6px)', sm: '0 0 135px' }, minWidth: 120 } } }}
+            />
+
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleFilterSearch}
+                size="small"
+                disabled={!!searchQuery || (!selectedFanMan && selectedProductionSeries.length === 0 && !selectedLnItem && !selectedDrawingNumber && !selectedPO && !fromDate && !toDate && selectedUser.length === 0 && !selectedFromId && !selectedToId)}
+                sx={{ height: '38px', minWidth: '80px' }}
+              >
+                Search
+              </Button>
+              <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownload} size="small" disabled={isDownloading || selectedQRCodes.length === 0} sx={{ height: '38px', minWidth: '100px' }}>
+                {isDownloading ? 'Downloading' : 'Download'}
+              </Button>
+              <Button variant="contained" color="error" startIcon={<ReplayIcon />} onClick={handleReset} size="small" disabled={!isResetEnabled} sx={{ height: '38px', minWidth: '80px' }}>
+                Reset
+              </Button>
             </Box>
           </Box>
+
+          {(selectedProductionSeries.length > 0 || selectedUser.length > 0) && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', mb: 1, px: 0.5 }}>
+              {selectedProductionSeries.map((item: any) => {
+                const label = typeof item === 'string' ? item : item.productionSeries;
+                return (
+                  <Chip
+                    key={item.id || label}
+                    label={`Series: ${label}`}
+                    size="small"
+                    onDelete={() => {
+                      setSelectedProductionSeries(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
+                    }}
+                    color="primary"
+                    variant="outlined"
+                  />
+                );
+              })}
+              {selectedUser.map((userItem: any) => {
+                const label = typeof userItem === 'string' ? userItem : (userItem.userName || userItem.username);
+                return (
+                  <Chip
+                    key={userItem.id || label}
+                    label={`User: ${label}`}
+                    size="small"
+                    onDelete={() => {
+                      setSelectedUser(prev => prev.filter((u: any) => (u.id || u) !== (userItem.id || userItem)));
+                    }}
+                    color="primary"
+                    variant="outlined"
+                  />
+                );
+              })}
+              <Button
+                size="small"
+                color="error"
+                variant="text"
+                onClick={() => {
+                  setSelectedProductionSeries([]);
+                  setSelectedUser([]);
+                }}
+                sx={{ fontSize: '0.75rem', py: 0, px: 1, height: '24px', minWidth: 'auto', fontWeight: 600 }}
+              >
+                Clear All
+              </Button>
+            </Box>
+          )}
 
 
 
@@ -1531,8 +1154,8 @@ const ViewBarcode: React.FC = () => {
             </Box>
           )}
 
-          <TableContainer>
-            <Table sx={{ maxWidth: 'auto' }} aria-label="QR codes table">
+          <TableContainer sx={{ width: '100%', maxHeight: 'calc(100vh - 270px)', minHeight: '480px', overflowX: 'auto', overflowY: 'auto' }}>
+            <Table sx={{ width: '100%', minWidth: '1540px', tableLayout: 'auto' }} stickyHeader aria-label="QR codes table">
               <TableHead>
                 <TableRow sx={{ height: 30 }}>
                   <TableCell padding="checkbox" sx={{ fontWeight: 'bold', textAlign: 'center', padding: "5px 8px !important" }}>
@@ -1542,18 +1165,18 @@ const ViewBarcode: React.FC = () => {
                       onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>QRCode ID</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '120px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Prod Series</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '120px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>LN Item Code</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '180px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Drawing Number</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Nomenclature</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '120px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Component Type</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '200px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>ConsumedInDrawing</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '120px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>ID Number</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '180px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>QRCode ID</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '140px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Prod Series</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>LN Item Code</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '200px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Drawing Number</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '200px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Nomenclature</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Component Type</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '220px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>ConsumedInDrawing</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '140px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>ID Number</TableCell>
                   {showBatchIdColumn && (
-                    <TableCell sx={{ fontWeight: 'bold', minWidth: '120px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Batch ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', minWidth: '130px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Batch ID</TableCell>
                   )}
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Details</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '160px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Details</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1569,16 +1192,20 @@ const ViewBarcode: React.FC = () => {
                         onSplit={() => handleSplit(globalIndex)}
                         showBatchId={showBatchIdColumn}
                         onDisable={() => handleOpenDisableDialog(item.qrCodeNumber)}
-                        isConsumed={activeTab === 'consumed'}
                         returnFilters={currentFilters}
                       />
                     );
                   })
                 ) : (
                   !loading && (
-                    <TableRow>
-                      <TableCell colSpan={showBatchIdColumn ? 12 : 11} sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">No data found. Please search for QR codes.</Typography>
+                    <TableRow sx={{ height: '350px' }}>
+                      <TableCell colSpan={showBatchIdColumn ? 12 : 11} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%' }}>
+                          
+                         
+                          <Typography variant="body1" color="text.secondary">Use the search filters to view QR codes.
+                          </Typography>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   )
@@ -1637,127 +1264,6 @@ const ViewBarcode: React.FC = () => {
               disabled={loading}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : "Disable"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog open={bulkUpdateDialogOpen} onClose={() => setBulkUpdateDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle sx={{ fontWeight: 600, color: 'primary.main' }}>Bulk Update QR Codes</DialogTitle>
-          <DialogContent sx={{ pt: 2.5 }}>
-            <Grid container spacing={2}>
-              {selectedQRCodes.length > 0 && (() => {
-                const selectedItems = displayedData.filter(item => selectedQRCodes.includes(item.id || item.qrCodeNumber));
-                if (selectedItems.length > 0) {
-                  const firstItem = selectedItems[0];
-                  return (
-                    <>
-                      <Grid item xs={12} sm={6}>
-                        <TextField label="PO Number" value={firstItem.productionOrderNumber || 'N/A'} fullWidth size="small" disabled />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField label="LN Item Code" value={firstItem.lnItemCode || 'N/A'} fullWidth size="small" disabled />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField label="Drawing Number" value={firstItem.drawingNumber || 'N/A'} fullWidth size="small" disabled />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField label="Production Series" value={firstItem.productionSeries || 'N/A'} fullWidth size="small" disabled />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField label="Created Date" value={formatDate(firstItem.createdDate)} fullWidth size="small" disabled />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField label="Component Type" value={firstItem.componentType || 'N/A'} fullWidth size="small" disabled />
-                      </Grid>
-                    </>
-                  );
-                }
-                return null;
-              })()}
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Project Number"
-                  value={newProjectNumber}
-                  onChange={(e) => setNewProjectNumber(e.target.value)}
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="bulk-unit-label">Unit</InputLabel>
-                  <Select
-                    labelId="bulk-unit-label"
-                    value={newUnitId}
-                    label="Unit"
-                    onChange={(e) => setNewUnitId(e.target.value)}
-                  >
-                    {units.map((unit: any) => (
-                      <MenuItem key={unit.id} value={unit.id}>
-                        {unit.unitName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="bulk-ir-label">IR</InputLabel>
-                  <Select
-                    labelId="bulk-ir-label"
-                    value={newIrNumberId}
-                    label="IR"
-                    onChange={(e) => setNewIrNumberId(e.target.value)}
-                  >
-                    {irNumbers.map((ir: any) => (
-                      <MenuItem key={ir.id} value={ir.id}>
-                        {ir.irNumber}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="bulk-msn-label">MSN</InputLabel>
-                  <Select
-                    labelId="bulk-msn-label"
-                    value={newMsnNumberId}
-                    label="MSN"
-                    onChange={(e) => setNewMsnNumberId(e.target.value)}
-                  >
-                    {msnNumbers.map((msn: any) => (
-                      <MenuItem key={msn.id} value={msn.id}>
-                        {msn.msnNumber}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="MRIR"
-                  value={newMrirNumber}
-                  onChange={(e) => setNewMrirNumber(e.target.value)}
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={() => setBulkUpdateDialogOpen(false)} color="inherit" variant="outlined" size="small">
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmBulkUpdate}
-              color="primary"
-              variant="contained"
-              disabled={loading}
-              size="small"
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Update"}
             </Button>
           </DialogActions>
         </Dialog>

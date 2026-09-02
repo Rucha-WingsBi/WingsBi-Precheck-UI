@@ -29,10 +29,10 @@ import {
   FormControl,
   FormControlLabel,
   Checkbox,
-  FormGroup,
   Grid,
   Tooltip,
   CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -70,7 +70,7 @@ import type { RootState } from "../../store/store";
 import * as XLSX from "xlsx";
 import api from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
-import { usePageAccess } from "../../hooks/useMasterData";
+import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { getAutosizedColumns } from "../../utils/gridUtils";
 
@@ -494,6 +494,8 @@ const ProductionOrderUpload: React.FC = () => {
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
+  const { data: productionSeriesData = [] } = useProductionSeries();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
@@ -526,6 +528,10 @@ const ProductionOrderUpload: React.FC = () => {
   // Helper to build query params from all filter states
   const buildQueryParams = () => {
     const params: any = {};
+
+    if (selectedProductionSeries.length > 0) {
+      params.productionSeries = selectedProductionSeries.map((s: any) => s.productionSeries || s).join(',');
+    }
 
     // Date Filters (Range mode)
     if (fromDate && toDate) {
@@ -563,6 +569,7 @@ const ProductionOrderUpload: React.FC = () => {
       fromDate,
       toDate,
       debouncedSearchQuery,
+      selectedProductionSeries,
     ],
     queryFn: async () => {
       const params = buildQueryParams();
@@ -579,6 +586,7 @@ const ProductionOrderUpload: React.FC = () => {
       fromDate,
       toDate,
       debouncedSearchQuery,
+      selectedProductionSeries,
     ],
     queryFn: async () => {
       const params = buildQueryParams();
@@ -599,7 +607,11 @@ const ProductionOrderUpload: React.FC = () => {
 
   // Use server data directly (Pure Server-Side Filtering) with Client-Side Fallback
   const filteredRows = React.useMemo(() => {
-    const rows = productionOrders || [];
+    let rows = productionOrders || [];
+    if (selectedProductionSeries.length > 0) {
+      const seriesNames = selectedProductionSeries.map((s: any) => (s.productionSeries || s).toString().toLowerCase());
+      rows = rows.filter((row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase()));
+    }
     if (!debouncedSearchQuery?.trim()) return rows;
     const term = debouncedSearchQuery.trim().toLowerCase();
     return rows.filter(
@@ -615,7 +627,7 @@ const ProductionOrderUpload: React.FC = () => {
         (row.precheckStatus === 2 && "partial".includes(term)) ||
         (row.precheckStatus === 3 && "completed".includes(term)),
     );
-  }, [productionOrders, debouncedSearchQuery]);
+  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries]);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -1751,6 +1763,49 @@ const ProductionOrderUpload: React.FC = () => {
                   }}
 
                 />
+                {/* Prod Series Multi-Select Autocomplete */}
+                <FormControl size="small" sx={{ width: 180 }}>
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    renderTags={() => null}
+                    size="small"
+                    options={productionSeriesData}
+                    getOptionLabel={(option: any) => {
+                      if (typeof option === "string") return option;
+                      return option.productionSeries || '';
+                    }}
+                    value={selectedProductionSeries}
+                    onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
+                    isOptionEqualToValue={(option: any, value: any) => (option.id || option) === (value?.id || value)}
+                    ListboxProps={{
+                      sx: {
+                        py: 0.5,
+                        '& .MuiAutocomplete-option': {
+                          minHeight: '30px !important',
+                          py: '2px !important',
+                          px: '8px !important',
+                          fontSize: '0.85rem'
+                        }
+                      }
+                    }}
+                    renderOption={(props, option, { selected }) => {
+                      const { key, ...optionProps } = props;
+                      return (
+                        <li {...optionProps} key={key}>
+                          <Checkbox
+                            size="small"
+                            sx={{ p: '2px', mr: 0.75 }}
+                            checked={selected}
+                          />
+                          {typeof option === "string" ? option : option.productionSeries}
+                        </li>
+                      );
+                    }}
+                    renderInput={(params) => <TextField {...params} label="Prod Series" placeholder={selectedProductionSeries.length > 0 ? `${selectedProductionSeries.length} selected` : "Select"} size="small" />}
+                  />
+                </FormControl>
+
                 {/* Date Filter Button & Range Fields */}
                 <Button
                   size="small"
@@ -1784,6 +1839,37 @@ const ProductionOrderUpload: React.FC = () => {
                 )}
               </Stack>
             </Paper>
+
+            {selectedProductionSeries.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', my: 0.5, px: 0.5 }}>
+                {selectedProductionSeries.map((item: any) => {
+                  const label = typeof item === 'string' ? item : item.productionSeries;
+                  return (
+                    <Chip
+                      key={item.id || label}
+                      label={`Series: ${label}`}
+                      size="small"
+                      onDelete={() => {
+                        setSelectedProductionSeries(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
+                      }}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  );
+                })}
+                <Button
+                  size="small"
+                  color="error"
+                  variant="text"
+                  onClick={() => {
+                    setSelectedProductionSeries([]);
+                  }}
+                  sx={{ fontSize: '0.75rem', py: 0, px: 1, height: '24px', minWidth: 'auto', fontWeight: 600 }}
+                >
+                  Clear All
+                </Button>
+              </Box>
+            )}
           </LocalizationProvider>
 
           <Paper
