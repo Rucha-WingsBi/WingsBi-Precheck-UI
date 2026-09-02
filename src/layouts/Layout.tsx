@@ -36,7 +36,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Dashboard as DashboardIcon,
   Assignment as AssignmentIcon,
-  Description as DescriptionIcon,
+
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   ViewList as ViewListIcon,
@@ -44,18 +44,13 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Add as AddIcon,
-  Search as SearchIcon,
   Visibility as VisibilityIcon,
   Store as StoreIcon,
   ShoppingCart as ShoppingCartIcon,
-  Article as ArticleIcon,
-  Archive as ArchiveIcon,
-  PlaylistAddCheck as PlaylistAddCheckIcon,
   Terminal as TerminalIcon,
   FactCheck as FactCheckIcon,
   MenuBook as MenuBookIcon,
   Category as CategoryIcon,
-  ReceiptLong as ReceiptLongIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -78,7 +73,6 @@ import {
 } from "../store/slices/sopSlice";
 import { usePageAccess } from "../hooks/useMasterData";
 import type { PageAccessItem } from "../types";
-import BreadcrumbsNav from "../components/BreadcrumbsNav";
 const drawerWidth = 255;
 const drawerCollapsedWidth = 60;
 
@@ -877,7 +871,6 @@ export default function Layout() {
 
       <Main>
         <Toolbar />
-        <BreadcrumbsNav />
         <Box
           sx={{
             p: 0,
