@@ -27,6 +27,10 @@ import {
   DialogContentText,
   DialogActions,
   Chip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -34,6 +38,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CallSplitIcon from '@mui/icons-material/CallSplit';
 import { getBarcodeDetails, getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, getAllFanManSerialNumbers, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
 import { useProductionSeries, useQRUsers } from '../../hooks/useMasterData';
 import { type ProductionOrderMaster } from '../../hooks/usePONumbers';
@@ -81,8 +87,22 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
   returnFilters?: any;
 }) => {
   const [open, setOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const isMenuOpen = Boolean(anchorEl);
   const navigate = useNavigate();
   const isConsumed = barcodeDetails?.qrCodeStatus?.toLowerCase() === 'consumed';
+  const isDisabledStatus = barcodeDetails?.qrCodeStatus?.toLowerCase() === 'disabled';
+
+  const canSplit = (barcodeDetails?.componentType === 'Batch' || barcodeDetails?.componentType === 'BATCH') &&
+    barcodeDetails?.unitName === 'ECH' && (Number(barcodeDetails?.quantity) > 1 || barcodeDetails.hasBeenSplit) && !barcodeDetails.isSplitRow;
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   const handleEdit = () => {
     const idParam = barcodeDetails?.qrCodeNumber || barcodeDetails?.id || '';
@@ -123,105 +143,89 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
           </TableCell>
         )}
 
-        <TableCell sx={{ textAlign: 'center', minWidth: '170px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>
-          {isConsumed ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', height: '28px' }}>
-              {/* Left Slot: 60px wide for optional Split button */}
-              <Box sx={{ width: '60px', display: 'flex', justifyContent: 'flex-start' }}>
-                {((barcodeDetails?.componentType === 'Batch' || barcodeDetails?.componentType === 'BATCH') &&
-                  barcodeDetails?.unitName === 'ECH' && (Number(barcodeDetails?.quantity) > 1 || barcodeDetails.hasBeenSplit) && !barcodeDetails.isSplitRow) ? (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={onSplit}
-                    sx={{
-                      fontSize: '0.7rem',
-                      py: 0.5,
-                      minWidth: 'auto',
-                      height: '28px',
-                      width: '60px',
-                      backgroundColor: barcodeDetails.hasBeenSplit ? 'error.light' : 'transparent',
-                      color: barcodeDetails.hasBeenSplit ? 'white' : 'secondary.main',
-                      borderColor: barcodeDetails.hasBeenSplit ? 'error.main' : 'secondary.main',
-                      '&:hover': {
-                        backgroundColor: barcodeDetails.hasBeenSplit ? 'error.main' : 'rgba(156, 39, 176, 0.04)',
-                        borderColor: barcodeDetails.hasBeenSplit ? 'error.main' : 'secondary.main',
-                      }
-                    }}
-                  >
-                    {barcodeDetails.hasBeenSplit ? 'Close' : 'Split'}
-                  </Button>
-                ) : null}
-              </Box>
-              
-              {/* Right Slot: Centered Action Icons */}
-              <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                <IconButton
-                  aria-label="expand row"
-                  size="small"
-                  onClick={() => setOpen(!open)}
-                  sx={{ padding: '4px !important' }}
+        <TableCell sx={{ textAlign: 'center', minWidth: '110px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+            <IconButton
+              aria-label="expand row"
+              size="small"
+              onClick={() => setOpen(!open)}
+              sx={{ padding: '4px !important' }}
+              title={open ? "Collapse details" : "Expand details"}
+            >
+              {open ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+            </IconButton>
+
+            <IconButton
+              aria-label="actions menu"
+              size="small"
+              onClick={handleMenuClick}
+              sx={{ padding: '4px !important' }}
+              title="Actions"
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+
+            <Menu
+              anchorEl={anchorEl}
+              open={isMenuOpen}
+              onClose={handleMenuClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              PaperProps={{
+                elevation: 3,
+                sx: { minWidth: 150, py: 0.5, borderRadius: 2 }
+              }}
+            >
+              {!isConsumed && (
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    handleEdit();
+                  }}
+                  sx={{ fontSize: '0.85rem', py: 0.75 }}
                 >
-                  {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                </IconButton>
-              </Box>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', height: '28px' }}>
-              {/* Left Slot: 60px wide for optional Split button */}
-              <Box sx={{ width: '60px', display: 'flex', justifyContent: 'flex-start' }}>
-                {(barcodeDetails?.componentType === 'Batch' || barcodeDetails?.componentType === 'BATCH') &&
-                  barcodeDetails?.unitName === 'ECH' && (Number(barcodeDetails?.quantity) > 1 || barcodeDetails.hasBeenSplit) && !barcodeDetails.isSplitRow ? (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={onSplit}
-                    sx={{
-                      fontSize: '0.7rem',
-                      py: 0.5,
-                      minWidth: 'auto',
-                      height: '28px',
-                      width: '60px',
-                      backgroundColor: barcodeDetails.hasBeenSplit ? 'error.light' : 'transparent',
-                      color: barcodeDetails.hasBeenSplit ? 'white' : 'secondary.main',
-                      borderColor: barcodeDetails.hasBeenSplit ? 'error.main' : 'secondary.main',
-                      '&:hover': {
-                        backgroundColor: barcodeDetails.hasBeenSplit ? 'error.main' : 'rgba(156, 39, 176, 0.04)',
-                        borderColor: barcodeDetails.hasBeenSplit ? 'error.main' : 'secondary.main',
-                      }
-                    }}
-                  >
-                    {barcodeDetails.hasBeenSplit ? 'Close' : 'Split'}
-                  </Button>
-                ) : null}
-              </Box>
-              
-              {/* Right Slot: Centered Action Icons */}
-              <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                <IconButton color="primary" onClick={handleEdit} size="small" sx={{ padding: '4px !important' }}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  color="error"
-                  onClick={onDisable}
-                  size="small"
-                  disabled={barcodeDetails?.qrCodeStatus?.toLowerCase() === 'disabled'}
-                  title={barcodeDetails?.qrCodeStatus?.toLowerCase() === 'disabled' ? "Already Disabled" : "Disable QR Code"}
-                  sx={{ padding: '4px !important' }}
+                  <ListItemIcon sx={{ minWidth: '28px !important' }}>
+                    <EditIcon fontSize="small" color="primary" />
+                  </ListItemIcon>
+                  <ListItemText primary="Edit QR" primaryTypographyProps={{ fontSize: '0.85rem' }} />
+                </MenuItem>
+              )}
+
+              {canSplit && (
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    if (onSplit) onSplit();
+                  }}
+                  sx={{ fontSize: '0.85rem', py: 0.75 }}
                 >
-                  <BlockIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  aria-label="expand row"
-                  size="small"
-                  onClick={() => setOpen(!open)}
-                  sx={{ padding: '4px !important' }}
+                  <ListItemIcon sx={{ minWidth: '28px !important' }}>
+                    <CallSplitIcon fontSize="small" color="secondary" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={barcodeDetails.hasBeenSplit ? "Close Split" : "Split QR"}
+                    primaryTypographyProps={{ fontSize: '0.85rem' }}
+                  />
+                </MenuItem>
+              )}
+
+              {!isConsumed && (
+                <MenuItem
+                  disabled={isDisabledStatus}
+                  onClick={() => {
+                    handleMenuClose();
+                    if (onDisable) onDisable();
+                  }}
+                  sx={{ fontSize: '0.85rem', py: 0.75 }}
                 >
-                  {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                </IconButton>
-              </Box>
-            </Box>
-          )}
+                  <ListItemIcon sx={{ minWidth: '28px !important' }}>
+                    <BlockIcon fontSize="small" color={isDisabledStatus ? "disabled" : "error"} />
+                  </ListItemIcon>
+                  <ListItemText primary="Disable QR" primaryTypographyProps={{ fontSize: '0.85rem' }} />
+                </MenuItem>
+              )}
+            </Menu>
+          </Box>
         </TableCell>
       </TableRow>
       <TableRow sx={{ height: 'auto' }}>
@@ -695,6 +699,11 @@ const ViewBarcode: React.FC = () => {
   }, [displayedData, page, rowsPerPage]);
 
   const handleSelectAll = (checked: boolean) => {
+    // If currently partially selected (indeterminate state with minus icon), clicking unselects all items
+    if (selectedQRCodes.length > 0 && selectedQRCodes.length < displayedData.length) {
+      setSelectedQRCodes([]);
+      return;
+    }
     if (checked) {
       const allIds = displayedData
         .map((item: any) => item.id || item.qrCodeNumber)
@@ -1176,7 +1185,7 @@ const ViewBarcode: React.FC = () => {
                   {showBatchIdColumn && (
                     <TableCell sx={{ fontWeight: 'bold', minWidth: '130px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Batch ID</TableCell>
                   )}
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '160px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Details</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', minWidth: '110px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
