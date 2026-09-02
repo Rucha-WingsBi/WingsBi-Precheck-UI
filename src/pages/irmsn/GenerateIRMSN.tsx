@@ -1,5 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { useForm, Controller } from "react-hook-form";
+import debounce from "lodash/debounce";
+
 import {
   Box,
   Typography,
@@ -19,8 +23,6 @@ import {
   FormHelperText,
   CircularProgress,
   Alert,
-  ToggleButton,
-  ToggleButtonGroup,
   Snackbar,
 } from "@mui/material";
 import {
@@ -31,7 +33,7 @@ import {
   ArrowBack as ArrowBackIcon,
   FileDownload as DownloadIcon,
 } from "@mui/icons-material";
-import { useForm, Controller } from "react-hook-form";
+
 import type { RootState, AppDispatch } from "../../store/store";
 import type { DrawingNumber, FormData as BaseFormData } from "../../types";
 import {
@@ -43,14 +45,12 @@ import {
   usePONumbers,
   type ProductionOrderMaster,
 } from "../../hooks/usePONumbers";
-import debounce from "lodash/debounce";
+import { useDebounce } from "../../hooks/useDebounce";
 import api from "../../services/api";
 import {
   generateIRMSN,
   clearError as clearIrmsnError,
 } from "../../store/slices/irmsnSlice";
-import { useNavigate } from "react-router-dom";
-import { useDebounce } from "../../hooks/useDebounce";
 
 // Local form type allowing empty documentType during initial load
 type LocalFormData = Omit<BaseFormData, "documentType"> & {
@@ -409,7 +409,7 @@ export default function GenerateIRMSN() {
 
       setStagesLoading(true);
       try {
-        let fetchedStages: any[] = [];
+        let fetchedStages: Array<{ id: number; stage: string }> = [];
 
         if (formMode === "PurchaseItem") {
           // For Purchase Items, we need stages from both if necessary,
@@ -748,6 +748,27 @@ export default function GenerateIRMSN() {
     }
   };
 
+  const handleFormModeChange = (
+    newValue: "ManufacturingItem" | "PurchaseItem",
+  ) => {
+    if (newValue !== formMode) {
+      const currentDept = getValues("department");
+      const currentDeptId = getValues("departmentId");
+
+      savedValuesRef.current[formMode] = getValues();
+      setFormMode(newValue);
+
+      const nextValues = {
+        ...savedValuesRef.current[newValue],
+        department: currentDept,
+        departmentId: currentDeptId,
+      };
+
+      reset(nextValues);
+      savedValuesRef.current[newValue] = nextValues;
+    }
+  };
+
   const renderActionButtons = () => (
     <Box
       sx={{
@@ -773,7 +794,7 @@ export default function GenerateIRMSN() {
       <Button
         type="submit"
         variant="contained"
-        size="small"
+        size="medium"
         disabled={isLoading}
         startIcon={
           isLoading ? (
@@ -807,66 +828,9 @@ export default function GenerateIRMSN() {
         }}
       >
         <Typography variant="h3" gutterBottom sx={{ color: "primary.main" }}>
-          <IconButton
-            onClick={() => navigate(-1)}
-            sx={{ color: "primary.main" }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
+         
           Generate IR/MSN Number
         </Typography>
-
-        <ToggleButtonGroup
-          value={formMode}
-          exclusive
-          onChange={(
-            _,
-            newValue: "ManufacturingItem" | "PurchaseItem" | null,
-          ) => {
-            if (newValue !== null) {
-              const currentDept = getValues("department");
-              const currentDeptId = getValues("departmentId");
-
-              savedValuesRef.current[formMode] = getValues();
-              setFormMode(newValue);
-
-              const nextValues = {
-                ...savedValuesRef.current[newValue],
-                department: currentDept,
-                departmentId: currentDeptId,
-              };
-
-              reset(nextValues);
-              savedValuesRef.current[newValue] = nextValues;
-            }
-          }}
-          size="small"
-          color="primary"
-          sx={{
-            gap: 1.5,
-            "& .MuiToggleButton-root": {
-              minWidth: 120,
-              textTransform: "none",
-              fontWeight: 600,
-              borderRadius: 1.5,
-              borderColor: "divider",
-              "&.Mui-selected": {
-                color: "#A8005A",
-                backgroundColor: "rgba(168, 0, 90, 0.12)",
-                borderColor: "#A8005A",
-                boxShadow: "0 2px 6px rgba(168, 0, 90, 0.25)",
-              },
-              "&.Mui-selected:hover": {
-                backgroundColor: "rgba(168, 0, 90, 0.16)",
-              },
-            },
-          }}
-        >
-          <ToggleButton value="ManufacturingItem">
-            Manufacturing Item
-          </ToggleButton>
-          <ToggleButton value="PurchaseItem">Purchase Item</ToggleButton>
-        </ToggleButtonGroup>
       </Box>
 
       {/* Error Message */}
@@ -886,8 +850,27 @@ export default function GenerateIRMSN() {
           <form onSubmit={handleSubmit(onSubmit)}>
             {formMode === "ManufacturingItem" && (
               <>
-                {/* Row 1: PO Number, LN ItmCode, Drawing Number */}
+                {/* Row 1: IR/MSN type, PO Number, LN ItmCode */}
                 <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={12} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="man-irmsn-type-label">IR/MSN type *</InputLabel>
+                      <Select
+                        labelId="man-irmsn-type-label"
+                        label="IR/MSN type *"
+                        value={formMode}
+                        onChange={(e) =>
+                          handleFormModeChange(
+                            e.target.value as "ManufacturingItem" | "PurchaseItem"
+                          )
+                        }
+                      >
+                        <MenuItem value="ManufacturingItem">Manufacturing Item</MenuItem>
+                        <MenuItem value="PurchaseItem">Purchase Item</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="poNumber"
@@ -959,16 +942,6 @@ export default function GenerateIRMSN() {
                                   newValue.lnItemCode || "",
                                 );
                               }
-
-                              // Map quantity from PO
-                              // if (newValue.quantity !== undefined && newValue.quantity !== null) {
-                              //   setValue("quantity", newValue.quantity);
-                              // }
-
-                              // Map ID Nos (idRange) from startIdNumber
-                              // if (newValue.startIdNumber !== undefined && newValue.startIdNumber !== null) {
-                              //   setValue("idRange", newValue.startIdNumber.toString());
-                              // }
                             } else {
                               setSelectedPO(null);
                               onChange("");
@@ -1061,7 +1034,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 2: Drawing Number, Document Type, Nomenclature */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="drawingNumber"
@@ -1186,10 +1162,7 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
-                </Grid>
 
-                {/* Row 2: Document Type, Nomenclature, Project Number */}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="man-documentType"
@@ -1247,7 +1220,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 3: Project Number, Production Series, ID Nos */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="man-projectNumber"
@@ -1266,10 +1242,6 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
-                </Grid>
-
-                {/* Row 3: Production Series, ID Nos, Quantity */}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="man-productionSeries"
@@ -1334,7 +1306,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 4: Quantity, Stage, Remark */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="man-quantity"
@@ -1360,55 +1335,70 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
-                </Grid>
 
-                {/* Row 4: Stage, Remark, Generated By */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="stage"
                       control={control}
                       rules={{ required: "Stage is required" }}
-                      render={({ field, fieldState: { error } }) => (
-                        <FormControl
-                          fullWidth
+                      render={({ field: { onChange, value }, fieldState: { error } }) => (
+                        <Autocomplete
                           size="small"
+                          options={Array.isArray(stages) ? stages : []}
+                          loading={stagesLoading}
                           disabled={stagesLoading}
-                          error={!!error}
-                        >
-                          <InputLabel id="stage-label">Stage *</InputLabel>
-                          <Select
-                            {...field}
-                            labelId="stage-label"
-                            label="Stage *"
-                            onChange={(e) => {
-                              field.onChange(e);
-                              const selectedStage = stages.find(
-                                (s) => s.stage === e.target.value,
-                              );
-                              if (selectedStage) {
-                                setValue("stageId", selectedStage.id);
-                              }
-                            }}
-                          >
-                            {stagesLoading ? (
-                              <MenuItem disabled>Loading stages...</MenuItem>
-                            ) : (
-                              Array.isArray(stages) &&
-                              stages.map((stageObj) => (
-                                <MenuItem
-                                  key={stageObj.id}
-                                  value={stageObj.stage}
-                                >
-                                  {stageObj.stage}
-                                </MenuItem>
-                              ))
-                            )}
-                          </Select>
-                          {error && (
-                            <FormHelperText>{error.message}</FormHelperText>
+                          autoHighlight
+                          autoSelect
+                          noOptionsText={
+                            stagesLoading
+                              ? "Loading stages..."
+                              : "No stages found"
+                          }
+                          getOptionLabel={(option) => {
+                            if (typeof option === "string") return option;
+                            return option?.stage || "";
+                          }}
+                          value={
+                            Array.isArray(stages)
+                              ? stages.find((s) => s.stage === value) || null
+                              : null
+                          }
+                          onChange={(_, newValue) => {
+                            if (newValue && typeof newValue !== "string") {
+                              onChange(newValue.stage);
+                              setValue("stageId", newValue.id);
+                            } else {
+                              onChange("");
+                              setValue("stageId", undefined);
+                            }
+                          }}
+                          isOptionEqualToValue={(option, val) =>
+                            option.stage ===
+                            (typeof val === "string" ? val : val?.stage)
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Stage *"
+                              error={!!error}
+                              helperText={error?.message}
+                              InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                  <>
+                                    {stagesLoading ? (
+                                      <CircularProgress
+                                        color="inherit"
+                                        size={16}
+                                      />
+                                    ) : null}
+                                    {params.InputProps.endAdornment}
+                                  </>
+                                ),
+                              }}
+                            />
                           )}
-                        </FormControl>
+                        />
                       )}
                     />
                   </Grid>
@@ -1427,7 +1417,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 5: Generated By, Operation Number, Build Number */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <TextField
                       label="Generated By"
@@ -1439,10 +1432,7 @@ export default function GenerateIRMSN() {
                       sx={{ bgcolor: "grey.50" }}
                     />
                   </Grid>
-                </Grid>
 
-                {/* Row 5: Operation Number, Build No & Department */}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="operationNumber"
@@ -1460,6 +1450,7 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="buildNumber"
@@ -1477,6 +1468,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
+
+                {/* Row 6: Department */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="department"
@@ -1617,8 +1612,27 @@ export default function GenerateIRMSN() {
 
             {formMode === "PurchaseItem" && (
               <>
-                {/* Row 1 Drawing Number Item Description LM Item Code*/}
+                {/* Row 1: IR/MSN type, Drawing Number, Item Description */}
                 <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={12} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="pur-irmsn-type-label">IR/MSN type *</InputLabel>
+                      <Select
+                        labelId="pur-irmsn-type-label"
+                        label="IR/MSN type *"
+                        value={formMode}
+                        onChange={(e) =>
+                          handleFormModeChange(
+                            e.target.value as "ManufacturingItem" | "PurchaseItem"
+                          )
+                        }
+                      >
+                        <MenuItem value="ManufacturingItem">Manufacturing Item</MenuItem>
+                        <MenuItem value="PurchaseItem">Purchase Item</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="drawingNumber"
@@ -1750,7 +1764,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 2: LN Item Code, Document Type, Project Number */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="lnItemCode"
@@ -1766,10 +1783,7 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
-                </Grid>
 
-                {/* Row 2 Document Type Project Purchase Order No*/}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="pur-documentType"
@@ -1814,7 +1828,7 @@ export default function GenerateIRMSN() {
                       key="pur-projectNumber"
                       name="projectNumber"
                       control={control}
-                      rules={{ required: "Project  is required" }}
+                      rules={{ required: "Project is required" }}
                       render={({ field }) => (
                         <TextField
                           {...field}
@@ -1827,7 +1841,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 3: Purchase Order No, Production Series, ID Nos / MAN No */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       name="purchaseOrderNumber"
@@ -1842,10 +1859,7 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
-                </Grid>
 
-                {/* Row 3 Production Series ID No / MAN No Quantity */}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="pur-productionSeries"
@@ -1910,7 +1924,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 4: Quantity, Stage, Remark */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="pur-quantity"
@@ -1937,62 +1954,71 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
-                </Grid>
 
-                {/* Row 4 Stage Remark Generated By */}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <Controller
                       key="pur-stage"
                       name="stage"
                       control={control}
                       rules={{ required: "Stage is required" }}
-                      render={({ field, fieldState: { error } }) => (
-                        <FormControl
-                          fullWidth
+                      render={({ field: { onChange, value }, fieldState: { error } }) => (
+                        <Autocomplete
                           size="small"
-                          error={!!error}
+                          options={Array.isArray(stages) ? stages : []}
+                          loading={stagesLoading}
                           disabled={stagesLoading}
-                        >
-                          <InputLabel id="stage-label" shrink>
-                            Stage *
-                          </InputLabel>
-
-                          <Select
-                            {...field}
-                            labelId="stage-label"
-                            label="Stage *"
-                            onChange={(e) => {
-                              field.onChange(e);
-
-                              const selectedStage = stages.find(
-                                (s) => s.stage === e.target.value,
-                              );
-
-                              if (selectedStage) {
-                                setValue("stageId", selectedStage.id);
-                              }
-                            }}
-                          >
-                            {stagesLoading ? (
-                              <MenuItem disabled>Loading stages...</MenuItem>
-                            ) : (
-                              Array.isArray(stages) &&
-                              stages.map((stageObj) => (
-                                <MenuItem
-                                  key={stageObj.id}
-                                  value={stageObj.stage}
-                                >
-                                  {stageObj.stage}
-                                </MenuItem>
-                              ))
-                            )}
-                          </Select>
-
-                          {error && (
-                            <FormHelperText>{error.message}</FormHelperText>
+                          autoHighlight
+                          autoSelect
+                          noOptionsText={
+                            stagesLoading
+                              ? "Loading stages..."
+                              : "No stages found"
+                          }
+                          getOptionLabel={(option) => {
+                            if (typeof option === "string") return option;
+                            return option?.stage || "";
+                          }}
+                          value={
+                            Array.isArray(stages)
+                              ? stages.find((s) => s.stage === value) || null
+                              : null
+                          }
+                          onChange={(_, newValue) => {
+                            if (newValue && typeof newValue !== "string") {
+                              onChange(newValue.stage);
+                              setValue("stageId", newValue.id);
+                            } else {
+                              onChange("");
+                              setValue("stageId", undefined);
+                            }
+                          }}
+                          isOptionEqualToValue={(option, val) =>
+                            option.stage ===
+                            (typeof val === "string" ? val : val?.stage)
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Stage *"
+                              error={!!error}
+                              helperText={error?.message}
+                              InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                  <>
+                                    {stagesLoading ? (
+                                      <CircularProgress
+                                        color="inherit"
+                                        size={16}
+                                      />
+                                    ) : null}
+                                    {params.InputProps.endAdornment}
+                                  </>
+                                ),
+                              }}
+                            />
                           )}
-                        </FormControl>
+                        />
                       )}
                     />
                   </Grid>
@@ -2011,7 +2037,10 @@ export default function GenerateIRMSN() {
                       )}
                     />
                   </Grid>
+                </Grid>
 
+                {/* Row 5: Generated By */}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} md={4}>
                     <TextField
                       label="Generated By"

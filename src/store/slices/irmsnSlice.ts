@@ -262,7 +262,7 @@ export const fetchIRMSNList = createAsyncThunk(
       drawingNumber?: string;
       stage?: string;
       productionSeries?: string;
-      departmentTypeId?: string;
+      departmentTypeId?: string | number;
       lnItemCode?: string;
       fromDate?: string;
       toDate?: string;
@@ -283,8 +283,8 @@ export const fetchIRMSNList = createAsyncThunk(
       if (productionSeries && productionSeries.trim() !== "") {
         params.Productionseries = productionSeries;
       }
-      if (departmentTypeId && departmentTypeId.trim() !== "") {
-        params.DepartmentTypeId = parseInt(departmentTypeId, 10);
+      if (departmentTypeId !== undefined && departmentTypeId !== null && String(departmentTypeId).trim() !== "") {
+        params.DepartmentTypeId = departmentTypeId;
       }
       if (lnItemCode && lnItemCode.trim() !== "") {
         params.LnItemCode = lnItemCode;
@@ -329,7 +329,7 @@ export const fetchMSNList = createAsyncThunk(
       drawingNumber?: string;
       stage?: string;
       productionSeries?: string;
-      departmentTypeId?: string;
+      departmentTypeId?: string | number;
       lnItemCode?: string;
       fromDate?: string;
       toDate?: string;
@@ -350,8 +350,8 @@ export const fetchMSNList = createAsyncThunk(
       if (productionSeries && productionSeries.trim() !== "") {
         params.Productionseries = productionSeries;
       }
-      if (departmentTypeId && departmentTypeId.trim() !== "") {
-        params.DepartmentTypeId = parseInt(departmentTypeId, 10);
+      if (departmentTypeId !== undefined && departmentTypeId !== null && String(departmentTypeId).trim() !== "") {
+        params.DepartmentTypeId = departmentTypeId;
       }
       if (lnItemCode && lnItemCode.trim() !== "") {
         params.LnItemCode = lnItemCode;
