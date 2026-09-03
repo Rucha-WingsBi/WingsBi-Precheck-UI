@@ -35,6 +35,7 @@ import {
   TablePagination,
   Autocomplete,
   FormHelperText,
+  InputAdornment,
   Backdrop,
   Dialog,
   DialogTitle,
@@ -1693,7 +1694,61 @@ export default function BarcodeGeneration() {
                             )} />
                           </Grid>
                           <Grid item xs={12} md={4}>
-                            <Controller name="partAssemblyId" control={control} render={({ field }) => <TextField {...field} label="Part Number (Assembly)" fullWidth size="small" />} />
+                            <Controller
+                              name="partAssemblyId"
+                              control={control}
+                              render={({ field: { onChange, value } }) => {
+                                const parentList = selectedDrawing?.parentDrawingNumbers || [];
+                                const parentCount = parentList.length;
+                                const extraCount = parentCount > 1 ? parentCount - 1 : 0;
+                                return (
+                                  <Autocomplete
+                                    value={value || ""}
+                                    onChange={(_, newValue) => onChange(newValue || "")}
+                                    onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                                    options={parentList}
+                                    freeSolo
+                                    openOnFocus={true}
+                                    forcePopupIcon={true}
+                                    size="small"
+                                    renderInput={(params) => (
+                                      <TextField
+                                        {...params}
+                                        label="Part Number (Assembly)"
+                                        helperText={parentCount > 0 ? `Used in ${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
+                                        size="small"
+                                        fullWidth
+                                        InputProps={{
+                                          ...params.InputProps,
+                                          endAdornment: (
+                                            <>
+                                              {extraCount > 0 && (
+                                                <Tooltip title={parentList.join(", ")}>
+                                                  <Chip
+                                                    label={`+${extraCount} more`}
+                                                    size="small"
+                                                    sx={{
+                                                      backgroundColor: "primary.main",
+                                                      color: "#fff",
+                                                      fontWeight: 600,
+                                                      fontSize: "0.72rem",
+                                                      height: 22,
+                                                      borderRadius: "12px",
+                                                      mr: 0.5,
+                                                    }}
+                                                  />
+                                                </Tooltip>
+                                              )}
+                                              {params.InputProps.endAdornment}
+                                            </>
+                                          ),
+                                        }}
+                                      />
+                                    )}
+                                  />
+                                );
+                              }}
+                            />
                           </Grid>
                         </Grid>
                         {/* SI Row 5: Total Quantity * | Unit | Material Specification */}
@@ -1785,7 +1840,61 @@ export default function BarcodeGeneration() {
                             <Controller name="customerItemCode" control={control} render={({ field }) => <TextField {...field} label="Customer Item Code" fullWidth size="small" />} />
                           </Grid>
                           <Grid item xs={12} md={4}>
-                            <Controller name="partAssemblyId" control={control} render={({ field }) => <TextField {...field} label="Part Number (Assembly)" fullWidth size="small" />} />
+                            <Controller
+                              name="partAssemblyId"
+                              control={control}
+                              render={({ field: { onChange, value } }) => {
+                                const parentList = selectedDrawing?.parentDrawingNumbers || [];
+                                const parentCount = parentList.length;
+                                const extraCount = parentCount > 1 ? parentCount - 1 : 0;
+                                return (
+                                  <Autocomplete
+                                    value={value || ""}
+                                    onChange={(_, newValue) => onChange(newValue || "")}
+                                    onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                                    options={parentList}
+                                    freeSolo
+                                    openOnFocus={true}
+                                    forcePopupIcon={true}
+                                    size="small"
+                                    renderInput={(params) => (
+                                      <TextField
+                                        {...params}
+                                        label="Part Number (Assembly)"
+                                        helperText={parentCount > 0 ? `Used in ${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
+                                        size="small"
+                                        fullWidth
+                                        InputProps={{
+                                          ...params.InputProps,
+                                          endAdornment: (
+                                            <>
+                                              {extraCount > 0 && (
+                                                <Tooltip title={parentList.join(", ")}>
+                                                  <Chip
+                                                    label={`+${extraCount} more`}
+                                                    size="small"
+                                                    sx={{
+                                                      backgroundColor: "primary.main",
+                                                      color: "#fff",
+                                                      fontWeight: 600,
+                                                      fontSize: "0.72rem",
+                                                      height: 22,
+                                                      borderRadius: "12px",
+                                                      mr: 0.5,
+                                                    }}
+                                                  />
+                                                </Tooltip>
+                                              )}
+                                              {params.InputProps.endAdornment}
+                                            </>
+                                          ),
+                                        }}
+                                      />
+                                    )}
+                                  />
+                                );
+                              }}
+                            />
                           </Grid>
                         </Grid>
                         {/* FIM Row 6: Total Quantity * | Unit | Material Specification */}
@@ -2373,23 +2482,53 @@ export default function BarcodeGeneration() {
                     </Grid>
                     <Grid item xs={12} md={4}>
                       <Controller name="partAssemblyId" control={control} render={({ field: { onChange, value } }) => {
-                        const parentCount = selectedDrawing?.parentDrawingNumbers?.length || 0;
+                        const parentList = selectedDrawing?.parentDrawingNumbers || [];
+                        const parentCount = parentList.length;
+                        const extraCount = parentCount > 1 ? parentCount - 1 : 0;
                         return (
                           <Autocomplete
                             value={value || ""}
                             onChange={(_, newValue) => onChange(newValue || "")}
-                            options={selectedDrawing?.parentDrawingNumbers || []}
+                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
+                            options={parentList}
                             freeSolo
+                            openOnFocus={true}
+                            forcePopupIcon={true}
+                            size="small"
                             renderInput={(params) => (
                               <TextField
                                 {...params}
-                                label={parentCount > 0 ? `Part Number (Assembly) (${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"})` : "Part Number (Assembly)"}
-                                helperText={parentCount > 0 ? `Used in ${parentCount} parent ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
+                                label="Part Number (Assembly)"
+                                helperText={parentCount > 0 ? `Used in ${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
                                 size="small"
                                 fullWidth
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {extraCount > 0 && (
+                                        <Tooltip title={parentList.join(", ")}>
+                                          <Chip
+                                            label={`+${extraCount} more`}
+                                            size="small"
+                                            sx={{
+                                              backgroundColor: "primary.main",
+                                              color: "#fff",
+                                              fontWeight: 600,
+                                              fontSize: "0.72rem",
+                                              height: 22,
+                                              borderRadius: "12px",
+                                              mr: 0.5,
+                                            }}
+                                          />
+                                        </Tooltip>
+                                      )}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
                               />
                             )}
-                            size="small"
                           />
                         );
                       }} />
