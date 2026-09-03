@@ -33,6 +33,7 @@ import {
   Download as DownloadIcon,
   History as HistoryIcon,
   Visibility as VisibilityIcon,
+  PlaylistAddCheck as PlaylistAddCheckIcon,
   Today as TodayIcon,
   CalendarMonth as CalendarMonthIcon,
   DateRange as DateRangeIcon,
@@ -61,6 +62,8 @@ import type { RootState } from "../../store/store";
 import * as XLSX from "xlsx";
 import api from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
+import { usePageAccess } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
 import { getAutosizedColumns } from "../../utils/gridUtils";
 
 interface ProductionOrder {
@@ -85,6 +88,16 @@ interface ProductionOrder {
   snagSheetNo?: string | null;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  totalRecords: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 interface UploadResult {
   totalRows: number;
   imported: number;
@@ -106,6 +119,10 @@ const normalizeKey = (key: string) =>
 
 const ProductionOrderUpload: React.FC = () => {
   const navigate = useNavigate();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: pageAccessData } = usePageAccess(
+    user?.roleid ? Number(user.roleid) : null,
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
@@ -117,6 +134,12 @@ const ProductionOrderUpload: React.FC = () => {
   const [uploadMode, setUploadMode] = useState<"import" | "update">("import");
 
   const queryClient = useQueryClient();
+
+  // Server-side pagination state (default page size: 50)
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 50,
+  });
 
   // Handle automatic reload if coming from edit success
   React.useEffect(() => {
@@ -170,6 +193,20 @@ const ProductionOrderUpload: React.FC = () => {
     severity: "success",
   });
 
+  // Reset pagination page to 0 when filters change
+  React.useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [
+    dateFilterMode,
+    filterDate,
+    fromDate,
+    toDate,
+    statusFilter,
+    debouncedPoNumber,
+    debouncedLnItemCode,
+    debouncedDrawingNo,
+  ]);
+
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
@@ -183,7 +220,10 @@ const ProductionOrderUpload: React.FC = () => {
 
   // Helper to build query params from all filter states
   const buildQueryParams = () => {
-    const params: any = {};
+    const params: any = {
+      pageNumber: paginationModel.page + 1,
+      pageSize: paginationModel.pageSize,
+    };
 
     // Date Filters
     if (dateFilterMode === "single" && filterDate) {
@@ -214,14 +254,16 @@ const ProductionOrderUpload: React.FC = () => {
     return params;
   };
 
-  // Fetch production orders with filters
+  // Fetch production orders with filters & pagination
   const {
-    data: productionOrders,
+    data: paginatedResponse,
     isLoading: isHistoryLoading,
     refetch,
-  } = useQuery<ProductionOrder[]>({
+  } = useQuery<PaginatedResponse<ProductionOrder>>({
     queryKey: [
       "productionOrders",
+      paginationModel.page,
+      paginationModel.pageSize,
       dateFilterMode,
       filterDate,
       fromDate,
@@ -234,6 +276,17 @@ const ProductionOrderUpload: React.FC = () => {
     queryFn: async () => {
       const params = buildQueryParams();
       const response = await api.get("/api/ProductionOrder/GetAll", { params });
+      if (Array.isArray(response.data)) {
+        return {
+          data: response.data,
+          totalRecords: response.data.length,
+          pageNumber: 1,
+          pageSize: response.data.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        };
+      }
       return response.data;
     },
     placeholderData: (previousData) => previousData,
@@ -254,6 +307,9 @@ const ProductionOrderUpload: React.FC = () => {
     ],
     queryFn: async () => {
       const params = buildQueryParams();
+      // Remove pagination params for counts query
+      delete params.pageNumber;
+      delete params.pageSize;
       const response = await api.get("/api/ProductionOrder/GetCounts", {
         params,
       });
@@ -269,15 +325,17 @@ const ProductionOrderUpload: React.FC = () => {
     uploadedCount: 0,
   };
 
-  // Use server data directly (Pure Server-Side Filtering) with Client-Side Fallback for Drawing No
-  const filteredRows = React.useMemo(() => {
-    const rows = productionOrders || [];
-    if (!debouncedDrawingNo?.trim()) return rows;
-    const term = debouncedDrawingNo.trim().toLowerCase();
-    return rows.filter((row) =>
-      row.drawingNumber?.toLowerCase().includes(term)
-    );
-  }, [productionOrders, debouncedDrawingNo]);
+  const totalRowCount = paginatedResponse?.totalRecords ?? 0;
+
+  // Process rows with correct global Sr No based on current page
+  const tableRows = React.useMemo(() => {
+    const rawRows = paginatedResponse?.data || [];
+    const pageOffset = paginationModel.page * paginationModel.pageSize;
+    return rawRows.map((row, index) => ({
+      ...row,
+      sr: pageOffset + index + 1,
+    }));
+  }, [paginatedResponse, paginationModel.page, paginationModel.pageSize]);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -533,14 +591,8 @@ const ProductionOrderUpload: React.FC = () => {
     try {
       // Use the helper which now uses debounced values (pure server-side)
       const params = buildQueryParams();
-
-      // if (filterModel && filterModel.items) {
-      //   filterModel.items.forEach((item) => {
-      //     if (item.value) {
-      //       params[item.field] = item.value;
-      //     }
-      //   });
-      // }
+      delete params.pageNumber;
+      delete params.pageSize;
 
       // Add confirmation to prevent accidental/auto exports
       const confirmExport = window.confirm(
@@ -713,7 +765,7 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "sr",
       headerName: "Sr No",
-      width: 20,
+      width: 60,
       headerAlign: "center",
       align: "center",
     },
@@ -878,11 +930,13 @@ const ProductionOrderUpload: React.FC = () => {
       field: "actions",
       headerName: "Actions",
       flex: 1,
-      minWidth: 60,
+      minWidth: 200,
+      sortable: false,
       headerAlign: "center",
       align: "center",
-      sortable: false,
       renderCell: (params) => {
+        const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
+        const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
         const isConfirming = deleteConfirmId === params.row.id;
         const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
 
@@ -919,6 +973,50 @@ const ProductionOrderUpload: React.FC = () => {
               </>
             ) : (
               <>
+                <Tooltip
+                  title={
+                    hasViewAccess
+                      ? "View BOM Details"
+                      : "You do not have permission to view precheck details"
+                  }
+                  PopperProps={{ disablePortal: true }}
+                  disableFocusListener
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() =>
+                        navigate("/production-order/view", { state: params.row })
+                      }
+                      disabled={!hasViewAccess}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  title={
+                    hasMakeAccess
+                      ? "Make Precheck"
+                      : "You do not have permission to perform precheck"
+                  }
+                  PopperProps={{ disablePortal: true }}
+                  disableFocusListener
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="success"
+                      onClick={() =>
+                        navigate("/precheck/make", { state: params.row })
+                      }
+                      disabled={!hasMakeAccess}
+                    >
+                      <PlaylistAddCheckIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
                 <IconButton
                   size="small"
                   color="secondary"
@@ -959,12 +1057,8 @@ const ProductionOrderUpload: React.FC = () => {
   }, [previewColumns, uploadTableRows]);
 
   const autosizedHistoryColumns = React.useMemo(() => {
-    const historyRows = (filteredRows || []).map((item, index) => ({
-      ...item,
-      sr: index + 1,
-    }));
-    return getAutosizedColumns(historyColumns, historyRows);
-  }, [historyColumns, filteredRows]);
+    return getAutosizedColumns(historyColumns, tableRows);
+  }, [historyColumns, tableRows]);
 
   return (
     <Box
@@ -1034,7 +1128,7 @@ const ProductionOrderUpload: React.FC = () => {
             }}
             sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
           >
-            History ({productionOrders?.length || 0})
+            History ({totalRowCount})
           </Button>
           {view === "history" && (
             <Button
@@ -1527,22 +1621,20 @@ const ProductionOrderUpload: React.FC = () => {
               </IconButton>
             </Box>
             <DataGrid
-              rows={(filteredRows || []).map((item, index) => ({
-                ...item,
-                sr: index + 1,
-              }))}
+              rows={tableRows}
               columns={autosizedHistoryColumns}
               loading={isHistoryLoading}
-              pageSizeOptions={[5, 10, 25, 50]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 50 } },
-              }}
+              rowCount={totalRowCount}
+              paginationMode="server"
+              paginationModel={paginationModel}
+              onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+              pageSizeOptions={[10, 25, 50, 100]}
               filterModel={filterModel}
               onFilterModelChange={(newModel) => setFilterModel(newModel)}
               disableColumnFilter
               density="compact"
               disableRowSelectionOnClick
-              getRowId={(row) => row.sr}
+              getRowId={(row) => row.id || row.sr}
               slots={{
                 footer: () => (
                   <GridFooterContainer>
@@ -1556,7 +1648,7 @@ const ProductionOrderUpload: React.FC = () => {
                       }}
                     >
                       <Chip
-                        label={`Total: ${counts.totalCount}`}
+                        label={`Total: ${counts.totalCount || totalRowCount}`}
                         size="small"
                         color="primary"
                         variant="outlined"
