@@ -1538,7 +1538,7 @@ export default function BarcodeGeneration() {
                           }}
                           renderGroup={(params) => (
                             <li key={params.key}>
-                              <Typography variant="subtitle2" fontWeight="800" sx={{ px: 2, py: 0.5, backgroundColor: "grey.200", color: "primary.main", fontSize: "0.95rem", letterSpacing: "0.5px" }}>
+                              <Typography variant="subtitle2" fontWeight="800" sx={{ px: 2, py: 0.6, backgroundColor: "#F2F2F2", color: "#9C004C", fontSize: "0.875rem", letterSpacing: "0.5px" }}>
                                 LN CODE: {params.group}
                               </Typography>
                               <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
@@ -1600,16 +1600,33 @@ export default function BarcodeGeneration() {
                                   setValue("location", "");
                                 }
                               }}
-                              renderOption={(props, option) => (
-                                <li {...props} key={option.id}>
-                                  <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                                    <Typography variant="body2" fontWeight="bold">{option.drawingNumber}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      LN: {option.lnItemCode} | {option.nomenclature} | {formatComponentType(option.componentType)}
-                                    </Typography>
-                                  </Box>
-                                </li>
-                              )}
+                              renderOption={(props, option) => {
+                                const { key, ...optionProps } = props;
+                                const drawingNo = typeof option === "string" ? option : option.drawingNumber;
+                                const lnCode = typeof option === "string" ? "" : option.lnItemCode;
+                                const nomenclature = typeof option === "string" ? "" : option.nomenclature;
+                                const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
+
+                                const subTextParts = [];
+                                if (lnCode) subTextParts.push(`LN: ${lnCode}`);
+                                if (nomenclature) subTextParts.push(nomenclature);
+                                if (compType) subTextParts.push(compType);
+
+                                return (
+                                  <li {...optionProps} key={key}>
+                                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                                      <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
+                                        {drawingNo}
+                                      </Typography>
+                                      {subTextParts.length > 0 && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+                                          {subTextParts.join(" | ")}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </li>
+                                );
+                              }}
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
@@ -2041,6 +2058,18 @@ export default function BarcodeGeneration() {
                           value={selectedDrawing}
                           loading={isLnSearchLoading || isLnSearchFetching}
                           size="small"
+                          filterOptions={(options, { inputValue }) => {
+                            if (!inputValue) return options.slice(0, 100);
+                            const searchLower = inputValue.toLowerCase();
+                            return options
+                              .filter(
+                                (option) =>
+                                  option.lnItemCode?.toLowerCase().includes(searchLower) ||
+                                  option.drawingNumber?.toLowerCase().includes(searchLower) ||
+                                  option.nomenclature?.toLowerCase().includes(searchLower),
+                              )
+                              .slice(0, 100);
+                          }}
                           onInputChange={(_, value) => updateDebouncedLnSearch(value)}
                           onChange={(_, newValue) => {
                             if (newValue && typeof newValue !== "string") {
@@ -2053,7 +2082,45 @@ export default function BarcodeGeneration() {
                               if (newValue.componentType) { updateComponentAndQrType(newValue.componentType); }
                             } else { setValue("drawingNumber", ""); setValue("nomenclature", ""); setValue("unit", ""); setValue("partAssemblyId", ""); setValue("location", ""); }
                           }}
-                          renderInput={(params) => <TextField {...params} label="LN Item Code" placeholder="Type to search..." />}
+                          renderOption={(props, option) => {
+                            const { key, ...optionProps } = props;
+                            return (
+                              <li {...optionProps} key={key}>
+                                <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                                  <Typography variant="body2" fontWeight="500" sx={{ fontSize: "0.85rem", color: "text.primary" }}>
+                                    Drawing: {option.drawingNumber}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.72rem" }}>
+                                    {option.nomenclature} | Type: {formatComponentType(option.componentType)}
+                                  </Typography>
+                                </Box>
+                              </li>
+                            );
+                          }}
+                          renderGroup={(params) => (
+                            <li key={params.key}>
+                              <Typography variant="subtitle2" fontWeight="800" sx={{ px: 2, py: 0.6, backgroundColor: "#F2F2F2", color: "#9C004C", fontSize: "0.875rem", letterSpacing: "0.5px" }}>
+                                LN CODE: {params.group}
+                              </Typography>
+                              <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
+                            </li>
+                          )}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="LN Item Code"
+                              placeholder="Type to search..."
+                              InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                  <>
+                                    {isLnSearchLoading || isLnSearchFetching ? <CircularProgress color="inherit" size={16} /> : null}
+                                    {params.InputProps.endAdornment}
+                                  </>
+                                ),
+                              }}
+                            />
+                          )}
                         />
                       </Grid>
                     </Grid>
@@ -2071,6 +2138,9 @@ export default function BarcodeGeneration() {
                               getOptionLabel={(option) => typeof option === "string" ? option : option.drawingNumber || ""}
                               value={selectedDrawing}
                               size="small"
+                              onInputChange={(_, value, reason) => {
+                                if (reason === "input" && value.length >= 3) debouncedDrawingSearch(value);
+                              }}
                               onChange={(_, value) => {
                                 setSelectedDrawing(value);
                                 onChange(value ? value.drawingNumber : "");
@@ -2081,6 +2151,33 @@ export default function BarcodeGeneration() {
                                   if (value.componentType) { updateComponentAndQrType(value.componentType); }
                                   setValue("partAssemblyId", value.parentDrawingNumbers?.[0] || "");
                                 } else { setValue("nomenclature", ""); setValue("unit", ""); setValue("partAssemblyId", ""); setValue("location", ""); }
+                              }}
+                              renderOption={(props, option) => {
+                                const { key, ...optionProps } = props;
+                                const drawingNo = typeof option === "string" ? option : option.drawingNumber;
+                                const lnCode = typeof option === "string" ? "" : option.lnItemCode;
+                                const nomenclature = typeof option === "string" ? "" : option.nomenclature;
+                                const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
+
+                                const subTextParts = [];
+                                if (lnCode) subTextParts.push(`LN: ${lnCode}`);
+                                if (nomenclature) subTextParts.push(nomenclature);
+                                if (compType) subTextParts.push(compType);
+
+                                return (
+                                  <li {...optionProps} key={key}>
+                                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                                      <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
+                                        {drawingNo}
+                                      </Typography>
+                                      {subTextParts.length > 0 && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+                                          {subTextParts.join(" | ")}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </li>
+                                );
                               }}
                               renderInput={(params) => <TextField {...params} label="Drawing Number *" error={!!errors.drawingNumber} helperText={errors.drawingNumber?.message} />}
                             />
