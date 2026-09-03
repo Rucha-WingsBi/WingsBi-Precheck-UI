@@ -356,25 +356,21 @@ const ProductionOrderUpload: React.FC = () => {
     setIsExporting(true);
 
     try {
-      // Build API query parameters with selected columns sent in payload
-      const columnKeys = activeColumns.map((c) => c.key);
-      const columnLabels = activeColumns.map((c) => c.label);
+      // Build export payload with filters as string arrays
       const basePayload = buildPayload();
-      delete basePayload.pageNumber;
-      delete basePayload.pageSize;
 
-      const exportParams = {
+      const exportPayload: any = {
         ...basePayload,
-        columns: columnKeys.join(","),
-        columnNames: columnLabels.join(","),
-        selectedColumns: columnKeys,
-        exportAll: exportMode === "all",
       };
+
+      // Only send selectedColumns if custom selection (not all)
+      if (exportMode === "custom") {
+        exportPayload.selectedColumns = activeColumns.map((c) => c.key);
+      }
 
       let exportedViaApi = false;
       try {
-        const response = await api.get("/api/ProductionOrder/Export", {
-          params: exportParams,
+        const response = await api.post("/api/ProductionOrder/Export", exportPayload, {
           responseType: "blob",
         });
 
@@ -542,9 +538,9 @@ const ProductionOrderUpload: React.FC = () => {
     pageSize: 20,
   });
 
-  // Reset pagination to page 0 when filters change
+  // Reset pagination to page 0 when filters change (only if not already 0)
   React.useEffect(() => {
-    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   }, [
     fromDate,
     toDate,
@@ -553,11 +549,9 @@ const ProductionOrderUpload: React.FC = () => {
     selectedStatusList,
   ]);
 
-  // Helper to build payload object from all filter states
+  // Helper to build payload object from all filter states (without pageNumber and pageSize)
   const buildPayload = () => {
     const payload: any = {
-      pageNumber: paginationModel.page + 1,
-      pageSize: paginationModel.pageSize,
       searchQuery: debouncedSearchQuery?.trim() || "",
       productionSeries: selectedProductionSeries.map((s: any) =>
         (s.productionSeries || s).toString()
@@ -632,8 +626,6 @@ const ProductionOrderUpload: React.FC = () => {
     ],
     queryFn: async () => {
       const payload = buildPayload();
-      delete payload.pageNumber;
-      delete payload.pageSize;
       const response = await api.post("/api/ProductionOrder/GetCounts", payload);
       return response.data;
     },
@@ -668,7 +660,6 @@ const ProductionOrderUpload: React.FC = () => {
         row.projectNumber?.toLowerCase().includes(term) ||
         row.itemDescription?.toLowerCase().includes(term) ||
         row.precheckStatusName?.toLowerCase().includes(term) ||
-        (row.precheckStatus === 4 && "pending-planner".includes(term)) ||
         (row.precheckStatus === 1 && "pending".includes(term)) ||
         (row.precheckStatus === 2 && "partial".includes(term)) ||
         (row.precheckStatus === 3 && "completed".includes(term)),
@@ -1918,6 +1909,23 @@ const ProductionOrderUpload: React.FC = () => {
                       onChange={(newValue) => setFromDate(newValue)}
                       slotProps={{
                         textField: { size: "small", sx: { width: 160 } },
+                        actionBar: { actions: ["today", "cancel"] },
+                        desktopPaper: {
+                          sx: {
+                            "& .MuiDateCalendar-root": {
+                              height: "auto",
+                              minHeight: "unset",
+                              pb: 0.5,
+                            },
+                            "& .MuiDayCalendar-slideTransition": {
+                              minHeight: 185,
+                            },
+                            "& .MuiPickersActionBar-root": {
+                              pt: 0,
+                              pb: 1,
+                            },
+                          },
+                        },
                       }}
                     />
                     <DatePicker
@@ -1926,8 +1934,42 @@ const ProductionOrderUpload: React.FC = () => {
                       onChange={(newValue) => setToDate(newValue)}
                       slotProps={{
                         textField: { size: "small", sx: { width: 160 } },
+                        actionBar: { actions: ["today", "cancel"] },
+                        desktopPaper: {
+                          sx: {
+                            "& .MuiDateCalendar-root": {
+                              height: "auto",
+                              minHeight: "unset",
+                              pb: 0.5,
+                            },
+                            "& .MuiDayCalendar-slideTransition": {
+                              minHeight: 185,
+                            },
+                            "& .MuiPickersActionBar-root": {
+                              pt: 0,
+                              pb: 1,
+                            },
+                          },
+                        },
                       }}
                     />
+                    {(fromDate || toDate) && (
+                      <Tooltip title="Clear Date Filter">
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          startIcon={<ClearIcon fontSize="small" />}
+                          onClick={() => {
+                            setFromDate(null);
+                            setToDate(null);
+                          }}
+                          sx={{ height: 40 }}
+                        >
+                          Clear Date
+                        </Button>
+                      </Tooltip>
+                    )}
                   </>
                 )}
               </Stack>
@@ -2025,12 +2067,7 @@ const ProductionOrderUpload: React.FC = () => {
                         color="primary"
                         variant="outlined"
                       />
-                      <Chip
-                        label={`Pending-Planner: ${counts.uploadedCount}`}
-                        size="small"
-                        color="info"
-                        variant="filled"
-                      />
+                     
                       <Chip
                         label={`Pending: ${counts.pendingCount}`}
                         size="small"
