@@ -416,6 +416,9 @@ const ViewBarcode: React.FC = () => {
           dispatch(getBarcodeDetailsWithParameters(params as any));
         }
       }
+    } else {
+      // Clear search results when entering ViewBarcode page fresh
+      dispatch(clearBarcodeDetails());
     }
   }, []);
 
@@ -424,6 +427,9 @@ const ViewBarcode: React.FC = () => {
   // Clear stale Redux errors on component mount
   useEffect(() => {
     dispatch(clearError());
+    return () => {
+      dispatch(clearBarcodeDetails());
+    };
   }, [dispatch]);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -1165,7 +1171,17 @@ const ViewBarcode: React.FC = () => {
 
           <TableContainer sx={{ width: '100%', maxHeight: 'calc(100vh - 270px)', minHeight: '480px', overflowX: 'auto', overflowY: 'auto' }}>
             <Table sx={{ width: '100%', minWidth: '1540px', tableLayout: 'auto' }} stickyHeader aria-label="QR codes table">
-              <TableHead>
+              <TableHead
+                sx={{
+                  backgroundColor: '#f5f5f5',
+                  '& .MuiTableCell-head': {
+                    backgroundColor: '#f5f5f5',
+                    zIndex: 2,
+                    position: 'sticky',
+                    top: 0,
+                  },
+                }}
+              >
                 <TableRow sx={{ height: 30 }}>
                   <TableCell padding="checkbox" sx={{ fontWeight: 'bold', textAlign: 'center', padding: "5px 8px !important" }}>
                     <Checkbox

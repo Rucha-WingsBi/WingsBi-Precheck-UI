@@ -1196,11 +1196,19 @@ const UpdateBarcode: React.FC = () => {
                       control={<Radio size="small" />}
                       label="Rejected"
                     />
-                    <FormControlLabel
-                      value="Used for QT"
-                      control={<Radio size="small" />}
-                      label="Used for QT"
-                    />
+                    {selectedComponentType === "FIM" || selectedComponentType === "SI" || formData.componentType === "FIM" || formData.componentType === "SI" ? (
+                      <FormControlLabel
+                        value="Send Back to Customer"
+                        control={<Radio size="small" />}
+                        label="Send Back to Customer"
+                      />
+                    ) : (
+                      <FormControlLabel
+                        value="Used for QT"
+                        control={<Radio size="small" />}
+                        label="Used for QT"
+                      />
+                    )}
                   </RadioGroup>
                 </Box>
               </Grid>
