@@ -595,7 +595,12 @@ const ProductionOrderUpload: React.FC = () => {
     ],
     queryFn: async () => {
       const payload = buildPayload();
-      const response = await api.post("/api/ProductionOrder/GetAll", payload);
+      const response = await api.post("/api/ProductionOrder/GetAll", payload, {
+        params: {
+          pageNumber: paginationModel.page + 1,
+          pageSize: paginationModel.pageSize,
+        },
+      });
       if (Array.isArray(response.data)) {
         return {
           data: response.data,
