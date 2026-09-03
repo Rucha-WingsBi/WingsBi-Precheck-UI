@@ -96,6 +96,16 @@ interface ProductionOrder {
   snagSheetNo?: string | null;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  totalRecords: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 interface UploadResult {
   totalRows: number;
   imported: number;
@@ -116,7 +126,6 @@ const normalizeKey = (key: string) =>
   key.toLowerCase().replace(/\s+/g, "").replace(/_/g, "").trim();
 
 const statusOptions = [
-  { id: 4, label: "Pending-Planner" },
   { id: 1, label: "Pending" },
   { id: 2, label: "Partial" },
   { id: 3, label: "Completed" },
@@ -350,10 +359,12 @@ const ProductionOrderUpload: React.FC = () => {
       // Build API query parameters with selected columns sent in payload
       const columnKeys = activeColumns.map((c) => c.key);
       const columnLabels = activeColumns.map((c) => c.label);
-      const baseParams = buildQueryParams();
+      const basePayload = buildPayload();
+      delete basePayload.pageNumber;
+      delete basePayload.pageSize;
 
       const exportParams = {
-        ...baseParams,
+        ...basePayload,
         columns: columnKeys.join(","),
         columnNames: columnLabels.join(","),
         selectedColumns: columnKeys,
@@ -495,6 +506,7 @@ const ProductionOrderUpload: React.FC = () => {
   const [toDate, setToDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
+  const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
   const { data: productionSeriesData = [] } = useProductionSeries();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
@@ -525,59 +537,83 @@ const ProductionOrderUpload: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  // Helper to build query params from all filter states
-  const buildQueryParams = () => {
-    const params: any = {};
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 20,
+  });
 
-    if (selectedProductionSeries.length > 0) {
-      params.productionSeries = selectedProductionSeries.map((s: any) => s.productionSeries || s).join(',');
-    }
+  // Reset pagination to page 0 when filters change
+  React.useEffect(() => {
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+  }, [
+    fromDate,
+    toDate,
+    debouncedSearchQuery,
+    selectedProductionSeries,
+    selectedStatusList,
+  ]);
+
+  // Helper to build payload object from all filter states
+  const buildPayload = () => {
+    const payload: any = {
+      pageNumber: paginationModel.page + 1,
+      pageSize: paginationModel.pageSize,
+      searchQuery: debouncedSearchQuery?.trim() || "",
+      productionSeries: selectedProductionSeries.map((s: any) =>
+        (s.productionSeries || s).toString()
+      ),
+      precheckStatus: selectedStatusList.map((s: any) =>
+        (typeof s === "number" ? s : s.id).toString()
+      ),
+    };
 
     // Date Filters (Range mode)
     if (fromDate && toDate) {
-      params.dateFilterType = "range";
-      params.fromDate = format(fromDate, "yyyy-MM-dd");
-      params.toDate = format(toDate, "yyyy-MM-dd");
+      payload.dateFilterType = "range";
+      payload.fromDate = format(fromDate, "yyyy-MM-dd");
+      payload.toDate = format(toDate, "yyyy-MM-dd");
     }
 
-    // Text Filters & Status (Server-side)
-    if (debouncedSearchQuery?.trim()) {
-      const term = debouncedSearchQuery.trim();
-      params.searchQuery = term;
-      params.poNumber = term;
-      params.lnItemCode = term;
-      params.drawingNumber = term;
-
-      const termLower = term.toLowerCase();
-      if ("pending-planner".includes(termLower)) params.precheckStatus = 4;
-      else if ("pending".includes(termLower)) params.precheckStatus = 1;
-      else if ("partial".includes(termLower)) params.precheckStatus = 2;
-      else if ("completed".includes(termLower)) params.precheckStatus = 3;
-    }
-
-    return params;
+    return payload;
   };
 
   // Fetch production orders with filters
   const {
-    data: productionOrders,
+    data: paginatedResponse,
     isLoading: isHistoryLoading,
     refetch,
-  } = useQuery<ProductionOrder[]>({
+  } = useQuery<PaginatedResponse<ProductionOrder>>({
     queryKey: [
       "productionOrders",
       fromDate,
       toDate,
       debouncedSearchQuery,
       selectedProductionSeries,
+      selectedStatusList,
+      paginationModel.page,
+      paginationModel.pageSize,
     ],
     queryFn: async () => {
-      const params = buildQueryParams();
-      const response = await api.get("/api/ProductionOrder/GetAll", { params });
+      const payload = buildPayload();
+      const response = await api.post("/api/ProductionOrder/GetAll", payload);
+      if (Array.isArray(response.data)) {
+        return {
+          data: response.data,
+          totalRecords: response.data.length,
+          pageNumber: 1,
+          pageSize: response.data.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        };
+      }
       return response.data;
     },
     placeholderData: (previousData) => previousData,
   });
+
+  const productionOrders = paginatedResponse?.data || [];
+  const totalRowCount = paginatedResponse?.totalRecords || 0;
 
   // Fetch status counts with filters
   const { data: statusCounts } = useQuery<StatusCount>({
@@ -587,12 +623,13 @@ const ProductionOrderUpload: React.FC = () => {
       toDate,
       debouncedSearchQuery,
       selectedProductionSeries,
+      selectedStatusList,
     ],
     queryFn: async () => {
-      const params = buildQueryParams();
-      const response = await api.get("/api/ProductionOrder/GetCounts", {
-        params,
-      });
+      const payload = buildPayload();
+      delete payload.pageNumber;
+      delete payload.pageSize;
+      const response = await api.post("/api/ProductionOrder/GetCounts", payload);
       return response.data;
     },
     placeholderData: (previousData) => previousData,
@@ -612,6 +649,10 @@ const ProductionOrderUpload: React.FC = () => {
       const seriesNames = selectedProductionSeries.map((s: any) => (s.productionSeries || s).toString().toLowerCase());
       rows = rows.filter((row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase()));
     }
+    if (selectedStatusList.length > 0) {
+      const statusIds = selectedStatusList.map((s: any) => typeof s === "number" ? s : s.id);
+      rows = rows.filter((row) => row.precheckStatus !== undefined && statusIds.includes(row.precheckStatus));
+    }
     if (!debouncedSearchQuery?.trim()) return rows;
     const term = debouncedSearchQuery.trim().toLowerCase();
     return rows.filter(
@@ -627,7 +668,7 @@ const ProductionOrderUpload: React.FC = () => {
         (row.precheckStatus === 2 && "partial".includes(term)) ||
         (row.precheckStatus === 3 && "completed".includes(term)),
     );
-  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries]);
+  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries, selectedStatusList]);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -1227,13 +1268,17 @@ const ProductionOrderUpload: React.FC = () => {
     return getAutosizedColumns(previewColumns, uploadTableRows);
   }, [previewColumns, uploadTableRows]);
 
-  const autosizedHistoryColumns = React.useMemo(() => {
-    const historyRows = (filteredRows || []).map((item: any, index: number) => ({
+  const historyTableRows = React.useMemo(() => {
+    const rows = filteredRows || [];
+    return rows.map((item: any, index: number) => ({
       ...item,
-      sr: index + 1,
+      sr: item.sr ? item.sr : (paginationModel.page * paginationModel.pageSize) + index + 1,
     }));
-    return getAutosizedColumns(historyColumns, historyRows);
-  }, [historyColumns, filteredRows]);
+  }, [filteredRows, paginationModel.page, paginationModel.pageSize]);
+
+  const autosizedHistoryColumns = React.useMemo(() => {
+    return getAutosizedColumns(historyColumns, historyTableRows);
+  }, [historyColumns, historyTableRows]);
 
   return (
     <Box
@@ -1806,6 +1851,49 @@ const ProductionOrderUpload: React.FC = () => {
                   />
                 </FormControl>
 
+                {/* Status Multi-Select Autocomplete */}
+                <FormControl size="small" sx={{ width: 180 }}>
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    renderTags={() => null}
+                    size="small"
+                    options={statusOptions}
+                    getOptionLabel={(option: any) => {
+                      if (typeof option === "string") return option;
+                      return option.label || "";
+                    }}
+                    value={selectedStatusList}
+                    onChange={(_, newValue) => setSelectedStatusList(newValue)}
+                    isOptionEqualToValue={(option: any, value: any) => (option.id || option) === (value?.id || value)}
+                    ListboxProps={{
+                      sx: {
+                        py: 0.5,
+                        '& .MuiAutocomplete-option': {
+                          minHeight: '30px !important',
+                          py: '2px !important',
+                          px: '8px !important',
+                          fontSize: '0.85rem'
+                        }
+                      }
+                    }}
+                    renderOption={(props, option, { selected }) => {
+                      const { key, ...optionProps } = props;
+                      return (
+                        <li {...optionProps} key={key}>
+                          <Checkbox
+                            size="small"
+                            sx={{ p: '2px', mr: 0.75 }}
+                            checked={selected}
+                          />
+                          {typeof option === "string" ? option : option.label}
+                        </li>
+                      );
+                    }}
+                    renderInput={(params) => <TextField {...params} label="Status" placeholder={selectedStatusList.length > 0 ? `${selectedStatusList.length} selected` : "Select"} size="small" />}
+                  />
+                </FormControl>
+
                 {/* Date Filter Button & Range Fields */}
                 <Button
                   size="small"
@@ -1840,17 +1928,32 @@ const ProductionOrderUpload: React.FC = () => {
               </Stack>
             </Paper>
 
-            {selectedProductionSeries.length > 0 && (
+            {(selectedProductionSeries.length > 0 || selectedStatusList.length > 0) && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', my: 0.5, px: 0.5 }}>
                 {selectedProductionSeries.map((item: any) => {
                   const label = typeof item === 'string' ? item : item.productionSeries;
                   return (
                     <Chip
-                      key={item.id || label}
+                      key={`series-${item.id || label}`}
                       label={`Series: ${label}`}
                       size="small"
                       onDelete={() => {
                         setSelectedProductionSeries(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
+                      }}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  );
+                })}
+                {selectedStatusList.map((item: any) => {
+                  const label = typeof item === 'string' ? item : item.label;
+                  return (
+                    <Chip
+                      key={`status-${item.id || label}`}
+                      label={`Status: ${label}`}
+                      size="small"
+                      onDelete={() => {
+                        setSelectedStatusList(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
                       }}
                       color="primary"
                       variant="outlined"
@@ -1863,6 +1966,7 @@ const ProductionOrderUpload: React.FC = () => {
                   variant="text"
                   onClick={() => {
                     setSelectedProductionSeries([]);
+                    setSelectedStatusList([]);
                   }}
                   sx={{ fontSize: '0.75rem', py: 0, px: 1, height: '24px', minWidth: 'auto', fontWeight: 600 }}
                 >
@@ -1883,23 +1987,21 @@ const ProductionOrderUpload: React.FC = () => {
             }}
           >
             <DataGrid
-              rows={(filteredRows || []).map((item, index) => ({
-                ...item,
-                sr: index + 1,
-              }))}
+              rows={historyTableRows}
               columns={autosizedHistoryColumns}
               loading={isHistoryLoading}
-              pageSizeOptions={[5, 10, 25, 50]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 50 } },
-              }}
+              rowCount={totalRowCount}
+              paginationMode="server"
+              paginationModel={paginationModel}
+              onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+              pageSizeOptions={[10, 20, 25, 50, 100]}
               filterModel={filterModel}
               onFilterModelChange={(newModel) => setFilterModel(newModel)}
               disableColumnMenu
               disableColumnFilter
               density="compact"
               disableRowSelectionOnClick
-              getRowId={(row) => row.sr}
+              getRowId={(row) => row.id || row.sr}
               slots={{
                 footer: () => (
                   <GridFooterContainer>
