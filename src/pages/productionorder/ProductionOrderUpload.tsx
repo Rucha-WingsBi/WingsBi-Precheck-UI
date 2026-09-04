@@ -1370,11 +1370,11 @@ const ProductionOrderUpload: React.FC = () => {
                     textDecoration: "underline",
                   }}
                 >
-                  Upload Order
+                  Import Production Order
                 </Typography>
               </Box>
               <Button
-                variant="outlined"
+                variant="contained"
                 size="small"
                 color="success"
                 onClick={handleExportExcel}
@@ -1460,7 +1460,8 @@ const ProductionOrderUpload: React.FC = () => {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                py: showColumnPreview ? 2.5 : 12,
+                flex: 1,
+                py: showColumnPreview ? 2.5 : 6,
                 px: 5,
                 borderRadius: 4,
                 border: "2px dashed",
@@ -1469,7 +1470,7 @@ const ProductionOrderUpload: React.FC = () => {
                 cursor: "pointer",
                 transition: "all 0.2s ease-in-out",
                 textAlign: "center",
-                minHeight: showColumnPreview ? 180 : 540,
+                minHeight: showColumnPreview ? 180 : 300,
                 "&:hover": {
                   backgroundColor: "#ede9fe",
                   borderColor: "#7c3aed",
@@ -1778,7 +1779,7 @@ const ProductionOrderUpload: React.FC = () => {
                 {/* Unified Status / PO / LN Item / Drawing No Search Bar */}
                 <TextField
 
-                  placeholder="Search Status, PO, LN Item, Drawing No..."
+                  placeholder="Search PO, LN Item, Drawing No..."
                   variant="outlined"
                   size="small"
                   value={searchQuery}
@@ -2067,7 +2068,7 @@ const ProductionOrderUpload: React.FC = () => {
                         color="primary"
                         variant="outlined"
                       />
-                     
+                    
                       <Chip
                         label={`Pending: ${counts.pendingCount}`}
                         size="small"

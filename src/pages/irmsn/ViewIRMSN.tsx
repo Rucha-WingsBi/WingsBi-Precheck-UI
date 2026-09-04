@@ -21,6 +21,7 @@ import {
   Alert,
   Checkbox,
   InputAdornment,
+  Chip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
@@ -313,22 +314,22 @@ const ViewIRMSN: React.FC = () => {
         )}
 
         {/* Form Controls */}
-        <Card elevation={2} sx={{ mb: 3 }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        <Card elevation={2} sx={{ mb: 1.5 }}>
+          <CardContent sx={{ p: { xs: 1.5, md: 2 }, "&:last-child": { pb: { xs: 1.5, md: 2 } } }}>
             <Box
               sx={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: 1.5,
+                gap: 1,
                 alignItems: "center",
               }}
             >
               {/* Drawing / LN / IR / MSN No Combined Search Bar */}
               <TextField
                 size="small"
-                sx={{ minWidth: 260, width: 300 }}
-                label="Drawing / LN / IR / MSN No *"
-                placeholder="Search Drawing, LN Code, IR/MSN..."
+                sx={{ flex: { xs: "1 1 100%", md: "1 1 0%" }, minWidth: 180 }}
+                label="Search"
+                placeholder="Drawing, LN Code, IR/MSN..."
                 value={drawingOrLnSearch}
                 onChange={(e) => setDrawingOrLnSearch(e.target.value)}
                 InputProps={{
@@ -352,14 +353,13 @@ const ViewIRMSN: React.FC = () => {
               />
 
               {/* Department Filter (Multi-select) */}
-              <FormControl sx={{ minWidth: 200 }} size="small">
+              <FormControl sx={{ flex: { xs: "1 1 45%", md: "0 1 auto" }, minWidth: 150 }} size="small">
                 <Autocomplete
                   multiple
                   size="small"
-                  sx={{ width: 220 }}
                   options={departments}
                   disableCloseOnSelect
-                  limitTags={1}
+                  renderTags={() => null}
                   getOptionLabel={(option: any) =>
                     typeof option === "string" ? option : option.name || ""
                   }
@@ -401,8 +401,8 @@ const ViewIRMSN: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Department Type"
-                      placeholder={selectedDepartments.length ? "" : "Select Department"}
+                      label="Dept Type"
+                      placeholder={selectedDepartments.length > 0 ? `${selectedDepartments.length} selected` : "Select"}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
@@ -420,14 +420,13 @@ const ViewIRMSN: React.FC = () => {
               </FormControl>
 
               {/* Production Series Filter (Multi-select) */}
-              <FormControl sx={{ minWidth: 170 }} size="small">
+              <FormControl sx={{ flex: { xs: "1 1 45%", md: "0 1 auto" }, minWidth: 140 }} size="small">
                 <Autocomplete
                   multiple
                   size="small"
-                  sx={{ minWidth: 170, width: 190 }}
                   options={productionSeries}
                   disableCloseOnSelect
-                  limitTags={1}
+                  renderTags={() => null}
                   getOptionLabel={(option: any) =>
                     typeof option === "string" ? option : option.productionSeries || ""
                   }
@@ -470,7 +469,7 @@ const ViewIRMSN: React.FC = () => {
                     <TextField
                       {...params}
                       label="Prod Series *"
-                      placeholder={selectedProductionSeries.length ? "" : "Select Series"}
+                      placeholder={selectedProductionSeries.length > 0 ? `${selectedProductionSeries.length} selected` : "Select"}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
@@ -492,21 +491,21 @@ const ViewIRMSN: React.FC = () => {
                 label="From Date"
                 value={fromDate}
                 onChange={(newValue) => setFromDate(newValue)}
-                slotProps={{ textField: { size: "small", sx: { width: 170 } } }}
+                slotProps={{ textField: { size: "small", sx: { flex: { xs: "1 1 45%", md: "0 0 auto" }, minWidth: 130, width: { md: 150 } } } }}
               />
               <DatePicker
                 label="To Date"
                 value={toDate}
                 onChange={(newValue) => setToDate(newValue)}
-                slotProps={{ textField: { size: "small", sx: { width: 170 } } }}
+                slotProps={{ textField: { size: "small", sx: { flex: { xs: "1 1 45%", md: "0 0 auto" }, minWidth: 130, width: { md: 150 } } } }}
               />
 
               <Button
                 variant="contained"
                 color="primary"
                 sx={{
-                  minWidth: { xs: "100%", sm: 100 },
-                  height: 32,
+                  minWidth: 80,
+                  height: 36,
                   flex: { xs: 1, sm: "none" },
                 }}
                 size="small"
@@ -519,27 +518,75 @@ const ViewIRMSN: React.FC = () => {
                   loading
                 }
               >
-                <SearchIcon sx={{ mr: 1 }} />
+                <SearchIcon sx={{ mr: 0.5, fontSize: 18 }} />
                 Search
               </Button>
               <Button
                 variant="contained"
                 color="error"
                 sx={{
-                  minWidth: { xs: "100%", sm: 80 },
-                  height: 32,
+                  minWidth: 70,
+                  height: 36,
                   flex: { xs: 1, sm: "none" },
                 }}
                 size="small"
                 onClick={handleReset}
                 disabled={!isResetEnabled}
               >
-                <RefreshIcon sx={{ mr: 1 }} />
+                <RefreshIcon sx={{ mr: 0.5, fontSize: 18 }} />
                 Reset
               </Button>
             </Box>
           </CardContent>
         </Card>
+
+        {/* Selected Filter Chips */}
+        {(selectedDepartments.length > 0 || selectedProductionSeries.length > 0) && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', my: 0.5, px: 0.5 }}>
+            {selectedDepartments.map((item: any) => {
+              const label = typeof item === 'string' ? item : item.name;
+              return (
+                <Chip
+                  key={`dept-${item.id || label}`}
+                  label={`Dept: ${label}`}
+                  size="small"
+                  onDelete={() => {
+                    setSelectedDepartments(prev => prev.filter((d: any) => (d.id || d) !== (item.id || item)));
+                  }}
+                  color="primary"
+                  variant="outlined"
+                />
+              );
+            })}
+            {selectedProductionSeries.map((item: any) => {
+              const label = typeof item === 'string' ? item : item.productionSeries;
+              return (
+                <Chip
+                  key={`series-${item.id || label}`}
+                  label={`Series: ${label}`}
+                  size="small"
+                  onDelete={() => {
+                    setSelectedProductionSeries(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
+                  }}
+                  color="primary"
+                  variant="outlined"
+                />
+              );
+            })}
+            <Button
+              size="small"
+              color="error"
+              variant="text"
+              onClick={() => {
+                setSelectedDepartments([]);
+                setSelectedProductionSeries([]);
+              }}
+              sx={{ fontSize: '0.75rem', py: 0, px: 1, height: '24px', minWidth: 'auto', fontWeight: 600 }}
+            >
+              Clear All
+            </Button>
+          </Box>
+        )}
 
         {/* Single Combined IR/MSN Table */}
         <Paper sx={{ mt: 1, mb: 1, p: 0.5, boxShadow: 2 }}>

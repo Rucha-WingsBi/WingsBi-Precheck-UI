@@ -604,6 +604,7 @@ export default function Layout() {
                   <ListItemText
                     primary={item.text}
                     sx={{
+                      flex: 1,
                       opacity: isSidebarOpen || !isDesktopVersion ? 1 : 0,
                       display: isSidebarOpen || !isDesktopVersion ? "block" : "none",
                       "& .MuiListItemText-primary": {
@@ -621,11 +622,11 @@ export default function Layout() {
                   {item.subItems &&
                     item.subItems.length > 0 &&
                     (isSidebarOpen || !isDesktopVersion) && (
-                      <Box sx={{ ml: 1 }}>
+                      <Box sx={{ ml: "auto", display: "flex", alignItems: "center" }}>
                         {expandedItems.includes(item.text) ? (
-                          <ExpandLessIcon sx={{ color: "text.secondary" }} />
+                          <ExpandLessIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
                         ) : (
-                          <ExpandMoreIcon sx={{ color: "text.secondary" }} />
+                          <ExpandMoreIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
                         )}
                       </Box>
                     )}
