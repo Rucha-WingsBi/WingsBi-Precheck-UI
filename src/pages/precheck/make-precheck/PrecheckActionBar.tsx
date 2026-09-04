@@ -202,7 +202,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
           Submit
         </Button>
 
-        {isAdminOrHead && (
+        {/* {isAdminOrHead && (
           <Button
             variant="contained"
             color="secondary"
@@ -219,7 +219,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
           >
             Add
           </Button>
-        )}
+        )} */}
 
         <Button
           variant="contained"

@@ -205,6 +205,7 @@ const RowActionsMenu: React.FC<{
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
+        transitionDuration={0}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         PaperProps={{

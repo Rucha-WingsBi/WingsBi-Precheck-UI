@@ -169,6 +169,7 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
               anchorEl={anchorEl}
               open={isMenuOpen}
               onClose={handleMenuClose}
+              transitionDuration={0}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               PaperProps={{
