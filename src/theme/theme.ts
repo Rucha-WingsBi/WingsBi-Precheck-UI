@@ -1,4 +1,5 @@
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
+import type {} from '@mui/x-data-grid/themeAugmentation';
 
 // Define custom breakpoints for all device types
 const customBreakpoints = {
@@ -424,6 +425,43 @@ let theme = createTheme({
           '@media (min-width:2560px)': {
             maxWidth: '2200px',
             margin: '0 auto',
+          },
+        },
+      },
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        option: {
+          minHeight: '28px !important',
+          paddingTop: '2px !important',
+          paddingBottom: '2px !important',
+          paddingLeft: '8px !important',
+          paddingRight: '8px !important',
+          fontSize: '0.85rem',
+        },
+        listbox: {
+          paddingTop: '4px',
+          paddingBottom: '4px',
+        },
+      },
+    },
+    MuiDataGrid: {
+      styleOverrides: {
+        root: {
+          '& .MuiDataGrid-virtualScroller': {
+            overflowX: 'auto !important',
+          },
+          '& ::-webkit-scrollbar': {
+            height: '8px',
+            width: '8px',
+          },
+          '& ::-webkit-scrollbar-track': {
+            backgroundColor: '#F2F4F7',
+          },
+          '& ::-webkit-scrollbar-thumb': {
+            backgroundColor: '#D0D5DD',
+            borderRadius: '4px',
+            '&:hover': { backgroundColor: '#98A2B3' },
           },
         },
       },

@@ -2,15 +2,12 @@ import React, { useState } from "react";
 import {
   Box,
   Button,
-  Card,
-
   Typography,
   Alert,
   LinearProgress,
   Chip,
   Paper,
   Stack,
-  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -40,7 +37,6 @@ import {
   History as HistoryIcon,
   Visibility as VisibilityIcon,
   PlaylistAddCheck as PlaylistAddCheckIcon,
-  DateRange as DateRangeIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -48,8 +44,8 @@ import {
   Close as CloseIcon,
   Search as SearchIcon,
   Clear as ClearIcon,
-  ArrowBack as ArrowBackIcon,
   MoreVert as MoreVertIcon,
+
 } from "@mui/icons-material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -60,8 +56,6 @@ import {
   DataGrid,
   type GridColDef,
   type GridFilterModel,
-  GridFooterContainer,
-  GridPagination,
 } from "@mui/x-data-grid";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -73,6 +67,14 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { getAutosizedColumns } from "../../utils/gridUtils";
+
+// --- Sub-components imported from modular directory ---
+import { UploadDropzone } from "./components/UploadDropzone";
+import { UploadSummaryCard } from "./components/UploadSummaryCard";
+import { HistoryStatCard } from "./components/HistoryStatCard";
+import { ActiveFilterChips, type FilterChipItem } from "./components/ActiveFilterChips";
+
+// --- Interfaces & Constants ---
 
 interface ProductionOrder {
   id: number;
@@ -131,6 +133,25 @@ const statusOptions = [
   { id: 3, label: "Completed" },
 ];
 
+const ALL_EXPORTABLE_COLUMNS = [
+  { key: "sr", label: "Sr No" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "projectNumber", label: "Project" },
+  { key: "projectDescription", label: "Project Description" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "itemDescription", label: "Item Description" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "startIdNumber", label: "Start ID" },
+  { key: "endIdNumber", label: "End ID" },
+  { key: "quantity", label: "Qty" },
+  { key: "mrirNumber", label: "MRIR No" },
+  { key: "buildNumber", label: "Build No" },
+  { key: "status", label: "Status" },
+  { key: "createdDate", label: "Created Date" },
+  { key: "agingDays", label: "Aging Days" },
+];
+
 const RowActionsMenu: React.FC<{
   row: any;
   pageAccessData: any;
@@ -150,6 +171,13 @@ const RowActionsMenu: React.FC<{
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleNavigate = (path: string, routeState?: any) => {
+    setAnchorEl(null);
+    setTimeout(() => {
+      navigate(path, { state: routeState });
+    }, 0);
   };
 
   const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
@@ -194,8 +222,8 @@ const RowActionsMenu: React.FC<{
         size="small"
         onClick={handleOpen}
         sx={{
-          color: "action.active",
-          "&:hover": { backgroundColor: "action.hover" },
+          color: "#667085",
+          "&:hover": { backgroundColor: "#F2F4F7" },
         }}
       >
         <MoreVertIcon fontSize="small" />
@@ -206,6 +234,7 @@ const RowActionsMenu: React.FC<{
         open={open}
         onClose={handleClose}
         transitionDuration={0}
+        disableRestoreFocus
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         PaperProps={{
@@ -217,37 +246,35 @@ const RowActionsMenu: React.FC<{
           disabled={!hasViewAccess}
           onClick={(e) => {
             e.stopPropagation();
-            handleClose();
-            navigate("/production-order/view", { state: row });
+            handleNavigate("/production-order/view", row);
           }}
         >
           <ListItemIcon>
             <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
           </ListItemIcon>
-          <ListItemText primary="View Availabe QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+          <ListItemText primary="View Available QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
         </MenuItem>
 
         <MenuItem
           disabled={!hasMakeAccess}
           onClick={(e) => {
             e.stopPropagation();
-            handleClose();
-            navigate("/precheck/make", { state: row });
+            handleNavigate("/precheck/make", row);
           }}
         >
           <ListItemIcon>
             <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
           </ListItemIcon>
-          <ListItemText primary="Make Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+          <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
         </MenuItem>
 
         <MenuItem
           disabled={!canDeleteOrEdit}
           onClick={(e) => {
             e.stopPropagation();
-            handleClose();
-            navigate(`/production-order/edit/${row.id}?from=${encodeURIComponent(location.pathname)}`, {
-              state: { ...row, from: location.pathname },
+            handleNavigate(`/production-order/edit/${row.id}?from=${encodeURIComponent(location.pathname)}`, {
+              ...row,
+              from: location.pathname,
             });
           }}
         >
@@ -282,38 +309,23 @@ const RowActionsMenu: React.FC<{
   );
 };
 
-const ALL_EXPORTABLE_COLUMNS = [
-  { key: "sr", label: "Sr No" },
-  { key: "productionOrderNumber", label: "PO Number" },
-  { key: "projectNumber", label: "Project" },
-  { key: "projectDescription", label: "Project Description" },
-  { key: "lnItemCode", label: "LN Item Code" },
-  { key: "itemDescription", label: "Item Description" },
-  { key: "drawingNumber", label: "Drawing Number" },
-  { key: "productionSeries", label: "Prod Series" },
-  { key: "startIdNumber", label: "Start ID" },
-  { key: "endIdNumber", label: "End ID" },
-  { key: "quantity", label: "Qty" },
-  { key: "mrirNumber", label: "MRIR No" },
-  { key: "buildNumber", label: "Build No" },
-  { key: "status", label: "Status" },
-  { key: "createdDate", label: "Created Date" },
-  { key: "agingDays", label: "Aging Days" },
-];
-
 const ProductionOrderUpload: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: pageAccessData } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null,
   );
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
-  const [showColumnPreview, setShowColumnPreview] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [insertedRows, setInsertedRows] = useState<any[]>([]);
-  const location = useLocation();
+  const [view, setView] = useState<"upload" | "history">(
+    location.state?.view || "history",
+  );
+
+  const queryClient = useQueryClient();
 
   // Export Modal state
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -343,6 +355,406 @@ const ProductionOrderUpload: React.FC = () => {
     }
   };
 
+  // Filter states
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
+  const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
+  const { data: productionSeriesData = [] } = useProductionSeries();
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({
+    items: [],
+  });
+
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 20,
+  });
+
+  // Handle automatic reload if coming from edit success
+  React.useEffect(() => {
+    if (location.state?.reload) {
+      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, reload: false },
+      });
+    }
+  }, [location.state, location.pathname, navigate, queryClient]);
+
+  // Reset pagination page to 0 when filters change
+  React.useEffect(() => {
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  }, [
+    fromDate,
+    toDate,
+    debouncedSearchQuery,
+    selectedProductionSeries,
+    selectedStatusList,
+  ]);
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  const showSnackbar = (
+    message: string,
+    severity: "success" | "error" = "success",
+  ) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  // Helper to build payload object from all filter states
+  const buildPayload = () => {
+    const payload: any = {
+      searchQuery: debouncedSearchQuery?.trim() || "",
+      productionSeries: selectedProductionSeries.map((s: any) =>
+        (s.productionSeries || s).toString()
+      ),
+      precheckStatus: selectedStatusList.map((s: any) =>
+        (typeof s === "number" ? s : s.id).toString()
+      ),
+    };
+
+    if (fromDate && toDate) {
+      payload.dateFilterType = "range";
+      payload.fromDate = format(fromDate, "yyyy-MM-dd");
+      payload.toDate = format(toDate, "yyyy-MM-dd");
+    }
+
+    return payload;
+  };
+
+  // Fetch production orders with filters
+  const {
+    data: paginatedResponse,
+    isLoading: isHistoryLoading,
+  } = useQuery<PaginatedResponse<ProductionOrder>>({
+    queryKey: [
+      "productionOrders",
+      fromDate,
+      toDate,
+      debouncedSearchQuery,
+      selectedProductionSeries,
+      selectedStatusList,
+      paginationModel.page,
+      paginationModel.pageSize,
+    ],
+    queryFn: async () => {
+      const payload = buildPayload();
+      const response = await api.post("/api/ProductionOrder/GetAll", payload, {
+        params: {
+          pageNumber: paginationModel.page + 1,
+          pageSize: paginationModel.pageSize,
+        },
+      });
+      if (Array.isArray(response.data)) {
+        return {
+          data: response.data,
+          totalRecords: response.data.length,
+          pageNumber: 1,
+          pageSize: response.data.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        };
+      }
+      return response.data;
+    },
+    placeholderData: (previousData) => previousData,
+  });
+
+  const productionOrders = paginatedResponse?.data || [];
+  const totalRowCount = paginatedResponse?.totalRecords || 0;
+
+  // Fetch status counts with filters
+  const { data: statusCounts } = useQuery<StatusCount>({
+    queryKey: [
+      "productionOrderCounts",
+      fromDate,
+      toDate,
+      debouncedSearchQuery,
+      selectedProductionSeries,
+      selectedStatusList,
+    ],
+    queryFn: async () => {
+      const payload = buildPayload();
+      const response = await api.post("/api/ProductionOrder/GetCounts", payload);
+      return response.data;
+    },
+    placeholderData: (previousData) => previousData,
+  });
+
+  const counts: StatusCount = statusCounts ?? {
+    totalCount: 0,
+    pendingCount: 0,
+    partialCount: 0,
+    completedCount: 0,
+    uploadedCount: 0,
+  };
+
+  // Client-side filtering fallback
+  const filteredRows = React.useMemo(() => {
+    let rows = productionOrders || [];
+    if (selectedProductionSeries.length > 0) {
+      const seriesNames = selectedProductionSeries.map((s: any) =>
+        (s.productionSeries || s).toString().toLowerCase()
+      );
+      rows = rows.filter(
+        (row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase())
+      );
+    }
+    if (selectedStatusList.length > 0) {
+      const statusIds = selectedStatusList.map((s: any) =>
+        typeof s === "number" ? s : s.id
+      );
+      rows = rows.filter(
+        (row) => row.precheckStatus !== undefined && statusIds.includes(row.precheckStatus)
+      );
+    }
+    if (!debouncedSearchQuery?.trim()) return rows;
+    const term = debouncedSearchQuery.trim().toLowerCase();
+    return rows.filter(
+      (row) =>
+        row.productionOrderNumber?.toLowerCase().includes(term) ||
+        row.lnItemCode?.toLowerCase().includes(term) ||
+        row.drawingNumber?.toLowerCase().includes(term) ||
+        row.projectNumber?.toLowerCase().includes(term) ||
+        row.itemDescription?.toLowerCase().includes(term) ||
+        row.precheckStatusName?.toLowerCase().includes(term) ||
+        (row.precheckStatus === 1 && "pending".includes(term)) ||
+        (row.precheckStatus === 2 && "partial".includes(term)) ||
+        (row.precheckStatus === 3 && "completed".includes(term))
+    );
+  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries, selectedStatusList]);
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post("/api/ProductionOrder/Upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    },
+    onSuccess: async (data) => {
+      const result = data.result || {};
+      setUploadResult(result);
+      const errors = result.errors || [];
+      const importedCount = result.imported || 0;
+
+      if (errors.length > 0) {
+        return;
+      }
+
+      if (importedCount > 0) {
+        const response = await api.post("/api/ProductionOrder/GetAll", {});
+        const allRows = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+        const insertedPONumbers = result.insertedPONumbers || [];
+
+        let newRows: ProductionOrder[] = [];
+
+        if (insertedPONumbers.length > 0) {
+          newRows = allRows.filter((row: ProductionOrder) =>
+            insertedPONumbers.includes(row.productionOrderNumber)
+          );
+        } else {
+          const sortedRows = [...allRows].sort((a, b) => b.id - a.id);
+          newRows = sortedRows.slice(0, importedCount);
+        }
+
+        const formattedRows = newRows.map((row: ProductionOrder) => ({
+          id: row.id,
+          sr: row.id,
+          productionorder: row.productionOrderNumber,
+          projectcode: row.projectNumber,
+          projectdescription: row.projectDescription,
+          itemcode: row.lnItemCode,
+          itemdescription: row.itemDescription,
+          series: row.productionSeries,
+          id_num: row.startIdNumber,
+          end_id: row.endIdNumber,
+          quantity: row.quantity,
+          mrirnumber: row.mrirNumber,
+          buildnumber: row.buildNumber,
+          min: (row as any).min || (row as any).minNumber || (row as any).minNo || "-",
+          snagsheetno: row.snagSheetNo,
+          status:
+            row.precheckStatusName ||
+            (row.precheckStatus === 4
+              ? "Pending-Planner"
+              : row.precheckStatus === 1
+                ? "Pending"
+                : row.precheckStatus === 2
+                  ? "Partial"
+                  : row.precheckStatus === 3
+                    ? "Completed"
+                    : "Uploaded"),
+        }));
+
+        setInsertedRows(formattedRows);
+        setPreviewRows([]);
+        setSelectedFile(null);
+        setShowSuccessPopup(true);
+        queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+      }
+    },
+    onError: (error: any) => {
+      setUploadResult({
+        totalRows: 0,
+        imported: 0,
+        skipped: 0,
+        errors: [error.response?.data?.message || "Upload failed"],
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (row: ProductionOrder) => {
+      const payload = {
+        productionOrderNumber: row.productionOrderNumber,
+        idNumber: row.startIdNumber,
+        quantity: row.quantity,
+      };
+      const response = await api.post("/api/ProductionOrder/DeleteProductionOrder", payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["productionOrderCounts"] });
+      setDeleteConfirmId(null);
+      showSnackbar("Production Order deleted successfully");
+    },
+    onError: (error: any) => {
+      showSnackbar(error.response?.data?.message || "Failed to Delete Production Order", "error");
+      setDeleteConfirmId(null);
+    },
+  });
+
+  const processFileSelect = (file: File) => {
+    setInsertedRows([]);
+    setSelectedFile(file);
+    setUploadResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const excelRows = XLSX.utils.sheet_to_json<any>(sheet);
+
+      const normalizedData = excelRows.map((row: any, index: number) => {
+        const newRow: any = { id: index };
+        Object.keys(row).forEach((key) => {
+          newRow[normalizeKey(key)] = row[key];
+        });
+
+        if (newRow["snagsheetnumber"] !== undefined) {
+          newRow["snagsheetno"] = newRow["snagsheetnumber"];
+        }
+
+        const minVal =
+          newRow["min"] ??
+          newRow["minnumber"] ??
+          newRow["minno"] ??
+          newRow["min_no"] ??
+          newRow["materialindentnumber"] ??
+          newRow["materialindentno"];
+        if (minVal !== undefined) {
+          newRow["min"] = minVal;
+        }
+
+        const statusVal =
+          newRow["status"] ??
+          newRow["precheckstatus"] ??
+          newRow["precheckstatusname"];
+        if (statusVal !== undefined) {
+          newRow["status"] = statusVal;
+        } else {
+          newRow["status"] = "Uploaded";
+        }
+
+        const startId = (newRow["startidnumber"] || newRow["startid"] || "")
+          .toString()
+          .replace(/[^a-zA-Z0-9]/g, "");
+
+        const match = startId.match(/^([A-Za-z]+)(\d+)$/);
+        if (match) {
+          newRow["series"] = match[1];
+          newRow["id_num"] = match[2];
+        } else if (startId) {
+          newRow["id_num"] = startId.slice(-4);
+          newRow["series"] = startId.slice(0, -4);
+        }
+
+        const qtyVal = newRow["quantity"] !== undefined ? newRow["quantity"] : newRow["qty"];
+        if (qtyVal !== undefined) {
+          newRow["quantity"] = qtyVal;
+        }
+
+        const endId = (newRow["endidnumber"] || newRow["endid"] || "")
+          .toString()
+          .replace(/[^a-zA-Z0-9]/g, "");
+        const endMatch = endId.match(/^([A-Za-z]+)(\d+)$/);
+        if (endMatch) {
+          newRow["end_id"] = endMatch[2];
+        } else if (endId) {
+          newRow["end_id"] = endId.slice(-4);
+        } else {
+          const startNum = parseInt(newRow["id_num"]);
+          const quantityVal = parseInt(newRow["quantity"]);
+          if (!isNaN(startNum) && !isNaN(quantityVal)) {
+            newRow["end_id"] = (startNum + quantityVal - 1).toString();
+          }
+        }
+
+        return newRow;
+      });
+
+      setPreviewRows(normalizedData);
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    uploadMutation.mutate(selectedFile);
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await api.get("/api/ProductionOrder/DownloadTemplate", {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Production_Order_Template.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      alert("Failed to download template. Please try again.");
+    }
+  };
+
   const handleConfirmExportData = async () => {
     const activeColumns =
       exportMode === "all"
@@ -357,14 +769,9 @@ const ProductionOrderUpload: React.FC = () => {
     setIsExporting(true);
 
     try {
-      // Build export payload with filters as string arrays
       const basePayload = buildPayload();
+      const exportPayload: any = { ...basePayload };
 
-      const exportPayload: any = {
-        ...basePayload,
-      };
-
-      // Only send selectedColumns if custom selection (not all)
       if (exportMode === "custom") {
         exportPayload.selectedColumns = activeColumns.map((c) => c.key);
       }
@@ -390,7 +797,6 @@ const ProductionOrderUpload: React.FC = () => {
         console.warn("Server API export fallback to client-side XLSX generation:", apiErr);
       }
 
-      // Non-blocking fallback client-side excel generation
       if (!exportedViaApi) {
         await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -479,464 +885,12 @@ const ProductionOrderUpload: React.FC = () => {
       setIsExporting(false);
     }
   };
-  const [view, setView] = useState<"upload" | "history">(
-    location.state?.view || "history",
-  );
-
-  const queryClient = useQueryClient();
-
-  // Handle automatic reload if coming from edit success
-  React.useEffect(() => {
-    if (location.state?.reload) {
-      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-      // Clear state to prevent extra reloads
-      navigate(location.pathname, {
-        replace: true,
-        state: { ...location.state, reload: false },
-      });
-    }
-  }, [location.state, location.pathname, navigate, queryClient]);
-
-  // Filter states
-  const [showDateFields, setShowDateFields] = useState(false);
-  const [fromDate, setFromDate] = useState<Date | null>(null);
-  const [toDate, setToDate] = useState<Date | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
-  const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
-  const { data: productionSeriesData = [] } = useProductionSeries();
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [filterModel, setFilterModel] = useState<GridFilterModel>({
-    items: [],
-  });
-
-  // Debounced values for server-side filtering
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-  }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  };
-
-  const showSnackbar = (
-    message: string,
-    severity: "success" | "error" = "success",
-  ) => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const [paginationModel, setPaginationModel] = useState({
-    page: 0,
-    pageSize: 20,
-  });
-
-  // Reset pagination to page 0 when filters change (only if not already 0)
-  React.useEffect(() => {
-    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
-  }, [
-    fromDate,
-    toDate,
-    debouncedSearchQuery,
-    selectedProductionSeries,
-    selectedStatusList,
-  ]);
-
-  // Helper to build payload object from all filter states (without pageNumber and pageSize)
-  const buildPayload = () => {
-    const payload: any = {
-      searchQuery: debouncedSearchQuery?.trim() || "",
-      productionSeries: selectedProductionSeries.map((s: any) =>
-        (s.productionSeries || s).toString()
-      ),
-      precheckStatus: selectedStatusList.map((s: any) =>
-        (typeof s === "number" ? s : s.id).toString()
-      ),
-    };
-
-    // Date Filters (Range mode)
-    if (fromDate && toDate) {
-      payload.dateFilterType = "range";
-      payload.fromDate = format(fromDate, "yyyy-MM-dd");
-      payload.toDate = format(toDate, "yyyy-MM-dd");
-    }
-
-    return payload;
-  };
-
-  // Fetch production orders with filters
-  const {
-    data: paginatedResponse,
-    isLoading: isHistoryLoading,
-    refetch,
-  } = useQuery<PaginatedResponse<ProductionOrder>>({
-    queryKey: [
-      "productionOrders",
-      fromDate,
-      toDate,
-      debouncedSearchQuery,
-      selectedProductionSeries,
-      selectedStatusList,
-      paginationModel.page,
-      paginationModel.pageSize,
-    ],
-    queryFn: async () => {
-      const payload = buildPayload();
-      const response = await api.post("/api/ProductionOrder/GetAll", payload, {
-        params: {
-          pageNumber: paginationModel.page + 1,
-          pageSize: paginationModel.pageSize,
-        },
-      });
-      if (Array.isArray(response.data)) {
-        return {
-          data: response.data,
-          totalRecords: response.data.length,
-          pageNumber: 1,
-          pageSize: response.data.length,
-          totalPages: 1,
-          hasNextPage: false,
-          hasPreviousPage: false,
-        };
-      }
-      return response.data;
-    },
-    placeholderData: (previousData) => previousData,
-  });
-
-  const productionOrders = paginatedResponse?.data || [];
-  const totalRowCount = paginatedResponse?.totalRecords || 0;
-
-  // Fetch status counts with filters
-  const { data: statusCounts } = useQuery<StatusCount>({
-    queryKey: [
-      "productionOrderCounts",
-      fromDate,
-      toDate,
-      debouncedSearchQuery,
-      selectedProductionSeries,
-      selectedStatusList,
-    ],
-    queryFn: async () => {
-      const payload = buildPayload();
-      const response = await api.post("/api/ProductionOrder/GetCounts", payload);
-      return response.data;
-    },
-    placeholderData: (previousData) => previousData,
-  });
-  const counts: StatusCount = statusCounts ?? {
-    totalCount: 0,
-    pendingCount: 0,
-    partialCount: 0,
-    completedCount: 0,
-    uploadedCount: 0,
-  };
-
-  // Use server data directly (Pure Server-Side Filtering) with Client-Side Fallback
-  const filteredRows = React.useMemo(() => {
-    let rows = productionOrders || [];
-    if (selectedProductionSeries.length > 0) {
-      const seriesNames = selectedProductionSeries.map((s: any) => (s.productionSeries || s).toString().toLowerCase());
-      rows = rows.filter((row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase()));
-    }
-    if (selectedStatusList.length > 0) {
-      const statusIds = selectedStatusList.map((s: any) => typeof s === "number" ? s : s.id);
-      rows = rows.filter((row) => row.precheckStatus !== undefined && statusIds.includes(row.precheckStatus));
-    }
-    if (!debouncedSearchQuery?.trim()) return rows;
-    const term = debouncedSearchQuery.trim().toLowerCase();
-    return rows.filter(
-      (row) =>
-        row.productionOrderNumber?.toLowerCase().includes(term) ||
-        row.lnItemCode?.toLowerCase().includes(term) ||
-        row.drawingNumber?.toLowerCase().includes(term) ||
-        row.projectNumber?.toLowerCase().includes(term) ||
-        row.itemDescription?.toLowerCase().includes(term) ||
-        row.precheckStatusName?.toLowerCase().includes(term) ||
-        (row.precheckStatus === 1 && "pending".includes(term)) ||
-        (row.precheckStatus === 2 && "partial".includes(term)) ||
-        (row.precheckStatus === 3 && "completed".includes(term)),
-    );
-  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries, selectedStatusList]);
-
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await api.post("/api/ProductionOrder/Upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return response.data;
-    },
-    onSuccess: async (data) => {
-      const result = data.result || {};
-      setUploadResult(result);
-
-      const errors = result.errors || [];
-      const importedCount = result.imported || 0;
-
-      // Do NOT show success popup if errors occurred or 0 items were imported
-      if (errors.length > 0) {
-        return;
-      }
-
-      if (importedCount > 0) {
-        const response = await api.get("/api/ProductionOrder/GetAll");
-        const allRows = response.data;
-        const insertedPONumbers = result.insertedPONumbers || [];
-
-        let newRows: ProductionOrder[] = [];
-
-        if (insertedPONumbers.length > 0) {
-          newRows = allRows.filter((row: ProductionOrder) =>
-            insertedPONumbers.includes(row.productionOrderNumber),
-          );
-        } else {
-          // Fallback: If no explicit IDs, assume the most recently created IDs are the new ones.
-          // Sort by ID descending to get the newest first.
-          const sortedRows = [...allRows].sort((a, b) => b.id - a.id);
-          newRows = sortedRows.slice(0, importedCount);
-        }
-
-        const formattedRows = newRows.map((row: ProductionOrder) => ({
-          id: row.id,
-          sr: row.id,
-          productionorder: row.productionOrderNumber,
-          projectcode: row.projectNumber,
-          projectdescription: row.projectDescription,
-          itemcode: row.lnItemCode,
-          itemdescription: row.itemDescription,
-          series: row.productionSeries,
-          id_num: row.startIdNumber,
-          end_id: row.endIdNumber,
-          quantity: row.quantity,
-          mrirnumber: row.mrirNumber,
-          buildnumber: row.buildNumber,
-          min: (row as any).min || (row as any).minNumber || (row as any).minNo || "-",
-          snagsheetno: row.snagSheetNo,
-          status:
-            row.precheckStatusName ||
-            (row.precheckStatus === 4
-              ? "Pending-Planner"
-              : row.precheckStatus === 1
-                ? "Pending"
-                : row.precheckStatus === 2
-                  ? "Partial"
-                  : row.precheckStatus === 3
-                    ? "Completed"
-                    : "Uploaded"),
-        }));
-
-        setInsertedRows(formattedRows);
-        setPreviewRows([]);
-        setSelectedFile(null);
-        setShowSuccessPopup(true);
-        queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-      }
-    },
-
-    onError: (error: any) => {
-      setUploadResult({
-        totalRows: 0,
-        imported: 0,
-        skipped: 0,
-        errors: [error.response?.data?.message || "Upload failed"],
-      });
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (row: ProductionOrder) => {
-      const payload = {
-        productionOrderNumber: row.productionOrderNumber,
-        idNumber: row.startIdNumber,
-        quantity: row.quantity,
-      };
-      const response = await api.post("/api/ProductionOrder/DeleteProductionOrder", payload);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-      queryClient.invalidateQueries({ queryKey: ["productionOrderCounts"] });
-      setDeleteConfirmId(null);
-      showSnackbar("Production Order deleted successfully");
-    },
-    onError: (error: any) => {
-      showSnackbar(error.response?.data?.message || "Failed to Delete Production Order", "error");
-      setDeleteConfirmId(null);
-    },
-  });
-
-
-  const [isDragging, setIsDragging] = useState(false);
-
-  const processFile = (file: File) => {
-    if (!file.name.endsWith(".xls") && !file.name.endsWith(".xlsx")) {
-      alert("Only .xls and .xlsx files are allowed");
-      return;
-    }
-
-    setInsertedRows([]);
-    setSelectedFile(file);
-    setUploadResult(null);
-    setShowColumnPreview(false);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const excelRows = XLSX.utils.sheet_to_json<any>(sheet);
-      console.log("Headers:", Object.keys(excelRows[0]));
-
-      const normalizedData = excelRows.map((row: any, index: number) => {
-        const newRow: any = { id: index };
-        Object.keys(row).forEach((key) => {
-          newRow[normalizeKey(key)] = row[key];
-        });
-
-        // Map "snagsheetnumber" (from Excel column "Snag Sheet Number") to "snagsheetno"
-        if (newRow["snagsheetnumber"] !== undefined) {
-          newRow["snagsheetno"] = newRow["snagsheetnumber"];
-        }
-
-        const minVal =
-          newRow["min"] ??
-          newRow["minnumber"] ??
-          newRow["minno"] ??
-          newRow["min_no"] ??
-          newRow["materialindentnumber"] ??
-          newRow["materialindentno"];
-        if (minVal !== undefined) {
-          newRow["min"] = minVal;
-        }
-
-        // Map Status column variations or default to "Uploaded" for preview
-        const statusVal =
-          newRow["status"] ??
-          newRow["precheckstatus"] ??
-          newRow["precheckstatusname"];
-        if (statusVal !== undefined) {
-          newRow["status"] = statusVal;
-        } else {
-          newRow["status"] = "Uploaded";
-        }
-
-        const startId = (newRow["startidnumber"] || newRow["startid"] || "")
-          .toString()
-          .replace(/[^a-zA-Z0-9]/g, "");
-
-        const match = startId.match(/^([A-Za-z]+)(\d+)$/);
-        if (match) {
-          newRow["series"] = match[1];
-          newRow["id_num"] = match[2];
-        } else if (startId) {
-          newRow["id_num"] = startId.slice(-4);
-          newRow["series"] = startId.slice(0, -4);
-        }
-
-        // Map quantity/qty
-        const qtyVal = newRow["quantity"] !== undefined ? newRow["quantity"] : newRow["qty"];
-        if (qtyVal !== undefined) {
-          newRow["quantity"] = qtyVal;
-        }
-
-        const endId = (newRow["endidnumber"] || newRow["endid"] || "")
-          .toString()
-          .replace(/[^a-zA-Z0-9]/g, "");
-        const endMatch = endId.match(/^([A-Za-z]+)(\d+)$/);
-        if (endMatch) {
-          newRow["end_id"] = endMatch[2];
-        } else if (endId) {
-          newRow["end_id"] = endId.slice(-4);
-        } else {
-          const startNum = parseInt(newRow["id_num"]);
-          const quantityVal = parseInt(newRow["quantity"]);
-          if (!isNaN(startNum) && !isNaN(quantityVal)) {
-            newRow["end_id"] = (startNum + quantityVal - 1).toString();
-          }
-        }
-
-        return newRow;
-      });
-
-      setPreviewRows(normalizedData);
-    };
-
-    reader.readAsArrayBuffer(file);
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (file) processFile(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      processFile(files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) return;
-    uploadMutation.mutate(selectedFile);
-  };
-
-  const handleDownloadTemplate = async () => {
-    try {
-      const response = await api.get("/api/ProductionOrder/DownloadTemplate", {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "Production_Order_Template.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error("Error downloading template:", error);
-      alert("Failed to download template. Please try again.");
-    }
-  };
-
-  const handleExportExcel = () => {
-    handleOpenExportDialog();
-  };
 
   const previewColumns: GridColDef[] = [
     {
       field: "sr",
       headerName: "Sr No",
-      width: 60,
+      width: 65,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) =>
@@ -944,9 +898,9 @@ const ProductionOrderUpload: React.FC = () => {
     },
     {
       field: "productionorder",
-      headerName: "Production Order",
+      headerName: "PO Number",
       flex: 1,
-      minWidth: 150,
+      minWidth: 140,
       headerAlign: "center",
       align: "center",
     },
@@ -962,7 +916,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "projectdescription",
       headerName: "Project Description",
       flex: 1.5,
-      minWidth: 200,
+      minWidth: 180,
       headerAlign: "center",
       align: "center",
     },
@@ -970,7 +924,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "itemcode",
       headerName: "Item Code",
       flex: 1,
-      minWidth: 150,
+      minWidth: 140,
       headerAlign: "center",
       align: "center",
     },
@@ -978,7 +932,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "itemdescription",
       headerName: "Item Description",
       flex: 2,
-      minWidth: 250,
+      minWidth: 200,
       headerAlign: "center",
       align: "center",
     },
@@ -994,7 +948,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "id_num",
       headerName: "Start ID",
       flex: 0.8,
-      minWidth: 100,
+      minWidth: 90,
       headerAlign: "center",
       align: "center",
     },
@@ -1002,7 +956,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "end_id",
       headerName: "End ID",
       flex: 0.8,
-      minWidth: 100,
+      minWidth: 90,
       headerAlign: "center",
       align: "center",
     },
@@ -1010,7 +964,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "quantity",
       headerName: "Qty",
       flex: 0.6,
-      minWidth: 80,
+      minWidth: 70,
       headerAlign: "center",
       align: "center",
     },
@@ -1018,7 +972,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "buildnumber",
       headerName: "Build No",
       flex: 0.8,
-      minWidth: 100,
+      minWidth: 90,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -1026,8 +980,8 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "mrirnumber",
       headerName: "MRIR No",
-      flex: 0.6,
-      minWidth: 150,
+      flex: 0.8,
+      minWidth: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -1035,8 +989,8 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "min",
       headerName: "MIN",
-      flex: 0.6,
-      minWidth: 150,
+      flex: 0.8,
+      minWidth: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -1052,8 +1006,8 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "status",
       headerName: "Status",
-      flex: 0.6,
-      minWidth: 150,
+      flex: 0.8,
+      minWidth: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "Uploaded",
@@ -1078,8 +1032,8 @@ const ProductionOrderUpload: React.FC = () => {
   const historyColumns: GridColDef[] = [
     {
       field: "sr",
-      headerName: "Sr No",
-      width: 70,
+      headerName: "Sr.No",
+      width: 60,
       headerAlign: "center",
       align: "center",
     },
@@ -1087,17 +1041,17 @@ const ProductionOrderUpload: React.FC = () => {
       field: "productionOrderNumber",
       headerName: "PO Number",
       flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
+      minWidth: 130,
+      headerAlign: "left",
+      align: "left",
       renderCell: (params) => (
         <Tooltip title={params.value || ""}>
-          <Chip
-            label={params.value}
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, color: "#101828", fontSize: "0.85rem" }}
+          >
+            {params.value}
+          </Typography>
         </Tooltip>
       ),
     },
@@ -1106,60 +1060,44 @@ const ProductionOrderUpload: React.FC = () => {
       headerName: "Project",
       flex: 0.8,
       minWidth: 90,
-      headerAlign: "center",
-      align: "center",
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "lnItemCode",
       headerName: "LN Item",
       flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
+      minWidth: 140,
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "drawingNumber",
-      headerName: "Drawing",
+      headerName: "Drawing No.",
       flex: 1,
-      minWidth: 200,
-      headerAlign: "center",
-      align: "center",
+      minWidth: 150,
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "productionSeries",
       headerName: "Prod Series",
       flex: 0.7,
-      minWidth: 70,
+      minWidth: 85,
       headerAlign: "center",
       align: "center",
     },
-    // {
-    //   field: "startIdNumber",
-    //   headerName: "Start ID",
-    //   flex: 0.7,
-    //   minWidth: 60,
-    //   headerAlign: "center",
-    //   align: "center",
-    // },
-    // {
-    //   field: "endIdNumber",
-    //   headerName: "End ID",
-    //   flex: 0.7,
-    //   minWidth: 60,
-    //   headerAlign: "center",
-    //   align: "center",
-    // },
     {
       field: "quantity",
       headerName: "Qty",
       flex: 0.5,
-      minWidth: 40,
+      minWidth: 50,
       headerAlign: "center",
       align: "center",
     },
     {
       field: "buildNumber",
-      headerName: "Build No",
+      headerName: "Build No.",
       flex: 0.8,
       minWidth: 90,
       headerAlign: "center",
@@ -1168,9 +1106,9 @@ const ProductionOrderUpload: React.FC = () => {
     },
     {
       field: "mrirNumber",
-      headerName: "MRIR No",
+      headerName: "MRIR No.",
       flex: 0.8,
-      minWidth: 120,
+      minWidth: 110,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -1179,48 +1117,51 @@ const ProductionOrderUpload: React.FC = () => {
       field: "precheckStatus",
       headerName: "Status",
       flex: 1,
-      minWidth: 150,
+      minWidth: 130,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
         const status = params.value || 1;
         const statusName = params.row.precheckStatusName || "Pending";
-        const color =
-          status === 4
-            ? "info"
-            : status === 3
-              ? "success"
-              : status === 2
-                ? "warning"
-                : "error";
+
+        let chipBg = "#FEF3F2";
+        let chipColor = "#B42318";
+        if (status === 4) {
+          chipBg = "#F4EBFF";
+          chipColor = "#6B288A";
+        } else if (status === 3) {
+          chipBg = "#ECFDF3";
+          chipColor = "#027A48";
+        } else if (status === 2) {
+          chipBg = "#FFFAEB";
+          chipColor = "#B54708";
+        }
+
         return (
           <Chip
             label={statusName}
             size="small"
-            color={color}
-            variant="filled"
+            sx={{
+              backgroundColor: chipBg,
+              color: chipColor,
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              borderRadius: "16px",
+              height: 24,
+            }}
           />
         );
       },
     },
     {
       field: "createdDate",
-      headerName: "Created Date",
-      flex: 1.2,
-      minWidth: 90,
+      headerName: "Created On",
+      flex: 1.1,
+      minWidth: 130,
       headerAlign: "center",
       align: "center",
       valueFormatter: (params) => formatDate(params.value),
     },
-    // {
-    //   field: "modifiedDate",
-    //   headerName: "Modified Date",
-    //   flex: 1.2,
-    //   minWidth: 90,
-    //   headerAlign: "center",
-    //   align: "center",
-    //   valueFormatter: (params) => formatDate(params.value),
-    // },
     {
       field: "days",
       headerName: "Aging Days",
@@ -1230,20 +1171,16 @@ const ProductionOrderUpload: React.FC = () => {
       align: "center",
       valueGetter: (params) => {
         if (!params.row.createdDate) return "-";
-
         const created = new Date(params.row.createdDate);
         const today = new Date();
-
         const diffTime = today.getTime() - created.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays;
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
       },
     },
     {
       field: "actions",
       headerName: "Actions",
-      width: 90,
+      width: 70,
       sortable: false,
       headerAlign: "center",
       align: "center",
@@ -1277,762 +1214,515 @@ const ProductionOrderUpload: React.FC = () => {
     return getAutosizedColumns(historyColumns, historyTableRows);
   }, [historyColumns, historyTableRows]);
 
+  // Construct active filter chips
+  const activeChips: FilterChipItem[] = React.useMemo(() => {
+    const list: FilterChipItem[] = [];
+
+    if (searchQuery.trim()) {
+      list.push({
+        id: "search",
+        label: `PO / Search: "${searchQuery.trim()}"`,
+        onRemove: () => setSearchQuery(""),
+      });
+    }
+
+    selectedStatusList.forEach((st: any) => {
+      const label = typeof st === "string" ? st : st.label || st.id;
+      list.push({
+        id: `status_${typeof st === "object" ? st.id : st}`,
+        label: `Status: ${label}`,
+        onRemove: () =>
+          setSelectedStatusList((prev) =>
+            prev.filter((item) => (typeof item === "object" ? item.id : item) !== (typeof st === "object" ? st.id : st))
+          ),
+      });
+    });
+
+    selectedProductionSeries.forEach((ser: any) => {
+      const val = typeof ser === "object" ? ser.productionSeries || ser.id : ser;
+      list.push({
+        id: `series_${val}`,
+        label: `Series: ${val}`,
+        onRemove: () =>
+          setSelectedProductionSeries((prev) =>
+            prev.filter((item) => (typeof item === "object" ? item.productionSeries || item.id : item) !== val)
+          ),
+      });
+    });
+
+    if (fromDate || toDate) {
+      const fromStr = fromDate ? format(fromDate, "dd/MM/yyyy") : "...";
+      const toStr = toDate ? format(toDate, "dd/MM/yyyy") : "...";
+      list.push({
+        id: "dateRange",
+        label: `Created On: ${fromStr} – ${toStr}`,
+        onRemove: () => {
+          setFromDate(null);
+          setToDate(null);
+        },
+      });
+    }
+
+    return list;
+  }, [searchQuery, selectedStatusList, selectedProductionSeries, fromDate, toDate]);
+
+  const totalOrdersCount = counts.totalCount || totalRowCount;
+  const pendingCount = counts.pendingCount || 0;
+  const partialCount = counts.partialCount || 0;
+  const completedCount = counts.completedCount || 0;
+
+  const pendingPct = totalOrdersCount > 0 ? Math.round((pendingCount / totalOrdersCount) * 100) : 0;
+  const partialPct = totalOrdersCount > 0 ? Math.round((partialCount / totalOrdersCount) * 100) : 0;
+  const completedPct = totalOrdersCount > 0 ? Math.round((completedCount / totalOrdersCount) * 100) : 0;
+
   return (
     <Box
       sx={{
-        p: { xs: 0.5, sm: 1 },
+        py: { xs: 1, sm: 1.25 },
+        px: { xs: 1.5, sm: 2 },
         height: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
+        backgroundColor: "#FAFAFA",
         width: "100%",
-        maxWidth: "100%",
-        overflowY: "auto",
-        scrollbarGutter: "stable",
+        boxSizing: "border-box",
+        overflow: view === "history" ? "hidden" : "auto",
       }}
     >
+      {/* Header Section */}
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 1, flexShrink: 0 }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
-        <Box display="flex" alignItems="center" gap={1}>
-          {view === "upload" && (
-            <IconButton
-              onClick={() => setView("history")}
-              size="small"
-              sx={{ color: "primary.main" }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          )}
+        <Box>
           <Typography
-            variant="h4"
+            variant="h5"
             sx={{
+              fontWeight: 700,
               color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
             }}
           >
-            {view === "history" ? "Production Order History" : "Upload Production Order"}
+            {view === "upload" ? "Upload Production Orders" : "Production Order History"}
           </Typography>
-        </Box>
-        <Stack direction="row" spacing={1.5} alignItems="center">
           {view === "upload" && (
-            <Chip
-              icon={<HistoryIcon sx={{ fontSize: "1.75rem " }} />}
-              label={`${(productionOrders?.length || 0).toLocaleString()} orders uploaded`}
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Import production orders from an Excel sheet.
+            </Typography>
+          )}
+        </Box>
+
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          {view === "upload" ? (
+            <Button
               variant="outlined"
-              size="medium"
+              size="small"
+              startIcon={<HistoryIcon sx={{ fontSize: 18 }} />}
               onClick={() => setView("history")}
               sx={{
-                borderRadius: 3,
-                px: 1.5,
-                height: 48,
-                fontSize: "0.925rem",
+                borderColor: "#D0D5DD",
+                color: "#344054",
                 fontWeight: 600,
-                borderColor: "#cbd5e1",
-                color: "#334155",
-                backgroundColor: "#ffffff",
-                cursor: "pointer",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                "&:hover": { backgroundColor: "#f8fafc", borderColor: "#94a3b8" },
+                fontSize: "0.875rem",
+                borderRadius: "8px",
+                px: 2,
+                py: 0.75,
+                textTransform: "none",
+                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
               }}
-            />
-          )}
-          {view === "history" && (
+            >
+              Upload history ({totalRowCount})
+            </Button>
+          ) : (
             <>
-              <Box
-                onClick={() => setView("upload")}
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleOpenExportDialog}
+                startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  cursor: "pointer",
-                  color: "primary.main",
-                  transition: "color 0.2s",
-                  "&:hover": {
-                    color: "primary.dark",
-                  },
+                  borderColor: "#D0D5DD",
+                  color: "#344054",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  px: 2,
+                  py: 0.75,
+                  textTransform: "none",
+                  "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
                 }}
               >
-                <IconButton
-                  size="small"
-                  color="primary"
-                  sx={{ p: 0.5 }}
-                >
-                  <ArrowBackIcon fontSize="small" />
-                </IconButton>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: "0.875rem",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Import Production Order
-                </Typography>
-              </Box>
+                Export
+              </Button>
               <Button
                 variant="contained"
                 size="small"
-                color="success"
-                onClick={handleExportExcel}
-                startIcon={<DownloadIcon sx={{ fontSize: "1rem !important" }} />}
-                sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
+                startIcon={<UploadIcon sx={{ fontSize: 18 }} />}
+                onClick={() => setView("upload")}
+                sx={{
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  px: 2.5,
+                  py: 0.75,
+                  textTransform: "none",
+                  boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                }}
               >
-                Export
+                Upload Orders
               </Button>
             </>
           )}
         </Stack>
       </Stack>
 
-      {view === "upload" && (
-        <Box
-          sx={{
-            flexGrow: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            width: "100%",
-            mt: 1,
-          }}
-        >
-          {/* Top Validation Error Alert */}
-          {uploadResult && uploadResult.errors.length > 0 && (
-            <Alert
-              severity="error"
-              sx={{
-                width: "100%",
-                mb: 2,
-                borderRadius: 3,
-                boxShadow: "0 4px 12px rgba(220, 38, 38, 0.12)",
-                border: "1px solid",
-                borderColor: "#fca5a5",
-                backgroundColor: "#fef2f2",
-                "& .MuiAlert-message": { width: "100%", pr: 1 },
+      {/* Main View Content */}
+      {view === "upload" ? (
+        <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          {/* Dropzone OR Upload Summary Card */}
+          {!selectedFile && !uploadResult ? (
+            <UploadDropzone
+              onFileSelect={processFileSelect}
+              isPending={uploadMutation.isPending}
+              onDownloadTemplate={handleDownloadTemplate}
+            />
+          ) : (
+            <UploadSummaryCard
+              fileName={selectedFile?.name || "Uploaded File"}
+              totalRows={uploadResult?.totalRows || previewRows.length || insertedRows.length}
+              userName={user?.username || user?.email || "User"}
+              importedCount={uploadResult?.imported || insertedRows.length}
+              errorCount={uploadResult?.errors?.length || 0}
+              skippedCount={uploadResult?.skipped || 0}
+              onDownloadErrorReport={
+                uploadResult?.errors && uploadResult.errors.length > 0
+                  ? () => alert(uploadResult.errors.join("\n"))
+                  : undefined
+              }
+              onUploadAnother={() => {
+                setSelectedFile(null);
+                setPreviewRows([]);
+                setInsertedRows([]);
+                setUploadResult(null);
               }}
-              onClose={() => setUploadResult(null)}
-            >
-              <Typography variant="subtitle2" fontWeight="700" color="#991b1b" sx={{ mb: 0.75, fontSize: "0.95rem" }}>
-                Upload Validation Errors ({uploadResult.errors.length}):
-              </Typography>
-              <Box
-                sx={{
-                  maxHeight: 160,
-                  overflowY: "auto",
-                  width: "100%",
-                  pr: 1.5,
-                  "&::-webkit-scrollbar": {
-                    width: "6px",
-                  },
-                  "&::-webkit-scrollbar-track": {
-                    backgroundColor: "#fee2e2",
-                    borderRadius: "3px",
-                  },
-                  "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: "#f87171",
-                    borderRadius: "3px",
-                    "&:hover": {
-                      backgroundColor: "#ef4444",
-                    },
-                  },
-                }}
-              >
-                {uploadResult.errors.map((err, idx) => (
-                  <Typography key={idx} variant="body2" color="#b91c1c" sx={{ my: 0.35, fontSize: "0.85rem", lineHeight: 1.4 }}>
-                    • {err}
-                  </Typography>
-                ))}
-              </Box>
-            </Alert>
+              onConfirmImport={selectedFile && !uploadResult ? handleUpload : undefined}
+              isPending={uploadMutation.isPending}
+              attentionRows={uploadResult?.errors}
+            />
           )}
 
-          <Card elevation={0} sx={{ width: "100%", maxWidth: "100%", borderRadius: 4, background: "transparent" }}>
-            <Box
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: 1,
-                py: showColumnPreview ? 2.5 : 6,
-                px: 5,
-                borderRadius: 4,
-                border: "2px dashed",
-                borderColor: isDragging ? "#6d28d9" : "#a78bfa",
-                backgroundColor: isDragging ? "#ede9fe" : "#f5f3ff",
-                cursor: "pointer",
-                transition: "all 0.2s ease-in-out",
-                textAlign: "center",
-                minHeight: showColumnPreview ? 180 : 300,
-                "&:hover": {
-                  backgroundColor: "#ede9fe",
-                  borderColor: "#7c3aed",
-                },
-              }}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                accept=".xlsx,.xls"
-                onChange={handleFileChange}
-              />
+          {uploadMutation.isPending && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
 
-              {/* Soft Purple Circular Icon Container */}
-              <Box
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: "50%",
-                  backgroundColor: "#ede9fe",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#6d28d9",
-                  mb: 2.5,
-                }}
-              >
-                <UploadIcon sx={{ fontSize: 32 }} />
-              </Box>
-
-              {/* Main Title */}
-              <Typography
-                variant="h5"
-                fontWeight="700"
-                color="#1e1b4b"
-                sx={{ fontSize: "1.35rem", mb: 1 }}
-              >
-                Click to upload or drag & drop your Excel file
-              </Typography>
-
-              {/* Subtitle */}
-              <Typography variant="body1" color="#64748b" sx={{ fontSize: "0.95rem", mb: 2.5 }}>
-                Supports .xlsx and .xls · up to 10MB
-              </Typography>
-
-              {/* File Chip if selected */}
-              {selectedFile && (
-                <Box
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }}
-                  sx={{ mb: 2 }}
-                >
-                  <Chip
-                    label={selectedFile.name}
-                    color="secondary"
-                    variant="filled"
-                    size="medium"
-                    onDelete={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setSelectedFile(null);
-                      setPreviewRows([]);
-                      setShowColumnPreview(false);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    sx={{ fontWeight: 600, bgcolor: "#7c3aed", color: "#fff", py: 0.5, px: 0.5 }}
-                  />
-                </Box>
-              )}
-
-              {/* Post-Upload Controls (Preview & Confirm) */}
-              {selectedFile && (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  gap={1.5}
-                  mb={1.5}
-                  flexWrap="wrap"
-                  justifyContent="center"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Typography variant="body2" color="#475569" fontWeight="500" sx={{ fontSize: "0.85rem" }}>
-                    Do you want to preview columns?
-                  </Typography>
-                  <Button
-                    variant={showColumnPreview ? "contained" : "outlined"}
-                    color="secondary"
-                    size="small"
-                    startIcon={<VisibilityIcon />}
-                    onClick={() => setShowColumnPreview(!showColumnPreview)}
-                    sx={{ height: 32, fontWeight: 600, borderRadius: 2 }}
-                  >
-                    {showColumnPreview ? "Hide Preview" : "Preview Columns"}
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    color="success"
-                    size="small"
-                    startIcon={<CheckIcon />}
-                    onClick={handleUpload}
-                    disabled={uploadMutation.isPending}
-                    sx={{ height: 32, px: 2.5, fontWeight: 700, borderRadius: 2 }}
-                  >
-                    {uploadMutation.isPending ? "Importing..." : "Confirm Import"}
-                  </Button>
-                </Box>
-              )}
-
-              {/* Divider Line */}
-              <Divider sx={{ width: "90%", borderColor: "#ddd6fe", my: 2 }} />
-
-              {/* Footer Template Download Link */}
-              <Typography
-                variant="body2"
-                color="#64748b"
-                sx={{ fontSize: "0.9rem" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                Don't have the template?{" "}
-                <Typography
-                  component="span"
-                  variant="body2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownloadTemplate();
-                  }}
-                  sx={{
-                    color: "#5b21b6",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    "&:hover": { color: "#4c1d95" },
-                  }}
-                >
-                  Click here to download it
-                </Typography>
-              </Typography>
-
-              {uploadMutation.isPending && (
-                <LinearProgress sx={{ width: "90%", mt: 2, borderRadius: 1 }} />
-              )}
-            </Box>
-          </Card>
-        </Box>
-      )}
-
-      <Dialog
-        open={showSuccessPopup}
-        onClose={() => setShowSuccessPopup(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        PaperProps={{
-          sx: { borderRadius: 2, minWidth: 320, textAlign: "center" },
-        }}
-      >
-        <DialogTitle
-          id="alert-dialog-title"
-          sx={{
-            pb: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <CheckCircleOutlineIcon color="success" sx={{ fontSize: 48 }} />
-          <Typography variant="h6" fontWeight="600">
-            Upload Successful!
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText
-            id="alert-dialog-description"
-            sx={{ textAlign: "center", mt: 1 }}
-          >
-            Your production orders have been successfully imported.
-            <br />
-            Please check the history to verify the details.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: "center", pb: 2.5 }}>
-          <Button onClick={() => setShowSuccessPopup(false)} color="inherit">
-            Close
-          </Button>
-          <Button
-            onClick={() => {
-              setShowSuccessPopup(false);
-              setSelectedFile(null);
-              setPreviewRows([]);
-              setInsertedRows([]);
-              setUploadResult(null);
-              setView("history");
-              queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-            }}
-            variant="contained"
-            color="primary"
-            autoFocus
-          >
-            View History
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {view === "upload" ? (
-        showColumnPreview && (
-          <Box
+          {/* Excel Rows Preview DataGrid */}
+          <Paper
+            elevation={0}
             sx={{
               flexGrow: 1,
-              minHeight: 650,
-              height: 650,
-              width: "100%",
-              maxWidth: "100%",
+              minHeight: 300,
+              borderRadius: "12px",
+              border: "1px solid #E9EAEB",
+              overflow: "hidden",
+              p: 2,
+              backgroundColor: "#ffffff",
               display: "flex",
               flexDirection: "column",
-              mt: 1,
             }}
           >
             <Typography
-              variant="subtitle2"
-              sx={{
-                mb: 0.5,
-                fontWeight: 600,
-                color: "text.primary",
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                flexShrink: 0,
-              }}
+              variant="subtitle1"
+              sx={{ fontWeight: 700, color: "#101828", mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}
             >
-              <VisibilityIcon color="primary" fontSize="small" />
-              {previewRows.length > 0
-                ? `Excel Content Preview (${previewRows.length} rows)`
+              <VisibilityIcon sx={{ color: "primary.main", fontSize: 20 }} />
+              {uploadTableRows.length > 0
+                ? `Rows Preview (${uploadTableRows.length} rows)`
                 : "Choose a file to preview its content here"}
             </Typography>
-            <Paper
-              elevation={2}
-              sx={{
-                flexGrow: 1,
-                minHeight: 600,
-                height: 600,
-                width: "100%",
-                overflow: "hidden",
-              }}
-            >
+
+            <Box sx={{ flex: 1, minHeight: 380, width: "100%", position: "relative" }}>
               <DataGrid
                 rows={uploadTableRows}
                 columns={autosizedPreviewColumns}
-                pageSizeOptions={[5, 10, 25, 50]}
+                pageSizeOptions={[10, 25, 50]}
                 initialState={{
                   pagination: { paginationModel: { pageSize: 50 } },
                 }}
                 density="compact"
-                disableColumnMenu
                 disableColumnFilter
+                disableColumnMenu
+                disableColumnSelector
                 disableRowSelectionOnClick
                 sx={{
+                  height: "100%",
+                  width: "100%",
                   border: "none",
+                  "& .MuiDataGrid-virtualScroller": {
+                    overflowX: "auto !important",
+                    overflowY: "auto !important",
+                  },
+                  "& ::-webkit-scrollbar": {
+                    height: "12px !important",
+                    width: "10px !important",
+                  },
+                  "& ::-webkit-scrollbar-track": {
+                    backgroundColor: "#F2F4F7 !important",
+                    borderRadius: "6px !important",
+                  },
+                  "& ::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#98A2B3 !important",
+                    borderRadius: "6px !important",
+                    border: "2px solid #F2F4F7 !important",
+                    "&:hover": { backgroundColor: "#667085 !important" },
+                  },
                   "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "grey.100",
-                    color: "text.primary",
-                    fontWeight: 800,
-                    fontSize: "0.875rem",
+                    backgroundColor: "#F9FAFB",
+                    color: "#475467",
+                    fontWeight: 700,
+                    fontSize: "0.8rem",
+                    borderBottom: "1px solid #EAECF0",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2,
                   },
                   "& .MuiDataGrid-cell": {
-                    fontSize: "0.875rem",
+                    fontSize: "0.85rem",
+                    color: "#344054",
+                    borderBottom: "1px solid #F2F4F7",
                   },
                 }}
               />
-            </Paper>
-          </Box>
-        )
+            </Box>
+          </Paper>
+        </Box>
       ) : (
-        <Box
-          sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            width: "100%",
-            maxWidth: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        /* History Tab Content */
+        <Box sx={{ flexGrow: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Stat Cards Row */}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.25}
+            sx={{ mb: 1 }}
+          >
+            <HistoryStatCard
+              title="Total orders"
+              count={totalOrdersCount}
+              indicatorColor="#6B288A"
+              subtext="All series · all time"
+            />
+            <HistoryStatCard
+              title="Pending"
+              count={pendingCount}
+              indicatorColor="#f03737ff"
+              subtext={`${pendingPct}% · pending`}
+            />
+            <HistoryStatCard
+              title="Partial"
+              count={partialCount}
+              indicatorColor="#F79009"
+              subtext={`${partialPct}% · precheck in progress`}
+            />
+            <HistoryStatCard
+              title="Completed"
+              count={completedCount}
+              indicatorColor="#12B76A"
+              subtext={`${completedPct}% · verified`}
+            />
+          </Stack>
 
-
-          {/* Filter Controls */}
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Paper elevation={1} sx={{ p: 0.75, mb: 0.25, flexShrink: 0 }}>
+          {/* Filter Bar */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1,
+              mb: 0.75,
+              borderRadius: "10px",
+              border: "1px solid #E9EAEB",
+              backgroundColor: "#ffffff",
+            }}
+          >
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
               <Stack
                 direction="row"
-                spacing={1}
+                spacing={1.5}
                 flexWrap="wrap"
                 alignItems="center"
               >
-
-
-                {/* Unified Status / PO / LN Item / Drawing No Search Bar */}
+                {/* Search Field */}
                 <TextField
-
-                  placeholder="Search PO, LN Item, Drawing No..."
+                  placeholder="Search PO, LN Item Code, Drawing No, MRIR No..."
                   variant="outlined"
                   size="small"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  sx={{ width: 380 }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+                        <SearchIcon fontSize="small" sx={{ color: "#667085" }} />
                       </InputAdornment>
                     ),
                     endAdornment: searchQuery ? (
                       <InputAdornment position="end">
-                        <IconButton
-                          size="small"
-                          onClick={() => setSearchQuery("")}
-                          edge="end"
-                        >
-                          <ClearIcon sx={{ fontSize: 16 }} />
+                        <IconButton size="small" onClick={() => setSearchQuery("")}>
+                          <ClearIcon fontSize="small" />
                         </IconButton>
                       </InputAdornment>
                     ) : null,
                   }}
-
+                  sx={{
+                    width: { xs: "100%", sm: 280 },
+                    "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" },
+                  }}
                 />
-                {/* Prod Series Multi-Select Autocomplete */}
-                <FormControl size="small" sx={{ width: 180 }}>
-                  <Autocomplete
-                    multiple
-                    disableCloseOnSelect
-                    renderTags={() => null}
-                    size="small"
-                    options={productionSeriesData}
-                    getOptionLabel={(option: any) => {
-                      if (typeof option === "string") return option;
-                      return option.productionSeries || '';
-                    }}
-                    value={selectedProductionSeries}
-                    onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                    isOptionEqualToValue={(option: any, value: any) => (option.id || option) === (value?.id || value)}
-                    ListboxProps={{
-                      sx: {
-                        py: 0.5,
-                        '& .MuiAutocomplete-option': {
-                          minHeight: '30px !important',
-                          py: '2px !important',
-                          px: '8px !important',
-                          fontSize: '0.85rem'
-                        }
-                      }
-                    }}
-                    renderOption={(props, option, { selected }) => {
-                      const { key, ...optionProps } = props;
-                      return (
-                        <li {...optionProps} key={key}>
-                          <Checkbox
-                            size="small"
-                            sx={{ p: '2px', mr: 0.75 }}
-                            checked={selected}
-                          />
-                          {typeof option === "string" ? option : option.productionSeries}
-                        </li>
-                      );
-                    }}
-                    renderInput={(params) => <TextField {...params} label="Prod Series" placeholder={selectedProductionSeries.length > 0 ? `${selectedProductionSeries.length} selected` : "Select"} size="small" />}
-                  />
-                </FormControl>
 
-                {/* Status Multi-Select Autocomplete */}
-                <FormControl size="small" sx={{ width: 180 }}>
-                  <Autocomplete
-                    multiple
-                    disableCloseOnSelect
-                    renderTags={() => null}
-                    size="small"
-                    options={statusOptions}
-                    getOptionLabel={(option: any) => {
-                      if (typeof option === "string") return option;
-                      return option.label || "";
-                    }}
-                    value={selectedStatusList}
-                    onChange={(_, newValue) => setSelectedStatusList(newValue)}
-                    isOptionEqualToValue={(option: any, value: any) => (option.id || option) === (value?.id || value)}
-                    ListboxProps={{
-                      sx: {
-                        py: 0.5,
-                        '& .MuiAutocomplete-option': {
-                          minHeight: '30px !important',
-                          py: '2px !important',
-                          px: '8px !important',
-                          fontSize: '0.85rem'
-                        }
-                      }
-                    }}
-                    renderOption={(props, option, { selected }) => {
-                      const { key, ...optionProps } = props;
-                      return (
-                        <li {...optionProps} key={key}>
-                          <Checkbox
-                            size="small"
-                            sx={{ p: '2px', mr: 0.75 }}
-                            checked={selected}
-                          />
-                          {typeof option === "string" ? option : option.label}
-                        </li>
-                      );
-                    }}
-                    renderInput={(params) => <TextField {...params} label="Status" placeholder={selectedStatusList.length > 0 ? `${selectedStatusList.length} selected` : "Select"} size="small" />}
-                  />
-                </FormControl>
-
-                {/* Date Filter Button & Range Fields */}
-                <Button
+                {/* Prod. Series Dropdown (Multi-Select with Checkboxes) */}
+                <Autocomplete
+                  multiple
+                  disableCloseOnSelect
+                  renderTags={() => null}
                   size="small"
-                  variant={showDateFields || fromDate || toDate ? "contained" : "outlined"}
-                  startIcon={<DateRangeIcon fontSize="small" />}
-                  onClick={() => setShowDateFields(!showDateFields)}
-                  sx={{ height: 40, px: 1.5 }}
-                >
-                  Date
-                </Button>
-
-                {(showDateFields || fromDate || toDate) && (
-                  <>
-                    <DatePicker
-                      label="From Date"
-                      value={fromDate}
-                      onChange={(newValue) => setFromDate(newValue)}
-                      slotProps={{
-                        textField: { size: "small", sx: { width: 160 } },
-                        actionBar: { actions: ["today", "cancel"] },
-                        desktopPaper: {
-                          sx: {
-                            "& .MuiDateCalendar-root": {
-                              height: "auto",
-                              minHeight: "unset",
-                              pb: 0.5,
-                            },
-                            "& .MuiDayCalendar-slideTransition": {
-                              minHeight: 185,
-                            },
-                            "& .MuiPickersActionBar-root": {
-                              pt: 0,
-                              pb: 1,
-                            },
-                          },
-                        },
-                      }}
-                    />
-                    <DatePicker
-                      label="To Date"
-                      value={toDate}
-                      onChange={(newValue) => setToDate(newValue)}
-                      slotProps={{
-                        textField: { size: "small", sx: { width: 160 } },
-                        actionBar: { actions: ["today", "cancel"] },
-                        desktopPaper: {
-                          sx: {
-                            "& .MuiDateCalendar-root": {
-                              height: "auto",
-                              minHeight: "unset",
-                              pb: 0.5,
-                            },
-                            "& .MuiDayCalendar-slideTransition": {
-                              minHeight: 185,
-                            },
-                            "& .MuiPickersActionBar-root": {
-                              pt: 0,
-                              pb: 1,
-                            },
-                          },
-                        },
-                      }}
-                    />
-                    {(fromDate || toDate) && (
-                      <Tooltip title="Clear Date Filter">
-                        <Button
+                  options={productionSeriesData}
+                  getOptionLabel={(option: any) => option.productionSeries || option.toString()}
+                  isOptionEqualToValue={(option, value) =>
+                    (option.productionSeries || option) === (value.productionSeries || value)
+                  }
+                  value={selectedProductionSeries}
+                  onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
+                  renderOption={(props, option, { selected }) => {
+                    const { key, ...optionProps } = props;
+                    return (
+                      <Box component="li" key={key} {...optionProps}>
+                        <Checkbox
                           size="small"
-                          color="error"
-                          variant="outlined"
-                          startIcon={<ClearIcon fontSize="small" />}
-                          onClick={() => {
-                            setFromDate(null);
-                            setToDate(null);
-                          }}
-                          sx={{ height: 40 }}
-                        >
-                          Clear Date
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </>
-                )}
-              </Stack>
-            </Paper>
+                          sx={{ mr: 0.75, p: 0.15 }}
+                          checked={selected}
+                        />
+                        {option.productionSeries || option.toString()}
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={selectedProductionSeries.length > 0 ? `Prod. Series · ${selectedProductionSeries.length}` : "Prod. Series"}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
+                    />
+                  )}
+                  sx={{ minWidth: 150, maxWidth: 220 }}
+                />
 
-            {(selectedProductionSeries.length > 0 || selectedStatusList.length > 0) && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', my: 0.5, px: 0.5 }}>
-                {selectedProductionSeries.map((item: any) => {
-                  const label = typeof item === 'string' ? item : item.productionSeries;
-                  return (
-                    <Chip
-                      key={`series-${item.id || label}`}
-                      label={`Series: ${label}`}
-                      size="small"
-                      onDelete={() => {
-                        setSelectedProductionSeries(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
-                      }}
-                      color="primary"
-                      variant="outlined"
+                {/* Status Dropdown (Multi-Select with Checkboxes) */}
+                <Autocomplete
+                  multiple
+                  disableCloseOnSelect
+                  renderTags={() => null}
+                  size="small"
+                  options={statusOptions}
+                  getOptionLabel={(option) => option.label}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={selectedStatusList}
+                  onChange={(_, newValue) => setSelectedStatusList(newValue)}
+                  renderOption={(props, option, { selected }) => {
+                    const { key, ...optionProps } = props;
+                    return (
+                      <Box component="li" key={key} {...optionProps}>
+                        <Checkbox
+                          size="small"
+                          sx={{ mr: 0.75, p: 0.15 }}
+                          checked={selected}
+                        />
+                        {option.label}
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={selectedStatusList.length > 0 ? `Status · ${selectedStatusList.length}` : "Status"}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
                     />
-                  );
-                })}
-                {selectedStatusList.map((item: any) => {
-                  const label = typeof item === 'string' ? item : item.label;
-                  return (
-                    <Chip
-                      key={`status-${item.id || label}`}
-                      label={`Status: ${label}`}
-                      size="small"
-                      onDelete={() => {
-                        setSelectedStatusList(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
-                      }}
-                      color="primary"
-                      variant="outlined"
-                    />
-                  );
-                })}
+                  )}
+                  sx={{ minWidth: 140, maxWidth: 200 }}
+                />
+
+                {/* Date Range Pickers */}
+                <DatePicker
+                  label="From Date"
+                  value={fromDate}
+                  onChange={(newValue) => setFromDate(newValue)}
+                  slotProps={{
+                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                  }}
+                />
+                <DatePicker
+                  label="To Date"
+                  value={toDate}
+                  onChange={(newValue) => setToDate(newValue)}
+                  slotProps={{
+                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                  }}
+                />
+
                 <Button
                   size="small"
-                  color="error"
                   variant="text"
+                  disabled={
+                    !searchQuery &&
+                    selectedProductionSeries.length === 0 &&
+                    selectedStatusList.length === 0 &&
+                    !fromDate &&
+                    !toDate
+                  }
                   onClick={() => {
+                    setSearchQuery("");
                     setSelectedProductionSeries([]);
                     setSelectedStatusList([]);
+                    setFromDate(null);
+                    setToDate(null);
                   }}
-                  sx={{ fontSize: '0.75rem', py: 0, px: 1, height: '24px', minWidth: 'auto', fontWeight: 600 }}
+                  sx={{
+                    color: "#667085",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                  }}
                 >
-                  Clear All
+                  Clear
                 </Button>
-              </Box>
-            )}
-          </LocalizationProvider>
+              </Stack>
+            </LocalizationProvider>
+          </Paper>
 
+          {/* Active Filter Chips & Results Count */}
+          <ActiveFilterChips
+            chips={activeChips}
+            onClearAll={() => {
+              setSearchQuery("");
+              setSelectedProductionSeries([]);
+              setSelectedStatusList([]);
+              setFromDate(null);
+              setToDate(null);
+            }}
+            totalResults={totalRowCount}
+          />
+
+          {/* Data Grid Table */}
           <Paper
-            elevation={2}
+            elevation={0}
             sx={{
               flexGrow: 1,
               minHeight: 0,
-              width: "100%",
-              position: "relative",
+              borderRadius: "12px",
+              border: "1px solid #E9EAEB",
+              backgroundColor: "#ffffff",
               overflow: "hidden",
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <DataGrid
@@ -2043,96 +1733,76 @@ const ProductionOrderUpload: React.FC = () => {
               paginationMode="server"
               paginationModel={paginationModel}
               onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
-              pageSizeOptions={[10, 20, 25, 50, 100]}
+              pageSizeOptions={[10, 20, 50, 100]}
               filterModel={filterModel}
               onFilterModelChange={(newModel) => setFilterModel(newModel)}
-              disableColumnMenu
               disableColumnFilter
+              disableColumnMenu
+              disableColumnSelector
               density="compact"
               disableRowSelectionOnClick
               getRowId={(row) => row.id || row.sr}
-              slots={{
-                footer: () => (
-                  <GridFooterContainer>
-                    <Box
-                      sx={{
-                        flexGrow: 1,
-                        display: "flex",
-                        gap: 1,
-                        ml: 2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Chip
-                        label={`Total: ${counts.totalCount}`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    
-                      <Chip
-                        label={`Pending: ${counts.pendingCount}`}
-                        size="small"
-                        color="error"
-                        variant="filled"
-                      />
-                      <Chip
-                        label={`Partial: ${counts.partialCount}`}
-                        size="small"
-                        color="warning"
-                        variant="filled"
-                      />
-                      <Chip
-                        label={`Completed: ${counts.completedCount}`}
-                        size="small"
-                        color="success"
-                        variant="filled"
-                      />
-                    </Box>
-                    <GridPagination />
-                  </GridFooterContainer>
-                ),
-              }}
               sx={{
+                flex: 1,
+                height: "100%",
+                width: "100%",
                 border: "none",
+                "& .MuiDataGrid-virtualScroller": {
+                  overflowX: "auto !important",
+                  overflowY: "auto !important",
+                },
+                "& ::-webkit-scrollbar": {
+                  height: "12px !important",
+                  width: "10px !important",
+                },
+                "& ::-webkit-scrollbar-track": {
+                  backgroundColor: "#F2F4F7 !important",
+                  borderRadius: "6px !important",
+                },
+                "& ::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#98A2B3 !important",
+                  borderRadius: "6px !important",
+                  border: "2px solid #F2F4F7 !important",
+                  "&:hover": { backgroundColor: "#667085 !important" },
+                },
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "grey.100",
-                  color: "text.primary",
-                  fontWeight: 800,
-                  fontSize: "0.875rem",
+                  backgroundColor: "#F9FAFB",
+                  color: "#475467",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  borderBottom: "1px solid #EAECF0",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2,
                 },
                 "& .MuiDataGrid-cell": {
-                  fontSize: "0.875rem",
+                  fontSize: "0.85rem",
+                  color: "#344054",
+                  borderBottom: "1px solid #F2F4F7",
                 },
-                "& .MuiDataGrid-cell:focus": {
-                  outline: "none !important",
-                },
-                "& .MuiDataGrid-cell:focus-within": {
-                  outline: "none !important",
-                },
-                "& .MuiDataGrid-columnHeader:focus": {
-                  outline: "none !important",
-                },
+                "& .MuiDataGrid-cell:focus": { outline: "none !important" },
+                "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
+                "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
               }}
             />
           </Paper>
         </Box>
       )}
 
-      {/* Export Options Modal */}
+      {/* Export Options Modal Dialog */}
       <Dialog
         open={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3, p: 1 },
+          sx: { borderRadius: "16px", p: 1 },
         }}
       >
         <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Box display="flex" alignItems="center" gap={1}>
-            <DownloadIcon color="primary" />
-            <Typography variant="h6" fontWeight="700" color="primary.main">
+            <DownloadIcon sx={{ color: "primary.main" }} />
+            <Typography variant="h6" fontWeight="700" color="#101828">
               Export Production Order Data
             </Typography>
           </Box>
@@ -2143,7 +1813,7 @@ const ProductionOrderUpload: React.FC = () => {
 
         <DialogContent dividers sx={{ py: 2 }}>
           <FormControl component="fieldset" sx={{ width: "100%" }}>
-            <Typography variant="subtitle2" fontWeight="600" color="text.secondary" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
               Choose Export Option:
             </Typography>
 
@@ -2160,12 +1830,12 @@ const ProductionOrderUpload: React.FC = () => {
             >
               <FormControlLabel
                 value="all"
-                control={<Radio size="small" />}
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
                 label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
               />
               <FormControlLabel
                 value="custom"
-                control={<Radio size="small" />}
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
                 label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
               />
             </RadioGroup>
@@ -2174,7 +1844,7 @@ const ProductionOrderUpload: React.FC = () => {
               <Box
                 sx={{
                   p: 2,
-                  borderRadius: 2,
+                  borderRadius: "12px",
                   bgcolor: "#f8fafc",
                   border: "1px solid #e2e8f0",
                 }}
@@ -2190,6 +1860,7 @@ const ProductionOrderUpload: React.FC = () => {
                           selectedExportColumns.length < ALL_EXPORTABLE_COLUMNS.length
                         }
                         onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
                       />
                     }
                     label={
@@ -2201,8 +1872,8 @@ const ProductionOrderUpload: React.FC = () => {
                   <Chip
                     label={`${selectedExportColumns.length} / ${ALL_EXPORTABLE_COLUMNS.length} selected`}
                     size="small"
-                    color="primary"
                     variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
                   />
                 </Box>
 
@@ -2215,6 +1886,7 @@ const ProductionOrderUpload: React.FC = () => {
                             size="small"
                             checked={selectedExportColumns.includes(col.key)}
                             onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
                           />
                         }
                         label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
@@ -2234,33 +1906,104 @@ const ProductionOrderUpload: React.FC = () => {
             size="small"
             onClick={() => setExportDialogOpen(false)}
             disabled={isExporting}
-            sx={{ minWidth: 110, fontWeight: 600 }}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
           >
             Cancel
           </Button>
           <Button
             variant="contained"
             size="small"
-            color="success"
             startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
             onClick={handleConfirmExportData}
             disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
-            sx={{ minWidth: 110, fontWeight: 600 }}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
           >
             {isExporting ? "Exporting..." : "Export"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Upload Success Modal */}
+      <Dialog
+        open={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1, minWidth: 340, textAlign: "center" },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            pb: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 1.5,
+          }}
+        >
+          <CheckCircleOutlineIcon sx={{ color: "#12B76A", fontSize: 56 }} />
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
+            Upload Successful!
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ textAlign: "center", mt: 1, color: "#475467" }}>
+            Your production orders have been successfully imported.
+            <br />
+            Please check the history to verify the details.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+          <Button
+            onClick={() => setShowSuccessPopup(false)}
+            sx={{ color: "#667085", textTransform: "none", fontWeight: 600 }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              setShowSuccessPopup(false);
+              setSelectedFile(null);
+              setPreviewRows([]);
+              setInsertedRows([]);
+              setUploadResult(null);
+              setView("history");
+              queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+            }}
+            variant="contained"
+            sx={{
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "8px",
+              px: 3,
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+            autoFocus
+          >
+            View History
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar Notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={snackbar.severity === 'error' ? null : 6000}
+        autoHideDuration={snackbar.severity === "error" ? null : 6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: "100%" }}
+          sx={{ width: "100%", borderRadius: "8px" }}
         >
           {snackbar.message}
         </Alert>

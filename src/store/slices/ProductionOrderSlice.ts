@@ -74,8 +74,8 @@ export const fetchProductionOrders = createAsyncThunk<
   { rejectValue: string }
 >("productionOrder/fetchAll", async (_, { rejectWithValue }) => {
   try {
-    const response = await api.get("/api/ProductionOrder/GetAll");
-    return response.data;
+    const response = await api.post("/api/ProductionOrder/GetAll", {});
+    return response.data?.data || (Array.isArray(response.data) ? response.data : []);
   } catch (error: any) {
     return rejectWithValue(
       error.response?.data?.message || "Failed to fetch production orders"
