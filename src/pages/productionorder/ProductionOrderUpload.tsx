@@ -1523,7 +1523,7 @@ const ProductionOrderUpload: React.FC = () => {
               title="Total orders"
               count={totalOrdersCount}
               indicatorColor="#6B288A"
-              subtext="All series · all time"
+              subtext="All Orders"
             />
             <HistoryStatCard
               title="Pending"

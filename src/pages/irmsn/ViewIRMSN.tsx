@@ -34,7 +34,6 @@ import {
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
   CheckBox as CheckBoxIcon,
   Clear as ClearIcon,
-  Refresh as RefreshIcon,
   Edit as EditIcon,
   FileDownload as DownloadIcon,
   Add as AddIcon,
