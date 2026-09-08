@@ -15,6 +15,7 @@ import {
   UploadFile as UploadFileIcon,
   CloudUpload as UploadIcon,
   Add as AddIcon,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
 
 interface PrecheckActionBarProps {
@@ -40,8 +41,9 @@ interface PrecheckActionBarProps {
   onDownloadTemplate: () => void;
   onMakePrecheck: () => void;
   onSubmitPrecheck: () => void;
-  onPrevId: () => void;
-  onNextId: () => void;
+  onPrevId?: () => void;
+  onNextId?: () => void;
+  onReject?: () => void;
 
   isAdminOrHead?: boolean;
   isAddEnabled?: boolean;
@@ -71,6 +73,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
   onSubmitPrecheck,
   onPrevId,
   onNextId,
+  onReject,
   isAdminOrHead = false,
   isAddEnabled = false,
   onAddBomDrawingClick,
@@ -199,7 +202,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
           Submit
         </Button>
 
-        {isAdminOrHead && (
+        {/* {isAdminOrHead && (
           <Button
             variant="contained"
             color="secondary"
@@ -216,38 +219,23 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
           >
             Add
           </Button>
-        )}
+        )} */}
 
         <Button
-          variant="outlined"
-          color="secondary"
+          variant="contained"
+          color="error"
           sx={{
-            minWidth: { xs: "100%", sm: isSidebarOpen ? 65 : 70 },
+            minWidth: { xs: "100%", sm: isSidebarOpen ? 75 : 85 },
             height: 40,
             flex: { xs: "1 1 100%", sm: "0 0 auto" },
             px: isSidebarOpen ? 1 : 1.5,
           }}
           size="small"
-          disabled={!isSubmitEnabled || isLoadingLocal || idOptionsLength <= 1}
-          onClick={onPrevId}
+          onClick={onReject}
+          disabled={!onReject || isLoadingLocal}
+          startIcon={<CancelIcon />}
         >
-          Previous
-        </Button>
-
-        <Button
-          variant="outlined"
-          color="secondary"
-          sx={{
-            minWidth: { xs: "100%", sm: isSidebarOpen ? 65 : 70 },
-            height: 40,
-            flex: { xs: "1 1 100%", sm: "0 0 auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-          size="small"
-          disabled={!isSubmitEnabled || isLoadingLocal || idOptionsLength <= 1}
-          onClick={onNextId}
-        >
-          Next
+          Reject
         </Button>
       </Box>
 

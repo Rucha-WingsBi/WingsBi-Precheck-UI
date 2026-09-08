@@ -36,7 +36,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Dashboard as DashboardIcon,
   Assignment as AssignmentIcon,
-  Description as DescriptionIcon,
+
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   ViewList as ViewListIcon,
@@ -44,14 +44,13 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Add as AddIcon,
-  Search as SearchIcon,
   Visibility as VisibilityIcon,
   Store as StoreIcon,
   ShoppingCart as ShoppingCartIcon,
-  Article as ArticleIcon,
-  Archive as ArchiveIcon,
-  PlaylistAddCheck as PlaylistAddCheckIcon,
   Terminal as TerminalIcon,
+  FactCheck as FactCheckIcon,
+  MenuBook as MenuBookIcon,
+  Category as CategoryIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -97,8 +96,8 @@ const Main = styled("main")(({ theme }) => ({
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: theme.zIndex.drawer + 2,
-  background: "linear-gradient(135deg, #A8005A 0%, #d63384 100%)",
-  boxShadow: "0 2px 8px rgba(168, 0, 90, 0.2)",
+  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+  boxShadow: "0 4px 15px rgba(107, 40, 138, 0.25)",
   [theme.breakpoints.up("lg")]: {
     paddingLeft: 0,
   },
@@ -122,8 +121,8 @@ const StyledDrawer = styled(Drawer, {
       duration: theme.transitions.duration.enteringScreen,
     }),
     overflowX: "hidden",
-    background: "linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)",
-    borderRight: "1px solid rgba(0, 0, 0, 0.12)",
+    background: "#ffffff",
+    borderRight: "1px solid rgba(0, 0, 0, 0.08)",
     boxShadow: "2px 0 8px rgba(0,0,0,0.05)",
     position: "fixed",
     top: 0,
@@ -139,7 +138,7 @@ const LogoBox = styled(Box, {
   alignItems: "center",
   padding: theme.spacing(0, 1),
   minHeight: 64,
-  background: "linear-gradient(135deg, #A8005A 0%, #d63384 100%)",
+  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
   color: "white",
   cursor: "pointer",
   justifyContent: open ? "space-between" : "center",
@@ -148,7 +147,7 @@ const LogoBox = styled(Box, {
     duration: theme.transitions.duration.enteringScreen,
   }),
   "&:hover": {
-    background: "linear-gradient(135deg, #920050 0%, #c02a5b 100%)",
+    background: "linear-gradient(90deg, #4A1964 0%, #9D1352 100%)",
   },
 }));
 
@@ -198,24 +197,23 @@ export default function Layout() {
         {
           text: "Upload Orders",
           icon: <AddIcon />,
-          path: "/production-order",
-
+          path: "/production-order/upload",
         },
-        {
-          text: "Pending For Precheck",
-          icon: <PlaylistAddCheckIcon />,
-          path:
-            user?.role === STORE_ROLE
-              ? "/precheck/pending/store"
-              : "/precheck/pending/qc",
+        // {
+        //   text: "Pending For Precheck",
+        //   icon: <PlaylistAddCheckIcon />,
+        //   path:
+        //     user?.role === STORE_ROLE
+        //       ? "/precheck/pending/store"
+        //       : "/precheck/pending/qc",
 
-        },
-        {
-          text: "View Order Details",
-          icon: <VisibilityIcon />,
-          path: "/production-order/view",
+        // },
+        // {
+        //   text: "View Order Details",
+        //   icon: <VisibilityIcon />,
+        //   path: "/production-order/view",
 
-        },
+        // },
         // {
         //   text: "Edit Order Details",
         //   icon: <EditIcon />,
@@ -258,17 +256,17 @@ export default function Layout() {
           path: "/qrcode/generate",
 
         },
-        {
-          text: "Generate STD QR Code",
-          icon: <AddIcon />,
-          path: "/qrcode/generate-new",
+        // {
+        //   text: "Generate STD QR Code",
+        //   icon: <AddIcon />,
+        //   path: "/qrcode/generate-new",
 
-        },
+        // },
       ],
     },
     {
       text: "Precheck",
-      icon: <AssignmentIcon />,
+      icon: <FactCheckIcon />,
       path: "/precheck",
       subItems: [
         {
@@ -276,23 +274,23 @@ export default function Layout() {
           icon: <VisibilityIcon />,
           path: "/precheck/view",
         },
-        {
-          text: "View Consumed In",
-          icon: <SearchIcon />,
-          path: "/precheck/consumed",
-        },
+        // {
+        //   text: "View Consumed In",
+        //   icon: <SearchIcon />,
+        //   path: "/precheck/consumed",
+        // },
         // {
         //   text: "Make Order",
         //   icon: <ShoppingCartIcon />,
         //   path: "/precheck/make-order",
         //  
         // },
-        {
-          text: "Make Precheck",
-          icon: <AddIcon />,
-          path: "/precheck/make",
+        // {
+        //   text: "Make Precheck",
+        //   icon: <AddIcon />,
+        //   path: "/precheck/make",
 
-        },
+        // },
         {
           text: "Store In",
           icon: <StoreIcon />,
@@ -305,30 +303,30 @@ export default function Layout() {
           path: "/precheck/available-in-store",
 
         },
-        {
-          text: "Stored In Components",
-          icon: <VisibilityIcon />,
-          path: "/precheck/stored-components",
+        // {
+        //   text: "Stored In Components",
+        //   icon: <VisibilityIcon />,
+        //   path: "/precheck/stored-components",
 
-        },
+        // },
       ],
     },
     {
       text: "SOP",
-      icon: <ArticleIcon />,
+      icon: <MenuBookIcon />,
       path: "/sop",
       subItems: [
         { text: "View SOP", icon: <VisibilityIcon />, path: "/sop/view" },
-        {
-          text: "View BOM Details",
-          icon: <VisibilityIcon />,
-          path: "/sop/viewBOM",
-        },
+        // {
+        //   text: "View BOM Details",
+        //   icon: <VisibilityIcon />,
+        //   path: "/sop/viewBOM",
+        // },
       ],
     },
     {
       text: "Components",
-      icon: <DescriptionIcon />,
+      icon: <CategoryIcon />,
       path: "/components",
       subItems: [
         {
@@ -336,18 +334,18 @@ export default function Layout() {
           icon: <VisibilityIcon />,
           path: "/components",
         },
-        {
-          text: "View Assembly",
-          icon: <VisibilityIcon />,
-          path: "/components/assembly",
-        },
+        // {
+        //   text: "View Assembly",
+        //   icon: <VisibilityIcon />,
+        //   path: "/components/assembly",
+        // },
       ],
     },
-    {
-      text: "Material Requisition",
-      icon: <AssignmentIcon />,
-      path: "/materialrequisition",
-    },
+    // {
+    //   text: "Material Requisition",
+    //   icon: <ReceiptLongIcon />,
+    //   path: "/materialrequisition",
+    // },
     {
       text: "Script Executor",
       icon: <TerminalIcon />,
@@ -358,18 +356,18 @@ export default function Layout() {
       icon: <SettingsIcon />,
       path: "/adminmaster",
       subItems: [
-        {
-          text: "Archive",
-          icon: <ArchiveIcon />,
-          path: "/adminmaster/archive",
+        // {
+        //   text: "Archive",
+        //   icon: <ArchiveIcon />,
+        //   path: "/adminmaster/archive",
 
-        },
-        {
-          text: "Update Components",
-          icon: <SettingsIcon />,
-          path: "/adminmaster/updatecomponents",
+        // },
+        // {
+        //   text: "Update Components",
+        //   icon: <SettingsIcon />,
+        //   path: "/adminmaster/updatecomponents",
 
-        },
+        // },
         {
           text: "User Management",
           icon: <AssignmentIcon />,
@@ -583,11 +581,11 @@ export default function Layout() {
                     borderRadius: 2,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      backgroundColor: "rgba(168, 0, 90, 0.08)",
+                      backgroundColor: "rgba(107, 40, 138, 0.08)",
                       transform: "translateX(4px)",
                     },
                     backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(168, 0, 90, 0.12)"
+                      ? "rgba(107, 40, 138, 0.12)"
                       : "transparent",
                   }}
                 >
@@ -597,7 +595,7 @@ export default function Layout() {
                       mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
                       justifyContent: "center",
                       color: location.pathname.startsWith(item.path)
-                        ? "#A8005A"
+                        ? "#6B288A"
                         : "text.secondary",
                     }}
                   >
@@ -606,6 +604,7 @@ export default function Layout() {
                   <ListItemText
                     primary={item.text}
                     sx={{
+                      flex: 1,
                       opacity: isSidebarOpen || !isDesktopVersion ? 1 : 0,
                       display: isSidebarOpen || !isDesktopVersion ? "block" : "none",
                       "& .MuiListItemText-primary": {
@@ -614,7 +613,7 @@ export default function Layout() {
                           ? 600
                           : 500,
                         color: location.pathname.startsWith(item.path)
-                          ? "#A8005A"
+                          ? "#6B288A"
                           : "text.primary",
                       },
                     }}
@@ -623,11 +622,11 @@ export default function Layout() {
                   {item.subItems &&
                     item.subItems.length > 0 &&
                     (isSidebarOpen || !isDesktopVersion) && (
-                      <Box sx={{ ml: 1 }}>
+                      <Box sx={{ ml: "auto", display: "flex", alignItems: "center" }}>
                         {expandedItems.includes(item.text) ? (
-                          <ExpandLessIcon sx={{ color: "text.secondary" }} />
+                          <ExpandLessIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
                         ) : (
-                          <ExpandMoreIcon sx={{ color: "text.secondary" }} />
+                          <ExpandMoreIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
                         )}
                       </Box>
                     )}
@@ -657,12 +656,12 @@ export default function Layout() {
                         borderRadius: 2,
                         transition: "all 0.2s ease",
                         "&:hover": {
-                          backgroundColor: "rgba(168, 0, 90, 0.05)",
+                          backgroundColor: "rgba(107, 40, 138, 0.05)",
                           transform: "translateX(4px)",
                         },
                         backgroundColor:
                           location.pathname === subItem.path
-                            ? "rgba(168, 0, 90, 0.08)"
+                            ? "rgba(107, 40, 138, 0.1)"
                             : "transparent",
                       }}
                     >
@@ -671,7 +670,7 @@ export default function Layout() {
                           minWidth: 32,
                           color:
                             location.pathname === subItem.path
-                              ? "#A8005A"
+                              ? "#6B288A"
                               : "text.secondary",
                         }}
                       >
@@ -686,7 +685,7 @@ export default function Layout() {
                               location.pathname === subItem.path ? 600 : 400,
                             color:
                               location.pathname === subItem.path
-                                ? "#A8005A"
+                                ? "#6B288A"
                                 : "text.secondary",
                           },
                         }}
@@ -729,7 +728,7 @@ export default function Layout() {
           >
             <img
               src="/assets/logo.jpg"
-              alt="Logo"
+              alt="Wingsbi Logo"
               style={{ height: 32, marginRight: 8, borderRadius: 10 }}
             />
             <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -745,7 +744,7 @@ export default function Layout() {
                   alignItems: "center",
                 }}
               >
-                Godrej Aerospace
+                Wingsbi
               </Typography>
             </Box>
           </Box>

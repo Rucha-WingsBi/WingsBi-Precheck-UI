@@ -1133,61 +1133,66 @@ export default function ScriptExecutor() {
   ) : "Script executed successfully.");
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: "100%", mx: "auto" }}>
-      {/* Header and Back Button */}
-      <Box sx={{ mb: 0.5, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "#A8005A" }}>
-          Script Executor
-        </Typography>
-      </Box>
-
-      {/* Modern custom styled Tabs */}
-      <Tabs
-        value={activeTab}
-        onChange={(_, val) => setActiveTab(val)}
-        textColor="primary"
-        indicatorColor="primary"
-        sx={{
-          mb: 3,
-          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-          "& .MuiTabs-indicator": {
-            backgroundColor: "#A8005A",
-            height: 3,
-            borderRadius: 2,
-          },
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 600,
-            fontSize: "1rem",
-            color: "text.secondary",
-            px: 4,
-            py: 1.5,
-            transition: "all 0.2s ease",
-            "&:hover": {
-              color: "#A8005A",
-              backgroundColor: "rgba(168, 0, 90, 0.04)",
-            },
-            "&.Mui-selected": {
-              color: "#A8005A",
-            },
-          },
-        }}
-      >
-        <Tab label="Master Data" value={TABS.MASTER_DATA} />
-        <Tab label="Old QR Code" value={TABS.QR_CODE} />
-        <Tab label="New Std QR Code" value={TABS.STD_QR_CODE} />
-      </Tabs>
-
-      <Stack spacing={3}>
-        {/* ROW 1: Notes Section (Full Width) */}
-        <Card
-          elevation={1}
+    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
+        {/* Header Navigation Bar with Tabs */}
+        <Box
           sx={{
-            border: "1px solid rgba(0,0,0,0.08)",
-            borderRadius: 3,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
           }}
         >
+          <Typography
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+          >
+            Script Executor
+          </Typography>
+
+          <Tabs
+            value={activeTab}
+            onChange={(_, val) => setActiveTab(val)}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
+              },
+            }}
+          >
+            <Tab label="Master Data" value={TABS.MASTER_DATA} />
+            <Tab label="Old QR Code" value={TABS.QR_CODE} />
+            <Tab label="New Std QR Code" value={TABS.STD_QR_CODE} />
+          </Tabs>
+        </Box>
+
+        <Stack spacing={2}>
+          {/* ROW 1: Notes Section (Full Width) */}
+          <Card
+            elevation={0}
+            sx={{
+              border: "1px solid #e2e8f0",
+              borderRadius: 2,
+              backgroundColor: "white",
+            }}
+          >
           <CardContent sx={{ p: 3 }}>
             <Grid container spacing={3}>
               {/* Instructions Panel */}

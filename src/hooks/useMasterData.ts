@@ -331,8 +331,7 @@ export const useAllDrawingNumbers = () => {
       const fallbackRaw = fallbackResponse.data?.data || fallbackResponse.data?.$values || fallbackResponse.data;
       return Array.isArray(fallbackRaw) ? fallbackRaw : [];
     },
-    staleTime: 1000 * 10, // 10 seconds so edits reflect immediately
-    refetchOnMount: "always",
+    staleTime: 1000 * 60 * 5, // 5 minutes cache for instant navigation
   });
 };
 

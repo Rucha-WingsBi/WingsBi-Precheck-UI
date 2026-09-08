@@ -6,8 +6,7 @@ import {
   TextField,
   Button,
   Grid,
-  Card,
-  CardContent,
+  Paper,
   Autocomplete,
   IconButton,
   Stack,
@@ -37,7 +36,6 @@ import {
   type ProductionOrderMaster,
 } from "../../hooks/usePONumbers";
 import { useDebounce } from "../../hooks/useDebounce";
-
 
 interface EditIRMSNFormData {
   id: number;
@@ -73,7 +71,7 @@ export default function EditIRMSN() {
   const isIR = type === "IR";
 
   const { loading: isSubmitting, error: apiError } = useSelector(
-    (state: RootState) => state.irmsn,
+    (state: RootState) => state.irmsn
   );
 
   // Master Data Hooks
@@ -85,7 +83,6 @@ export default function EditIRMSN() {
   const [poSearchText, setPOSearchText] = useState("");
   const debouncedPOSearch = useDebounce(poSearchText, 500);
   const { data: poNumbers = [] } = usePONumbers(debouncedPOSearch);
-
 
   const stages = isIR ? irStages : msnStages;
 
@@ -113,7 +110,6 @@ export default function EditIRMSN() {
     if (initialData) {
       console.log("EditIRMSN initialData:", initialData);
 
-      // Helper to safely get property case-insensitively
       const getVal = (key: string) =>
         initialData[key] ||
         initialData[key.charAt(0).toUpperCase() + key.slice(1)];
@@ -126,15 +122,13 @@ export default function EditIRMSN() {
       if (allDrawingNumbers.length > 0) {
         let match = null;
 
-        // Try match by ID first
         if (drawingId) {
           match = allDrawingNumbers.find((d) => d.id == drawingId);
         }
 
-        // Fallback to match by name if no ID match (or no ID)
         if (!match && drawingName) {
           match = allDrawingNumbers.find(
-            (d) => d.drawingNumber === drawingName,
+            (d) => d.drawingNumber === drawingName
           );
         }
 
@@ -166,15 +160,12 @@ export default function EditIRMSN() {
       // 3. Set PO Number
       const poNum = getVal("productionOrderNumber") || getVal("poNumber");
       if (poNum) {
-        // If PO number exists in initial data, set it for display
-        // If the PO list isn't loaded yet, we can at least show the value
         const poMatch = poNumbers.find(
-          (p) => p.productionOrderNumber === poNum,
+          (p) => p.productionOrderNumber === poNum
         );
         if (poMatch) {
           setSelectedPO(poMatch);
         } else {
-          // Create a temporary object for display if not in list
           setSelectedPO({
             productionOrderNumber: poNum,
           });
@@ -203,9 +194,6 @@ export default function EditIRMSN() {
   // Fetch full details if supplier or other key fields are missing from initialData
   useEffect(() => {
     const fetchDetails = async () => {
-      // Check if we need to fetch.
-      // If we don't have initialData or it's missing supplier, we try to fetch.
-      // We check case-insensitive supplier similar to getVal
       const hasSupplier =
         initialData && (initialData.supplier || initialData.Supplier);
 
@@ -217,9 +205,8 @@ export default function EditIRMSN() {
           });
 
           if (response.data && Array.isArray(response.data)) {
-            // Find exact match
             const match = response.data.find(
-              (item: any) => (isIR ? item.irNumber : item.msnNumber) === id,
+              (item: any) => (isIR ? item.irNumber : item.msnNumber) === id
             );
 
             if (match && match.supplier) {
@@ -227,7 +214,6 @@ export default function EditIRMSN() {
               setValue("supplier", match.supplier);
             }
 
-            // We could establish other missing fields here if needed
             if (match && !initialData?.remark && match.remark) {
               setValue("remark", match.remark);
             }
@@ -256,7 +242,6 @@ export default function EditIRMSN() {
         for (const part of parts) {
           if (part.includes("-")) {
             const [start, end] = part.split("-").map(Number);
-            // Protect against massive loops if user types large numbers
             if (
               !isNaN(start) &&
               !isNaN(end) &&
@@ -275,7 +260,6 @@ export default function EditIRMSN() {
           }
         }
 
-        // Remove duplicates and return the count
         return new Set(ids.filter((id) => !isNaN(id))).size;
       };
 
@@ -313,324 +297,406 @@ export default function EditIRMSN() {
     }
   };
 
+  const readOnlyStyle = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "#F9FAFB",
+      borderRadius: "8px",
+      fontSize: "0.875rem",
+    },
+  };
+
+  const inputStyle = {
+    "& .MuiOutlinedInput-root": {
+      borderRadius: "8px",
+      fontSize: "0.875rem",
+    },
+  };
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-        <IconButton onClick={() => navigate(-1)}>
-          <ArrowBackIcon />
+    <Box
+      sx={{
+        py: { xs: 1, sm: 1.25 },
+        px: { xs: 1.5, sm: 2 },
+        minHeight: "calc(100vh - 64px)",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "#FAFAFA",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Header Section */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1.5}
+        sx={{ mb: 2 }}
+      >
+        <IconButton
+          onClick={() => navigate(-1)}
+          size="small"
+          sx={{
+            backgroundColor: "#ffffff",
+            border: "1px solid #D0D5DD",
+            color: "#344054",
+            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+          }}
+        >
+          <ArrowBackIcon fontSize="small" />
         </IconButton>
         <Typography
-          variant="h4"
+          variant="h5"
           sx={{
-            fontWeight: "600",
+            fontWeight: 700,
             color: "primary.main",
-            fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
           Edit {isIR ? "IR" : "MSN"} Number: {id}
         </Typography>
       </Stack>
 
+      {/* Error Alert */}
       {apiError && (
         <Alert
           severity="error"
-          sx={{ mb: 3 }}
+          sx={{ mb: 2, borderRadius: "8px" }}
           onClose={() => dispatch(clearIrmsnError())}
         >
           {apiError}
         </Alert>
       )}
 
-      <Card elevation={3} sx={{ borderRadius: 2 }}>
-        <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container spacing={3}>
-              {/* Row 1: Document Number (Readonly) and Project Number */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={`${isIR ? "IR" : "MSN"} Number`}
-                  value={id}
-                  fullWidth
-                  disabled
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="projectNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Project Number"
-                      disabled
-                      fullWidth
-                      size="small"
-                      sx={{ bgcolor: "#f5f5f5" }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 2: Drawing Number Autocomplete */}
-              <Grid item xs={12} md={6}>
-                <Autocomplete
-                  size="small"
-                  options={allDrawingNumbers}
-                  getOptionLabel={(option: any) => option.drawingNumber || ""}
-                  value={selectedDrawing}
-                  loading={isDrgLoading}
-                  onChange={(_, newValue) => {
-                    setSelectedDrawing(newValue);
-                    if (newValue) {
-                      setValue("drawingNumberId", newValue.id);
-                      setValue("drawingNumberIdName", newValue.drawingNumber || "");
-                      setValue("drawingNumber", newValue.drawingNumber || "");
-                      setValue("lnItemCode", newValue.lnItemCode ?? "");
-                      setValue("nomenclature", newValue.nomenclature ?? "");
-                      setValue("componentType", newValue.componentType ?? "");
-                    } else {
-                      setValue("drawingNumberId", null);
-                      setValue("drawingNumberIdName", null);
-                      setValue("drawingNumber", "");
-                      setValue("lnItemCode", "");
-                      setValue("nomenclature", "");
-                      setValue("componentType", "");
-                    }
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} label="Drawing Number" fullWidth />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="lnItemCode"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="LN Item Code"
-                      fullWidth
-                      size="small"
-                      disabled
-                      sx={{ bgcolor: "#f5f5f5" }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 3: Nomenclature and Component Type */}
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="nomenclature"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Nomenclature"
-                      fullWidth
-                      size="small"
-                      disabled
-                      InputLabelProps={{ shrink: true }}
-                      sx={{ bgcolor: "#f5f5f5" }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="componentType"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Component Type"
-                      fullWidth
-                      size="small"
-                      disabled
-                      InputLabelProps={{ shrink: true }}
-                      sx={{ bgcolor: "#f5f5f5" }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 4: PO Number Autocomplete and Quantity */}
-              <Grid item xs={12} md={6}>
-                <Autocomplete
-                  size="small"
-                  options={poNumbers}
-                  getOptionLabel={(option: any) =>
-                    option.productionOrderNumber || ""
-                  }
-                  onInputChange={(_, value) => setPOSearchText(value)}
-                  value={selectedPO}
-                  onChange={(_, newValue: ProductionOrderMaster | null) => {
-                    setSelectedPO(newValue);
-                    if (newValue) {
-                      setValue(
-                        "productionOrderNumber",
-                        newValue.productionOrderNumber,
-                      );
-                      // Cascading logic
-                      if (newValue.lnItemCodeId) {
-                        const match = allDrawingNumbers.find(
-                          (d) => d.lnItemCodeId === newValue.lnItemCodeId,
-                        );
-                        if (match) {
-                          setSelectedDrawing(match);
-                          setValue("drawingNumberId", match.id);
-                          setValue("drawingNumberIdName", match.drawingNumber || "");
-                          setValue("drawingNumber", match.drawingNumber || "");
-                          setValue("lnItemCode", match.lnItemCode ?? undefined);
-                          setValue("nomenclature", match.nomenclature);
-                          setValue("componentType", match.componentType);
-                        }
-                      }
-                    } else {
-                      setValue("productionOrderNumber", null);
-                    }
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} label="PO Number" fullWidth />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="quantity"
-                  control={control}
-                  rules={{
-                    required: "Quantity is required",
-                    min: { value: 1, message: "Quantity must be at least 1" },
-                  }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Quantity *"
-                      type="number"
-                      fullWidth
-                      size="small"
-                      error={!!errors.quantity}
-                      helperText={errors.quantity?.message}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 5: Stage Autocomplete */}
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="stage"
-                  control={control}
-                  rules={{ required: "Stage is required" }}
-                  render={({ field, fieldState: { error } }) => (
-                    <Autocomplete
-                      size="small"
-                      options={stages}
-                      getOptionLabel={(option: any) =>
-                        typeof option === "string" ? option : option.stage || ""
-                      }
-                      value={selectedStage}
-                      onChange={(_, newValue) => {
-                        setSelectedStage(newValue);
-                        field.onChange(newValue?.stage || "");
-                      }}
-                      onBlur={field.onBlur}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Stage *"
-                          fullWidth
-                          error={!!error}
-                          helperText={error?.message}
-                          inputRef={field.ref}
-                        />
-                      )}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 6: ID Range and Operation No */}
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="idNumberRange"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="ID Number Range"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="operationNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Operation Number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 7: Remark */}
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="remark"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Remark"
-                      fullWidth
-                      size="small"
-                      multiline
-                      rows={1}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Action Buttons */}
-              <Grid item xs={12} sx={{ mt: 2 }}>
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate(-1)}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    startIcon={
-                      isSubmitting ? (
-                        <CircularProgress size={20} color="inherit" />
-                      ) : (
-                        <SaveIcon />
-                      )
-                    }
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Updating..." : "Update Record"}
-                  </Button>
-                </Stack>
-              </Grid>
+      {/* Main Content Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 2.5, md: 3 },
+          borderRadius: "10px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          flexGrow: 1,
+        }}
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Grid container spacing={2.5}>
+            {/* Row 1: Document Number (Readonly) and Project Number */}
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                label={`${isIR ? "IR" : "MSN"} Number`}
+                value={id}
+                fullWidth
+                disabled
+                size="small"
+                sx={readOnlyStyle}
+              />
             </Grid>
-          </form>
-        </CardContent>
-      </Card>
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="projectNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Project Number"
+                    disabled
+                    fullWidth
+                    size="small"
+                    sx={readOnlyStyle}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 2: Drawing Number Autocomplete & LN Item Code */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Autocomplete
+                size="small"
+                options={allDrawingNumbers}
+                getOptionLabel={(option: any) => option.drawingNumber || ""}
+                value={selectedDrawing}
+                loading={isDrgLoading}
+                onChange={(_, newValue) => {
+                  setSelectedDrawing(newValue);
+                  if (newValue) {
+                    setValue("drawingNumberId", newValue.id);
+                    setValue("drawingNumberIdName", newValue.drawingNumber || "");
+                    setValue("drawingNumber", newValue.drawingNumber || "");
+                    setValue("lnItemCode", newValue.lnItemCode ?? "");
+                    setValue("nomenclature", newValue.nomenclature ?? "");
+                    setValue("componentType", newValue.componentType ?? "");
+                  } else {
+                    setValue("drawingNumberId", null);
+                    setValue("drawingNumberIdName", null);
+                    setValue("drawingNumber", "");
+                    setValue("lnItemCode", "");
+                    setValue("nomenclature", "");
+                    setValue("componentType", "");
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Drawing Number" fullWidth sx={inputStyle} />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="lnItemCode"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="LN Item Code"
+                    fullWidth
+                    size="small"
+                    disabled
+                    sx={readOnlyStyle}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 3: Nomenclature and Component Type */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="nomenclature"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Nomenclature"
+                    fullWidth
+                    size="small"
+                    disabled
+                    InputLabelProps={{ shrink: true }}
+                    sx={readOnlyStyle}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="componentType"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Component Type"
+                    fullWidth
+                    size="small"
+                    disabled
+                    InputLabelProps={{ shrink: true }}
+                    sx={readOnlyStyle}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 4: PO Number Autocomplete and Quantity */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Autocomplete
+                size="small"
+                options={poNumbers}
+                getOptionLabel={(option: any) =>
+                  option.productionOrderNumber || ""
+                }
+                onInputChange={(_, value) => setPOSearchText(value)}
+                value={selectedPO}
+                onChange={(_, newValue: ProductionOrderMaster | null) => {
+                  setSelectedPO(newValue);
+                  if (newValue) {
+                    setValue(
+                      "productionOrderNumber",
+                      newValue.productionOrderNumber
+                    );
+                    if (newValue.lnItemCodeId) {
+                      const match = allDrawingNumbers.find(
+                        (d) => d.lnItemCodeId === newValue.lnItemCodeId
+                      );
+                      if (match) {
+                        setSelectedDrawing(match);
+                        setValue("drawingNumberId", match.id);
+                        setValue("drawingNumberIdName", match.drawingNumber || "");
+                        setValue("drawingNumber", match.drawingNumber || "");
+                        setValue("lnItemCode", match.lnItemCode ?? undefined);
+                        setValue("nomenclature", match.nomenclature);
+                        setValue("componentType", match.componentType);
+                      }
+                    }
+                  } else {
+                    setValue("productionOrderNumber", null);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="PO Number" fullWidth sx={inputStyle} />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="quantity"
+                control={control}
+                rules={{
+                  required: "Quantity is required",
+                  min: { value: 1, message: "Quantity must be at least 1" },
+                }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Quantity *"
+                    type="number"
+                    fullWidth
+                    size="small"
+                    error={!!errors.quantity}
+                    helperText={errors.quantity?.message}
+                    sx={inputStyle}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 5: Stage Autocomplete */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="stage"
+                control={control}
+                rules={{ required: "Stage is required" }}
+                render={({ field, fieldState: { error } }) => (
+                  <Autocomplete
+                    size="small"
+                    options={stages}
+                    getOptionLabel={(option: any) =>
+                      typeof option === "string" ? option : option.stage || ""
+                    }
+                    value={selectedStage}
+                    onChange={(_, newValue) => {
+                      setSelectedStage(newValue);
+                      field.onChange(newValue?.stage || "");
+                    }}
+                    onBlur={field.onBlur}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Stage *"
+                        fullWidth
+                        error={!!error}
+                        helperText={error?.message}
+                        inputRef={field.ref}
+                        sx={inputStyle}
+                      />
+                    )}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 6: ID Range and Operation No */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="idNumberRange"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="ID Number Range"
+                    fullWidth
+                    size="small"
+                    sx={inputStyle}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="operationNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Operation Number"
+                    fullWidth
+                    size="small"
+                    sx={inputStyle}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 7: Remark */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="remark"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Remark"
+                    fullWidth
+                    size="small"
+                    multiline
+                    rows={1}
+                    sx={inputStyle}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Action Buttons */}
+            <Grid item xs={12} sx={{ mt: 2 }}>
+              <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => navigate(-1)}
+                  disabled={isSubmitting}
+                  sx={{
+                    borderColor: "#D0D5DD",
+                    color: "#344054",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    borderRadius: "6px",
+                    px: 2,
+                    py: 0.5,
+                    height: 34,
+                    textTransform: "none",
+                    "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="small"
+                  startIcon={
+                    isSubmitting ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <SaveIcon sx={{ fontSize: 16 }} />
+                    )
+                  }
+                  disabled={isSubmitting}
+                  sx={{
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    borderRadius: "6px",
+                    px: 2.5,
+                    py: 0.5,
+                    height: 34,
+                    textTransform: "none",
+                    boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                  }}
+                >
+                  {isSubmitting ? "Saving..." : "Save"}
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </form>
+      </Paper>
     </Box>
   );
 }

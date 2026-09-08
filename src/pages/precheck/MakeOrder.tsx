@@ -643,10 +643,10 @@ const MakeOrder: React.FC = () => {
             <Button
               variant="outlined"
               color="error"
-              size="medium"
+              size="small"
               onClick={handleReset}
               startIcon={<RefreshIcon />}
-              sx={{ minWidth: 120, py: 1.5, height: 40 }}
+              sx={{ minWidth: 100, height: 32 }}
             >
               Reset
             </Button>
@@ -654,7 +654,7 @@ const MakeOrder: React.FC = () => {
             <Button
               variant="contained"
               color="primary"
-              size="medium"
+              size="small"
               onClick={handleSubmit(onSubmit)}
               disabled={isLoading}
               startIcon={
@@ -664,7 +664,7 @@ const MakeOrder: React.FC = () => {
                   <ShoppingCartIcon />
                 )
               }
-              sx={{ minWidth: 150, py: 1.5, height: 30 }}
+              sx={{ minWidth: 140, height: 32 }}
             >
               {isLoading ? "Processing..." : "Make Order"}
             </Button>

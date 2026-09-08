@@ -2,46 +2,50 @@ import React, { useState } from "react";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Typography,
   Alert,
   LinearProgress,
   Chip,
   Paper,
   Stack,
-  Divider,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  ToggleButtonGroup,
-  ToggleButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
   DialogActions,
-  Tooltip,
   IconButton,
   TextField,
   Snackbar,
+  InputAdornment,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormControlLabel,
+  Checkbox,
+  Grid,
+  Tooltip,
+  CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
-  Refresh as RefreshIcon,
   Download as DownloadIcon,
   History as HistoryIcon,
   Visibility as VisibilityIcon,
   PlaylistAddCheck as PlaylistAddCheckIcon,
-  Today as TodayIcon,
-  CalendarMonth as CalendarMonthIcon,
-  DateRange as DateRangeIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  MoreVert as MoreVertIcon,
+
 } from "@mui/icons-material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -52,8 +56,6 @@ import {
   DataGrid,
   type GridColDef,
   type GridFilterModel,
-  GridFooterContainer,
-  GridPagination,
 } from "@mui/x-data-grid";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -62,9 +64,17 @@ import type { RootState } from "../../store/store";
 import * as XLSX from "xlsx";
 import api from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
-import { usePageAccess } from "../../hooks/useMasterData";
+import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { getAutosizedColumns } from "../../utils/gridUtils";
+
+// --- Sub-components imported from modular directory ---
+import { UploadDropzone } from "./components/UploadDropzone";
+import { UploadSummaryCard } from "./components/UploadSummaryCard";
+import { HistoryStatCard } from "./components/HistoryStatCard";
+import { ActiveFilterChips, type FilterChipItem } from "./components/ActiveFilterChips";
+
+// --- Interfaces & Constants ---
 
 interface ProductionOrder {
   id: number;
@@ -98,6 +108,16 @@ interface PaginatedResponse<T> {
   hasPreviousPage: boolean;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  totalRecords: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 interface UploadResult {
   totalRows: number;
   imported: number;
@@ -117,71 +137,247 @@ interface StatusCount {
 const normalizeKey = (key: string) =>
   key.toLowerCase().replace(/\s+/g, "").replace(/_/g, "").trim();
 
+const statusOptions = [
+  { id: 1, label: "Pending" },
+  { id: 2, label: "Partial" },
+  { id: 3, label: "Completed" },
+];
+
+const ALL_EXPORTABLE_COLUMNS = [
+  { key: "sr", label: "Sr No" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "projectNumber", label: "Project" },
+  { key: "projectDescription", label: "Project Description" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "itemDescription", label: "Item Description" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "startIdNumber", label: "Start ID" },
+  { key: "endIdNumber", label: "End ID" },
+  { key: "quantity", label: "Qty" },
+  { key: "mrirNumber", label: "MRIR No" },
+  { key: "buildNumber", label: "Build No" },
+  { key: "status", label: "Status" },
+  { key: "createdDate", label: "Created Date" },
+  { key: "agingDays", label: "Aging Days" },
+];
+
+const RowActionsMenu: React.FC<{
+  row: any;
+  pageAccessData: any;
+  deleteConfirmId: number | null;
+  setDeleteConfirmId: (id: number | null) => void;
+  deleteMutation: any;
+}> = ({ row, pageAccessData, deleteConfirmId, setDeleteConfirmId, deleteMutation }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleOpen = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setAnchorEl(e.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleNavigate = (path: string, routeState?: any) => {
+    setAnchorEl(null);
+    setTimeout(() => {
+      navigate(path, { state: routeState });
+    }, 0);
+  };
+
+  const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
+  const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+  const isConfirming = deleteConfirmId === row.id;
+  const canDeleteOrEdit = row.precheckStatus === 1 || row.precheckStatus === 4;
+
+  if (isConfirming) {
+    return (
+      <Box sx={{ display: "flex", gap: 0.5 }}>
+        <Tooltip title="Confirm Delete">
+          <IconButton
+            size="small"
+            color="success"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteMutation.mutate(row);
+            }}
+          >
+            <CheckIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Cancel">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteConfirmId(null);
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+      <IconButton
+        size="small"
+        onClick={handleOpen}
+        sx={{
+          color: "#667085",
+          "&:hover": { backgroundColor: "#F2F4F7" },
+        }}
+      >
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        transitionDuration={0}
+        disableRestoreFocus
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        PaperProps={{
+          elevation: 3,
+          sx: { minWidth: 170, borderRadius: 2, py: 0.5 },
+        }}
+      >
+        <MenuItem
+          disabled={!hasViewAccess}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNavigate("/production-order/view", row);
+          }}
+        >
+          <ListItemIcon>
+            <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText primary="View Available QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+        </MenuItem>
+
+        <MenuItem
+          disabled={!hasMakeAccess}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNavigate("/precheck/make", row);
+          }}
+        >
+          <ListItemIcon>
+            <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+        </MenuItem>
+
+        <MenuItem
+          disabled={!canDeleteOrEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNavigate(`/production-order/edit/${row.id}?from=${encodeURIComponent(location.pathname)}`, {
+              ...row,
+              from: location.pathname,
+            });
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" color={canDeleteOrEdit ? "secondary" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText primary="Edit Order" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+        </MenuItem>
+
+        <MenuItem
+          disabled={!canDeleteOrEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+            setDeleteConfirmId(row.id);
+          }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color={canDeleteOrEdit ? "error" : "disabled"} />
+          </ListItemIcon>
+          <ListItemText
+            primary="Delete Order"
+            primaryTypographyProps={{
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              color: canDeleteOrEdit ? "error.main" : undefined,
+            }}
+          />
+        </MenuItem>
+      </Menu>
+    </Box>
+  );
+};
+
 const ProductionOrderUpload: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: pageAccessData } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null,
   );
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<any[]>([]);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [insertedRows, setInsertedRows] = useState<any[]>([]);
-  const location = useLocation();
   const [view, setView] = useState<"upload" | "history">(
     location.state?.view || "history",
   );
-  const [uploadMode, setUploadMode] = useState<"import" | "update">("import");
 
   const queryClient = useQueryClient();
 
-  // Server-side pagination state (default page size: 50)
-  const [paginationModel, setPaginationModel] = useState({
-    page: 0,
-    pageSize: 50,
-  });
+  // Export Modal state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Handle automatic reload if coming from edit success
-  React.useEffect(() => {
-    if (location.state?.reload) {
-      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-      // Clear state to prevent extra reloads
-      navigate(location.pathname, {
-        replace: true,
-        state: { ...location.state, reload: false },
-      });
+  const handleOpenExportDialog = () => {
+    setExportMode("all");
+    setSelectedExportColumns([]);
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    if (selectedExportColumns.includes(colKey)) {
+      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
+    } else {
+      setSelectedExportColumns([...selectedExportColumns, colKey]);
     }
-  }, [location.state, location.pathname, navigate, queryClient]);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+    }
+  };
 
   // Filter states
-  const [dateFilterMode, setDateFilterMode] = useState<"single" | "range">(
-    "single",
-  );
-  const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
-  const [statusFilter, setStatusFilter] = useState<number | "">("");
-  const [poNumber, setPoNumber] = useState("");
-  const [lnItemCode, setLnItemCode] = useState("");
-  const [drawingNo, setDrawingNo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
+  const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
+  const { data: productionSeriesData = [] } = useProductionSeries();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
   });
 
-  const hasActiveFilters = !!(
-    (dateFilterMode === "single" && filterDate) ||
-    (dateFilterMode === "range" && (fromDate || toDate)) ||
-    statusFilter !== "" ||
-    poNumber.trim() ||
-    lnItemCode.trim() ||
-    drawingNo.trim()
-  );
-
-  // Debounced values for server-side filtering
-  const debouncedPoNumber = useDebounce(poNumber, 500);
-  const debouncedLnItemCode = useDebounce(lnItemCode, 500);
-  const debouncedDrawingNo = useDebounce(drawingNo, 500);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -193,18 +389,31 @@ const ProductionOrderUpload: React.FC = () => {
     severity: "success",
   });
 
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 20,
+  });
+
+  // Handle automatic reload if coming from edit success
+  React.useEffect(() => {
+    if (location.state?.reload) {
+      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, reload: false },
+      });
+    }
+  }, [location.state, location.pathname, navigate, queryClient]);
+
   // Reset pagination page to 0 when filters change
   React.useEffect(() => {
-    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   }, [
-    dateFilterMode,
-    filterDate,
     fromDate,
     toDate,
-    statusFilter,
-    debouncedPoNumber,
-    debouncedLnItemCode,
-    debouncedDrawingNo,
+    debouncedSearchQuery,
+    selectedProductionSeries,
+    selectedStatusList,
   ]);
 
   const handleCloseSnackbar = () => {
@@ -218,64 +427,51 @@ const ProductionOrderUpload: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  // Helper to build query params from all filter states
-  const buildQueryParams = () => {
-    const params: any = {
-      pageNumber: paginationModel.page + 1,
-      pageSize: paginationModel.pageSize,
+  // Helper to build payload object from all filter states
+  const buildPayload = () => {
+    const payload: any = {
+      searchQuery: debouncedSearchQuery?.trim() || "",
+      productionSeries: selectedProductionSeries.map((s: any) =>
+        (s.productionSeries || s).toString()
+      ),
+      precheckStatus: selectedStatusList.map((s: any) =>
+        (typeof s === "number" ? s : s.id).toString()
+      ),
     };
 
-    // Date Filters
-    if (dateFilterMode === "single" && filterDate) {
-      params.dateFilterType = "single";
-      params.filterDate = format(filterDate, "yyyy-MM-dd");
-    } else if (dateFilterMode === "range" && fromDate && toDate) {
-      params.dateFilterType = "range";
-      params.fromDate = format(fromDate, "yyyy-MM-dd");
-      params.toDate = format(toDate, "yyyy-MM-dd");
+    if (fromDate && toDate) {
+      payload.dateFilterType = "range";
+      payload.fromDate = format(fromDate, "yyyy-MM-dd");
+      payload.toDate = format(toDate, "yyyy-MM-dd");
     }
 
-    // Status Filter
-    if (statusFilter !== "") {
-      params.precheckStatus = statusFilter;
-    }
-
-    // Text Filters (Server-side)
-    if (debouncedPoNumber?.trim()) {
-      params.poNumber = debouncedPoNumber.trim();
-    }
-    if (debouncedLnItemCode?.trim()) {
-      params.lnItemCode = debouncedLnItemCode.trim();
-    }
-    if (debouncedDrawingNo?.trim()) {
-      params.drawingNumber = debouncedDrawingNo.trim();
-    }
-
-    return params;
+    return payload;
   };
 
   // Fetch production orders with filters & pagination
   const {
     data: paginatedResponse,
+
     isLoading: isHistoryLoading,
-    refetch,
   } = useQuery<PaginatedResponse<ProductionOrder>>({
     queryKey: [
       "productionOrders",
-      paginationModel.page,
-      paginationModel.pageSize,
-      dateFilterMode,
-      filterDate,
       fromDate,
       toDate,
-      statusFilter,
-      debouncedPoNumber,
-      debouncedLnItemCode,
-      debouncedDrawingNo,
+      debouncedSearchQuery,
+      selectedProductionSeries,
+      selectedStatusList,
+      paginationModel.page,
+      paginationModel.pageSize,
     ],
     queryFn: async () => {
-      const params = buildQueryParams();
-      const response = await api.get("/api/ProductionOrder/GetAll", { params });
+      const payload = buildPayload();
+      const response = await api.post("/api/ProductionOrder/GetAll", payload, {
+        params: {
+          pageNumber: paginationModel.page + 1,
+          pageSize: paginationModel.pageSize,
+        },
+      });
       if (Array.isArray(response.data)) {
         return {
           data: response.data,
@@ -292,31 +488,27 @@ const ProductionOrderUpload: React.FC = () => {
     placeholderData: (previousData) => previousData,
   });
 
+  const productionOrders = paginatedResponse?.data || [];
+  const totalRowCount = paginatedResponse?.totalRecords || 0;
+
   // Fetch status counts with filters
   const { data: statusCounts } = useQuery<StatusCount>({
     queryKey: [
       "productionOrderCounts",
-      dateFilterMode,
-      filterDate,
       fromDate,
       toDate,
-      statusFilter,
-      debouncedPoNumber,
-      debouncedLnItemCode,
-      debouncedDrawingNo,
+      debouncedSearchQuery,
+      selectedProductionSeries,
+      selectedStatusList,
     ],
     queryFn: async () => {
-      const params = buildQueryParams();
-      // Remove pagination params for counts query
-      delete params.pageNumber;
-      delete params.pageSize;
-      const response = await api.get("/api/ProductionOrder/GetCounts", {
-        params,
-      });
+      const payload = buildPayload();
+      const response = await api.post("/api/ProductionOrder/GetCounts", payload);
       return response.data;
     },
     placeholderData: (previousData) => previousData,
   });
+
   const counts: StatusCount = statusCounts ?? {
     totalCount: 0,
     pendingCount: 0,
@@ -325,17 +517,40 @@ const ProductionOrderUpload: React.FC = () => {
     uploadedCount: 0,
   };
 
-  const totalRowCount = paginatedResponse?.totalRecords ?? 0;
-
-  // Process rows with correct global Sr No based on current page
-  const tableRows = React.useMemo(() => {
-    const rawRows = paginatedResponse?.data || [];
-    const pageOffset = paginationModel.page * paginationModel.pageSize;
-    return rawRows.map((row, index) => ({
-      ...row,
-      sr: pageOffset + index + 1,
-    }));
-  }, [paginatedResponse, paginationModel.page, paginationModel.pageSize]);
+  // Client-side filtering fallback
+  const filteredRows = React.useMemo(() => {
+    let rows = productionOrders || [];
+    if (selectedProductionSeries.length > 0) {
+      const seriesNames = selectedProductionSeries.map((s: any) =>
+        (s.productionSeries || s).toString().toLowerCase()
+      );
+      rows = rows.filter(
+        (row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase())
+      );
+    }
+    if (selectedStatusList.length > 0) {
+      const statusIds = selectedStatusList.map((s: any) =>
+        typeof s === "number" ? s : s.id
+      );
+      rows = rows.filter(
+        (row) => row.precheckStatus !== undefined && statusIds.includes(row.precheckStatus)
+      );
+    }
+    if (!debouncedSearchQuery?.trim()) return rows;
+    const term = debouncedSearchQuery.trim().toLowerCase();
+    return rows.filter(
+      (row) =>
+        row.productionOrderNumber?.toLowerCase().includes(term) ||
+        row.lnItemCode?.toLowerCase().includes(term) ||
+        row.drawingNumber?.toLowerCase().includes(term) ||
+        row.projectNumber?.toLowerCase().includes(term) ||
+        row.itemDescription?.toLowerCase().includes(term) ||
+        row.precheckStatusName?.toLowerCase().includes(term) ||
+        (row.precheckStatus === 1 && "pending".includes(term)) ||
+        (row.precheckStatus === 2 && "partial".includes(term)) ||
+        (row.precheckStatus === 3 && "completed".includes(term))
+    );
+  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries, selectedStatusList]);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -348,61 +563,67 @@ const ProductionOrderUpload: React.FC = () => {
       return response.data;
     },
     onSuccess: async (data) => {
-      setUploadResult(data.result);
-      const response = await api.get("/api/ProductionOrder/GetAll");
-      const allRows = response.data;
-      const insertedPONumbers = data.result.insertedPONumbers || [];
-      const importedCount = data.result.imported || 0;
+      const result = data.result || {};
+      setUploadResult(result);
+      const errors = result.errors || [];
+      const importedCount = result.imported || 0;
 
-      let newRows: ProductionOrder[] = [];
-
-      if (insertedPONumbers.length > 0) {
-        newRows = allRows.filter((row: ProductionOrder) =>
-          insertedPONumbers.includes(row.productionOrderNumber),
-        );
-      } else if (importedCount > 0) {
-        // Fallback: If no explicit IDs, assume the most recently created IDs are the new ones.
-        // Sort by ID descending to get the newest first.
-        const sortedRows = [...allRows].sort((a, b) => b.id - a.id);
-        newRows = sortedRows.slice(0, importedCount);
+      if (errors.length > 0) {
+        return;
       }
 
-      const formattedRows = newRows.map((row: ProductionOrder) => ({
-        id: row.id,
-        sr: row.id,
-        productionorder: row.productionOrderNumber,
-        projectcode: row.projectNumber,
-        projectdescription: row.projectDescription,
-        itemcode: row.lnItemCode,
-        itemdescription: row.itemDescription,
-        series: row.productionSeries,
-        id_num: row.startIdNumber,
-        end_id: row.endIdNumber,
-        quantity: row.quantity,
-        mrirnumber: row.mrirNumber,
-        buildnumber: row.buildNumber,
-        min: (row as any).min || (row as any).minNumber || (row as any).minNo || "-",
-        snagsheetno: row.snagSheetNo,
-        status:
-          row.precheckStatusName ||
-          (row.precheckStatus === 4
-            ? "Pending-Planner"
-            : row.precheckStatus === 1
-              ? "Pending"
-              : row.precheckStatus === 2
-                ? "Partial"
-                : row.precheckStatus === 3
-                  ? "Completed"
-                  : "Uploaded"),
-      }));
+      if (importedCount > 0) {
+        const response = await api.post("/api/ProductionOrder/GetAll", {});
+        const allRows = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+        const insertedPONumbers = result.insertedPONumbers || [];
 
-      setInsertedRows(formattedRows);
-      setPreviewRows([]);
-      setSelectedFile(null);
-      setShowSuccessPopup(true);
-      queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+        let newRows: ProductionOrder[] = [];
+
+        if (insertedPONumbers.length > 0) {
+          newRows = allRows.filter((row: ProductionOrder) =>
+            insertedPONumbers.includes(row.productionOrderNumber)
+          );
+        } else {
+          const sortedRows = [...allRows].sort((a, b) => b.id - a.id);
+          newRows = sortedRows.slice(0, importedCount);
+        }
+
+        const formattedRows = newRows.map((row: ProductionOrder) => ({
+          id: row.id,
+          sr: row.id,
+          productionorder: row.productionOrderNumber,
+          projectcode: row.projectNumber,
+          projectdescription: row.projectDescription,
+          itemcode: row.lnItemCode,
+          itemdescription: row.itemDescription,
+          series: row.productionSeries,
+          id_num: row.startIdNumber,
+          end_id: row.endIdNumber,
+          quantity: row.quantity,
+          mrirnumber: row.mrirNumber,
+          buildnumber: row.buildNumber,
+          min: (row as any).min || (row as any).minNumber || (row as any).minNo || "-",
+          snagsheetno: row.snagSheetNo,
+          status:
+            row.precheckStatusName ||
+            (row.precheckStatus === 4
+              ? "Pending-Planner"
+              : row.precheckStatus === 1
+                ? "Pending"
+                : row.precheckStatus === 2
+                  ? "Partial"
+                  : row.precheckStatus === 3
+                    ? "Completed"
+                    : "Uploaded"),
+        }));
+
+        setInsertedRows(formattedRows);
+        setPreviewRows([]);
+        setSelectedFile(null);
+        setShowSuccessPopup(true);
+        queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
+      }
     },
-
     onError: (error: any) => {
       setUploadResult({
         totalRows: 0,
@@ -436,23 +657,7 @@ const ProductionOrderUpload: React.FC = () => {
     },
   });
 
-  const handleRefresh = () => {
-    setFilterModel({ items: [] });
-    refetch();
-  };
-
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (!file.name.endsWith(".xls") && !file.name.endsWith(".xlsx")) {
-      alert("Only .xls and .xlsx files are allowed");
-      return;
-    }
-
+  const processFileSelect = (file: File) => {
     setInsertedRows([]);
     setSelectedFile(file);
     setUploadResult(null);
@@ -463,7 +668,6 @@ const ProductionOrderUpload: React.FC = () => {
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const excelRows = XLSX.utils.sheet_to_json<any>(sheet);
-      console.log("Headers:", Object.keys(excelRows[0]));
 
       const normalizedData = excelRows.map((row: any, index: number) => {
         const newRow: any = { id: index };
@@ -471,12 +675,10 @@ const ProductionOrderUpload: React.FC = () => {
           newRow[normalizeKey(key)] = row[key];
         });
 
-        // Map "snagsheetnumber" (from Excel column "Snag Sheet Number") to "snagsheetno"
         if (newRow["snagsheetnumber"] !== undefined) {
           newRow["snagsheetno"] = newRow["snagsheetnumber"];
         }
 
-        // Map MIN column variations (e.g. MIN, MIN Number, MIN No)
         const minVal =
           newRow["min"] ??
           newRow["minnumber"] ??
@@ -488,7 +690,6 @@ const ProductionOrderUpload: React.FC = () => {
           newRow["min"] = minVal;
         }
 
-        // Map Status column variations or default to "Uploaded" for preview
         const statusVal =
           newRow["status"] ??
           newRow["precheckstatus"] ??
@@ -512,7 +713,6 @@ const ProductionOrderUpload: React.FC = () => {
           newRow["series"] = startId.slice(0, -4);
         }
 
-        // Map quantity/qty
         const qtyVal = newRow["quantity"] !== undefined ? newRow["quantity"] : newRow["qty"];
         if (qtyVal !== undefined) {
           newRow["quantity"] = qtyVal;
@@ -545,27 +745,6 @@ const ProductionOrderUpload: React.FC = () => {
 
   const handleUpload = async () => {
     if (!selectedFile) return;
-    if (uploadMode === "update") {
-      try {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-
-        await api.post("/api/ProductionOrder/UpdateMinStatus", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-
-        setPreviewRows([]);
-        setSelectedFile(null);
-        setShowSuccessPopup(true);
-        queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
-        refetch();
-      } catch (error: any) {
-        alert(error.response?.data?.message || "Update failed");
-      }
-
-      return;
-    }
-
     uploadMutation.mutate(selectedFile);
   };
 
@@ -587,34 +766,134 @@ const ProductionOrderUpload: React.FC = () => {
     }
   };
 
-  const handleExportExcel = async () => {
+  const handleConfirmExportData = async () => {
+    const activeColumns =
+      exportMode === "all"
+        ? ALL_EXPORTABLE_COLUMNS
+        : ALL_EXPORTABLE_COLUMNS.filter((col) => selectedExportColumns.includes(col.key));
+
+    if (exportMode === "custom" && activeColumns.length === 0) {
+      showSnackbar("Please select at least one column to export.", "error");
+      return;
+    }
+
+    setIsExporting(true);
+
     try {
-      // Use the helper which now uses debounced values (pure server-side)
-      const params = buildQueryParams();
-      delete params.pageNumber;
-      delete params.pageSize;
+      const basePayload = buildPayload();
+      const exportPayload: any = { ...basePayload };
 
-      // Add confirmation to prevent accidental/auto exports
-      const confirmExport = window.confirm(
-        "Do you want to export the Production Order data?",
-      );
-      if (!confirmExport) return;
+      if (exportMode === "custom") {
+        exportPayload.selectedColumns = activeColumns.map((c) => c.key);
+      }
 
-      const response = await api.get("/api/ProductionOrder/Export", {
-        params,
-        responseType: "blob",
-      });
+      let exportedViaApi = false;
+      try {
+        const response = await api.post("/api/ProductionOrder/Export", exportPayload, {
+          responseType: "blob",
+        });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "Production_Order_Data.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error("Error Exporting Data:", error);
-      alert("Failed to Export Data. Please try again.");
+        if (response.status === 200 && response.data && response.data.size > 0) {
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `Production_Orders_Export_${Date.now()}.xlsx`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          exportedViaApi = true;
+        }
+      } catch (apiErr) {
+        console.warn("Server API export fallback to client-side XLSX generation:", apiErr);
+      }
+
+      if (!exportedViaApi) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const rowsToExport = filteredRows || [];
+
+        const excelData = rowsToExport.map((row: any, index: number) => {
+          const rowData: Record<string, any> = {};
+
+          activeColumns.forEach((col) => {
+            switch (col.key) {
+              case "sr":
+                rowData["Sr No"] = index + 1;
+                break;
+              case "productionOrderNumber":
+                rowData["PO Number"] = row.productionOrderNumber || row.productionorder || "-";
+                break;
+              case "projectNumber":
+                rowData["Project"] = row.projectNumber || row.projectcode || "-";
+                break;
+              case "projectDescription":
+                rowData["Project Description"] = row.projectDescription || row.projectdescription || "-";
+                break;
+              case "lnItemCode":
+                rowData["LN Item Code"] = row.lnItemCode || row.itemcode || "-";
+                break;
+              case "itemDescription":
+                rowData["Item Description"] = row.itemDescription || row.itemdescription || "-";
+                break;
+              case "drawingNumber":
+                rowData["Drawing Number"] = row.drawingNumber || row.drawingnumber || "-";
+                break;
+              case "productionSeries":
+                rowData["Prod Series"] = row.productionSeries || row.series || "-";
+                break;
+              case "startIdNumber":
+                rowData["Start ID"] = row.startIdNumber || row.id_num || "-";
+                break;
+              case "endIdNumber":
+                rowData["End ID"] = row.endIdNumber || row.end_id || "-";
+                break;
+              case "quantity":
+                rowData["Qty"] = row.quantity || 0;
+                break;
+              case "mrirNumber":
+                rowData["MRIR No"] = row.mrirNumber || row.mrirnumber || "-";
+                break;
+              case "buildNumber":
+                rowData["Build No"] = row.buildNumber || row.buildnumber || "-";
+                break;
+              case "status":
+                rowData["Status"] = row.precheckStatusName || row.status || "Pending";
+                break;
+              case "createdDate":
+                rowData["Created Date"] = formatDate(row.createdDate);
+                break;
+              case "agingDays": {
+                if (!row.createdDate) {
+                  rowData["Aging Days"] = "-";
+                } else {
+                  const created = new Date(row.createdDate);
+                  const diffDays = Math.floor((new Date().getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+                  rowData["Aging Days"] = diffDays;
+                }
+                break;
+              }
+              default:
+                break;
+            }
+          });
+
+          return rowData;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Production Orders");
+        XLSX.writeFile(workbook, `Production_Orders_Export_${Date.now()}.xlsx`);
+      }
+
+      setExportDialogOpen(false);
+      showSnackbar("Data exported successfully to Excel");
+    } catch (err) {
+      console.error("Export error:", err);
+      showSnackbar("Failed to export data. Please try again.", "error");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -622,7 +901,7 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "sr",
       headerName: "Sr No",
-      width: 60,
+      width: 65,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) =>
@@ -630,9 +909,9 @@ const ProductionOrderUpload: React.FC = () => {
     },
     {
       field: "productionorder",
-      headerName: "Production Order",
+      headerName: "PO Number",
       flex: 1,
-      minWidth: 150,
+      minWidth: 140,
       headerAlign: "center",
       align: "center",
     },
@@ -648,7 +927,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "projectdescription",
       headerName: "Project Description",
       flex: 1.5,
-      minWidth: 200,
+      minWidth: 180,
       headerAlign: "center",
       align: "center",
     },
@@ -656,7 +935,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "itemcode",
       headerName: "Item Code",
       flex: 1,
-      minWidth: 150,
+      minWidth: 140,
       headerAlign: "center",
       align: "center",
     },
@@ -664,7 +943,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "itemdescription",
       headerName: "Item Description",
       flex: 2,
-      minWidth: 250,
+      minWidth: 200,
       headerAlign: "center",
       align: "center",
     },
@@ -680,7 +959,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "id_num",
       headerName: "Start ID",
       flex: 0.8,
-      minWidth: 100,
+      minWidth: 90,
       headerAlign: "center",
       align: "center",
     },
@@ -688,7 +967,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "end_id",
       headerName: "End ID",
       flex: 0.8,
-      minWidth: 100,
+      minWidth: 90,
       headerAlign: "center",
       align: "center",
     },
@@ -696,7 +975,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "quantity",
       headerName: "Qty",
       flex: 0.6,
-      minWidth: 80,
+      minWidth: 70,
       headerAlign: "center",
       align: "center",
     },
@@ -704,7 +983,7 @@ const ProductionOrderUpload: React.FC = () => {
       field: "buildnumber",
       headerName: "Build No",
       flex: 0.8,
-      minWidth: 100,
+      minWidth: 90,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -712,8 +991,8 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "mrirnumber",
       headerName: "MRIR No",
-      flex: 0.6,
-      minWidth: 150,
+      flex: 0.8,
+      minWidth: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -721,8 +1000,8 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "min",
       headerName: "MIN",
-      flex: 0.6,
-      minWidth: 150,
+      flex: 0.8,
+      minWidth: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -738,8 +1017,8 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "status",
       headerName: "Status",
-      flex: 0.6,
-      minWidth: 150,
+      flex: 0.8,
+      minWidth: 120,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "Uploaded",
@@ -764,7 +1043,7 @@ const ProductionOrderUpload: React.FC = () => {
   const historyColumns: GridColDef[] = [
     {
       field: "sr",
-      headerName: "Sr No",
+      headerName: "Sr.No",
       width: 60,
       headerAlign: "center",
       align: "center",
@@ -773,17 +1052,17 @@ const ProductionOrderUpload: React.FC = () => {
       field: "productionOrderNumber",
       headerName: "PO Number",
       flex: 1,
-      minWidth: 120,
-      headerAlign: "center",
-      align: "center",
+      minWidth: 130,
+      headerAlign: "left",
+      align: "left",
       renderCell: (params) => (
         <Tooltip title={params.value || ""}>
-          <Chip
-            label={params.value}
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, color: "#101828", fontSize: "0.85rem" }}
+          >
+            {params.value}
+          </Typography>
         </Tooltip>
       ),
     },
@@ -792,46 +1071,30 @@ const ProductionOrderUpload: React.FC = () => {
       headerName: "Project",
       flex: 0.8,
       minWidth: 90,
-      headerAlign: "center",
-      align: "center",
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "lnItemCode",
       headerName: "LN Item",
       flex: 1,
-      minWidth: 160,
-      headerAlign: "center",
-      align: "center",
+      minWidth: 140,
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "drawingNumber",
-      headerName: "Drawing",
+      headerName: "Drawing No.",
       flex: 1,
-      minWidth: 200,
-      headerAlign: "center",
-      align: "center",
+      minWidth: 150,
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "productionSeries",
       headerName: "Prod Series",
       flex: 0.7,
-      minWidth: 70,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "startIdNumber",
-      headerName: "Start ID",
-      flex: 0.7,
-      minWidth: 60,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "endIdNumber",
-      headerName: "End ID",
-      flex: 0.7,
-      minWidth: 60,
+      minWidth: 85,
       headerAlign: "center",
       align: "center",
     },
@@ -839,13 +1102,13 @@ const ProductionOrderUpload: React.FC = () => {
       field: "quantity",
       headerName: "Qty",
       flex: 0.5,
-      minWidth: 40,
+      minWidth: 50,
       headerAlign: "center",
       align: "center",
     },
     {
       field: "buildNumber",
-      headerName: "Build No",
+      headerName: "Build No.",
       flex: 0.8,
       minWidth: 90,
       headerAlign: "center",
@@ -854,9 +1117,9 @@ const ProductionOrderUpload: React.FC = () => {
     },
     {
       field: "mrirNumber",
-      headerName: "MRIR No",
+      headerName: "MRIR No.",
       flex: 0.8,
-      minWidth: 120,
+      minWidth: 110,
       headerAlign: "center",
       align: "center",
       renderCell: (params: any) => params.value || "-",
@@ -865,44 +1128,47 @@ const ProductionOrderUpload: React.FC = () => {
       field: "precheckStatus",
       headerName: "Status",
       flex: 1,
-      minWidth: 150,
+      minWidth: 130,
       headerAlign: "center",
       align: "center",
       renderCell: (params) => {
         const status = params.value || 1;
         const statusName = params.row.precheckStatusName || "Pending";
-        const color =
-          status === 4
-            ? "info"
-            : status === 3
-              ? "success"
-              : status === 2
-                ? "warning"
-                : "error";
+
+        let chipBg = "#FEF3F2";
+        let chipColor = "#B42318";
+        if (status === 4) {
+          chipBg = "#F4EBFF";
+          chipColor = "#6B288A";
+        } else if (status === 3) {
+          chipBg = "#ECFDF3";
+          chipColor = "#027A48";
+        } else if (status === 2) {
+          chipBg = "#FFFAEB";
+          chipColor = "#B54708";
+        }
+
         return (
           <Chip
             label={statusName}
             size="small"
-            color={color}
-            variant="filled"
+            sx={{
+              backgroundColor: chipBg,
+              color: chipColor,
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              borderRadius: "16px",
+              height: 24,
+            }}
           />
         );
       },
     },
     {
       field: "createdDate",
-      headerName: "Created Date",
-      flex: 1.2,
-      minWidth: 90,
-      headerAlign: "center",
-      align: "center",
-      valueFormatter: (params) => formatDate(params.value),
-    },
-    {
-      field: "modifiedDate",
-      headerName: "Modified Date",
-      flex: 1.2,
-      minWidth: 90,
+      headerName: "Created On",
+      flex: 1.1,
+      minWidth: 130,
       headerAlign: "center",
       align: "center",
       valueFormatter: (params) => formatDate(params.value),
@@ -916,137 +1182,28 @@ const ProductionOrderUpload: React.FC = () => {
       align: "center",
       valueGetter: (params) => {
         if (!params.row.createdDate) return "-";
-
         const created = new Date(params.row.createdDate);
         const today = new Date();
-
         const diffTime = today.getTime() - created.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays;
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
       },
     },
     {
       field: "actions",
       headerName: "Actions",
-      flex: 1,
-      minWidth: 200,
+      width: 70,
       sortable: false,
       headerAlign: "center",
       align: "center",
-      renderCell: (params) => {
-        const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
-        const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
-        const isConfirming = deleteConfirmId === params.row.id;
-        const canDeleteOrEdit = params.row.precheckStatus === 1 || params.row.precheckStatus === 4;
-
-        return (
-          <Box
-            sx={{
-              display: "flex",
-              gap: 0.5,
-              "& .MuiIconButton-root": {
-                outline: "none",
-              },
-            }}
-          >
-            {isConfirming ? (
-              <>
-                <Tooltip title="Confirm Delete">
-                  <IconButton
-                    size="small"
-                    color="success"
-                    onClick={() => deleteMutation.mutate(params.row)}
-                  >
-                    <CheckIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Cancel">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => setDeleteConfirmId(null)}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <Tooltip
-                  title={
-                    hasViewAccess
-                      ? "View BOM Details"
-                      : "You do not have permission to view precheck details"
-                  }
-                  PopperProps={{ disablePortal: true }}
-                  disableFocusListener
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() =>
-                        navigate("/production-order/view", { state: params.row })
-                      }
-                      disabled={!hasViewAccess}
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  title={
-                    hasMakeAccess
-                      ? "Make Precheck"
-                      : "You do not have permission to perform precheck"
-                  }
-                  PopperProps={{ disablePortal: true }}
-                  disableFocusListener
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      color="success"
-                      onClick={() =>
-                        navigate("/precheck/make", { state: params.row })
-                      }
-                      disabled={!hasMakeAccess}
-                    >
-                      <PlaylistAddCheckIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <IconButton
-                  size="small"
-                  color="secondary"
-                  onClick={() =>
-                    navigate(
-                      `/production-order/edit/${params.row.id}?from=${encodeURIComponent(location.pathname)}`,
-                      {
-                        state: { ...params.row, from: location.pathname },
-                      },
-                    )
-                  }
-                  disabled={!canDeleteOrEdit}
-                  title="Edit Production Order"
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => setDeleteConfirmId(params.row.id)}
-                  disabled={!canDeleteOrEdit}
-                  title="Delete Production Order"
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </>
-            )}
-          </Box>
-        );
-      },
+      renderCell: (params) => (
+        <RowActionsMenu
+          row={params.row}
+          pageAccessData={pageAccessData}
+          deleteConfirmId={deleteConfirmId}
+          setDeleteConfirmId={setDeleteConfirmId}
+          deleteMutation={deleteMutation}
+        />
+      ),
     },
   ];
 
@@ -1056,301 +1213,768 @@ const ProductionOrderUpload: React.FC = () => {
     return getAutosizedColumns(previewColumns, uploadTableRows);
   }, [previewColumns, uploadTableRows]);
 
+  const historyTableRows = React.useMemo(() => {
+    const rows = filteredRows || [];
+    return rows.map((item: any, index: number) => ({
+      ...item,
+      sr: item.sr ? item.sr : (paginationModel.page * paginationModel.pageSize) + index + 1,
+    }));
+  }, [filteredRows, paginationModel.page, paginationModel.pageSize]);
+
   const autosizedHistoryColumns = React.useMemo(() => {
-    return getAutosizedColumns(historyColumns, tableRows);
-  }, [historyColumns, tableRows]);
+    return getAutosizedColumns(historyColumns, historyTableRows);
+  }, [historyColumns, historyTableRows]);
+
+  // Construct active filter chips
+  const activeChips: FilterChipItem[] = React.useMemo(() => {
+    const list: FilterChipItem[] = [];
+
+    if (searchQuery.trim()) {
+      list.push({
+        id: "search",
+        label: `PO / Search: "${searchQuery.trim()}"`,
+        onRemove: () => setSearchQuery(""),
+      });
+    }
+
+    selectedStatusList.forEach((st: any) => {
+      const label = typeof st === "string" ? st : st.label || st.id;
+      list.push({
+        id: `status_${typeof st === "object" ? st.id : st}`,
+        label: `Status: ${label}`,
+        onRemove: () =>
+          setSelectedStatusList((prev) =>
+            prev.filter((item) => (typeof item === "object" ? item.id : item) !== (typeof st === "object" ? st.id : st))
+          ),
+      });
+    });
+
+    selectedProductionSeries.forEach((ser: any) => {
+      const val = typeof ser === "object" ? ser.productionSeries || ser.id : ser;
+      list.push({
+        id: `series_${val}`,
+        label: `Series: ${val}`,
+        onRemove: () =>
+          setSelectedProductionSeries((prev) =>
+            prev.filter((item) => (typeof item === "object" ? item.productionSeries || item.id : item) !== val)
+          ),
+      });
+    });
+
+    if (fromDate || toDate) {
+      const fromStr = fromDate ? format(fromDate, "dd/MM/yyyy") : "...";
+      const toStr = toDate ? format(toDate, "dd/MM/yyyy") : "...";
+      list.push({
+        id: "dateRange",
+        label: `Created On: ${fromStr} – ${toStr}`,
+        onRemove: () => {
+          setFromDate(null);
+          setToDate(null);
+        },
+      });
+    }
+
+    return list;
+  }, [searchQuery, selectedStatusList, selectedProductionSeries, fromDate, toDate]);
+
+  const totalOrdersCount = counts.totalCount || totalRowCount;
+  const pendingCount = counts.pendingCount || 0;
+  const partialCount = counts.partialCount || 0;
+  const completedCount = counts.completedCount || 0;
+
+  const pendingPct = totalOrdersCount > 0 ? Math.round((pendingCount / totalOrdersCount) * 100) : 0;
+  const partialPct = totalOrdersCount > 0 ? Math.round((partialCount / totalOrdersCount) * 100) : 0;
+  const completedPct = totalOrdersCount > 0 ? Math.round((completedCount / totalOrdersCount) * 100) : 0;
 
   return (
     <Box
       sx={{
-        p: { xs: 0.5, sm: 1 },
+        py: { xs: 1, sm: 1.25 },
+        px: { xs: 1.5, sm: 2 },
         height: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
+        backgroundColor: "#FAFAFA",
         width: "100%",
-        maxWidth: "100%",
-        overflow: "hidden",
-        scrollbarGutter: "stable",
+        boxSizing: "border-box",
+        overflow: view === "history" ? "hidden" : "auto",
       }}
     >
+      {/* Header Section */}
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 0.25, flexShrink: 0 }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
         <Box>
           <Typography
-            variant="h4"
+            variant="h5"
             sx={{
-              fontWeight: 600,
+              fontWeight: 700,
               color: "primary.main",
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
             }}
           >
-            Production Order Management
+            {view === "upload" ? "Upload Production Orders" : "Production Order History"}
           </Typography>
+          {view === "upload" && (
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Import production orders from an Excel sheet.
+            </Typography>
+          )}
         </Box>
-        <Stack direction="row" spacing={1}>
-          {view === "history" && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<UploadIcon />}
-              onClick={() => {
-                setView("upload");
-                setUploadMode("import");
-              }}
-            >
-              Import
-            </Button>
-          )}
 
-          {view === "history" && (
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          {view === "upload" ? (
             <Button
               variant="outlined"
               size="small"
-              startIcon={<UploadIcon />}
-              onClick={() => {
-                setView("upload");
-                setUploadMode("update");
+              startIcon={<HistoryIcon sx={{ fontSize: 18 }} />}
+              onClick={() => setView("history")}
+              sx={{
+                borderColor: "#D0D5DD",
+                color: "#344054",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                borderRadius: "8px",
+                px: 2,
+                py: 0.75,
+                textTransform: "none",
+                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
               }}
             >
-              Update
+              Upload history ({totalRowCount})
             </Button>
-          )}
-          <Button
-            variant={view === "history" ? "contained" : "outlined"}
-            size="small"
-            startIcon={<HistoryIcon sx={{ fontSize: "1rem !important" }} />}
-            onClick={() => {
-              setView("history");
-            }}
-            sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
-          >
-            History ({totalRowCount})
-          </Button>
-          {view === "history" && (
-            <Button
-              variant={view === "history" ? "contained" : "outlined"}
-              size="small"
-              color="success"
-              onClick={handleExportExcel}
-              startIcon={<DownloadIcon sx={{ fontSize: "1rem !important" }} />}
-              sx={{ px: 1, py: 0.25, fontSize: "0.75rem", minWidth: "auto" }}
-            >
-              Export
-            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleOpenExportDialog}
+                startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}
+                sx={{
+                  borderColor: "#D0D5DD",
+                  color: "#344054",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  px: 2,
+                  py: 0.75,
+                  textTransform: "none",
+                  "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                }}
+              >
+                Export
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<UploadIcon sx={{ fontSize: 18 }} />}
+                onClick={() => setView("upload")}
+                sx={{
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  borderRadius: "8px",
+                  px: 2.5,
+                  py: 0.75,
+                  textTransform: "none",
+                  boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                }}
+              >
+                Upload Orders
+              </Button>
+            </>
           )}
         </Stack>
       </Stack>
 
-      {view === "upload" && (
-        <Card
-          elevation={1}
-          sx={{ mb: 0.5, flexShrink: 0 }}
-        >
-          <CardContent
+      {/* Main View Content */}
+      {view === "upload" ? (
+        <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          {/* Dropzone OR Upload Summary Card */}
+          {!selectedFile && !uploadResult ? (
+            <UploadDropzone
+              onFileSelect={processFileSelect}
+              isPending={uploadMutation.isPending}
+              onDownloadTemplate={handleDownloadTemplate}
+            />
+          ) : (
+            <UploadSummaryCard
+              fileName={selectedFile?.name || "Uploaded File"}
+              totalRows={uploadResult?.totalRows || previewRows.length || insertedRows.length}
+              userName={user?.username || user?.email || "User"}
+              importedCount={uploadResult?.imported || insertedRows.length}
+              errorCount={uploadResult?.errors?.length || 0}
+              skippedCount={uploadResult?.skipped || 0}
+              onDownloadErrorReport={
+                uploadResult?.errors && uploadResult.errors.length > 0
+                  ? () => alert(uploadResult.errors.join("\n"))
+                  : undefined
+              }
+              onUploadAnother={() => {
+                setSelectedFile(null);
+                setPreviewRows([]);
+                setInsertedRows([]);
+                setUploadResult(null);
+              }}
+              onConfirmImport={selectedFile && !uploadResult ? handleUpload : undefined}
+              isPending={uploadMutation.isPending}
+              attentionRows={uploadResult?.errors}
+            />
+          )}
+
+          {uploadMutation.isPending && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+
+          {/* Excel Rows Preview DataGrid */}
+          <Paper
+            elevation={0}
             sx={{
-              py: 0.5,
-              px: 0.5,
+              flexGrow: 1,
+              minHeight: 300,
+              borderRadius: "12px",
+              border: "1px solid #E9EAEB",
+              overflow: "hidden",
+              p: 2,
+              backgroundColor: "#ffffff",
               display: "flex",
               flexDirection: "column",
-              justifyContent: "center",
-              minHeight: 48,
-              boxSizing: "border-box",
-              "&:last-child": { pb: 0.5 }
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                gap: 2,
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 700, color: "#101828", mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}
             >
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <Box>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    size="small"
-                    startIcon={<UploadIcon />}
-                    sx={{ px: 0 }}
-                  //disabled={view === "history"}
-                  >
-                    {selectedFile
-                      ? "Change Excel"
-                      : uploadMode === "update"
-                        ? "Select Excel for Update"
-                        : "Select Excel File"}
-                    <input
-                      type="file"
-                      hidden
-                      accept=".xlsx,.xls"
-                      onChange={handleFileChange}
-                    // disabled={view === "history"}
+              <VisibilityIcon sx={{ color: "primary.main", fontSize: 20 }} />
+              {uploadTableRows.length > 0
+                ? `Rows Preview (${uploadTableRows.length} rows)`
+                : "Choose a file to preview its content here"}
+            </Typography>
+
+            <Box sx={{ flex: 1, minHeight: 380, width: "100%", position: "relative" }}>
+              <DataGrid
+                rows={uploadTableRows}
+                columns={autosizedPreviewColumns}
+                pageSizeOptions={[10, 25, 50]}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 50 } },
+                }}
+                density="compact"
+                disableColumnFilter
+                disableColumnMenu
+                disableColumnSelector
+                disableRowSelectionOnClick
+                sx={{
+                  height: "100%",
+                  width: "100%",
+                  border: "none",
+                  "& .MuiDataGrid-virtualScroller": {
+                    overflowX: "auto !important",
+                    overflowY: "auto !important",
+                  },
+                  "& ::-webkit-scrollbar": {
+                    height: "12px !important",
+                    width: "10px !important",
+                  },
+                  "& ::-webkit-scrollbar-track": {
+                    backgroundColor: "#F2F4F7 !important",
+                    borderRadius: "6px !important",
+                  },
+                  "& ::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#98A2B3 !important",
+                    borderRadius: "6px !important",
+                    border: "2px solid #F2F4F7 !important",
+                    "&:hover": { backgroundColor: "#667085 !important" },
+                  },
+                  "& .MuiDataGrid-columnHeaders": {
+                    backgroundColor: "#F9FAFB",
+                    color: "#475467",
+                    fontWeight: 700,
+                    fontSize: "0.8rem",
+                    borderBottom: "1px solid #EAECF0",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2,
+                  },
+                  "& .MuiDataGrid-cell": {
+                    fontSize: "0.85rem",
+                    color: "#344054",
+                    borderBottom: "1px solid #F2F4F7",
+                  },
+                }}
+              />
+            </Box>
+          </Paper>
+        </Box>
+      ) : (
+        /* History Tab Content */
+        <Box sx={{ flexGrow: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Stat Cards Row */}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.25}
+            sx={{ mb: 1 }}
+          >
+            <HistoryStatCard
+              title="Total orders"
+              count={totalOrdersCount}
+              indicatorColor="#6B288A"
+              subtext="All series · all time"
+            />
+            <HistoryStatCard
+              title="Pending"
+              count={pendingCount}
+              indicatorColor="#f03737ff"
+              subtext={`${pendingPct}% · pending`}
+            />
+            <HistoryStatCard
+              title="Partial"
+              count={partialCount}
+              indicatorColor="#F79009"
+              subtext={`${partialPct}% · precheck in progress`}
+            />
+            <HistoryStatCard
+              title="Completed"
+              count={completedCount}
+              indicatorColor="#12B76A"
+              subtext={`${completedPct}% · verified`}
+            />
+          </Stack>
+
+          {/* Filter Bar */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1,
+              mb: 0.75,
+              borderRadius: "10px",
+              border: "1px solid #E9EAEB",
+              backgroundColor: "#ffffff",
+            }}
+          >
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                flexWrap="wrap"
+                alignItems="center"
+              >
+                {/* Search Field */}
+                <TextField
+                  placeholder="Search PO, LN Item Code, Drawing No, MRIR No..."
+                  variant="outlined"
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" sx={{ color: "#667085" }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchQuery ? (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setSearchQuery("")}>
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  }}
+                  sx={{
+                    width: { xs: "100%", sm: 280 },
+                    "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" },
+                  }}
+                />
+
+                {/* Prod. Series Dropdown (Multi-Select with Checkboxes) */}
+                <Autocomplete
+                  multiple
+                  disableCloseOnSelect
+                  renderTags={() => null}
+                  size="small"
+                  options={productionSeriesData}
+                  getOptionLabel={(option: any) => option.productionSeries || option.toString()}
+                  isOptionEqualToValue={(option, value) =>
+                    (option.productionSeries || option) === (value.productionSeries || value)
+                  }
+                  value={selectedProductionSeries}
+                  onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
+                  renderOption={(props, option, { selected }) => {
+                    const { key, ...optionProps } = props;
+                    return (
+                      <Box component="li" key={key} {...optionProps}>
+                        <Checkbox
+                          size="small"
+                          sx={{ mr: 0.75, p: 0.15 }}
+                          checked={selected}
+                        />
+                        {option.productionSeries || option.toString()}
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={selectedProductionSeries.length > 0 ? `Prod. Series · ${selectedProductionSeries.length}` : "Prod. Series"}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
                     />
-                  </Button>
-                </Box>
+                  )}
+                  sx={{ minWidth: 150, maxWidth: 220 }}
+                />
 
-                {selectedFile && (
-                  <Chip
-                    label={selectedFile.name}
-                    color="primary"
-                    variant="filled"
-                    size="small"
-                    onDelete={() => {
-                      setSelectedFile(null);
-                      setPreviewRows([]);
-                    }}
-                    sx={{ maxWidth: 200 }}
-                  />
-                )}
+                {/* Status Dropdown (Multi-Select with Checkboxes) */}
+                <Autocomplete
+                  multiple
+                  disableCloseOnSelect
+                  renderTags={() => null}
+                  size="small"
+                  options={statusOptions}
+                  getOptionLabel={(option) => option.label}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={selectedStatusList}
+                  onChange={(_, newValue) => setSelectedStatusList(newValue)}
+                  renderOption={(props, option, { selected }) => {
+                    const { key, ...optionProps } = props;
+                    return (
+                      <Box component="li" key={key} {...optionProps}>
+                        <Checkbox
+                          size="small"
+                          sx={{ mr: 0.75, p: 0.15 }}
+                          checked={selected}
+                        />
+                        {option.label}
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={selectedStatusList.length > 0 ? `Status · ${selectedStatusList.length}` : "Status"}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
+                    />
+                  )}
+                  sx={{ minWidth: 140, maxWidth: 200 }}
+                />
 
-                {selectedFile && (
-                  <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-                )}
-
-                {selectedFile && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 700,
-                        color: "success.main",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      STEP 2:
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      onClick={handleUpload}
-                      disabled={uploadMutation.isPending}
-                      color="success"
-                      size="small"
-                      startIcon={<UploadIcon />}
-                      sx={{ px: 2, fontWeight: 600, height: 30 }}
-                    >
-                      {uploadMutation.isPending ? "Importing..." : "Confirm"}
-                    </Button>
-                  </Box>
-                )}
-              </Box>
-
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                {uploadResult && (
-                  <Alert
-                    severity={
-                      uploadResult.imported === 0 && uploadResult.errors.length > 0
-                        ? "error"
-                        : uploadResult.errors.length > 0
-                          ? "warning"
-                          : "success"
-                    }
-                    onClose={() => setUploadResult(null)}
-                    sx={{
-                      py: 0,
-                      px: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      "& .MuiAlert-message": { py: 0.25 },
-                      "& .MuiAlert-icon": { py: 0.25, mr: 0.5, fontSize: "1.1rem" },
-                      "& .MuiAlert-action": { py: 0, my: 0, mr: -0.5 }
-                    }}
-                  >
-                    <Typography variant="caption" fontWeight="600" sx={{ whiteSpace: "nowrap" }}>
-                      Import Summary: {uploadResult.imported} Imported | {uploadResult.skipped} Skipped
-                    </Typography>
-                  </Alert>
-                )}
+                {/* Date Range Pickers */}
+                <DatePicker
+                  label="From Date"
+                  value={fromDate}
+                  onChange={(newValue) => setFromDate(newValue)}
+                  slotProps={{
+                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                  }}
+                />
+                <DatePicker
+                  label="To Date"
+                  value={toDate}
+                  onChange={(newValue) => setToDate(newValue)}
+                  slotProps={{
+                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                  }}
+                />
 
                 <Button
-                  variant="text"
-                  color="primary"
                   size="small"
-                  startIcon={<DownloadIcon fontSize="small" />}
-                  onClick={handleDownloadTemplate}
+                  variant="text"
+                  disabled={
+                    !searchQuery &&
+                    selectedProductionSeries.length === 0 &&
+                    selectedStatusList.length === 0 &&
+                    !fromDate &&
+                    !toDate
+                  }
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedProductionSeries([]);
+                    setSelectedStatusList([]);
+                    setFromDate(null);
+                    setToDate(null);
+                  }}
                   sx={{
+                    color: "#667085",
                     fontWeight: 600,
-                    textDecoration: "underline",
-                    fontSize: "0.75rem",
-                    whiteSpace: "nowrap",
+                    textTransform: "none",
+                    "&:hover": { color: "#101828", backgroundColor: "transparent" },
                   }}
                 >
-                  Template
+                  Clear
                 </Button>
-              </Box>
-            </Box>
+              </Stack>
+            </LocalizationProvider>
+          </Paper>
 
-            {uploadMutation.isPending && <LinearProgress sx={{ mt: 2 }} />}
+          {/* Active Filter Chips & Results Count */}
+          <ActiveFilterChips
+            chips={activeChips}
+            onClearAll={() => {
+              setSearchQuery("");
+              setSelectedProductionSeries([]);
+              setSelectedStatusList([]);
+              setFromDate(null);
+              setToDate(null);
+            }}
+            totalResults={totalRowCount}
+          />
 
-            {view === "upload" && uploadResult && uploadResult.errors.length > 0 && (
-              <Alert
-                severity="error"
-                sx={{ mt: 1 }}
-                onClose={() => setUploadResult(null)}
-              >
-                <Box sx={{ maxHeight: 150, overflow: "auto" }}>
-                  {uploadResult.errors.map((err, idx) => (
-                    <Typography
-                      key={idx}
-                      variant="body2"
-                      color="error"
-                      sx={{ my: 0.5 }}
-                    >
-                      • {err}
-                    </Typography>
-                  ))}
-                </Box>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+          {/* Data Grid Table */}
+          <Paper
+            elevation={0}
+            sx={{
+              flexGrow: 1,
+              minHeight: 0,
+              borderRadius: "12px",
+              border: "1px solid #E9EAEB",
+              backgroundColor: "#ffffff",
+              overflow: "hidden",
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <DataGrid
+              rows={historyTableRows}
+              columns={autosizedHistoryColumns}
+              loading={isHistoryLoading}
+              rowCount={totalRowCount}
+              paginationMode="server"
+              paginationModel={paginationModel}
+              onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+              pageSizeOptions={[10, 20, 50, 100]}
+              filterModel={filterModel}
+              onFilterModelChange={(newModel) => setFilterModel(newModel)}
+              disableColumnFilter
+              disableColumnMenu
+              disableColumnSelector
+              density="compact"
+              disableRowSelectionOnClick
+              getRowId={(row) => row.id || row.sr}
+              sx={{
+                flex: 1,
+                height: "100%",
+                width: "100%",
+                border: "none",
+                "& .MuiDataGrid-virtualScroller": {
+                  overflowX: "auto !important",
+                  overflowY: "auto !important",
+                },
+                "& ::-webkit-scrollbar": {
+                  height: "12px !important",
+                  width: "10px !important",
+                },
+                "& ::-webkit-scrollbar-track": {
+                  backgroundColor: "#F2F4F7 !important",
+                  borderRadius: "6px !important",
+                },
+                "& ::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#98A2B3 !important",
+                  borderRadius: "6px !important",
+                  border: "2px solid #F2F4F7 !important",
+                  "&:hover": { backgroundColor: "#667085 !important" },
+                },
+                "& .MuiDataGrid-columnHeaders": {
+                  backgroundColor: "#F9FAFB",
+                  color: "#475467",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  borderBottom: "1px solid #EAECF0",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2,
+                },
+                "& .MuiDataGrid-cell": {
+                  fontSize: "0.85rem",
+                  color: "#344054",
+                  borderBottom: "1px solid #F2F4F7",
+                },
+                "& .MuiDataGrid-cell:focus": { outline: "none !important" },
+                "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
+                "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
+              }}
+            />
+          </Paper>
+        </Box>
       )}
 
+      {/* Export Options Modal Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <DownloadIcon sx={{ color: "primary.main" }} />
+            <Typography variant="h6" fontWeight="700" color="#101828">
+              Export Production Order Data
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns([]);
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < ALL_EXPORTABLE_COLUMNS.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${ALL_EXPORTABLE_COLUMNS.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {ALL_EXPORTABLE_COLUMNS.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isExporting}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+            onClick={handleConfirmExportData}
+            disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Success Modal */}
       <Dialog
         open={showSuccessPopup}
         onClose={() => setShowSuccessPopup(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
         PaperProps={{
-          sx: { borderRadius: 2, minWidth: 320, textAlign: "center" },
+          sx: { borderRadius: "16px", p: 1, minWidth: 340, textAlign: "center" },
         }}
       >
         <DialogTitle
-          id="alert-dialog-title"
           sx={{
             pb: 0,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 1,
+            gap: 1.5,
           }}
         >
-          <CheckCircleOutlineIcon color="success" sx={{ fontSize: 48 }} />
-          <Typography variant="h6" fontWeight="600">
-            {uploadMode === "update"
-              ? "Update Successful!"
-              : "Upload Successful!"}
+          <CheckCircleOutlineIcon sx={{ color: "#12B76A", fontSize: 56 }} />
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
+            Upload Successful!
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <DialogContentText
-            id="alert-dialog-description"
-            sx={{ textAlign: "center", mt: 1 }}
-          >
-            {uploadMode === "update"
-              ? "Your production orders have been successfully updated."
-              : "Your production orders have been successfully imported."}
+          <DialogContentText sx={{ textAlign: "center", mt: 1, color: "#475467" }}>
+            Your production orders have been successfully imported.
             <br />
             Please check the history to verify the details.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: "center", pb: 2.5 }}>
-          <Button onClick={() => setShowSuccessPopup(false)} color="inherit">
+        <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+          <Button
+            onClick={() => setShowSuccessPopup(false)}
+            sx={{ color: "#667085", textTransform: "none", fontWeight: 600 }}
+          >
             Close
           </Button>
           <Button
@@ -1364,7 +1988,15 @@ const ProductionOrderUpload: React.FC = () => {
               queryClient.invalidateQueries({ queryKey: ["productionOrders"] });
             }}
             variant="contained"
-            color="primary"
+            sx={{
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "8px",
+              px: 3,
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
             autoFocus
           >
             View History
@@ -1372,351 +2004,17 @@ const ProductionOrderUpload: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {view === "upload" ? (
-        <Box
-          sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            width: "100%",
-            maxWidth: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mb: 0.25,
-              fontWeight: 600,
-              color: "text.primary",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              flexShrink: 0,
-            }}
-          >
-            <VisibilityIcon color="primary" fontSize="small" />
-            {previewRows.length > 0
-              ? `Excel Content Preview (${previewRows.length} rows)`
-              : "Choose a file to preview its content here"}
-          </Typography>
-          <Paper
-            elevation={2}
-            sx={{
-              flexGrow: 1,
-              minHeight: 0,
-              width: "100%",
-              overflow: "hidden",
-            }}
-          >
-            <DataGrid
-              rows={uploadTableRows}
-              columns={autosizedPreviewColumns}
-              pageSizeOptions={[5, 10, 25, 50]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 50 } },
-              }}
-              density="compact"
-              disableColumnFilter
-              disableRowSelectionOnClick
-              sx={{
-                border: "none",
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "grey.100",
-                  color: "text.primary",
-                  fontWeight: 800,
-                  fontSize: "0.875rem",
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.875rem",
-                },
-              }}
-            />
-          </Paper>
-        </Box>
-      ) : (
-        <Box
-          sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            width: "100%",
-            maxWidth: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mb: 0.25,
-              fontWeight: 600,
-              color: "text.primary",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              flexShrink: 0,
-            }}
-          >
-            Production Orders History
-          </Typography>
-
-          {/* Filter Controls */}
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Paper elevation={1} sx={{ p: 0.75, mb: 0.25, flexShrink: 0 }}>
-              <Stack
-                direction="row"
-                spacing={1}
-                flexWrap="wrap"
-                alignItems="center"
-              >
-                {/* Date Filter Mode Toggle */}
-                <ToggleButtonGroup
-                  value={dateFilterMode}
-                  exclusive
-                  onChange={(_, newMode) => {
-                    if (newMode !== null) {
-                      setDateFilterMode(newMode);
-                      setFilterDate(null);
-                      setFromDate(null);
-                      setToDate(null);
-                    }
-                  }}
-                  size="small"
-                >
-                  <ToggleButton value="single">
-                    <CalendarMonthIcon fontSize="small" sx={{ mr: 0.5 }} />
-                    Single Date
-                  </ToggleButton>
-                  <ToggleButton value="range">
-                    <DateRangeIcon fontSize="small" sx={{ mr: 0.5 }} />
-                    Date Range
-                  </ToggleButton>
-                </ToggleButtonGroup>
-
-                {/* Date Pickers based on mode */}
-                {dateFilterMode === "single" ? (
-                  <>
-                    <DatePicker
-                      label="Filter Date"
-                      value={filterDate}
-                      onChange={(newValue) => setFilterDate(newValue)}
-                      slotProps={{
-                        textField: { size: "small", sx: { width: 180 } },
-                      }}
-                    />
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<TodayIcon />}
-                      onClick={() => setFilterDate(new Date())}
-                    >
-                      Today
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <DatePicker
-                      label="From Date"
-                      value={fromDate}
-                      onChange={(newValue) => setFromDate(newValue)}
-                      slotProps={{
-                        textField: { size: "small", sx: { width: 160 } },
-                      }}
-                    />
-                    <DatePicker
-                      label="To Date"
-                      value={toDate}
-                      onChange={(newValue) => setToDate(newValue)}
-                      slotProps={{
-                        textField: { size: "small", sx: { width: 160 } },
-                      }}
-                    />
-                  </>
-                )}
-
-                {/* Status Filter */}
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={statusFilter}
-                    label="Status"
-                    onChange={(e) =>
-                      setStatusFilter(e.target.value as number | "")
-                    }
-                  >
-                    <MenuItem value="">All</MenuItem>
-                    <MenuItem value={4}>Pending-Planner</MenuItem>
-                    <MenuItem value={1}>Pending</MenuItem>
-                    <MenuItem value={2}>Partial</MenuItem>
-                    <MenuItem value={3}>Completed</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <TextField
-                  label="PO Number"
-                  variant="outlined"
-                  size="small"
-                  value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
-                  sx={{ width: 120 }}
-                />
-
-                <TextField
-                  label="LN Item Code"
-                  variant="outlined"
-                  size="small"
-                  value={lnItemCode}
-                  onChange={(e) => setLnItemCode(e.target.value)}
-                  sx={{ width: 120 }}
-                />
-
-                <TextField
-                  label="Drawing No"
-                  variant="outlined"
-                  size="small"
-                  value={drawingNo}
-                  onChange={(e) => setDrawingNo(e.target.value)}
-                  sx={{ width: 150 }}
-                />
-
-                {/* Clear Filters Button */}
-                <Button
-                  size="small"
-                  variant="text"
-                  color="error"
-                  disabled={!hasActiveFilters}
-                  onClick={() => {
-                    setFilterDate(null);
-                    setFromDate(null);
-                    setToDate(null);
-                    setStatusFilter("");
-                    setPoNumber("");
-                    setLnItemCode("");
-                    setDrawingNo("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </Stack>
-            </Paper>
-          </LocalizationProvider>
-
-          <Paper
-            elevation={2}
-            sx={{
-              flexGrow: 1,
-              minHeight: 0,
-              width: "100%",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <Box sx={{ position: "absolute", right: 8, top: 4, zIndex: 1 }}>
-              <IconButton
-                onClick={handleRefresh}
-                disabled={isHistoryLoading}
-                size="small"
-              >
-                <RefreshIcon fontSize="small" color="primary" />
-              </IconButton>
-            </Box>
-            <DataGrid
-              rows={tableRows}
-              columns={autosizedHistoryColumns}
-              loading={isHistoryLoading}
-              rowCount={totalRowCount}
-              paginationMode="server"
-              paginationModel={paginationModel}
-              onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
-              pageSizeOptions={[10, 25, 50, 100]}
-              filterModel={filterModel}
-              onFilterModelChange={(newModel) => setFilterModel(newModel)}
-              disableColumnFilter
-              density="compact"
-              disableRowSelectionOnClick
-              getRowId={(row) => row.id || row.sr}
-              slots={{
-                footer: () => (
-                  <GridFooterContainer>
-                    <Box
-                      sx={{
-                        flexGrow: 1,
-                        display: "flex",
-                        gap: 1,
-                        ml: 2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Chip
-                        label={`Total: ${counts.totalCount || totalRowCount}`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                      <Chip
-                        label={`Pending-Planner: ${counts.uploadedCount}`}
-                        size="small"
-                        color="info"
-                        variant="filled"
-                      />
-                      <Chip
-                        label={`Pending: ${counts.pendingCount}`}
-                        size="small"
-                        color="error"
-                        variant="filled"
-                      />
-                      <Chip
-                        label={`Partial: ${counts.partialCount}`}
-                        size="small"
-                        color="warning"
-                        variant="filled"
-                      />
-                      <Chip
-                        label={`Completed: ${counts.completedCount}`}
-                        size="small"
-                        color="success"
-                        variant="filled"
-                      />
-                    </Box>
-                    <GridPagination />
-                  </GridFooterContainer>
-                ),
-              }}
-              sx={{
-                border: "none",
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "grey.100",
-                  color: "text.primary",
-                  fontWeight: 800,
-                  fontSize: "0.875rem",
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.875rem",
-                },
-                "& .MuiDataGrid-cell:focus": {
-                  outline: "none !important",
-                },
-                "& .MuiDataGrid-cell:focus-within": {
-                  outline: "none !important",
-                },
-                "& .MuiDataGrid-columnHeader:focus": {
-                  outline: "none !important",
-                },
-              }}
-            />
-          </Paper>
-        </Box>
-      )}
+      {/* Snackbar Notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={snackbar.severity === 'error' ? null : 6000}
+        autoHideDuration={snackbar.severity === "error" ? null : 6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: "100%" }}
+          sx={{ width: "100%", borderRadius: "8px" }}
         >
           {snackbar.message}
         </Alert>

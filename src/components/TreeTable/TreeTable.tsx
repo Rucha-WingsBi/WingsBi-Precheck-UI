@@ -487,7 +487,7 @@ export const TreeTable = React.forwardRef<any, TreeTableProps>(({
                         background: "#e2e8f0",
                       },
                       "&:hover .col-resizer-line": {
-                        backgroundColor: "#a8005a",
+                        backgroundColor: "#6B288A",
                         width: 3,
                       },
                       "&:first-of-type": {

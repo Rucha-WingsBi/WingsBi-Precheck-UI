@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -19,6 +20,8 @@ import {
   TablePagination,
   Card,
   CardContent,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -54,8 +57,15 @@ const formatQuantity = (qty: any) => {
   return match ? match[0] : String(qty);
 };
 
-const ViewConsumedIn: React.FC = () => {
+const ViewPrecheck = React.lazy(() => import("./ViewPrecheck"));
+
+const ViewConsumedIn: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<"precheck" | "consumed">(
+    location.pathname.includes("consumed") ? "consumed" : "precheck"
+  );
   const { loading, isDownloading } = useSelector(
     (state: RootState) => state.qrcode,
   );
@@ -302,38 +312,82 @@ const ViewConsumedIn: React.FC = () => {
     setSelectedPO(null);
     setPOSearchText("");
     setOrderBy("");
-    setOrder("asc");
+setOrder("asc");
     setPage(0);
   };
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
-      <Typography
-        variant="h4"
-        sx={{
-          color: "primary.main",
-          fontWeight: 600,
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-          mb: 0.5,
-        }}
-      >
-        View Consumed In
-      </Typography>
-      <Card elevation={2} sx={{ mb: 2 }}>
-        <CardContent sx={{ p: { xs: 1, md: 2 } }}>
-          <Box
+    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+      {!hideHeader && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
+          }}
+        >
+          <Typography
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+          >
+            {activeTab === "precheck" ? "View Precheck Details" : "View Consumed In Details"}
+          </Typography>
+
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
             sx={{
-              display: "flex",
-              alignItems: "center",
-              mb: 1,
-              gap: 1.5,
-              flexWrap: "wrap",
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 120,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
+              },
             }}
           >
-            {/* LN Item Code Filter */}
-            <FormControl sx={{ minWidth: 250 }} size="small">
-              <Autocomplete
-                size="small"
+            <Tab label="View Precheck" value="precheck" />
+            <Tab label="View Consumed In" value="consumed" />
+          </Tabs>
+        </Box>
+      )}
+
+      {activeTab === "precheck" ? (
+        <React.Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />}>
+          <ViewPrecheck hideHeader />
+        </React.Suspense>
+      ) : (
+        <>
+          <Card elevation={2} sx={{ mb: 2 }}>
+            <CardContent sx={{ p: { xs: 1, md: 2 } }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mb: 1,
+                  gap: 1.5,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* LN Item Code Filter */}
+                <FormControl sx={{ minWidth: 250 }} size="small">
+                  <Autocomplete
+                    size="small"
                 sx={{ width: 250 }}
                 options={allDrawingNumbers}
                 groupBy={(option: any) => option.lnItemCode || "No LN Code"}
@@ -1056,6 +1110,8 @@ const ViewConsumedIn: React.FC = () => {
           />
         )}
       </Paper>
+      </>
+      )}
     </Box>
   );
 };

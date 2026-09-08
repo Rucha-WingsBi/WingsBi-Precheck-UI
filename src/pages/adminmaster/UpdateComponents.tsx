@@ -1161,10 +1161,10 @@ export default function InsertMappings() {
                 <Button
                   type="button"
                   variant="outlined"
-                  size="medium"
+                  size="small"
                   onClick={handleReset}
                   startIcon={<RefreshIcon />}
-                  sx={{ minWidth: 100, py: 1.5, height: 40 }}
+                  sx={{ minWidth: 90, height: 32 }}
                 >
                   Reset
                 </Button>
@@ -1172,7 +1172,7 @@ export default function InsertMappings() {
                 <Button
                   type="submit"
                   variant="contained"
-                  size="medium"
+                  size="small"
                   disabled={loading || (isEditMode && !selectedDrawing)}
                   startIcon={
                     loading ? (
@@ -1181,7 +1181,7 @@ export default function InsertMappings() {
                       <SaveIcon />
                     )
                   }
-                  sx={{ minWidth: 100, py: 1.5, height: 40 }}
+                  sx={{ minWidth: 100, height: 32 }}
                 >
                   {loading
                     ? "Saving..."

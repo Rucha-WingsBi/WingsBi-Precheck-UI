@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -23,6 +23,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
@@ -267,8 +269,9 @@ const DrawingNumberRowComponent = ({
   );
 };
 
-const Components: React.FC = () => {
+const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   // Get data from hook
   const {
     data: allDrawingNumbers = [],
@@ -404,20 +407,68 @@ const Components: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3, width: "100%", overflow: "hidden" }}>
-      <Typography
-        variant="h4"
-        sx={{ mb: 3, fontWeight: "bold", color: "#A8005A" }}
-      >
-        Components - All Drawing Numbers
-      </Typography>
-
-      <Paper sx={{ p: 3, mb: 3, width: "100%", overflow: "hidden" }}>
+    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+      {!hideHeader && (
         <Box
           sx={{
             display: "flex",
-            gap: 2,
-            mb: 3,
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: { xs: 1, sm: 2, md: 3 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
+          }}
+        >
+          <Typography
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+          >
+            View Component Details
+          </Typography>
+
+          <Tabs
+            value={location.pathname.includes("assembly") ? "assembly" : "components"}
+            onChange={(_, newValue) => {
+              if (newValue === "components") {
+                navigate("/components/view");
+              } else {
+                navigate("/components/assembly");
+              }
+            }}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
+              },
+            }}
+          >
+            <Tab label="View Component" value="components" />
+            <Tab label="View Assembly" value="assembly" />
+          </Tabs>
+        </Box>
+      )}
+
+      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2, width: "100%", overflow: "hidden" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1.5,
+            mb: 2,
             flexWrap: "wrap",
             alignItems: "center",
           }}
@@ -433,7 +484,7 @@ const Components: React.FC = () => {
               maxWidth: 400,
               flexGrow: 1,
               "& .MuiOutlinedInput-root": {
-                height: 50,
+                height: 40,
               }
             }}
             InputProps={{
@@ -453,7 +504,7 @@ const Components: React.FC = () => {
             disabled={!searchQuery}
             size="small"
             sx={{
-              height: 50,
+              height: 40,
             }}
           >
             Clear Search
@@ -462,7 +513,7 @@ const Components: React.FC = () => {
 
         <Box
           sx={{
-            mb: 2,
+            mb: 1.5,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",

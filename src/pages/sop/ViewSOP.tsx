@@ -6,10 +6,6 @@ import {
   TextField,
   Button,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   Autocomplete,
   CircularProgress,
@@ -24,10 +20,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Tooltip,
   Tabs,
   Tab,
 } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search as SearchIcon,
   GetApp as ExportIcon,
@@ -41,15 +37,14 @@ import { useForm, Controller } from "react-hook-form";
 import type { RootState } from "../../store/store";
 import {
   getSopAssemblyData,
-  getSopExcludingRawMaterial,
   exportSopAssemblyData,
-  exportSopExcludingRawMaterial,
   clearAssemblyData,
   clearError,
   setSearchCriteria,
 } from "../../store/slices/sopSlice";
 import { useProductionSeries, useDrawingNumbers } from "../../hooks/useMasterData";
 import TreeTable from "../../components/TreeTable/TreeTable";
+import ViewBOM from "./ViewBOM";
 
 interface FormData {
   prodSeriesId: number;
@@ -59,6 +54,9 @@ interface FormData {
 
 const ViewSOP: React.FC = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<"sop" | "bom">("sop");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
@@ -76,7 +74,6 @@ const ViewSOP: React.FC = () => {
   const [isSelectingItem, setIsSelectingItem] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showFilters, setShowFilters] = useState(true);
-  const [activeTab, setActiveTab] = useState<"planner" | "qc">("planner");
   const [prodSeriesInputText, setProdSeriesInputText] = useState("");
   const treeTableRef = useRef<any>(null);
 
@@ -597,9 +594,8 @@ const ViewSOP: React.FC = () => {
   }, [getValues]);
 
   // Handle search - matches ExecuteSearch
-  const executeSearch = useCallback(async (tabOverride?: "planner" | "qc") => {
+  const executeSearch = useCallback(async () => {
     try {
-      const targetTab = tabOverride || activeTab;
       const missingFields = validateRequiredFields();
       if (missingFields.length > 0) {
         setSuccessMessage(
@@ -620,11 +616,11 @@ const ViewSOP: React.FC = () => {
 
       setSuccessMessage("");
       dispatch(setSearchCriteria(request));
-      const action = targetTab === "qc" ? getSopExcludingRawMaterial(request) : getSopAssemblyData(request);
+      const action = getSopAssemblyData(request);
       const result = await dispatch(action as any);
 
       if (
-        (getSopAssemblyData.fulfilled.match(result) || getSopExcludingRawMaterial.fulfilled.match(result)) &&
+        getSopAssemblyData.fulfilled.match(result) &&
         Array.isArray(result.payload) &&
         result.payload.length > 0
       ) {
@@ -638,12 +634,7 @@ const ViewSOP: React.FC = () => {
       console.error("Error during search:", error);
       setSuccessMessage("Error during search");
     }
-  }, [dispatch, validateRequiredFields, getValues, selectedDrawingNumber, drwDisplayText, activeTab]);
-
-  const handleTabChange = (newTab: "planner" | "qc") => {
-    setActiveTab(newTab);
-    executeReset();
-  };
+  }, [dispatch, validateRequiredFields, getValues, selectedDrawingNumber, drwDisplayText]);
 
   // Handle export - matches ExecuteExport
   const executeExport = useCallback(async () => {
@@ -673,17 +664,13 @@ const ViewSOP: React.FC = () => {
         assemblyDrawing: selectedDrawingNumber?.drawingNumber || drwDisplayText || "",
       };
 
-      const exportAction =
-        activeTab === "qc"
-          ? exportSopExcludingRawMaterial(request)
-          : exportSopAssemblyData(request);
-      await dispatch(exportAction as any);
+      await dispatch(exportSopAssemblyData(request) as any);
       setSuccessMessage("Export completed successfully!");
     } catch (error) {
       console.error("Error during export:", error);
       setSuccessMessage("Error during export");
     }
-  }, [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText, activeTab]);
+  }, [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText]);
 
   // Handle reset - matches ExecuteReset
   const executeReset = useCallback(() => {
@@ -743,57 +730,57 @@ const ViewSOP: React.FC = () => {
 
   return (
 
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "#f8fafc",
-        position: "relative",
-        p: { xs: 1, md: 1.5 },
-      }}
-    >
-      <Container maxWidth="xl" sx={{ pt: 1.5, pb: 1 }}>
+    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
+        {/* Header Navigation Bar with Tabs */}
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            mb: 1.5,
             flexWrap: "wrap",
-            gap: 3,
-            mb: 1,
+            gap: { xs: 2, sm: 4, md: 6 },
+            borderBottom: 1,
+            borderColor: "divider",
+            pb: 0.5,
           }}
         >
           <Typography
-            variant="h5"
-            sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: { xs: "1.25rem", md: "1.4rem" },
-            }}
+            variant="h4"
+            color="primary.main"
+            fontWeight={600}
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
           >
-            View SOP
+            {activeTab === "bom" ? "View BOM Details" : "View SOP"}
           </Typography>
 
           <Tabs
             value={activeTab}
-            onChange={(_, newValue) => handleTabChange(newValue)}
+            onChange={(_, newValue) => setActiveTab(newValue)}
             textColor="primary"
             indicatorColor="primary"
             sx={{
-              minHeight: 36,
               "& .MuiTab-root": {
-                minHeight: 36,
-                py: 0.5,
-                px: 2.5,
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 textTransform: "none",
+                minWidth: 100,
+              },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: "3px 3px 0 0",
               },
             }}
           >
-            <Tab label="Planner" value="planner" />
-            <Tab label="QC" value="qc" />
+            <Tab label="View SOP" value="sop" />
+            <Tab label="View BOM" value="bom" />
           </Tabs>
         </Box>
+
+        {activeTab === "sop" ? (
+          <>
         {/* Success/Error Messages */}
         <Fade in={!!(successMessage || error)}>
           <Box sx={{ mb: 2 }}>
@@ -1305,8 +1292,6 @@ const ViewSOP: React.FC = () => {
             </Box>
           </Box>
         </Card>
-      </Container>
-
       {/* Loading Backdrop */}
       <Backdrop
         sx={{
@@ -1368,6 +1353,10 @@ const ViewSOP: React.FC = () => {
           </Box>
         </Card>
       </Backdrop>
+          </>
+        ) : (
+          <ViewBOM hideHeader />
+        )}
     </Box>
   );
 };

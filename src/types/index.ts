@@ -268,18 +268,27 @@ export interface QRCodeFormData {
   customIdRange: string;
   batchId: string;
   unit: string;
-  manufacturingDate: Date| null;
+  manufacturingDate: Date | null;
   expiryDate?: Date | null;
   irNumber: string;
   msnNumber: string;
   poNumber: string;
   projectNumber: string;
   mrirNumber: string;
-  desposition: "Accepted" | "Rejected" | "Used for QT";
+  desposition: "Accepted" | "Rejected" | "Used for QT" | "Send Back to Customer" | string;
   location: string;
   remark: string;
   partAssemblyId: string;
   buildNumber?: string;
+  qrType?: string;
+  fanManNumber?: string;
+  fanManSerialNumber?: string;
+  customerItemCode?: string;
+  gfnNo?: string;
+  shapes?: string;
+  material?: string;
+  noMfgDate?: boolean;
+  noExpiryDate?: boolean;
 }
 
 export interface NewQRCodeFormData extends QRCodeFormData {

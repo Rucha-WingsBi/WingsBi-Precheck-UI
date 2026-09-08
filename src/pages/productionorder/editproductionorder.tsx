@@ -5,9 +5,7 @@ import {
   TextField,
   Button,
   Grid,
-  Card,
-  CardContent,
-  Autocomplete,
+  Paper,
   IconButton,
   Stack,
   CircularProgress,
@@ -28,8 +26,6 @@ import {
 } from "../../store/slices/ProductionOrderSlice";
 import {
   useProductionSeries,
-  useAllLnItemCodes,
-  useAllDrawingNumbers,
 } from "../../hooks/useMasterData";
 import { usePONumbers } from "../../hooks/usePONumbers";
 import api from "../../services/api";
@@ -62,9 +58,7 @@ export default function EditProductionOrder() {
   const {
     loading,
     error: apiError,
-    success,
   } = useSelector((state: RootState) => state.productionOrder);
-  const user = useSelector((state: RootState) => state.auth.user);
 
   const rawInitialData = (location.state || {}) as any;
   const initialData: EditProductionOrderFormData = useMemo(
@@ -87,9 +81,7 @@ export default function EditProductionOrder() {
 
   // Master Data Hooks
   const { data: productionSeriesList = [] } = useProductionSeries();
-  const { data: initialLnItemCodes = [] } = useAllLnItemCodes();
-  const { data: allDrawingNumbers = [], isLoading: isDrawingsLoading } = useAllDrawingNumbers();
-  const { data: poNumbersList = [], isLoading: isPOLoading } = usePONumbers();
+  const { data: poNumbersList = [] } = usePONumbers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -106,37 +98,11 @@ export default function EditProductionOrder() {
   const {
     control,
     handleSubmit,
-    setValue,
     reset,
-    watch,
     formState: { errors },
   } = useForm<EditProductionOrderFormData>({
     defaultValues: initialData,
   });
-
-  const watchItemCode = watch("itemCode");
-  const watchPrecheckStatus = watch("precheckStatus");
-
-  // Derive unique LN Item Codes from all drawings and initial list
-  const lnItemCodes = useMemo(() => {
-    // Use a set to prevent duplicates
-    const codes = new Set<string>(initialLnItemCodes);
-
-    // Add codes from all drawings (this ensures "all" items are available)
-    allDrawingNumbers.forEach((drawing) => {
-      if (drawing.lnItemCode) {
-        codes.add(drawing.lnItemCode);
-      }
-    });
-
-    // Ensure the current field value is also in the list
-    if (watchItemCode) {
-      codes.add(watchItemCode);
-    }
-
-    // Convert back to array and sort
-    return Array.from(codes).sort();
-  }, [initialLnItemCodes, allDrawingNumbers, watchItemCode]);
 
   // Reset state on mount
   useEffect(() => {
@@ -147,8 +113,8 @@ export default function EditProductionOrder() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get("/api/ProductionOrder/GetAll");
-        const allOrders = response.data || [];
+        const response = await api.post("/api/ProductionOrder/GetAll", {});
+        const allOrders = response.data?.data || (Array.isArray(response.data) ? response.data : []);
         const currentOrder = allOrders.find((po: any) => po.id === Number(id));
         
         if (currentOrder) {
@@ -273,17 +239,36 @@ export default function EditProductionOrder() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-        <IconButton onClick={handleBack}>
-          <ArrowBackIcon />
+    <Box
+      sx={{
+        py: { xs: 1.5, sm: 2 },
+        px: { xs: 1.5, sm: 2.5 },
+        minHeight: "calc(100vh - 64px)",
+        backgroundColor: "#FAFAFA",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Header Section */}
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+        <IconButton
+          size="small"
+          onClick={handleBack}
+          sx={{
+            color: "#344054",
+            backgroundColor: "#ffffff",
+            border: "1px solid #D0D5DD",
+            borderRadius: "8px",
+            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+          }}
+        >
+          <ArrowBackIcon fontSize="small" />
         </IconButton>
         <Typography
-          variant="h4"
+          variant="h5"
           sx={{
-            fontWeight: "600",
+            fontWeight: 700,
             color: "primary.main",
-            fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
           Edit Production Order: {initialData.productionOrderNumber || id}
@@ -291,258 +276,281 @@ export default function EditProductionOrder() {
       </Stack>
 
       {apiError && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => dispatch(resetUploadState())}>
+        <Alert severity="error" sx={{ mb: 2, borderRadius: "8px" }} onClose={() => dispatch(resetUploadState())}>
           {apiError}
         </Alert>
       )}
 
-      <Card elevation={3} sx={{ borderRadius: 2 }}>
-        <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container spacing={3}>
-              {/* Row 1: PO Number, LN Item Code, Item Description */}
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="productionOrderNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="PO Number"
-                      fullWidth
-                      size="small"
-                      disabled
-                      sx={{ bgcolor: "#f5f5f5" }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="itemCode"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Item Code"
-                      fullWidth
-                      size="small"
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                      sx={{ 
-                        bgcolor: "#f5f5f5",
-                        "& .MuiInputBase-input": {
-                          color: "rgba(0, 0, 0, 0.38)",
-                          WebkitTextFillColor: "rgba(0, 0, 0, 0.38)",
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="itemDescription"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Item Description"
-                      fullWidth
-                      size="small"
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                      sx={{ 
-                        bgcolor: "#f5f5f5",
-                        "& .MuiInputBase-input": {
-                          color: "rgba(0, 0, 0, 0.38)",
-                          WebkitTextFillColor: "rgba(0, 0, 0, 0.38)",
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Row 2: Project Number, Project Description, Prod Series */}
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="projectCode"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Project Code"
-                      fullWidth
-                      size="small"
-                     
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="projectDescription"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Project Description"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label="Prod Series"
-                  fullWidth
-                  size="small"
-                  value={selectedProductionSeries?.productionSeries || ""}
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  sx={{ 
-                    bgcolor: "#f5f5f5",
-                    "& .MuiInputBase-input": {
-                      color: "rgba(0, 0, 0, 0.38)",
-                      WebkitTextFillColor: "rgba(0, 0, 0, 0.38)",
-                    },
-                  }}
-                />
-              </Grid>
-
-              {/* Row 3: start ID, Quantity, MRIR number */}
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="startIdNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Start ID Number"
-                      type="number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="quantity"
-                  control={control}
-                  rules={{ required: "Quantity is required", min: 1 }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Quantity *"
-                      type="number"
-                      fullWidth
-                      size="small"
-                      error={!!errors.quantity}
-                      helperText={errors.quantity?.message}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="mrirNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="MRIR Number"
-                      fullWidth
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
-                    />
-                    
-                  )}
-                />  
-              </Grid>
-              {/* {watchPrecheckStatus !== 4 && ( */}
-                <Grid item xs={12} md={4}>
-                  <Controller
-                    name="min"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Min Number"
-                        fullWidth
-                        size="small"
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    )}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #E9EAEB",
+          backgroundColor: "#ffffff",
+          p: { xs: 2, sm: 3 },
+        }}
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Grid container spacing={2.5}>
+            {/* Row 1: PO Number, LN Item Code, Item Description */}
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="productionOrderNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="PO Number"
+                    fullWidth
+                    size="small"
+                    disabled
+                    sx={{
+                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
+                      "& .MuiInputBase-input.Mui-disabled": { WebkitTextFillColor: "#344054", fontWeight: 600 },
+                    }}
                   />
-                </Grid>
-              {/* )} */}
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="snagSheetNo"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Snag Sheet Number"
-                      fullWidth
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="buildNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Build Number"
-                      fullWidth
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Action Buttons */}
-              <Grid item xs={12} sx={{ mt: 2 }}>
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button
-                    variant="outlined"
-                    onClick={handleBack}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    startIcon={
-                      loading ? (
-                        <CircularProgress size={20} color="inherit" />
-                      ) : (
-                        <SaveIcon />
-                      )
-                    }
-                    disabled={loading}
-                  >
-                    {loading ? "Updating..." : "Update Order"}
-                  </Button>
-                </Stack>
-              </Grid>
+                )}
+              />
             </Grid>
-          </form>
-        </CardContent>
-      </Card>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="itemCode"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Item Code"
+                    fullWidth
+                    size="small"
+                    InputProps={{ readOnly: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
+                      "& .MuiInputBase-input": { color: "#344054", fontWeight: 600 },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="itemDescription"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Item Description"
+                    fullWidth
+                    size="small"
+                    InputProps={{ readOnly: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
+                      "& .MuiInputBase-input": { color: "#344054" },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 2: Project Code, Project Description, Prod Series */}
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="projectCode"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Project Code"
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="projectDescription"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Project Description"
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Prod Series"
+                fullWidth
+                size="small"
+                value={selectedProductionSeries?.productionSeries || ""}
+                InputProps={{ readOnly: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
+                  "& .MuiInputBase-input": { color: "#344054", fontWeight: 600 },
+                }}
+              />
+            </Grid>
+
+            {/* Row 3: Start ID Number, Quantity, MRIR Number */}
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="startIdNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Start ID Number"
+                    type="number"
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="quantity"
+                control={control}
+                rules={{ required: "Quantity is required", min: 1 }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Quantity *"
+                    type="number"
+                    fullWidth
+                    size="small"
+                    error={!!errors.quantity}
+                    helperText={errors.quantity?.message}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="mrirNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="MRIR Number"
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* Row 4: Min Number, Snag Sheet Number, Build Number */}
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="min"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Min Number"
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="snagSheetNo"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Snag Sheet Number"
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Controller
+                name="buildNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Build Number"
+                    fullWidth
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Action Buttons */}
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ mt: 3, pt: 2, borderTop: "1px solid #EAECF0" }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleBack}
+              disabled={loading}
+              sx={{
+                borderColor: "#D0D5DD",
+                color: "#344054",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                borderRadius: "8px",
+                px: 2.5,
+                py: 0.75,
+                textTransform: "none",
+                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              size="small"
+              startIcon={
+                loading ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <SaveIcon sx={{ fontSize: 18 }} />
+                )
+              }
+              disabled={loading}
+              sx={{
+                backgroundColor: "primary.main",
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                borderRadius: "8px",
+                px: 3,
+                py: 0.75,
+                textTransform: "none",
+                boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
+            >
+              {loading ? "Updating..." : "Update Order"}
+            </Button>
+          </Stack>
+        </form>
+      </Paper>
 
       <Snackbar
         open={snackbarOpen}
@@ -550,7 +558,7 @@ export default function EditProductionOrder() {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: "100%" }}>
+        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: "100%", borderRadius: "8px" }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>

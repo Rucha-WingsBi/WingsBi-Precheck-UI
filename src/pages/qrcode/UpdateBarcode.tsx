@@ -1196,11 +1196,19 @@ const UpdateBarcode: React.FC = () => {
                       control={<Radio size="small" />}
                       label="Rejected"
                     />
-                    <FormControlLabel
-                      value="Used for QT"
-                      control={<Radio size="small" />}
-                      label="Used for QT"
-                    />
+                    {selectedComponentType === "FIM" || selectedComponentType === "SI" || formData.componentType === "FIM" || formData.componentType === "SI" ? (
+                      <FormControlLabel
+                        value="Send Back to Customer"
+                        control={<Radio size="small" />}
+                        label="Send Back to Customer"
+                      />
+                    ) : (
+                      <FormControlLabel
+                        value="Used for QT"
+                        control={<Radio size="small" />}
+                        label="Used for QT"
+                      />
+                    )}
                   </RadioGroup>
                 </Box>
               </Grid>
@@ -1243,9 +1251,9 @@ const UpdateBarcode: React.FC = () => {
               <Button
                 type="button"
                 variant="outlined"
-                size="medium"
+                size="small"
                 onClick={handleCancel}
-                sx={{ minWidth: 120, py: 1.5, height: 40 }}
+                sx={{ minWidth: 100 }}
               >
                 Cancel
               </Button>
@@ -1253,9 +1261,9 @@ const UpdateBarcode: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                size="medium"
+                size="small"
                 disabled={loading}
-                sx={{ minWidth: 200, py: 1.5, height: 40 }}
+                sx={{ minWidth: 140 }}
               >
                 {loading ? "Updating..." : "Update"}
               </Button>

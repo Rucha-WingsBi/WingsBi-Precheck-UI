@@ -40,9 +40,25 @@ export const getComponentTypeChip = (
 ) => {
   const type = componentType?.toUpperCase();
 
+  const getIcon = () => {
+    switch (type) {
+      case "ID":
+        return <QrCodeIcon />;
+      case "BATCH":
+        return <InventoryIcon />;
+      case "FIM":
+        return <CategoryIcon />;
+      case "SI":
+        return <SettingsIcon />;
+      default:
+        return undefined;
+    }
+  };
+
   if (isRejected) {
     return (
       <Chip
+        icon={getIcon()}
         label={type || "N/A"}
         size="small"
         color="error"
