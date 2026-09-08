@@ -27,7 +27,6 @@ import {
   Stack,
   Select,
   MenuItem as SelectMenuItem,
-  Tooltip,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -39,6 +38,7 @@ import {
   Add as AddIcon,
   KeyboardArrowDown as ArrowDownIcon,
   Article as ArticleIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import {
   fetchIRMSNList,
@@ -89,6 +89,12 @@ const ViewIRMSN: React.FC = () => {
   // Export Menu State
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  // Row Action Menu State
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<{
+    anchorEl: HTMLElement;
+    item: any;
+  } | null>(null);
 
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error" | "info" | null;
@@ -484,24 +490,53 @@ const ViewIRMSN: React.FC = () => {
               anchorEl={exportMenuAnchor}
               open={Boolean(exportMenuAnchor)}
               onClose={handleExportClose}
+              transformOrigin={{ horizontal: "right", vertical: "top" }}
+              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               PaperProps={{
-                elevation: 3,
-                sx: { minWidth: 180, borderRadius: 2, mt: 0.5 },
+                elevation: 0,
+                sx: {
+                  minWidth: 150,
+                  borderRadius: "6px",
+                  py: 0.25,
+                  px: 0.25,
+                  mt: 0.5,
+                  border: "1px solid #EAECF0",
+                  boxShadow: "0px 4px 12px rgba(16, 24, 40, 0.08)",
+                },
               }}
             >
-              <MenuItem onClick={() => executeExport("IR")}>
-                <ListItemIcon>
-                  <ArticleIcon fontSize="small" sx={{ color: "primary.main" }} />
+              <MenuItem
+                onClick={() => executeExport("IR")}
+                sx={{
+                  borderRadius: "4px",
+                  py: 0.4,
+                  px: 1,
+                  minHeight: "30px !important",
+                  color: "#344054",
+                  "&:hover": { backgroundColor: "#F9FAFB", color: "primary.main" },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "auto !important", mr: 1, color: "primary.main" }}>
+                  <ArticleIcon sx={{ fontSize: 16 }} />
                 </ListItemIcon>
-                <ListItemText primary="Export IR Report" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+                <ListItemText primary="Export IR Report" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
               </MenuItem>
-              <MenuItem onClick={() => executeExport("MSN")}>
-                <ListItemIcon>
-                  <ArticleIcon fontSize="small" sx={{ color: "#0078D4" }} />
+              <MenuItem
+                onClick={() => executeExport("MSN")}
+                sx={{
+                  borderRadius: "4px",
+                  py: 0.4,
+                  px: 1,
+                  minHeight: "30px !important",
+                  color: "#344054",
+                  "&:hover": { backgroundColor: "#F9FAFB", color: "#0078D4" },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "auto !important", mr: 1, color: "#0078D4" }}>
+                  <ArticleIcon sx={{ fontSize: 16 }} />
                 </ListItemIcon>
-                <ListItemText primary="Export MSN Report" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+                <ListItemText primary="Export MSN Report" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
               </MenuItem>
-             
             </Menu>
 
             {/* New IR/MSN Action Button */}
@@ -789,6 +824,12 @@ const ViewIRMSN: React.FC = () => {
                     "& .MuiOutlinedInput-root": {
                       borderRadius: "8px",
                       fontSize: "0.85rem",
+                      backgroundColor: "#ffffff",
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.85rem",
+                      backgroundColor: "#ffffff",
+                      px: 0.5,
                     },
                   },
                 },
@@ -807,6 +848,12 @@ const ViewIRMSN: React.FC = () => {
                     "& .MuiOutlinedInput-root": {
                       borderRadius: "8px",
                       fontSize: "0.85rem",
+                      backgroundColor: "#ffffff",
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.85rem",
+                      backgroundColor: "#ffffff",
+                      px: 0.5,
                     },
                   },
                 },
@@ -1264,25 +1311,24 @@ const ViewIRMSN: React.FC = () => {
                       <TableCell align="center">{item.stage || "-"}</TableCell>
                       <TableCell align="center">{item.buildNumber || "-"}</TableCell>
                       <TableCell align="center">
-                        <Tooltip title={`Edit ${item.recordType} Number`}>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              navigate(
-                                `/irmsn/edit/${item.recordType}/${encodeURIComponent(
-                                  item.displayNumber || ""
-                                )}`,
-                                { state: item }
-                              )
-                            }
-                            sx={{
-                              color: "primary.main",
-                              "&:hover": { backgroundColor: "rgba(168, 0, 90, 0.08)" },
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <IconButton
+                          size="small"
+                          onClick={(e) =>
+                            setActionMenuAnchor({
+                              anchorEl: e.currentTarget,
+                              item,
+                            })
+                          }
+                          sx={{
+                            color: "#667085",
+                            "&:hover": {
+                              backgroundColor: "#F2F4F7",
+                              color: "#101828",
+                            },
+                          }}
+                        >
+                          <MoreVertIcon fontSize="small" />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1383,6 +1429,62 @@ const ViewIRMSN: React.FC = () => {
             </Stack>
           </Box>
         </Paper>
+        {/* Row Action Menu */}
+        <Menu
+          anchorEl={actionMenuAnchor?.anchorEl}
+          open={Boolean(actionMenuAnchor)}
+          onClose={() => setActionMenuAnchor(null)}
+          transitionDuration={0}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          PaperProps={{
+            elevation: 0,
+            sx: {
+              minWidth: 90,
+              borderRadius: "6px",
+              py: 0.25,
+              px: 0.25,
+              border: "1px solid #EAECF0",
+              boxShadow: "0px 4px 12px rgba(16, 24, 40, 0.08)",
+            },
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              const targetItem = actionMenuAnchor?.item;
+              setActionMenuAnchor(null);
+              if (targetItem) {
+                navigate(
+                  `/irmsn/edit/${targetItem.recordType}/${encodeURIComponent(
+                    targetItem.displayNumber || ""
+                  )}`,
+                  { state: targetItem }
+                );
+              }
+            }}
+            sx={{
+              borderRadius: "4px",
+              py: 0.35,
+              px: 0.85,
+              minHeight: "28px !important",
+              color: "#344054",
+              transition: "all 0.15s ease-in-out",
+              "&:hover": {
+                backgroundColor: "#F9FAFB",
+                color: "primary.main",
+                "& .MuiListItemIcon-root": { color: "primary.main" },
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: "auto !important", mr: 0.85, color: "#667085" }}>
+              <EditIcon sx={{ fontSize: 14 }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Edit"
+              primaryTypographyProps={{ fontSize: "0.775rem", fontWeight: 500 }}
+            />
+          </MenuItem>
+        </Menu>
       </Box>
     </LocalizationProvider>
   );

@@ -3,38 +3,22 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
   Typography,
-  TextField,
+  Paper,
   Button,
   Grid,
   Alert,
-  Autocomplete,
-  CircularProgress,
-  Backdrop,
-  Card,
-  CardHeader,
-  Chip,
-  useTheme,
-  useMediaQuery,
-  Container,
-  Fade,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Tabs,
   Tab,
+  Stack,
+  Chip,
+  CircularProgress,
+  Backdrop,
 } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search as SearchIcon,
-  GetApp as ExportIcon,
-  Refresh as ResetIcon,
-  TableChart as TableIcon,
-  FilterList as FilterIcon,
-  ExpandMore as ExpandMoreIcon,
-  AccountTree as TreeIcon,
+  FileDownload as DownloadIcon,
 } from "@mui/icons-material";
-import { useForm, Controller } from "react-hook-form";
-import type { RootState } from "../../store/store";
+import { useForm } from "react-hook-form";
+import type { RootState, AppDispatch } from "../../store/store";
 import {
   getSopAssemblyData,
   exportSopAssemblyData,
@@ -45,6 +29,8 @@ import {
 import { useProductionSeries, useDrawingNumbers } from "../../hooks/useMasterData";
 import TreeTable from "../../components/TreeTable/TreeTable";
 import ViewBOM from "./ViewBOM";
+import { SopFilterCard } from "./components/SopFilterCard";
+import { NodeDetailsCard } from "./components/NodeDetailsCard";
 
 interface FormData {
   prodSeriesId: number;
@@ -53,31 +39,26 @@ interface FormData {
 }
 
 const ViewSOP: React.FC = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
   const [activeTab, setActiveTab] = useState<"sop" | "bom">("sop");
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
 
   // Redux state
   const { assemblyData, isLoading, isExporting, error } = useSelector(
     (state: RootState) => state.sop
   );
 
-  // Local state matching ViewModel
+  // Local state
   const [drwDisplayText, setDrwDisplayText] = useState("");
   const [debouncedDrwText, setDebouncedDrwText] = useState("");
   const [selectedDrawingNumber, setSelectedDrawingNumber] = useState<any>(null);
   const [isDRWDropDownOpen, setIsDRWDropDownOpen] = useState(false);
   const [isSelectingItem, setIsSelectingItem] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [showFilters, setShowFilters] = useState(true);
   const [prodSeriesInputText, setProdSeriesInputText] = useState("");
+  const [selectedNode, setSelectedNode] = useState<any>(null);
   const treeTableRef = useRef<any>(null);
 
-  // Debounce drawing number query to limit API network spam on every keystroke
+  // Debounce drawing number query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedDrwText(drwDisplayText);
@@ -88,140 +69,102 @@ const ViewSOP: React.FC = () => {
   // TanStack Query Hooks
   const { data: productionSeriesData = [] } = useProductionSeries();
   const { data: drawingNumbersData = [], isLoading: isDrawingNumbersLoading } = useDrawingNumbers(
-    '',
-    debouncedDrwText.length >= 3 ? debouncedDrwText : ''
+    "",
+    debouncedDrwText.length >= 3 ? debouncedDrwText : ""
   );
 
-  // Tree table columns configuration
+  // All 15 Tree table columns preserved
   const treeColumns = [
     {
-      id: 'serialNumber',
-      label: 'Sr. No.',
-      minWidth: 80,
-      align: 'center' as const,
+      id: "serialNumber",
+      label: "Sr. No.",
+      minWidth: 70,
+      align: "center" as const,
       format: (_: any, __: any, index?: number) => (
-        <Typography
-          variant="body2"
-          sx={{ fontSize: '0.8rem', color: '#64748b' }}
-        >
-          {index !== undefined ? index + 1 : ''}
+        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#64748b" }}>
+          {index !== undefined ? index + 1 : ""}
         </Typography>
       ),
     },
     {
-      id: 'level',
-      label: 'Level',
-      minWidth: 80,
-      align: 'center' as const,
+      id: "level",
+      label: "Level",
+      minWidth: 70,
+      align: "center" as const,
       format: (value: any, row: any) => (
         <Typography
           variant="body2"
           sx={{
-            fontSize: '0.8rem',
+            fontSize: "0.8rem",
             fontWeight: row.level === 0 ? 600 : row.level === 1 ? 500 : 400,
-            color: row.level === 0 ? '#1976d2' : row.level === 1 ? '#2e7d32' : '#64748b'
+            color: row.level === 0 ? "primary.main" : row.level === 1 ? "#2e7d32" : "#64748b",
           }}
         >
-          {value !== undefined && value !== null ? value : '0'}
+          {value !== undefined && value !== null ? value : "0"}
         </Typography>
       ),
     },
     {
-      id: 'findNo',
-      label: 'Position No',
-      minWidth: 100,
-      align: 'center' as const,
+      id: "findNo",
+      label: "Position No",
+      minWidth: 90,
+      align: "center" as const,
       format: (value: any, row: any) => (
         <Typography
           variant="body2"
           sx={{
-            fontSize: '0.8rem',
+            fontSize: "0.8rem",
             fontWeight: row.level === 0 ? 600 : row.level === 1 ? 500 : 400,
-            color: row.level === 0 ? '#1976d2' : row.level === 1 ? '#2e7d32' : '#64748b'
+            color: row.level === 0 ? "primary.main" : row.level === 1 ? "#2e7d32" : "#64748b",
           }}
         >
-          {value || '-'}
+          {value || "-"}
         </Typography>
       ),
     },
     {
-      id: 'drawingNumber',
-      label: 'Drawing Number',
-      minWidth: 300,
-      align: 'center' as const,
+      id: "drawingNumber",
+      label: "Drawing Number · Nomenclature",
+      minWidth: 280,
+      align: "left" as const,
       format: (value: any, row: any) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflow: 'hidden', width: '100%' }}>
+        <Box sx={{ overflow: "hidden", width: "100%" }}>
           <Typography
             variant="body2"
             sx={{
-              fontWeight: row.level === 0 ? 600 : row.level === 1 ? 500 : 400,
-              color: row.level === 0 ? '#1976d2' : row.level === 1 ? '#2e7d32' : '#424242',
-              fontSize: { xs: '0.7rem', md: '0.8rem' },
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              width: '100%'
+              fontWeight: row.level === 0 ? 700 : row.level === 1 ? 600 : 500,
+              color: row.level === 0 ? "#101828" : row.level === 1 ? "#344054" : "#475467",
+              fontSize: "0.85rem",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             {value}
           </Typography>
+          {row.nomenclature && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: "#667085",
+                fontSize: "0.75rem",
+                display: "block",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {row.nomenclature}
+            </Typography>
+          )}
         </Box>
       ),
     },
     {
-      id: 'nomenclature',
-      label: 'Nomenclature',
-      minWidth: 300,
-      align: 'center' as const,
-      format: (value: any, row: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontWeight: row.level === 0 ? 500 : 400,
-            color: row.level === 0 ? '#1e293b' : '#374151',
-            lineHeight: 1.2,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value}
-        </Typography>
-      ),
-    },
-    {
-      id: 'idNumber',
-      label: 'ID No',
-      minWidth: 100,
-      align: 'center' as const,
-      format: (value: any, row: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontFamily: 'monospace',
-            backgroundColor: row.level === 0 ? '#f8fafc' : 'transparent',
-            px: row.level === 0 ? 0.5 : 0,
-            py: row.level === 0 ? 0.25 : 0,
-            borderRadius: 0.5,
-            fontWeight: row.level === 0 ? 500 : 400,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value}
-        </Typography>
-      ),
-    },
-    {
-      id: 'quantity',
-      label: 'Qty',
+      id: "quantity",
+      label: "Qty/Assy",
       minWidth: 80,
-      align: 'center' as const,
+      align: "center" as const,
       format: (value: any, row: any) => {
         const formattedValue =
           value !== undefined && value !== null && value !== "" && !isNaN(Number(value))
@@ -231,13 +174,9 @@ const ViewSOP: React.FC = () => {
           <Typography
             variant="body2"
             sx={{
-              fontWeight: 600,
-              color: row.level === 0 ? '#1976d2' : '#059669',
-              fontSize: { xs: '0.7rem', md: '0.8rem' },
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              width: '100%'
+              fontWeight: 700,
+              color: row.level === 0 ? "primary.main" : "#027A48",
+              fontSize: "0.85rem",
             }}
           >
             {formattedValue}
@@ -246,191 +185,173 @@ const ViewSOP: React.FC = () => {
       },
     },
     {
-      id: 'unit',
-      label: 'Unit',
-      minWidth: 80,
-      align: 'center' as const,
+      id: "unit",
+      label: "Unit",
+      minWidth: 70,
+      align: "center" as const,
       format: (value: any, row: any) => (
         <Typography
           variant="body2"
           sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontStyle: !value ? 'italic' : 'normal',
-            color: !value ? '#9ca3af' : row.level === 0 ? '#374151' : '#6b7280',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
+            fontSize: "0.8rem",
+            color: !value ? "#98A2B3" : row.level === 0 ? "#344054" : "#667085",
           }}
         >
-          {value || '-'}
+          {value || "-"}
         </Typography>
       ),
     },
     {
-      id: 'irNumber',
-      label: 'IR Number',
-      minWidth: 200,
-      align: 'center' as const,
-      format: (value: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontFamily: 'monospace',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value || '-'}
-        </Typography>
-      ),
-    },
-    {
-      id: 'msnNumber',
-      label: 'MSN Number',
-      minWidth: 200,
-      align: 'center' as const,
-      format: (value: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontFamily: 'monospace',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value || '-'}
-        </Typography>
-      ),
-    },
-    {
-      id: 'remarks',
-      label: 'Remarks',
-      minWidth: 250,
-      align: 'center' as const,
-      format: (value: any, row: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontStyle: !value ? 'italic' : 'normal',
-            color: !value ? '#9ca3af' : row.level === 0 ? '#374151' : '#6b7280',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value || '-'}
-        </Typography>
-      ),
-    },
-    {
-      id: 'assemblyNumber',
-      label: 'Assembly No',
-      minWidth: 300,
-      align: 'center' as const,
-      format: (value: any, row: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontFamily: 'monospace',
-            fontWeight: row.level === 0 ? 500 : 400,
-            color: row.level === 0 ? '#1976d2' : '#374151',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value || '-'}
-        </Typography>
-      ),
-    },
-    {
-      id: 'build',
-      label: 'Build Number',
+      id: "componentType",
+      label: "Component Type",
       minWidth: 120,
-      align: 'center' as const,
+      align: "center" as const,
+      format: (value: any, row: any) => {
+        const typeLabel =
+          value ||
+          row.componentType ||
+          row.itemType ||
+          row.type ||
+          row.component_Type ||
+          row.drawingType ||
+          (row.hasChildren ? "Assembly" : "Manufactured");
+        return (
+          <Chip
+            label={typeLabel}
+            size="small"
+            variant="outlined"
+            sx={{
+              fontSize: "0.725rem",
+              height: 22,
+              fontWeight: 600,
+              borderColor:
+                typeLabel === "Assembly"
+                  ? "#B2DDFF"
+                  : typeLabel === "Bought-out" || typeLabel === "Purchase"
+                  ? "#FEDF89"
+                  : "#EAECF0",
+              color:
+                typeLabel === "Assembly"
+                  ? "#175CD3"
+                  : typeLabel === "Bought-out" || typeLabel === "Purchase"
+                  ? "#B54708"
+                  : "#344054",
+              backgroundColor:
+                typeLabel === "Assembly"
+                  ? "#EFF8FF"
+                  : typeLabel === "Bought-out" || typeLabel === "Purchase"
+                  ? "#FEF0C7"
+                  : "#F9FAFB",
+            }}
+          />
+        );
+      },
+    },
+    {
+      id: "idNumber",
+      label: "ID No",
+      minWidth: 100,
+      align: "center" as const,
       format: (value: any, row: any) => (
         <Typography
           variant="body2"
           sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontStyle: !value ? 'italic' : 'normal',
-            color: !value ? '#9ca3af' : row.level === 0 ? '#374151' : '#6b7280',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
+            fontSize: "0.8rem",
+            fontFamily: "monospace",
+            fontWeight: row.level === 0 ? 600 : 400,
           }}
         >
-          {value || '-'}
+          {value || "-"}
         </Typography>
       ),
     },
     {
-      id: 'snag_Sheet_No',
-      label: 'Snag Sheet Number',
-      minWidth: 160,
-      align: 'center' as const,
-      format: (value: any, row: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontStyle: !value ? 'italic' : 'normal',
-            color: !value ? '#9ca3af' : row.level === 0 ? '#374151' : '#6b7280',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value || '-'}
+      id: "irNumber",
+      label: "IR Number",
+      minWidth: 140,
+      align: "center" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem", fontFamily: "monospace" }}>
+          {value || "-"}
         </Typography>
       ),
     },
     {
-      id: 'mrirNumber',
-      label: 'MRIR Number',
+      id: "msnNumber",
+      label: "MSN Number",
+      minWidth: 140,
+      align: "center" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem", fontFamily: "monospace" }}>
+          {value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      id: "remarks",
+      label: "Remarks",
       minWidth: 160,
-      align: 'center' as const,
-      format: (value: any, row: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            fontSize: { xs: '0.7rem', md: '0.8rem' },
-            fontStyle: !value ? 'italic' : 'normal',
-            color: !value ? '#9ca3af' : row.level === 0 ? '#374151' : '#6b7280',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%'
-          }}
-        >
-          {value || '-'}
+      align: "left" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#667085" }}>
+          {value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      id: "assemblyNumber",
+      label: "Assembly No",
+      minWidth: 160,
+      align: "center" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem", fontFamily: "monospace" }}>
+          {value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      id: "build",
+      label: "Build Number",
+      minWidth: 110,
+      align: "center" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+          {value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      id: "snag_Sheet_No",
+      label: "Snag Sheet Number",
+      minWidth: 150,
+      align: "center" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+          {value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      id: "mrirNumber",
+      label: "MRIR Number",
+      minWidth: 140,
+      align: "center" as const,
+      format: (value: any) => (
+        <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+          {value || "-"}
         </Typography>
       ),
     },
   ];
 
   // Form setup
-  const { control, reset, setValue, getValues, watch } =
-    useForm<FormData>({
-      defaultValues: {
-        prodSeriesId: 0,
-        drawingNumberId: 0,
-        assemblyNumber: "",
-      },
-    });
+  const { control, reset, setValue, getValues, watch } = useForm<FormData>({
+    defaultValues: {
+      prodSeriesId: 0,
+      drawingNumberId: 0,
+      assemblyNumber: "",
+    },
+  });
 
   const watchProdSeriesId = watch("prodSeriesId");
   const watchDrawingNumberId = watch("drawingNumberId");
@@ -440,7 +361,6 @@ const ViewSOP: React.FC = () => {
   const transformToTreeData = useCallback((data: any[]) => {
     if (!data || data.length === 0) return [];
 
-    // Pass 1: Create a list with resolved IDs and initial parentIds
     const rawItems = data.map((item, index) => {
       const defaultLevel = item.drawingNumber?.includes("-")
         ? item.drawingNumber.split("-").length - 1
@@ -448,76 +368,57 @@ const ViewSOP: React.FC = () => {
 
       return {
         ...item,
-        id: (item.id !== undefined && item.id !== null) ? item.id : (item.serialNumber || index + 1),
-        parentId: (item.parentId !== undefined && item.parentId !== null) ? item.parentId : (item.parentAssemblyId || null),
+        id: item.id !== undefined && item.id !== null ? item.id : item.serialNumber || index + 1,
+        parentId: item.parentId !== undefined && item.parentId !== null ? item.parentId : item.parentAssemblyId || null,
         level: item.level !== undefined ? item.level : defaultLevel,
         hasChildren: item.hasChildren !== undefined ? item.hasChildren : false,
         isExpanded: item.isExpanded !== undefined ? item.isExpanded : false,
       };
     });
 
-    // Build a map of drawing number to node for quick lookup
     const drawingToNodeMap = new Map<string, any>();
-    rawItems.forEach(item => {
+    rawItems.forEach((item) => {
       if (item.drawingNumber) {
         drawingToNodeMap.set(item.drawingNumber, item);
       }
     });
 
-    // Pass 2: Resolve parentId for all nodes and track parent relations in Sets
     const parentIdsSet = new Set<string | number>();
     const parentDrawingNumbersSet = new Set<string>();
 
-    const itemsWithResolvedParents = rawItems.map(item => {
+    const itemsWithResolvedParents = rawItems.map((item) => {
       let parentId = item.parentId;
 
-      // 1. Resolve parentId by parentDrawingNumber
       if (!parentId && item.parentDrawingNumber) {
         const parentNode = drawingToNodeMap.get(item.parentDrawingNumber);
-        if (parentNode) {
-          parentId = parentNode.id;
-        }
+        if (parentNode) parentId = parentNode.id;
       }
 
-      // 2. Resolve parentId by parentAssemblyId
       if (!parentId && item.parentAssemblyId) {
         parentId = item.parentAssemblyId;
       }
 
-      // 3. Fallback: Resolve parentId by drawing number pattern
       if (!parentId && item.drawingNumber) {
         const parts = item.drawingNumber.split("-");
         if (parts.length > 1) {
           const parentDrawing = parts.slice(0, -1).join("-");
           const parentNode = drawingToNodeMap.get(parentDrawing);
-          if (parentNode) {
-            parentId = parentNode.id;
-          }
+          if (parentNode) parentId = parentNode.id;
         }
       }
 
-      // Track parent-child relationships for O(1) lookup later
-      if (parentId) {
-        parentIdsSet.add(parentId);
-      }
-      if (item.parentDrawingNumber) {
-        parentDrawingNumbersSet.add(item.parentDrawingNumber);
-      }
+      if (parentId) parentIdsSet.add(parentId);
+      if (item.parentDrawingNumber) parentDrawingNumbersSet.add(item.parentDrawingNumber);
 
-      return {
-        ...item,
-        parentId,
-      };
+      return { ...item, parentId };
     });
 
-    // Update idToNodeMap with the resolved parentIds
     const resolvedIdToNodeMap = new Map<string | number, any>();
-    itemsWithResolvedParents.forEach(item => {
+    itemsWithResolvedParents.forEach((item) => {
       resolvedIdToNodeMap.set(item.id, item);
     });
 
-    // Pass 3: Walk up hierarchy to resolve levels and check hasChildren in O(1)
-    const processedData = itemsWithResolvedParents.map(item => {
+    return itemsWithResolvedParents.map((item) => {
       let level = item.level;
       let parentId = item.parentId;
 
@@ -526,7 +427,6 @@ const ViewSOP: React.FC = () => {
         let count = 0;
         while (currentParent && count < 10) {
           count++;
-          // check if parent has a parent
           let nextParentId = currentParent.parentId;
           if (!nextParentId && currentParent.parentDrawingNumber) {
             const nextParentNode = drawingToNodeMap.get(currentParent.parentDrawingNumber);
@@ -537,8 +437,8 @@ const ViewSOP: React.FC = () => {
         level = count;
       }
 
-      // O(1) Check using sets
-      const hasChildren = item.hasChildren ||
+      const hasChildren =
+        item.hasChildren ||
         parentIdsSet.has(item.id) ||
         (item.drawingNumber && parentDrawingNumbersSet.has(item.drawingNumber));
 
@@ -548,61 +448,47 @@ const ViewSOP: React.FC = () => {
         hasChildren,
       };
     });
-
-    return processedData;
   }, []);
 
-  // Get tree data
   const treeData = useMemo(() => {
     return transformToTreeData(assemblyData);
   }, [assemblyData, transformToTreeData]);
 
-  // Debounced drawing number search - matches LoadDRWNumbers logic
-  // Handled by hooks
+  // Set default selected node to root when tree loads
+  useEffect(() => {
+    if (treeData && treeData.length > 0 && !selectedNode) {
+      setSelectedNode(treeData[0]);
+    }
+  }, [treeData, selectedNode]);
 
-  // Handled by hooks
-
-  // Clear Redux assembly data when navigating away from ViewSOP page
+  // Clear Redux assembly data on unmount
   useEffect(() => {
     return () => {
       dispatch(clearAssemblyData());
     };
   }, [dispatch]);
 
-  // Clear messages
+  // Clear success messages after delay
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 3000);
+      const timer = setTimeout(() => setSuccessMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
-  // Validate required fields - matches ValidateRequiredFields
   const validateRequiredFields = useCallback((): string[] => {
     const values = getValues();
     const missingFields: string[] = [];
-
-    if (!values.drawingNumberId || values.drawingNumberId <= 0) {
-      missingFields.push("Drawing Number");
-    }
-
-    if (!values.prodSeriesId || values.prodSeriesId <= 0) {
-      missingFields.push("Series Number");
-    }
-
+    if (!values.drawingNumberId || values.drawingNumberId <= 0) missingFields.push("Drawing Number");
+    if (!values.prodSeriesId || values.prodSeriesId <= 0) missingFields.push("Series Number");
     return missingFields;
   }, [getValues]);
 
-  // Handle search - matches ExecuteSearch
   const executeSearch = useCallback(async () => {
     try {
       const missingFields = validateRequiredFields();
       if (missingFields.length > 0) {
-        setSuccessMessage(
-          `Please fill the following required fields: ${missingFields.join(
-            ", "
-          )}`
-        );
+        setSuccessMessage(`Please fill required fields: ${missingFields.join(", ")}`);
         return;
       }
 
@@ -615,6 +501,7 @@ const ViewSOP: React.FC = () => {
       };
 
       setSuccessMessage("");
+      setSelectedNode(null);
       dispatch(setSearchCriteria(request));
       const action = getSopAssemblyData(request);
       const result = await dispatch(action as any);
@@ -624,11 +511,9 @@ const ViewSOP: React.FC = () => {
         Array.isArray(result.payload) &&
         result.payload.length > 0
       ) {
-        setSuccessMessage(
-          `Found ${result.payload.length} records matching your criteria.`
-        );
+        setSuccessMessage(`Loaded ${result.payload.length} records matching criteria.`);
       } else {
-        setSuccessMessage("No records found matching your criteria.");
+        setSuccessMessage("No records found matching criteria.");
       }
     } catch (error) {
       console.error("Error during search:", error);
@@ -636,23 +521,16 @@ const ViewSOP: React.FC = () => {
     }
   }, [dispatch, validateRequiredFields, getValues, selectedDrawingNumber, drwDisplayText]);
 
-  // Handle export - matches ExecuteExport
   const executeExport = useCallback(async () => {
     try {
       const missingFields = validateRequiredFields();
       if (missingFields.length > 0) {
-        setSuccessMessage(
-          `Please fill the following required fields before exporting: ${missingFields.join(
-            ", "
-          )}`
-        );
+        setSuccessMessage(`Please select required fields before exporting.`);
         return;
       }
 
       if (!assemblyData || assemblyData.length === 0) {
-        setSuccessMessage(
-          "No data available to export. Please perform a search first."
-        );
+        setSuccessMessage("No data available to export. Please perform a search first.");
         return;
       }
 
@@ -672,28 +550,22 @@ const ViewSOP: React.FC = () => {
     }
   }, [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText]);
 
-  // Handle reset - matches ExecuteReset
   const executeReset = useCallback(() => {
-    // Clear all form values
     reset({
       prodSeriesId: 0,
       drawingNumberId: 0,
       assemblyNumber: "",
     });
-
-    // Clear local state
     setDrwDisplayText("");
     setProdSeriesInputText("");
     setSelectedDrawingNumber(null);
     setIsDRWDropDownOpen(false);
     setIsSelectingItem(false);
     setSuccessMessage("");
-
-    // Clear Redux state
+    setSelectedNode(null);
     dispatch(clearAssemblyData());
   }, [reset, dispatch]);
 
-  // Handle drawing number selection
   const handleDrawingNumberChange = useCallback(
     (newValue: any) => {
       if (newValue) {
@@ -713,650 +585,295 @@ const ViewSOP: React.FC = () => {
     [setValue]
   );
 
-  // Handle tree node click to expand/collapse
-  const handleTreeNodeClick = useCallback((row: any) => {
-    console.log('Tree node clicked:', row);
+  // Compute stats for current tree summary
+  const rootNode = treeData.length > 0 ? treeData[0] : null;
+  const maxLevels = useMemo(() => {
+    if (!treeData.length) return 0;
+    return Math.max(...treeData.map((d: any) => d.level || 0)) + 1;
+  }, [treeData]);
 
-    // You can add custom logic here for node interaction
-    if (row.hasChildren) {
-      // Toggle expansion state
-      // Note: This would require state management to persist the expansion
-      console.log('Toggling expansion for:', row.drawingNumber);
-    }
-
-    // Add any additional click functionality here
-    // For example: show details modal, highlight related items, etc.
-  }, []);
+  const selectedChildCount = useMemo(() => {
+    if (!selectedNode || !treeData.length) return 0;
+    return treeData.filter((d: any) => d.parentId === selectedNode.id || d.parentDrawingNumber === selectedNode.drawingNumber).length;
+  }, [selectedNode, treeData]);
 
   return (
-
-    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
-        {/* Header Navigation Bar with Tabs */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
-            borderBottom: 1,
-            borderColor: "divider",
-            pb: 0.5,
-          }}
-        >
+    <Box
+      sx={{
+        py: { xs: 1, sm: 1.25 },
+        px: { xs: 1.5, sm: 2 },
+        minHeight: "calc(100vh - 64px)",
+        backgroundColor: "#FAFAFA",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Top Header */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={1.5}
+        sx={{ mb: 1 }}
+      >
+        <Box>
           <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={600}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-          >
-            {activeTab === "bom" ? "View BOM Details" : "View SOP"}
-          </Typography>
-
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
+            variant="h5"
             sx={{
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 100,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.2rem", sm: "1.35rem" },
             }}
           >
-            <Tab label="View SOP" value="sop" />
-            <Tab label="View BOM" value="bom" />
-          </Tabs>
+            Assembly Explorer
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.825rem", mt: 0.15 }}>
+            {activeTab === "sop"
+              ? "Browse the BOM tree of a production order"
+              : "Browse the BOM tree of an Assembly"}
+          </Typography>
         </Box>
 
-        {activeTab === "sop" ? (
-          <>
-        {/* Success/Error Messages */}
-        <Fade in={!!(successMessage || error)}>
-          <Box sx={{ mb: 2 }}>
-            {successMessage && (
-              <Alert
-                severity={
-                  successMessage.includes("Error") ||
-                    successMessage.includes("Please fill")
-                    ? "error"
-                    : successMessage.includes("No records found")
-                    ? "warning"
-                    : "success"
-                }
-                sx={{
-                  mb: 1,
-                  borderRadius: 2,
-                  "& .MuiAlert-message": {
-                    fontSize: { xs: "0.875rem", md: "1rem" },
-                  },
-                }}
-                onClose={() => setSuccessMessage("")}
-              >
-                {successMessage}
-              </Alert>
-            )}
-
-            {error && (
-              <Alert
-                severity="error"
-                sx={{
-                  borderRadius: 2,
-                  "& .MuiAlert-message": {
-                    fontSize: { xs: "0.875rem", md: "1rem" },
-                  },
-                }}
-                onClose={() => dispatch(clearError())}
-              >
-                {error}
-              </Alert>
-            )}
-          </Box>
-        </Fade>
-        {/* Search Filters Card */}
-        <Card
-          elevation={0}
-          sx={{
-            mb: 2,
-            border: "1px solid #e2e8f0",
-            borderRadius: 2,
-            overflow: "hidden",
-            background: "white",
-          }}
-        >
-          <Accordion
-            expanded={showFilters || !isMobile}
-            onChange={() => isMobile && setShowFilters(!showFilters)}
-            sx={{
-              boxShadow: "none",
-              "&:before": { display: "none" },
-            }}
-          >
-            <AccordionSummary
-              expandIcon={isMobile ? <ExpandMoreIcon /> : null}
-              sx={{
-                backgroundColor: "#f8fafc",
-                borderBottom: "1px solid #e2e8f0",
-                py: 0.5,
-                minHeight: "36px !important",
-                "& .MuiAccordionSummary-content": {
-                  alignItems: "center",
-                  margin: "4px 0 !important",
-                },
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <FilterIcon sx={{ color: "#A8005A", fontSize: 20 }} />
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontSize: { xs: "0.9rem", md: "1rem" },
-                    fontWeight: 500,
-                    color: "#1e293b",
-
-                  }}
-                >
-                  Search Filters
-                </Typography>
-              </Box>
-            </AccordionSummary>
-
-            <AccordionDetails sx={{ p: { xs: 1.5, md: 2 } }}>
-              <Grid container spacing={1} alignItems="end">
-                {/* Production Series */}
-                <Grid item xs={12} sm={6} md={3}>
-                  <Controller
-                    name="prodSeriesId"
-                    control={control}
-                    render={({ field: { onChange, value } }) => {
-                      const selectedOption =
-                        productionSeriesData.find(
-                          (s: any) => s.id === value
-                        ) || null;
-                      return (
-                        <Autocomplete
-                          key={value || 0}
-                          size="small"
-                          freeSolo
-                          options={productionSeriesData}
-                          getOptionLabel={(option: any) => {
-                            if (typeof option === "string") return option;
-                            return option.productionSeries || "";
-                          }}
-                          value={selectedOption}
-                          inputValue={prodSeriesInputText}
-                          onInputChange={(_, newInputValue) => {
-                            setProdSeriesInputText(newInputValue);
-                            const match = productionSeriesData.find(
-                              (s: any) =>
-                                s.productionSeries?.toLowerCase() ===
-                                newInputValue.trim().toLowerCase()
-                            );
-                            if (match) {
-                              onChange(match.id);
-                            } else if (!newInputValue) {
-                              onChange(0);
-                            }
-                          }}
-                          onChange={(_, newValue: any) => {
-                            if (newValue && typeof newValue !== "string") {
-                              onChange(newValue.id);
-                              setProdSeriesInputText(newValue.productionSeries || "");
-                            } else if (typeof newValue === "string") {
-                              const match = productionSeriesData.find(
-                                (s: any) =>
-                                  s.productionSeries?.toLowerCase() ===
-                                  newValue.toLowerCase()
-                              );
-                              onChange(match ? match.id : 0);
-                              setProdSeriesInputText(newValue);
-                            } else {
-                              onChange(0);
-                              setProdSeriesInputText("");
-                            }
-                          }}
-                          renderOption={(props, option: any) => (
-                            <li {...props} key={option.id}>
-                              <Typography variant="body2">
-                                {option.productionSeries}
-                              </Typography>
-                            </li>
-                          )}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="Production Series *"
-                              placeholder="Type to search series..."
-                              sx={{
-                                "& .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: "#d1d5db",
-                                },
-                                "&:hover .MuiOutlinedInput-notchedOutline": {
-                                  borderColor: "#A8005A",
-                                },
-                              }}
-                            />
-                          )}
-                        />
-                      );
-                    }}
-                  />
-                </Grid>
-
-                {/* Drawing Number */}
-                <Grid item xs={12} sm={6} md={3}>
-                  <Autocomplete
-                    options={drawingNumbersData || []}
-                    filterOptions={(options, { inputValue }) => {
-                      if (inputValue.length < 3) return [];
-                      return options.slice(0, 100);
-                    }}
-                    getOptionLabel={(option: any) => option.drawingNumber || ""}
-                    value={selectedDrawingNumber}
-                    onChange={(_, newValue) =>
-                      handleDrawingNumberChange(newValue)
-                    }
-                    inputValue={drwDisplayText}
-                    onInputChange={(_, newInputValue) => {
-                      if (!isSelectingItem) {
-                        setDrwDisplayText(newInputValue);
-                      }
-                    }}
-                    open={isDRWDropDownOpen}
-                    onOpen={() => setIsDRWDropDownOpen(true)}
-                    onClose={() => setIsDRWDropDownOpen(false)}
-                    loading={false} // Hook handles loading
-                    size="small"
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Drawing Number *"
-                        placeholder="Type 3+ characters..."
-                        sx={{
-                          "& .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#d1d5db",
-                          },
-                          "&:hover .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#A8005A",
-                          },
-                        }}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {isDrawingNumbersLoading ? (
-                                <CircularProgress color="inherit" size={16} />
-                              ) : null}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                    renderOption={(props, option: any) => (
-                      <li {...props}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', py: 1 }}>
-                          <Typography variant="body1">
-                            {option.drawingNumber}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {option.nomenclature}
-                          </Typography>
-                        </Box>
-                      </li>
-                    )}
-                    noOptionsText={
-                      drwDisplayText.length < 3
-                        ? "Type 3+ characters"
-                        : "No drawing numbers found"
-                    }
-                  />
-                </Grid>
-
-                {/* Assembly ID Number */}
-                <Grid item xs={12} sm={6} md={2}>
-                  <Controller
-                    name="assemblyNumber"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="Assembly ID Number"
-                        placeholder="Enter assembly ID..."
-                        fullWidth
-                        size="small"
-                        sx={{
-                          "& .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#d1d5db",
-                          },
-                          "&:hover .MuiOutlinedInput-notchedOutline": {
-                            borderColor: "#A8005A",
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                {/* Action Buttons */}
-                <Grid item xs={12} sm={6} md={4}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 1,
-                      justifyContent: { xs: "center", md: "flex-start" },
-                      flexWrap: "no-wrap",
-                    }}
-                  >
-                    <Button
-                      variant="outlined"
-                      startIcon={<ResetIcon />}
-                      onClick={executeReset}
-                      disabled={!isSearchAndResetEnabled}
-                      size="small"
-                      sx={{
-                        minWidth: { xs: 80, md: 90 },
-                        height: 38,
-                        px: 1.5,
-                        borderColor: "#6b7280",
-                        color: "#6b7280",
-                        fontSize: "0.75rem",
-                        "&:hover": {
-                          borderColor: "#374151",
-                          backgroundColor: "#f9fafb",
-                          color: "#374151",
-                        },
-                      }}
-                    >
-                      Reset
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={<SearchIcon />}
-                      onClick={() => executeSearch()}
-                      disabled={isLoading || !isSearchAndResetEnabled}
-                      size="small"
-                      sx={{
-                        minWidth: { xs: 90, md: 100 },
-                        height: 38,
-                        px: 1.5,
-                        fontSize: "0.75rem",
-                        backgroundColor: "#2563eb",
-                        "&:hover": { backgroundColor: "#1d4ed8" },
-                        boxShadow: "0 1px 4px rgba(37, 99, 235, 0.3)",
-                      }}
-                    >
-                      {isLoading ? "Searching..." : "Search"}
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      startIcon={<ExportIcon />}
-                      onClick={executeExport}
-                      disabled={
-                        isExporting ||
-                        !assemblyData ||
-                        assemblyData.length === 0
-                      }
-                      size="small"
-                      sx={{
-                        minWidth: { xs: 90, md: 100 },
-                        height: 38,
-                        px: 1.5,
-                        fontSize: "0.75rem",
-                        backgroundColor: "#A8005A",
-                        "&:hover": { backgroundColor: "#920050" },
-                        boxShadow: "0 1px 4px rgba(168, 0, 90, 0.3)",
-                      }}
-                    >
-                      {isExporting ? "Exporting..." : "Export"}
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        </Card>
-
-        {/* Results Section */}
-        <Card
-          elevation={0}
-          sx={{
-            border: "1px solid #e2e8f0",
-            borderRadius: 3,
-            overflow: "hidden",
-            background: "white",
-          }}
-        >
-          <CardHeader
-            avatar={<TableIcon sx={{ color: "#A8005A" }} />}
-            title={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", width: "100%" }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontSize: { xs: "1rem", md: "1.125rem" },
-                    fontWeight: 600,
-                    color: "#1e293b",
-                  }}
-                >
-                  Assembly Data Results
-                </Typography>
-                {assemblyData && assemblyData.length > 0 && (
-                  <>
-                    <Chip
-                      label={`${assemblyData.length} records`}
-                      size="small"
-                      sx={{
-                        backgroundColor: "#dcfce7",
-                        color: "#166534",
-                        fontWeight: 600,
-                      }}
-                    />
-                    <Chip
-                      label={`${treeData.filter(item => item.level === 0).length} assemblies`}
-                      size="small"
-                      sx={{
-                        backgroundColor: "#e3f2fd",
-                        color: "#1976d2",
-                        fontWeight: 600,
-                      }}
-                    />
-                    <Box sx={{ display: "flex", gap: 1, ml: { xs: 0, sm: "auto" } }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => treeTableRef.current?.expandAll()}
-                        sx={{
-                          fontSize: "0.7rem",
-                          py: 0.25,
-                          px: 1,
-                          borderColor: "#2563eb",
-                          color: "#2563eb",
-                          textTransform: "none",
-                          "&:hover": {
-                            borderColor: "#1d4ed8",
-                            backgroundColor: "rgba(37, 99, 235, 0.04)",
-                          },
-                        }}
-                      >
-                        Expand All
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => treeTableRef.current?.collapseAll()}
-                        sx={{
-                          fontSize: "0.7rem",
-                          py: 0.35,
-                          px: 1,
-                          borderColor: "#6b7280",
-                          color: "#6b7280",
-                          textTransform: "none",
-                          "&:hover": {
-                            borderColor: "#374151",
-                            backgroundColor: "rgba(107, 114, 128, 0.04)",
-                          },
-                        }}
-                      >
-                        Collapse All
-                      </Button>
-                    </Box>
-                  </>
-                )}
-              </Box>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={executeExport}
+            disabled={isExporting || !assemblyData || assemblyData.length === 0}
+            startIcon={
+              isExporting ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <DownloadIcon sx={{ fontSize: 18 }} />
+              )
             }
             sx={{
-              backgroundColor: "#f8fafc",
-              borderBottom: "1px solid #e2e8f0",
-              py: { xs: 1.5, md: 2 },
-            }}
-          />
-
-          <Box sx={{ position: "relative" }}>
-            {/* Tree View */}
-            <Box sx={{
-              maxHeight: { xs: 450, sm: 550, md: 650, lg: 750 },
-              overflow: "auto",
-              border: "1px solid #e2e8f0",
-              borderRadius: 0,
-              "&::-webkit-scrollbar": {
-                width: 6,
-                height: 6,
-              },
-              "&::-webkit-scrollbar-track": {
-                backgroundColor: "#f1f5f9",
-                borderRadius: 3,
-              },
-              "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "#cbd5e1",
-                borderRadius: 3,
-                "&:hover": {
-                  backgroundColor: "#94a3b8",
-                },
-              },
-            }}>
-              {assemblyData && assemblyData.length > 0 ? (
-                <TreeTable
-                  ref={treeTableRef}
-                  data={treeData}
-                  columns={treeColumns}
-                  idField="id"
-                  parentIdField="parentId"
-                  height={isMobile ? 450 : isTablet ? 550 : 700}
-                  rowHeight={isMobile ? 40 : 44}
-                  enableVirtualization={assemblyData.length > 50}
-                  onRowClick={(row) => {
-                    handleTreeNodeClick(row);
-                  }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 1.5,
-                    py: { xs: 3, md: 4 },
-                    color: "#6b7280",
-                  }}
-                >
-                  <TreeIcon sx={{ fontSize: 40, color: "#d1d5db" }} />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontSize: { xs: "0.8rem", md: "0.9rem" },
-                      fontWeight: 500,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {isLoading
-                      ? "Loading tree structure..."
-                      : successMessage.includes("No records found")
-                      ? "No records found matching your criteria."
-                      : "No hierarchical data available. Please perform a search to view tree structure."}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </Card>
-      {/* Loading Backdrop */}
-      <Backdrop
-        sx={{
-          color: "#fff",
-          zIndex: theme.zIndex.modal + 1,
-          backdropFilter: "blur(4px)",
-        }}
-        open={isExporting}
-      >
-        <Card
-          elevation={8}
-          sx={{
-            p: 4,
-            borderRadius: 3,
-            textAlign: "center",
-            backgroundColor: "white",
-            color: "black",
-            minWidth: { xs: 280, md: 350 },
-            maxWidth: 400,
-            mx: 2,
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 3,
+              borderColor: "#D0D5DD",
+              color: "#344054",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              borderRadius: "8px",
+              px: 1.75,
+              py: 0.6,
+              textTransform: "none",
+              "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
             }}
           >
-            <CircularProgress
-              size={60}
-              sx={{
-                color: "#A8005A",
-              }}
-            />
-            <Box>
-              <Typography
-                variant="h6"
+            Export tree
+          </Button>
+        </Stack>
+      </Stack>
+
+      {/* Navigation Tabs Bar */}
+      <Box sx={{ borderBottom: "1px solid #EAECF0", mb: 1.25 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            minHeight: 36,
+            "& .MuiTab-root": {
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              textTransform: "none",
+              minWidth: 100,
+              py: 0.75,
+            },
+            "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "primary.main",
+              height: 3,
+              borderRadius: "3px 3px 0 0",
+            },
+          }}
+        >
+          <Tab label="View SOP" value="sop" />
+          <Tab label="View BOM" value="bom" />
+        </Tabs>
+      </Box>
+
+      {/* Success / Error Alerts */}
+      {(successMessage || error) && (
+        <Alert
+          severity={error ? "error" : successMessage.includes("fill") ? "error" : "success"}
+          sx={{ mb: 1.25, borderRadius: "8px", py: 0.25 }}
+          onClose={() => {
+            setSuccessMessage("");
+            dispatch(clearError());
+          }}
+        >
+          {error || successMessage}
+        </Alert>
+      )}
+
+      {/* Tab Panels */}
+      {activeTab === "sop" ? (
+        <>
+          {/* SOP Search Filter Card */}
+          <SopFilterCard
+            control={control}
+            productionSeriesData={productionSeriesData}
+            drawingNumbersData={drawingNumbersData}
+            isDrawingNumbersLoading={isDrawingNumbersLoading}
+            drwDisplayText={drwDisplayText}
+            setDrwDisplayText={setDrwDisplayText}
+            selectedDrawingNumber={selectedDrawingNumber}
+            handleDrawingNumberChange={handleDrawingNumberChange}
+            isDRWDropDownOpen={isDRWDropDownOpen}
+            setIsDRWDropDownOpen={setIsDRWDropDownOpen}
+            isSelectingItem={isSelectingItem}
+            prodSeriesInputText={prodSeriesInputText}
+            setProdSeriesInputText={setProdSeriesInputText}
+            executeSearch={executeSearch}
+            executeReset={executeReset}
+            isLoading={isLoading}
+            isSearchAndResetEnabled={isSearchAndResetEnabled}
+            executeExport={executeExport}
+            isExporting={isExporting}
+            hasAssemblyData={assemblyData && assemblyData.length > 0}
+          />
+
+          {/* 2-Column Assembly Tree & Node Details Layout */}
+          <Grid container spacing={1.5}>
+            {/* Left Panel: Assembly Tree Table */}
+            <Grid item xs={12} md={7.5} lg={8}>
+              <Paper
+                elevation={0}
                 sx={{
-                  fontSize: { xs: "1rem", md: "1.125rem" },
-                  fontWeight: 600,
-                  mb: 1,
-                  color: "#1e293b",
+                  borderRadius: "10px",
+                  border: "1px solid #EAECF0",
+                  backgroundColor: "#ffffff",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
-                Exporting SOP Data
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "#6b7280",
-                  fontSize: { xs: "0.875rem", md: "0.9rem" },
-                }}
-              >
-                Please wait while we prepare your export...
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
+                {/* Tree Summary Bar */}
+                <Box
+                  sx={{
+                    p: 1.5,
+                    px: 2,
+                    borderBottom: "1px solid #EAECF0",
+                    backgroundColor: "#F9FAFB",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 1,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: "#101828", fontSize: "0.9rem" }}>
+                      {rootNode?.drawingNumber || selectedDrawingNumber?.drawingNumber || "Assembly Tree"}
+                    </Typography>
+                    {(rootNode?.nomenclature || selectedDrawingNumber?.nomenclature) && (
+                      <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem" }}>
+                        · {rootNode?.nomenclature || selectedDrawingNumber?.nomenclature}
+                      </Typography>
+                    )}
+                    {treeData.length > 0 && (
+                      <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.775rem", fontWeight: 500 }}>
+                        · {treeData.length} nodes · {maxLevels} levels
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {treeData.length > 0 && (
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => treeTableRef.current?.expandAll()}
+                        sx={{
+                          fontSize: "0.775rem",
+                          fontWeight: 600,
+                          color: "primary.main",
+                          textTransform: "none",
+                          p: 0,
+                          minWidth: "auto",
+                        }}
+                      >
+                        Expand all
+                      </Button>
+                      <Typography variant="caption" sx={{ color: "#D0D5DD" }}>
+                        ·
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => treeTableRef.current?.collapseAll()}
+                        sx={{
+                          fontSize: "0.775rem",
+                          fontWeight: 600,
+                          color: "#667085",
+                          textTransform: "none",
+                          p: 0,
+                          minWidth: "auto",
+                        }}
+                      >
+                        Collapse
+                      </Button>
+                    </Stack>
+                  )}
+                </Box>
+
+                {/* Tree Table View */}
+                <Box sx={{ minHeight: 450, maxHeight: "calc(100vh - 290px)", overflow: "auto" }}>
+                  {assemblyData && assemblyData.length > 0 ? (
+                    <TreeTable
+                      ref={treeTableRef}
+                      data={treeData}
+                      columns={treeColumns}
+                      idField="id"
+                      parentIdField="parentId"
+                      height={600}
+                      rowHeight={42}
+                      enableVirtualization={assemblyData.length > 80}
+                      onRowClick={(row) => {
+                        setSelectedNode(row);
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        py: 8,
+                        color: "#667085",
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {isLoading
+                          ? "Loading assembly tree structure..."
+                          : "No assembly data available. Search for Series and Drawing Number to explore the tree."}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Right Panel: Selected Node Details Card */}
+            <Grid item xs={12} md={4.5} lg={4}>
+              <NodeDetailsCard selectedNode={selectedNode} childCount={selectedChildCount} />
+            </Grid>
+          </Grid>
+        </>
+      ) : (
+        /* BOM Details Tab */
+        <ViewBOM hideHeader />
+      )}
+
+      {/* Exporting Backdrop */}
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={isExporting}
+      >
+        <CircularProgress color="inherit" />
       </Backdrop>
-          </>
-        ) : (
-          <ViewBOM hideHeader />
-        )}
     </Box>
   );
 };
