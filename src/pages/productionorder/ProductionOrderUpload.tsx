@@ -451,7 +451,7 @@ const ProductionOrderUpload: React.FC = () => {
   // Fetch production orders with filters & pagination
   const {
     data: paginatedResponse,
-    data: paginatedResponse,
+
     isLoading: isHistoryLoading,
   } = useQuery<PaginatedResponse<ProductionOrder>>({
     queryKey: [
