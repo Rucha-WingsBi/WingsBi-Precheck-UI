@@ -1,4 +1,4 @@
-import { useState, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, forwardRef, useImperativeHandle, useRef, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -18,6 +18,10 @@ import {
   Tab,
   Tabs,
   Snackbar,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
@@ -26,6 +30,8 @@ import {
   Delete as DeleteIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  MoreVert as MoreVertIcon,
+
 } from "@mui/icons-material";
 import {
   useUserRoles,
@@ -35,13 +41,11 @@ import {
   useDepartments,
   useUpdateDepartment,
   useDeleteDepartment,
-  useUsers,
   useAddDepartment,
 } from "../../hooks/useMasterData";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-import PageAccessDialog from "./components/PageAccessDialog";
-import { useQueryClient } from "@tanstack/react-query";
+import EditRoleDrawer from "./components/EditRoleDrawer";
 
 interface UserRoleInput {
   id?: number;
@@ -61,7 +65,7 @@ interface TabPanelProps {
 function TabPanel({ children, value, index }: TabPanelProps) {
   return (
     <Box role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ mt: 2 }}>{children}</Box>}
+      {value === index && <Box>{children}</Box>}
     </Box>
   );
 }
@@ -76,9 +80,118 @@ interface TabProps {
   showSnackbar: (msg: string, severity?: "success" | "error") => void;
 }
 
+// 3-Dots Action Menu for Rows
+interface RoleRowActionMenuProps {
+  row: any;
+  onEdit: (row: any) => void;
+  onDelete: (id: number) => void;
+}
+
+function RoleRowActionMenu({ row, onEdit, onDelete }: RoleRowActionMenuProps) {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setIsConfirmingDelete(false);
+  };
+
+  const isInactive = !row.isActive;
+
+  if (isConfirmingDelete) {
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
+        <Tooltip title="Confirm Delete">
+          <IconButton
+            size="small"
+            color="success"
+            onClick={() => {
+              onDelete(row.id);
+              handleClose();
+            }}
+          >
+            <CheckIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Cancel">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() => setIsConfirmingDelete(false)}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      <IconButton
+        id={`role-action-menu-btn-${row.id}`}
+        size="small"
+        onClick={handleClick}
+        disabled={isInactive}
+        sx={{ color: "text.secondary" }}
+      >
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        PaperProps={{
+          elevation: 2,
+          sx: {
+            borderRadius: 2,
+            minWidth: 140,
+            border: "1px solid",
+            borderColor: "neutral.border",
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            onEdit(row);
+          }}
+          disabled={isInactive}
+          sx={{ fontSize: "0.85rem", py: 1 }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Edit Role / Access " />
+        </MenuItem>
+
+        
+
+        <MenuItem
+          onClick={() => setIsConfirmingDelete(true)}
+          disabled={isInactive}
+          sx={{ fontSize: "0.85rem", py: 1, color: "error.main" }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText primary="Delete" />
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
+
 const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
   const { data: userRoles = [], isLoading, error } = useUserRoles();
-  const { data: users = [] } = useUsers();
   const addMutation = useAddUserRole();
   const updateMutation = useUpdateUserRole();
   const deleteMutation = useDeleteUserRole();
@@ -91,21 +204,17 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
     isActive: true,
   });
 
-  const [pageAccessOpen, setPageAccessOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<any>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-
   const currentUser = useSelector((state: RootState) => state.auth.user);
 
   const handleOpen = (role?: UserRoleInput) => {
     if (role) {
       setEditingRole(role);
-      setFormData(role);
+      setOpen(false);
     } else {
       setEditingRole(null);
       setFormData({ role: "", description: "", isActive: true });
+      setOpen(true);
     }
-    setOpen(true);
   };
 
   useImperativeHandle(ref, () => ({
@@ -144,190 +253,64 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
     try {
       await deleteMutation.mutateAsync(id);
       showSnackbar("Role deleted successfully");
-      setDeleteConfirmId(null);
     } catch (err) {
       showSnackbar("Failed to delete role", "error");
     }
   };
 
-  const columns: GridColDef[] = (
-    [
-      {
-        field: "srNo",
-        headerName: "Sr No",
-        width: 70,
-        renderCell: (params) =>
-          userRoles.findIndex((r: any) => r.id === params.row.id) + 1,
+  const columns: GridColDef[] = [
+    {
+      field: "srNo",
+      headerName: "Sr No",
+      width: 80,
+      renderCell: (params) =>
+        userRoles.findIndex((r: any) => r.id === params.row.id) + 1,
+    },
+    {
+      field: "role",
+      headerName: "Role Name",
+      flex: 1,
+      minWidth: 140,
+    },
+    {
+      field: "description",
+      headerName: "Description",
+      flex: 1.5,
+      minWidth: 160,
+      renderCell: (params) => params.value || "-",
+    },
+    {
+      field: "createdDate",
+      headerName: "Last Active ↑",
+      width: 170,
+      renderCell: (params) => {
+        if (!params.value) return "-";
+        return new Date(params.value).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
       },
-      { field: "role", headerName: "Role Name", flex: 1, minWidth: 120 },
-      {
-        field: "description",
-        headerName: "Description",
-        flex: 1.5,
-        minWidth: 150,
-      },
-      {
-        field: "createdBy",
-        headerName: "Created By",
-        width: 180,
-        renderCell: (params) => {
-          const u = users.find((u: any) => u.id === params.row.createdBy);
-          return u ? u.userName : params.row.createdBy || "-";
-        },
-      },
-      {
-        field: "createdDate",
-        headerName: "Created Date",
-        width: 180,
-        valueFormatter: (params) => {
-          if (!params.value) return "N/A";
-          return new Date(params.value).toLocaleString();
-        },
-      },
-      // {
-      //   field: "isActive",
-      //   headerName: "Status",
-      //   width: 100,
-      //   renderCell: (params) => (
-      //     <Typography
-      //       variant="body2"
-      //       sx={{
-      //         color: params.value ? "success.main" : "error.main",
-      //         fontWeight: 600,
-      //       }}
-      //     >
-      //       {params.value ? "Active" : "Inactive"}
-      //     </Typography>
-      //   ),
-      // },
-      ...(currentUser?.role?.toLowerCase() === "admin"
-        ? [
-            {
-              field: "pageaccess",
-              headerName: "Page Access",
-              flex: 1,
-              minWidth: 100,
-              renderCell: (params: any) => {
-                const isInactive = !params.row.isActive;
-                return (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={isInactive}
-                    onClick={() => {
-                      if (isInactive) return;
-                      setSelectedRole(params.row);
-                      setPageAccessOpen(true);
-                    }}
-                    sx={{
-                      color: "#6B288A",
-                      borderColor: "#c084fc",
-                      fontWeight: 600,
-                      borderRadius: 4,
-                      fontSize: "0.75rem !important",
-                      px: 2,
-                      py: 0.3,
-                      textTransform: "none",
-                      "&:hover": {
-                        borderColor: "#6B288A",
-                        backgroundColor: "rgba(107, 40, 138, 0.04)",
-                      },
-                    }}
-                  >
-                    Edit
-                  </Button>
-                );
-              },
-            } as GridColDef,
-          ]
-        : []),
-      {
-        field: "actions",
-        headerName: "Actions",
-        width: 120,
-        sortable: false,
-        renderCell: (params) => {
-          const isInactive = !params.row.isActive;
-          const isConfirming = deleteConfirmId === params.row.id;
-
-          return (
-            <Box>
-              {isConfirming ? (
-                <>
-                  <Tooltip title="Confirm Delete">
-                    <IconButton
-                      size="small"
-                      color="success"
-                      onClick={() => handleDelete(params.row.id)}
-                    >
-                      <CheckIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Cancel">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => setDeleteConfirmId(null)}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              ) : (
-                <>
-                  <Tooltip title={isInactive ? "Inactive - cannot edit" : "Edit"}>
-                    <span>
-                      {" "}
-                      {/* 👈 required for tooltip on disabled button */}
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        disabled={isInactive}
-                        onClick={() => {
-                          if (isInactive) return;
-                          handleOpen(params.row);
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-
-                  <Tooltip
-                    title={isInactive ? "Inactive - cannot delete" : "Delete"}
-                  >
-                    <span>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        disabled={isInactive}
-                        onClick={() => {
-                          if (isInactive) return;
-                          setDeleteConfirmId(params.row.id);
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </>
-              )}
-            </Box>
-          );
-        },
-      },
-    ] as GridColDef[]
-  ).map((c) => ({ ...c, align: "center", headerAlign: "center" }));
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 90,
+      sortable: false,
+      renderCell: (params) => (
+        <RoleRowActionMenu
+          row={params.row}
+          onEdit={handleOpen}
+          onDelete={handleDelete}
+        />
+      ),
+    },
+  ];
 
   if (isLoading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="40vh"
-      >
-        <CircularProgress />
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="30vh">
+        <CircularProgress color="primary" />
       </Box>
     );
   }
@@ -335,9 +318,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
   if (error) {
     return (
       <Box p={3}>
-        <Alert severity="error">
-          Error loading roles. Please try again later.
-        </Alert>
+        <Alert severity="error">Error loading roles. Please try again later.</Alert>
       </Box>
     );
   }
@@ -347,10 +328,11 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
       <Card
         elevation={0}
         sx={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "neutral.border",
+          borderRadius: "10px",
           overflow: "hidden",
-          background: "white",
+          background: "background.paper",
         }}
       >
         <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
@@ -363,31 +345,38 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
                 pagination: {
                   paginationModel: { pageSize: 10 },
                 },
+                sorting: {
+                  sortModel: [{ field: "srNo", sort: "asc" }],
+                },
               }}
-              pageSizeOptions={[5, 10, 25, 50]}
+              pageSizeOptions={[10, 20, 50]}
               disableRowSelectionOnClick
+              disableColumnMenu
+              disableColumnFilter
+              disableColumnSelector
               sx={{
                 border: "none",
                 "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#f8fafc",
-                  borderBottom: "2px solid #e2e8f0",
-                  color: "#1e293b",
+                  backgroundColor: "neutral.hoverBg",
+                  borderBottom: "1px solid",
+                  borderColor: "neutral.border",
+                  color: "text.subtle",
                   fontWeight: 700,
-                  fontSize: "0.75rem",
+                  fontSize: "0.8rem",
                 },
                 "& .MuiDataGrid-columnHeaderTitle": {
                   fontWeight: 700,
-                  fontSize: "0.75rem",
-                  color: "#1e293b",
+                  fontSize: "0.8rem",
+                  color: "text.subtle",
                 },
                 "& .MuiDataGrid-cell": {
-                  fontSize: "0.75rem",
-                  color: "#1e293b",
-                  borderBottom: "1px solid #e2e8f0",
+                  fontSize: "0.85rem",
+                  color: "text.secondary",
+                  borderBottom: "1px solid",
+                  borderColor: "neutral.chipBg",
                 },
                 "& .MuiDataGrid-row": {
-                  "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
-                  "&:hover": { backgroundColor: "#f1f5f9" },
+                  "&:hover": { backgroundColor: "neutral.hoverBg" },
                   transition: "background-color 0.2s ease",
                 },
                 "& .MuiDataGrid-cell:focus": { outline: "none" },
@@ -400,9 +389,11 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
         </CardContent>
       </Card>
 
-      {/* Add / Edit Role Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-        <DialogTitle>{editingRole ? "Edit Role" : "Add Role"}</DialogTitle>
+      {/* Add Role Dialog */}
+      <Dialog open={open && !editingRole} onClose={handleClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 600, color: "text.primary" }}>
+          Add Role
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -411,7 +402,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
             fullWidth
             value={formData.role}
             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            // disabled={!!editingRole}
+            sx={{ mb: 1.5 }}
           />
           <TextField
             margin="dense"
@@ -420,374 +411,300 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
             multiline
             rows={3}
             value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
+            size="small"
+            onClick={handleClose}
+            sx={{ color: "text.secondary", textTransform: "none", fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
             onClick={handleSubmit}
             variant="contained"
-            disabled={!formData.role}
+            disabled={!formData.role.trim()}
+            sx={{
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+              textTransform: "none",
+              fontWeight: 600,
+              px: 2.5,
+            }}
           >
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
-      <PageAccessDialog
-        open={pageAccessOpen}
-        onClose={() => {
-          setPageAccessOpen(false);
-          setSelectedRole(null);
-        }}
-        roleId={selectedRole?.id || null}
-        roleName={selectedRole?.role || ""}
+      {/* Edit Role Side Drawer */}
+      <EditRoleDrawer
+        open={Boolean(editingRole)}
+        role={editingRole as any}
+        onClose={() => setEditingRole(null)}
+        showSnackbar={showSnackbar}
       />
     </>
   );
 });
 
-const DepartmentTab = forwardRef<TabHandle, TabProps>(
-  ({ showSnackbar }, ref) => {
-    const { data: departments = [], isLoading, error } = useDepartments();
-    const { data: users = [] } = useUsers();
-    const addMutation = useAddDepartment();
-    const updateMutation = useUpdateDepartment();
-    const deleteMutation = useDeleteDepartment();
+const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
+  const { data: departments = [], isLoading, error } = useDepartments();
+  const addMutation = useAddDepartment();
+  const updateMutation = useUpdateDepartment();
+  const deleteMutation = useDeleteDepartment();
 
-    const [open, setOpen] = useState(false);
-    const [departmentName, setDepartmentName] = useState("");
-    const [editingDepartment, setEditingDepartment] = useState<any>(null);
-    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-    const [apiError, setApiError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [departmentName, setDepartmentName] = useState("");
+  const [editingDepartment, setEditingDepartment] = useState<any>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-    const saving = addMutation.isPending || updateMutation.isPending;
+  const saving = addMutation.isPending || updateMutation.isPending;
+  const currentUser = useSelector((state: RootState) => state.auth.user);
 
-    const queryClient = useQueryClient();
-    const currentUser = useSelector((state: RootState) => state.auth.user);
+  const handleOpen = (dept?: any) => {
+    if (dept) {
+      setEditingDepartment(dept);
+      setDepartmentName(dept.name || dept.departmentName || "");
+    } else {
+      setEditingDepartment(null);
+      setDepartmentName("");
+    }
+    setApiError(null);
+    setOpen(true);
+  };
 
-    const handleOpen = (dept?: any) => {
-      if (dept) {
-        setEditingDepartment(dept);
-        setDepartmentName(dept.name || dept.departmentName || "");
+  useImperativeHandle(ref, () => ({
+    openAdd: () => handleOpen(),
+  }));
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleSubmit = async () => {
+    setApiError(null);
+    try {
+      const currentUserId = currentUser?.id ? Number(currentUser.id) : 1;
+      if (editingDepartment) {
+        await updateMutation.mutateAsync({
+          id: editingDepartment.id,
+          departmentName,
+          modifiedBy: currentUserId,
+        });
+        showSnackbar("Department updated successfully");
       } else {
-        setEditingDepartment(null);
-        setDepartmentName("");
+        await addMutation.mutateAsync({
+          departmentName,
+          createdBy: currentUserId,
+        });
+        showSnackbar("Department added successfully");
       }
-      setApiError(null);
-      setOpen(true);
-    };
-
-    useImperativeHandle(ref, () => ({
-      openAdd: () => handleOpen(),
-    }));
-
-    const handleClose = () => {
-      setOpen(false);
-    };
-
-    const handleSubmit = async () => {
-      setApiError(null);
-      try {
-        const currentUserId = currentUser?.id ? Number(currentUser.id) : 1;
-        if (editingDepartment) {
-          await updateMutation.mutateAsync({
-            id: editingDepartment.id,
-            departmentName,
-            modifiedBy: currentUserId,
-          });
-          showSnackbar("Department updated successfully");
-        } else {
-          await addMutation.mutateAsync({
-            departmentName,
-            createdBy: currentUserId,
-          });
-          showSnackbar("Department added successfully");
-        }
-        handleClose();
-      } catch (err: any) {
-        setApiError(
-          err?.response?.data?.message ||
-            err?.message ||
-            `Failed to ${editingDepartment ? "update" : "add"} department.`,
-        );
-      }
-    };
-
-    const handleDelete = async (id: number) => {
-      try {
-        await deleteMutation.mutateAsync(id);
-        showSnackbar("Department deleted successfully");
-        setDeleteConfirmId(null);
-      } catch (err: any) {
-        showSnackbar(
-          err?.response?.data?.message ||
-            err?.message ||
-            "Failed to delete department.",
-          "error",
-        );
-      }
-    };
-
-    const filteredDepartments = departments.filter(
-      (d: any) => d.isActive === 1 || d.isActive === true,
-    );
-
-    const columns: GridColDef[] = (
-      [
-        {
-          field: "srNo",
-          headerName: "Sr No",
-          width: 70,
-          renderCell: (params) =>
-            filteredDepartments.findIndex((r: any) => r.id === params.row.id) +
-            1,
-        },
-        {
-          field: "name",
-          headerName: "Department Name",
-          flex: 1,
-          minWidth: 150,
-          renderCell: (params) =>
-            params.row.name || params.row.departmentName || "-",
-        },
-        // {
-        //   field: "isActive",
-        //   headerName: "Status",
-        //   width: 100,
-        //   renderCell: (params) => {
-        //     const isActive =
-        //       params.row.isActive === 1 || params.row.isActive === true;
-        //     return (
-        //       <Typography
-        //         variant="body2"
-        //         sx={{
-        //           color: isActive ? "success.main" : "error.main",
-        //           fontWeight: 600,
-        //         }}
-        //       >
-        //         {isActive ? "Active" : "Inactive"}
-        //       </Typography>
-        //     );
-        //   },
-        // },
-        {
-          field: "createdDate",
-          headerName: "Created Date",
-          width: 170,
-          renderCell: (params) =>
-            params.row.createdDate
-              ? new Date(params.row.createdDate).toLocaleString()
-              : "-",
-        },
-        {
-          field: "modifiedDate",
-          headerName: "Modified Date",
-          width: 170,
-          renderCell: (params) =>
-            params.row.modifiedDate
-              ? new Date(params.row.modifiedDate).toLocaleString()
-              : "-",
-        },
-        {
-          field: "createdBy",
-          headerName: "Created By",
-          width: 160,
-          renderCell: (params) => {
-            const u = users.find((u: any) => u.id === params.row.createdBy);
-            return u ? u.userName : params.row.createdBy || "-";
-          },
-        },
-        {
-          field: "modifiedBy",
-          headerName: "Modified By",
-          width: 160,
-          renderCell: (params) => {
-            const u = users.find((u: any) => u.id === params.row.modifiedBy);
-            return u ? u.userName : params.row.modifiedBy || "-";
-          },
-        },
-        {
-          field: "actions",
-          headerName: "Actions",
-          width: 120,
-          sortable: false,
-          renderCell: (params) => {
-            const isConfirming = deleteConfirmId === params.row.id;
-            return (
-              <Box>
-                {isConfirming ? (
-                  <>
-                    <Tooltip title="Confirm Delete">
-                      <IconButton
-                        size="small"
-                        color="success"
-                        onClick={() => handleDelete(params.row.id)}
-                      >
-                        <CheckIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Cancel">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => setDeleteConfirmId(null)}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </>
-                ) : (
-                  <>
-                    <Tooltip title="Edit">
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpen(params.row)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => setDeleteConfirmId(params.row.id)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </>
-                )}
-              </Box>
-            );
-          },
-        },
-      ] as GridColDef[]
-    ).map((c) => ({ ...c, align: "center", headerAlign: "center" }));
-
-    if (isLoading) {
-      return (
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="40vh"
-        >
-          <CircularProgress />
-        </Box>
+      handleClose();
+    } catch (err: any) {
+      setApiError(
+        err?.response?.data?.message ||
+          err?.message ||
+          `Failed to ${editingDepartment ? "update" : "add"} department.`
       );
     }
+  };
 
-    if (error) {
-      return (
-        <Box p={3}>
-          <Alert severity="error">Error loading departments.</Alert>
-        </Box>
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      showSnackbar("Department deleted successfully");
+    } catch (err: any) {
+      showSnackbar(
+        err?.response?.data?.message || err?.message || "Failed to delete department.",
+        "error"
       );
     }
+  };
 
+  const activeDepartments = useMemo(() => {
+    return departments.filter((d: any) => d.isActive === 1 || d.isActive === true);
+  }, [departments]);
+
+  const columns: GridColDef[] = [
+    {
+      field: "srNo",
+      headerName: "Sr No",
+      width: 80,
+      renderCell: (params) =>
+        activeDepartments.findIndex((r: any) => r.id === params.row.id) + 1,
+    },
+    {
+      field: "name",
+      headerName: "Department Name",
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => params.row.name || params.row.departmentName || "-",
+    },
+    {
+      field: "createdDate",
+      headerName: "Last Active ↑",
+      width: 170,
+      renderCell: (params) => {
+        if (!params.row.createdDate && !params.row.modifiedDate) return "-";
+        const dateVal = params.row.modifiedDate || params.row.createdDate;
+        return new Date(dateVal).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      },
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 90,
+      sortable: false,
+      renderCell: (params) => (
+        <RoleRowActionMenu
+          row={params.row}
+          onEdit={handleOpen}
+          onDelete={handleDelete}
+        />
+      ),
+    },
+  ];
+
+  if (isLoading) {
     return (
-      <>
-        {apiError && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setApiError(null)}>
-            {apiError}
-          </Alert>
-        )}
-
-        <Card
-          elevation={0}
-          sx={{
-            border: "1px solid #e2e8f0",
-            borderRadius: 3,
-            overflow: "hidden",
-            background: "white",
-          }}
-        >
-          <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-            <Box sx={{ width: "100%" }}>
-              <DataGrid
-                autoHeight
-                rows={filteredDepartments}
-                columns={columns}
-                initialState={{
-                  pagination: {
-                    paginationModel: { pageSize: 10 },
-                  },
-                }}
-                pageSizeOptions={[5, 10, 25, 50]}
-                disableRowSelectionOnClick
-                sx={{
-                  border: "none",
-                  "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "#f8fafc",
-                    borderBottom: "2px solid #e2e8f0",
-                    color: "#1e293b",
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                  },
-                  "& .MuiDataGrid-columnHeaderTitle": {
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                    color: "#1e293b",
-                  },
-                  "& .MuiDataGrid-cell": {
-                    fontSize: "0.75rem",
-                    color: "#1e293b",
-                    borderBottom: "1px solid #e2e8f0",
-                  },
-                  "& .MuiDataGrid-row": {
-                    "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
-                    "&:hover": { backgroundColor: "#f1f5f9" },
-                    transition: "background-color 0.2s ease",
-                  },
-                  "& .MuiDataGrid-cell:focus": { outline: "none" },
-                  "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-                  "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-                  "& .MuiDataGrid-columnHeader:focus-within": {
-                    outline: "none",
-                  },
-                }}
-              />
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-          <DialogTitle>
-            {editingDepartment ? "Edit Department" : "Add Department"}
-          </DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Department Name"
-              fullWidth
-              value={departmentName}
-              onChange={(e) => setDepartmentName(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose} disabled={saving}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              disabled={!departmentName.trim() || saving}
-              startIcon={saving ? <CircularProgress size={14} /> : undefined}
-            >
-              {saving ? "Saving..." : "Save"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="30vh">
+        <CircularProgress color="primary" />
+      </Box>
     );
-  },
-);
+  }
+
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">Error loading departments.</Alert>
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      {apiError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setApiError(null)}>
+          {apiError}
+        </Alert>
+      )}
+
+      <Card
+        elevation={0}
+        sx={{
+          border: "1px solid",
+          borderColor: "neutral.border",
+          borderRadius: "10px",
+          overflow: "hidden",
+          background: "background.paper",
+        }}
+      >
+        <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+          <Box sx={{ width: "100%" }}>
+            <DataGrid
+              autoHeight
+              rows={activeDepartments}
+              columns={columns}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 },
+                },
+                sorting: {
+                  sortModel: [{ field: "srNo", sort: "asc" }],
+                },
+              }}
+              pageSizeOptions={[10, 20, 50]}
+              disableRowSelectionOnClick
+              disableColumnMenu
+              disableColumnFilter
+              disableColumnSelector
+              sx={{
+                border: "none",
+                "& .MuiDataGrid-columnHeaders": {
+                  backgroundColor: "neutral.hoverBg",
+                  borderBottom: "1px solid",
+                  borderColor: "neutral.border",
+                  color: "text.subtle",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                },
+                "& .MuiDataGrid-columnHeaderTitle": {
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  color: "text.subtle",
+                },
+                "& .MuiDataGrid-cell": {
+                  fontSize: "0.85rem",
+                  color: "text.secondary",
+                  borderBottom: "1px solid",
+                  borderColor: "neutral.chipBg",
+                },
+                "& .MuiDataGrid-row": {
+                  "&:hover": { backgroundColor: "neutral.hoverBg" },
+                  transition: "background-color 0.2s ease",
+                },
+                "& .MuiDataGrid-cell:focus": { outline: "none" },
+                "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+                "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
+                "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+              }}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+
+      <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 600, color: "text.primary" }}>
+          {editingDepartment ? "Edit Department" : "Add Department"}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Department Name"
+            fullWidth
+            value={departmentName}
+            onChange={(e) => setDepartmentName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            size="small"
+            onClick={handleClose}
+            disabled={saving}
+            sx={{ color: "text.secondary", textTransform: "none", fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={!departmentName.trim() || saving}
+            startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
+            sx={{
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+              textTransform: "none",
+              fontWeight: 600,
+              px: 2.5,
+            }}
+          >
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+});
 
 export default function RoleManagement() {
   const [activeTab, setActiveTab] = useState(0);
@@ -808,14 +725,11 @@ export default function RoleManagement() {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  const showSnackbar = (
-    message: string,
-    severity: "success" | "error" = "success",
-  ) => {
+  const showSnackbar = (message: string, severity: "success" | "error" = "success") => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
@@ -825,41 +739,54 @@ export default function RoleManagement() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
+      {/* Top Header Bar */}
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 3 }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
-        <Typography
-          variant="h3"
-          sx={{ color: "primary.main", fontWeight: 600 }}
-        >
-          Role Management
-        </Typography>
+        <Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            Role Management
+          </Typography>
+        </Box>
       </Stack>
 
+      {/* Main Container Card */}
       <Card
         elevation={0}
         sx={{
           mb: 0,
-          border: "1px solid #e2e8f0",
+          border: "1px solid",
+          borderColor: "neutral.border",
           borderRadius: 3,
           overflow: "hidden",
-          background: "white",
+          background: "background.paper",
         }}
       >
+        {/* Header Toolbar (Tabs on left, Add Button on right) */}
         <Box
           sx={{
-            borderBottom: "1px solid #e2e8f0",
+            p: 1.5,
             px: 3,
-            pt: 1.5,
-            pb: 0.5,
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "white",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+            bgcolor: "background.paper",
+            borderBottom: "1px solid",
+            borderColor: "neutral.border",
           }}
         >
           <Tabs
@@ -869,49 +796,51 @@ export default function RoleManagement() {
             indicatorColor="primary"
             aria-label="role and department tabs"
             sx={{
-              flexGrow: 1,
+              minHeight: 38,
               "& .MuiTab-root": {
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 textTransform: "none",
-                minWidth: 100,
-                color: "#64748b",
+                minWidth: 80,
+                minHeight: 38,
+                py: 0,
+                color: "text.muted",
               },
-              "& .MuiTab-root.Mui-selected": { color: "#6B288A" },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
               "& .MuiTabs-indicator": {
-                backgroundColor: "#6B288A",
+                backgroundColor: "primary.main",
                 height: 3,
                 borderRadius: "3px 3px 0 0",
               },
             }}
           >
-            <Tab label="Role" />
-            <Tab label="Department" />
+            <Tab id="tab-role" label="Role" />
+            <Tab id="tab-department" label="Department" />
           </Tabs>
 
-          <Box sx={{ ml: 2, mb: 0.5 }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenAdd}
-              sx={{
-                fontWeight: 600,
-                backgroundColor: "#6B288A",
-                "&:hover": { backgroundColor: "#4A1964" },
-                textTransform: "none",
-                borderRadius: 1,
-                px: 2.5,
-                py: 0.8,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Add {TAB_LABELS[activeTab]}
-            </Button>
-          </Box>
+          <Button
+            id="btn-add-role-dept"
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleOpenAdd}
+            sx={{
+              fontWeight: 600,
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+              textTransform: "none",
+              borderRadius: 1.5,
+              px: 2.5,
+              height: 38,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Add {TAB_LABELS[activeTab]}
+          </Button>
         </Box>
 
-        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "#f8fafc" }}>
+        {/* Content Area */}
+        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "background.paper" }}>
           <TabPanel value={activeTab} index={0}>
             <RoleTab ref={roleRef} showSnackbar={showSnackbar} />
           </TabPanel>
@@ -921,6 +850,7 @@ export default function RoleManagement() {
         </CardContent>
       </Card>
 
+      {/* Global Snackbar Notification */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={snackbar.severity === "error" ? null : 6000}

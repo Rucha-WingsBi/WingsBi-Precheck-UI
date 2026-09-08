@@ -844,34 +844,36 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
-          p: hideHeader ? 0 : { xs: 1, sm: 2, md: 3 },
+          py: hideHeader ? 0 : { xs: 1, sm: 1.25 },
+          px: hideHeader ? 0 : { xs: 1.5, sm: 2 },
           maxWidth: "100%",
           mx: "auto",
         }}
       >
         {/* Header Navigation Tabs */}
         {!hideHeader && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              mb: 1.5,
-              flexWrap: "wrap",
-              gap: { xs: 2, sm: 4, md: 6 },
-              borderBottom: 1,
-              borderColor: "divider",
-              pb: 0.5,
-            }}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={2}
+            sx={{ mb: 1 }}
           >
-            <Typography
-              variant="h4"
-              color="primary.main"
-              fontWeight={600}
-              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-            >
-              Generate Standard QR Code
-            </Typography>
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: "primary.main",
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                Generate Standard QR Code
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+                Generate and print standard batch QR codes.
+              </Typography>
+            </Box>
 
             <Tabs
               value={location.pathname.includes("generate-new") ? "generate-std" : "generate"}
@@ -902,7 +904,7 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
               <Tab label="Generate QR Code" value="generate" />
               <Tab label="Generate STD QR Code" value="generate-std" />
             </Tabs>
-          </Box>
+          </Stack>
         )}
         <Card elevation={2} sx={{ width: "100%", maxWidth: "100%" }}>
           <CardContent>

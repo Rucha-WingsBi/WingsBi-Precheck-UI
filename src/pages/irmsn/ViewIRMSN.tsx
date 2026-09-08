@@ -392,7 +392,7 @@ const ViewIRMSN: React.FC = () => {
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", sm: "center" }}
           spacing={2}
-          sx={{ mb: 1.5 }}
+          sx={{ mb: 1 }}
         >
           <Box>
             <Typography

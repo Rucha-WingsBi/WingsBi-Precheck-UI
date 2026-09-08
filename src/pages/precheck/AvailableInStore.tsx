@@ -24,6 +24,7 @@ import {
   IconButton,
   Tabs,
   Tab,
+  Stack,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -406,7 +407,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     <Box
       sx={{
         flexGrow: 1,
-        p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 },
+        py: hideHeader ? 0 : { xs: 1, sm: 1.25 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2 },
         animation: "fadeIn 0.5s ease-out",
         "@keyframes fadeIn": {
           from: { opacity: 0, transform: "translateY(10px)" },
@@ -415,27 +416,28 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       }}
     >
       {!hideHeader && (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: { xs: 1, sm: 2, md: 3 },
-            borderBottom: 1,
-            borderColor: "divider",
-            pb: 0.5,
-          }}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1 }}
         >
-          <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={600}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-          >
-            {storeTab === "available" ? "Available In Store" : "Stored In Components"}
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
+              {storeTab === "available" ? "Available In Store" : "Stored In Components"}
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              View and filter available components and QR codes in store.
+            </Typography>
+          </Box>
 
           <Tabs
             value={storeTab}
@@ -460,7 +462,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
             <Tab label="Available In Store" value="available" />
             <Tab label="Stored In Components" value="stored" />
           </Tabs>
-        </Box>
+        </Stack>
       )}
 
       {storeTab === "stored" ? (

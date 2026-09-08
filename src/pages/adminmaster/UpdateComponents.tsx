@@ -20,6 +20,7 @@ import {
 
   debounce,
   IconButton,
+  Stack,
 } from "@mui/material";
 
 import { Save as SaveIcon, Refresh as RefreshIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
@@ -436,10 +437,47 @@ export default function InsertMappings() {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
+          py: { xs: 1, sm: 1.25 },
+          px: { xs: 1.5, sm: 2 },
           maxWidth: "100%",
           mx: "auto",
         }}
       >
+        {/* Header Section */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1 }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {fromView && (
+              <IconButton
+                onClick={() => navigate("/components")}
+                sx={{ color: "primary.main", p: 0 }}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            )}
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: "primary.main",
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                {isEditMode ? "Update Component" : "Add Component"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+                {isEditMode ? "Update master component details and item mappings." : "Add a new component master to the system."}
+              </Typography>
+            </Box>
+          </Box>
+        </Stack>
+
         {/* Success/Error Messages */}
         {successMessage && (
           <Alert
@@ -461,27 +499,9 @@ export default function InsertMappings() {
           </Alert>
         )}
 
-
         {/* Main Form */}
         <Card elevation={2} sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>
-              {fromView && (
-                <IconButton
-                  onClick={() => navigate("/components")}
-                  sx={{ color: "primary.main", p: 0 }}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
-              )}
-              <Typography
-                variant="h6"
-                sx={{ color: "primary.main", fontWeight: 600 }}
-              >
-                {isEditMode ? "Update Component" : "Add Component"}
-              </Typography>
-            </Box>
-
             <form onSubmit={handleSubmit(onSubmit)}>
               {/* Ln item code , Drawing Number, Nomenclature*/}
               <Grid container spacing={2} sx={{ mb: 2 }}>

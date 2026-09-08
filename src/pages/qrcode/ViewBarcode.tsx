@@ -31,6 +31,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Stack,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -917,26 +918,30 @@ const ViewBarcode: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: { xs: 0.5, sm: 1 } }}>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 0.75,
-            flexWrap: 'wrap',
-            gap: 1,
-            borderBottom: 1,
-            borderColor: 'divider',
-            pb: 0.25
-          }}
+      <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1 }}
         >
           <Box>
-            <Typography variant="h4" color="primary.main" fontWeight={600} sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
               View QR Code
             </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Search and manage generated QR code details.
+            </Typography>
           </Box>
-        </Box>
+        </Stack>
 
         <Paper sx={{ p: { xs: 1, sm: 1.25 }, mt: 0.5 }}>
           <Box

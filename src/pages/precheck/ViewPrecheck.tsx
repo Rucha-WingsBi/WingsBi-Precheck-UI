@@ -25,6 +25,7 @@ import {
   Chip,
   Tabs,
   Tab,
+  Stack,
 } from "@mui/material";
 import {
   Visibility as VisibilityIcon,
@@ -425,29 +426,27 @@ const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
   const isResetEnabled = isSearchCriteriaFilled || searchResults.length > 0;
 
   return (
-    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+    <Box sx={{ py: hideHeader ? 0 : { xs: 1, sm: 1.25 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2 } }}>
       {!hideHeader && (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
-            borderBottom: 1,
-            borderColor: "divider",
-            pb: 0.5,
-          }}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1 }}
         >
-          <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={600}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-          >
-            {activeTab === "precheck" ? "View Precheck Details" : "View Consumed In Details"}
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
+              {activeTab === "precheck" ? "View Precheck Details" : "View Consumed In Details"}
+            </Typography>
+          </Box>
 
           <Tabs
             value={activeTab}
@@ -472,7 +471,7 @@ const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             <Tab label="View Precheck" value="precheck" />
             <Tab label="View Consumed In" value="consumed" />
           </Tabs>
-        </Box>
+        </Stack>
       )}
 
       {activeTab === "consumed" ? (

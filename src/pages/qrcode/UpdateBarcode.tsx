@@ -20,6 +20,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Stack,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
@@ -493,30 +494,48 @@ const UpdateBarcode: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "100%", mx: "auto" }}>
-      <Card elevation={2}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-            <IconButton
-              onClick={handleBack}
-              sx={{
-                color: "primary.main",
-                mr: 1,
-                "&:hover": {
-                  backgroundColor: "action.hover",
-                },
-              }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
+    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 }, maxWidth: "100%", mx: "auto" }}>
+      {/* Header Section */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <IconButton
+            onClick={handleBack}
+            sx={{
+              color: "primary.main",
+              p: 0,
+              "&:hover": {
+                backgroundColor: "action.hover",
+              },
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Box>
             <Typography
-              variant="h6"
-              sx={{ color: "primary.main", fontWeight: 600 }}
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
             >
               {id ? "Update QR Code" : "QR Code Details"}
             </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Modify and update barcode details and master mapping properties.
+            </Typography>
           </Box>
+        </Box>
+      </Stack>
 
+      <Card elevation={2}>
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={4}>

@@ -22,6 +22,7 @@ import {
   Autocomplete,
   Tabs,
   Tab,
+  Stack,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -35,7 +36,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from '../../store/store';
 import { getStoredComponentsByDate, exportStoredComponents, clearStoredComponents } from '../../store/slices/qrcodeSlice';
-import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import debounce from 'lodash/debounce';
@@ -387,29 +387,30 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+      <Box sx={{ py: hideHeader ? 0 : { xs: 1, sm: 1.25 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2 } }}>
         {!hideHeader && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              mb: 1.5,
-              flexWrap: "wrap",
-              gap: { xs: 2, sm: 4, md: 6 },
-              borderBottom: 1,
-              borderColor: "divider",
-              pb: 0.5,
-            }}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={2}
+            sx={{ mb: 1 }}
           >
-            <Typography
-              variant="h4"
-              color="primary.main"
-              fontWeight={600}
-              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-            >
-              {storeTab === "available" ? "Available In Store" : "Stored In Components"}
-            </Typography>
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: "primary.main",
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                {storeTab === "available" ? "Available In Store" : "Stored In Components"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+                View and filter stored components in the system.
+              </Typography>
+            </Box>
 
             <Tabs
               value={storeTab}
@@ -434,7 +435,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               <Tab label="Available In Store" value="available" />
               <Tab label="Stored In Components" value="stored" />
             </Tabs>
-          </Box>
+          </Stack>
         )}
 
         {storeTab === "available" ? (

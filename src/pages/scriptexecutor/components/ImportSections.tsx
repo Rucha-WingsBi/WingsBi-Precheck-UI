@@ -28,22 +28,21 @@ interface ImportHeaderProps {
 
 export const ImportHeader: React.FC<ImportHeaderProps> = ({ selectedFilesCount }) => {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        mb: 2,
-        flexWrap: "wrap",
-        gap: 2,
-      }}
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      justifyContent="space-between"
+      alignItems={{ xs: "flex-start", sm: "center" }}
+      spacing={2}
+      sx={{ mb: 1 }}
     >
       <Box>
         <Typography
-          variant="h4"
-          color="primary.main"
-          fontWeight={700}
-          sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, letterSpacing: "-0.02em" }}
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            color: "primary.main",
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
+          }}
         >
           Bulk Import
         </Typography>
@@ -71,7 +70,7 @@ export const ImportHeader: React.FC<ImportHeaderProps> = ({ selectedFilesCount }
       >
         Import history ({selectedFilesCount})
       </Button>
-    </Box>
+    </Stack>
   );
 };
 

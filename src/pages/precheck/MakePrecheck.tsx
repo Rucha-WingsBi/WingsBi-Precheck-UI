@@ -13,6 +13,7 @@ import {
   Alert,
   useMediaQuery,
   useTheme,
+  Stack,
 } from "@mui/material";
 import {
   viewPrecheckDetails,
@@ -1622,7 +1623,7 @@ const MakePrecheck: React.FC = () => {
   return (
     <Box
       sx={{
-        p: { xs: 0.5, sm: 1, md: 1.5 },
+        py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 },
         height: "calc(100vh - 64px)",
         boxSizing: "border-box",
         display: "flex",
@@ -1630,17 +1631,26 @@ const MakePrecheck: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{
-          color: "primary.main",
-          fontWeight: 600,
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-          mb: 0.5,
-        }}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
-        Make Precheck
-      </Typography>
+        <Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            Make Precheck
+          </Typography>
+        </Box>
+      </Stack>
 
       {/* Alert */}
       {showAlert && (

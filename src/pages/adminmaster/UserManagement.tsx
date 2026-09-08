@@ -14,6 +14,7 @@ import {
   IconButton,
   Tooltip,
   Stack,
+  Menu,
   MenuItem,
   Switch,
   Tabs,
@@ -30,6 +31,7 @@ import {
   Visibility,
   VisibilityOff,
   Search as SearchIcon,
+  MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import {
   useUserRoles,
@@ -47,6 +49,59 @@ import {
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { UserRole, User } from "../../types";
+
+function UserActionMenu({
+  row,
+  isAdmin,
+  isActive,
+  onEdit,
+}: {
+  row: any;
+  isAdmin: boolean;
+  isActive: boolean;
+  onEdit: (user: any) => void;
+}) {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  return (
+    <>
+      <IconButton
+        size="small"
+        onClick={handleClick}
+        sx={{ color: "text.secondary" }}
+      >
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+      >
+        <MenuItem
+          disabled={!isAdmin || !isActive}
+          onClick={() => {
+            handleClose();
+            onEdit(row);
+          }}
+          sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+        >
+          <EditIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+          Edit
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
 
 export default function UserManagement() {
   const { data: userRoles = [] } = useUserRoles();
@@ -92,7 +147,7 @@ export default function UserManagement() {
     });
   };
 
-  const handleSnackbarClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleSnackbarClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === "clickaway") {
       return;
     }
@@ -101,9 +156,18 @@ export default function UserManagement() {
 
   const [mainTab, setMainTab] = useState(0); // 0 = All Users, 1 = Pending Approval
   const pendingUsersCount = pendingUsers.length;
-  const displayedUsers = (mainTab === 0 ? users : pendingUsers).filter((u: User) =>
-    u.userName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+
+  const displayedUsers = (mainTab === 0 ? users : pendingUsers).filter((u: User) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      u.userName?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.userId?.toLowerCase().includes(q) ||
+      (u.role && String(u.role).toLowerCase().includes(q)) ||
+      (u.departmentName && String(u.departmentName).toLowerCase().includes(q))
+    );
+  });
 
   // Active/Deactive Confirmation Dialog State
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -399,11 +463,11 @@ export default function UserManagement() {
                 disabled={!isAdmin || approveUserMutation.isPending}
                 sx={{
                   fontWeight: 600,
-                  backgroundColor: "#6B288A",
+                  backgroundColor: "primary.main",
                   "&.Mui-disabled": {
                     backgroundColor: "rgba(0, 0, 0, 0.12)",
                   },
-                  "&:hover": { backgroundColor: "#4A1964" },
+                  "&:hover": { backgroundColor: "primary.dark" },
                   textTransform: "none",
                   borderRadius: 1,
                   px: 2,
@@ -422,51 +486,80 @@ export default function UserManagement() {
     {
       field: "srNo",
       headerName: "Sr No",
-      width: 70,
+      width: 80,
+      align: "center",
+      headerAlign: "center",
       renderCell: (params: any) =>
         params.api.getSortedRowIds().indexOf(params.id) + 1,
     },
-    { field: "userName", headerName: "Full Name", flex: 1.5, minWidth: 150 },
-    { field: "email", headerName: "User Email", width: 200 },
-    { field: "userId", headerName: "User ID", width: 150 },
     {
-      field: "plantName",
-      headerName: "Plant",
-      width: 120,
-      valueGetter: (params: any) => {
-        const row = params.row || params;
-        const plant = plants.find((p: any) => p.id === row.plantId);
-        return plant ? plant.name || plant.plantname : "";
-      },
-    },
-    { field: "role", headerName: "Role", width: 120 },
-    { field: "departmentName", headerName: "Department", width: 150 },
-    {
-      field: "isActive",
-      headerName: "Status",
-      width: 100,
+      field: "userName",
+      headerName: "User",
+      flex: 1.5,
+      minWidth: 180,
       renderCell: (params: any) => (
-        <Typography
-          variant="body2"
-          sx={{
-            color: params.value ? "success.main" : "error.main",
-            fontWeight: 600,
-          }}
-        >
-          {params.value ? "Active" : "Inactive"}
+        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
+          {params.value || "-"}
         </Typography>
       ),
     },
     {
-      field: "deactivateUser",
-      headerName: "Deactivate User",
+      field: "email",
+      headerName: "Email",
+      flex: 1.5,
+      minWidth: 200,
+      renderCell: (params: any) => (
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {params.value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      field: "role",
+      headerName: "Role",
       width: 140,
-      sortable: false,
+      renderCell: (params: any) => (
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {params.value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      field: "departmentName",
+      headerName: "Department",
+      width: 150,
+      renderCell: (params: any) => (
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {params.value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      field: "modifiedDate",
+      headerName: "Last Active ↑",
+      width: 150,
+      align: "center",
+      headerAlign: "center",
+      renderCell: (params: any) => {
+        const val = params.row.modifiedDate || params.row.createdDate;
+        return (
+          <Typography variant="body2" sx={{ color: "text.muted" }}>
+            {val ? new Date(val).toLocaleDateString() : "-"}
+          </Typography>
+        );
+      },
+    },
+    {
+      field: "isActive",
+      headerName: "Active",
+      width: 100,
+      align: "center",
+      headerAlign: "center",
       renderCell: (params: any) => {
         const isAdmin = userRole === "Admin";
         const isSelf = Number(params.row.id) === Number(currentUser?.id);
 
-        const switchEl = (
+        return (
           <Switch
             checked={Boolean(params.row.isActive)}
             disabled={!isAdmin || isSelf}
@@ -475,67 +568,30 @@ export default function UserManagement() {
             size="small"
           />
         );
-
-        if (!isAdmin) {
-          return (
-            <Tooltip title="Only administrators can change status" arrow>
-              <span>{switchEl}</span>
-            </Tooltip>
-          );
-        }
-
-        if (isSelf) {
-          return (
-            <Tooltip title="You cannot deactivate your own account" arrow>
-              <span>{switchEl}</span>
-            </Tooltip>
-          );
-        }
-
-        return (
-          <Tooltip title={params.row.isActive ? "Deactivate User" : "Activate User"} arrow>
-            {switchEl}
-          </Tooltip>
-        );
       },
     },
     {
       field: "actions",
       headerName: "Actions",
-      width: 80,
+      width: 90,
+      align: "center",
+      headerAlign: "center",
       sortable: false,
       renderCell: (params: any) => {
         const isAdmin = userRole === "Admin";
         const isActive = Boolean(params.row.isActive);
 
-        let tooltipTitle = "Edit User";
-        if (!isAdmin) {
-          tooltipTitle = "Only administrators can edit users";
-        } else if (!isActive) {
-          tooltipTitle = "Cannot edit inactive user";
-        }
-
         return (
-          <Tooltip title={tooltipTitle}>
-            <span>
-              <IconButton
-                size="small"
-                color="primary"
-                disabled={!isAdmin || !isActive}
-                onClick={() => handleUserDialogOpen(params.row)}
-                sx={{
-                  "&:focus": { outline: "none", boxShadow: "none" },
-                  "&:active": { outline: "none", boxShadow: "none" },
-                }}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <UserActionMenu
+            row={params.row}
+            isAdmin={isAdmin}
+            isActive={isActive}
+            onEdit={handleUserDialogOpen}
+          />
         );
       },
     },
-  ].map((c) => ({ ...c, align: "center", headerAlign: "center" }));
+  ];
 
   if (isUsersLoading || isPendingUsersLoading) {
     return (
@@ -551,124 +607,145 @@ export default function UserManagement() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
+      {/* Top Header Bar */}
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 3 }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
-        <Typography
-          variant="h3"
-          sx={{ color: "primary.main", fontWeight: 600 }}
-        >
-          User Management
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Total Users: {users.length}
-        </Typography>
+        <Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            Users Management
+          </Typography>
+        </Box>
+
+        {userRole === "Admin" && (
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleAddUserOpen}
+            sx={{
+              fontWeight: 600,
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+              textTransform: "none",
+              borderRadius: 1.5,
+              px: 2.5,
+              py: 0.8,
+              height: 38,
+            }}
+          >
+            Add User
+          </Button>
+        )}
       </Stack>
 
+      {/* Outer Card Wrapper */}
       <Card
         elevation={0}
         sx={{
-          border: "1px solid #e2e8f0",
+          mb: 0,
+          border: "1px solid",
+          borderColor: "neutral.border",
           borderRadius: 3,
           overflow: "hidden",
-          background: "white",
+          background: "background.paper",
         }}
       >
+        {/* Header Toolbar: Search Bar on Left, User Count & Tabs on Right */}
         <Box
           sx={{
-            borderBottom: "1px solid #e2e8f0",
+            p: 2,
             px: 3,
-            pt: 1.5,
-            pb: 0.5,
+            bgcolor: "background.paper",
+            borderBottom: "1px solid",
+            borderColor: "neutral.border",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
+            justifyContent: "space-between",
             flexWrap: "wrap",
             gap: 2,
-            backgroundColor: "white",
           }}
         >
-          <Tabs
-            value={mainTab}
-            onChange={(_e, newValue) => setMainTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
+          {/* Left: Search Bar */}
+          <TextField
+            placeholder="Search name or email..."
+            size="small"
+            variant="outlined"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             sx={{
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 100,
-                color: "#64748b",
-              },
-              "& .MuiTab-root.Mui-selected": { color: "#6B288A" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "#6B288A",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
+              width: { xs: "100%", sm: 320 },
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                backgroundColor: "background.paper",
               },
             }}
-          >
-            <Tab label="All Users" />
-            <Tab label={`Pending Approval (${pendingUsersCount})`} />
-          </Tabs>
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
 
-          <Stack direction="row" spacing={2} alignItems="center">
-            <TextField
-              placeholder="Search by name..."
-              size="small"
-              variant="outlined"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+          {/* Right: User Count & Tabs */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 600 }}>
+              Total users {displayedUsers.length} 
+            </Typography>
+            <Tabs
+              value={mainTab}
+              onChange={(_e, newValue) => setMainTab(newValue)}
+              textColor="primary"
+              indicatorColor="primary"
               sx={{
-                width: { xs: "100%", sm: 240 },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  backgroundColor: "#f8fafc",
+                minHeight: 38,
+                "& .MuiTab-root": {
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  textTransform: "none",
+                  minWidth: 90,
+                  minHeight: 38,
+                  py: 0,
+                  color: "text.muted",
+                },
+                "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "primary.main",
+                  height: 3,
+                  borderRadius: "3px 3px 0 0",
                 },
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            {userRole === "Admin" && (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={handleAddUserOpen}
-                sx={{
-                  fontWeight: 600,
-                  backgroundColor: "#6B288A",
-                  "&:hover": { backgroundColor: "#4A1964" },
-                  textTransform: "none",
-                  borderRadius: 1,
-                  px: 2.5,
-                  py: 0.8,
-                }}
-              >
-                Add User
-              </Button>
-            )}
-          </Stack>
+            >
+              <Tab label="All Users" />
+              <Tab label={`Pending Approval (${pendingUsersCount})`} />
+            </Tabs>
+          </Box>
         </Box>
 
-        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "#f8fafc" }}>
+        {/* DataGrid Container */}
+        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "background.paper" }}>
           <Card
             elevation={0}
             sx={{
-              border: "1px solid #e2e8f0",
-              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "neutral.border",
+              borderRadius: "10px",
               overflow: "hidden",
-              background: "white",
+              background: "background.paper",
             }}
           >
             <Box sx={{ width: "100%" }}>
@@ -682,30 +759,34 @@ export default function UserManagement() {
                     paginationModel: { pageSize: 10 },
                   },
                 }}
-                pageSizeOptions={[5, 10, 25, 50]}
+                pageSizeOptions={[10, 20, 50]}
                 disableRowSelectionOnClick
+                disableColumnMenu
+                disableColumnFilter
+                disableColumnSelector
                 sx={{
                   border: "none",
                   "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "#f8fafc",
-                    borderBottom: "1px solid #e2e8f0",
-                    color: "#475569",
+                    backgroundColor: "neutral.hoverBg",
+                    borderBottom: "1px solid",
+                    borderColor: "neutral.border",
+                    color: "text.subtle",
                     fontWeight: 700,
-                    fontSize: "0.75rem",
+                    fontSize: "0.8rem",
                   },
                   "& .MuiDataGrid-columnHeaderTitle": {
                     fontWeight: 700,
-                    fontSize: "0.75rem",
-                    color: "#475569",
+                    fontSize: "0.8rem",
+                    color: "text.subtle",
                   },
                   "& .MuiDataGrid-cell": {
-                    fontSize: "0.75rem",
-                    color: "#334155",
-                    borderBottom: "1px solid #f1f5f9",
+                    fontSize: "0.85rem",
+                    color: "text.secondary",
+                    borderBottom: "1px solid",
+                    borderColor: "neutral.chipBg",
                   },
                   "& .MuiDataGrid-row": {
-                    "&:nth-of-type(even)": { backgroundColor: "#fafafa" },
-                    "&:hover": { backgroundColor: "#f1f5f9" },
+                    "&:hover": { backgroundColor: "neutral.hoverBg" },
                     transition: "background-color 0.2s ease",
                   },
                   "& .MuiDataGrid-cell:focus": { outline: "none" },
@@ -741,7 +822,7 @@ export default function UserManagement() {
             <Box sx={{ width: "100%" }}>
               <Tabs
                 value={activeTab}
-                onChange={(e, newValue) => setActiveTab(newValue)}
+                onChange={(_e, newValue) => setActiveTab(newValue)}
                 variant="fullWidth"
                 sx={{
                   mb: 3,
@@ -753,10 +834,10 @@ export default function UserManagement() {
                     fontSize: "1rem",
                   },
                   "& .Mui-selected": {
-                    color: "#6B288A !important",
+                    color: "primary.main !important",
                   },
                   "& .MuiTabs-indicator": {
-                    backgroundColor: "#6B288A",
+                    backgroundColor: "primary.main",
                   },
                 }}
               >
@@ -1216,8 +1297,8 @@ export default function UserManagement() {
                   : createUserMutation.isPending
             }
             sx={{
-              backgroundColor: "#6B288A",
-              "&:hover": { backgroundColor: "#4A1964" },
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
             }}
           >
             {dialogMode === "edit"

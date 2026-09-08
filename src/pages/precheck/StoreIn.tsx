@@ -496,19 +496,27 @@ const StoreIn: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          mb: 2,
-          gap: 2,
-        }}
+    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
-        <Typography variant="h4" color="primary.main" fontWeight={600}>
-          Store In
-        </Typography>
-      </Box>
+        <Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            Store In
+          </Typography>
+        </Box>
+      </Stack>
 
       {/* Alert Message */}
       {alertMessage.message && (

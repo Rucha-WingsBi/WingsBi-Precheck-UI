@@ -622,7 +622,7 @@ const ViewSOP: React.FC = () => {
             sx={{
               fontWeight: 700,
               color: "primary.main",
-              fontSize: { xs: "1.2rem", sm: "1.35rem" },
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
             }}
           >
             Assembly Explorer

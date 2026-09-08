@@ -658,7 +658,7 @@ export default function GenerateIRMSN() {
           sx={{
             fontWeight: 700,
             color: "primary.main",
-            fontSize: { xs: "1.25rem", sm: "1.35rem" },
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
           New IR/MSN

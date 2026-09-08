@@ -778,7 +778,7 @@ export default function ScriptExecutor() {
   }, [selectedFiles, fileValidationStatuses]);
 
   return (
-    <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
+    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
       {/* 1. Header Section */}
       <ImportHeader selectedFilesCount={selectedFiles.length} />
 

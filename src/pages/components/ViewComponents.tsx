@@ -30,6 +30,7 @@ import {
   Checkbox,
   ListItemText,
   ListItemIcon,
+  Stack,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -505,28 +506,30 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
   );
 
   return (
-    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 }, backgroundColor: "background.default", minHeight: "100vh" }}>
+    <Box sx={{ py: hideHeader ? 0 : { xs: 1, sm: 1.25 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2 }, minHeight: "100vh" }}>
       {!hideHeader && (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: 1.5,
-          }}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1 }}
         >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              color: "primary.main",
-              fontSize: { xs: "1.1rem", sm: "1.25rem" },
-            }}
-          >
-            Components
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
+              Components
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              View, search, and manage component master entries and assembly mappings.
+            </Typography>
+          </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Button
@@ -569,7 +572,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
               Add Component
             </Button>
           </Box>
-        </Box>
+        </Stack>
       )}
 
       {/* Main Filter & Table Card */}

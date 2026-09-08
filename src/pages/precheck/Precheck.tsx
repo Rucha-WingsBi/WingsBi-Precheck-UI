@@ -454,7 +454,7 @@ export default function Precheck() {
   return (
     <Box sx={{ 
       flexGrow: 1, 
-      p: { xs: 1, sm: 2, md: 3 },
+      py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 },
       maxWidth: { xl: '1400px', xxl: '1800px' },
       mx: 'auto',
     }}>
@@ -484,36 +484,36 @@ export default function Precheck() {
       )}
 
       {/* Main Header */}
-      <Box mb={{ xs: 2, md: 3 }}>
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          component="h1"
-          sx={{ 
-            fontSize: { 
-              xs: '1.5rem', 
-              sm: '1.75rem', 
-              md: '2rem', 
-              lg: '2.25rem',
-              xl: '2.5rem' 
-            },
-            fontWeight: 600,
-            color: 'primary.main',
-          }}
-        >
-          Precheck Management
-        </Typography>
-        <Typography 
-          variant="body1" 
-          color="text.secondary"
-          sx={{ 
-            fontSize: { xs: '0.875rem', sm: '1rem', lg: '1.125rem' },
-            maxWidth: '600px',
-          }}
-        >
-          Manage and monitor precheck operations for assembly components
-        </Typography>
-      </Box>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
+      >
+        <Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            Precheck Management
+          </Typography>
+          <Typography 
+            variant="body1" 
+            color="text.secondary"
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              maxWidth: '600px',
+            }}
+          >
+            Manage and monitor precheck operations for assembly components
+          </Typography>
+        </Box>
+      </Stack>
 
       {/* Error Alert */}
       {error && (
