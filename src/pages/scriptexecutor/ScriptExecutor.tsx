@@ -1,212 +1,48 @@
-import React, { useState, useEffect, useRef, useMemo, type MouseEvent } from "react";
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Typography,
-  Alert,
-  Chip,
-  Stack,
-  Divider,
-  Tabs,
-  Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Grid,
-  Snackbar,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material";
-import {
-  CloudUpload as UploadIcon,
-  PlayArrow as PlayIcon,
-  Info as InfoIcon,
-  CheckCircle as SuccessIcon,
-  Warning as WarningIcon,
-  Close as CloseIcon,
-  InsertDriveFile as FileIcon,
-  Check as CheckIcon,
-  Download as DownloadIcon,
-  Description as DescriptionIcon,
-  RadioButtonChecked as RadioButtonCheckedIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  AccessTime as AccessTimeIcon,
-} from "@mui/icons-material";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo, type MouseEvent } from "react";
+import { Box, Snackbar, Alert } from "@mui/material";
 import { useSelector } from "react-redux";
 import * as XLSX from "xlsx";
 import type { RootState } from "../../store/store";
 import api from "../../services/api";
 
-interface LogEntry {
-  timestamp: string;
-  type: "info" | "success" | "warning" | "error";
-  message: string;
-}
+import {
+  TABS,
+  TAB_METADATA,
+  type LogEntry,
+  detectTemplateType,
+  isTemplateValidForTab,
+  getExpectedTemplateName,
+  parseAssemblyStats,
+  parseTotalNewRecords,
+} from "./constants/scriptExecutorConstants";
 
-const TABS = {
-  MASTER_DATA: 0,
-  QR_CODE: 1,
-  STD_QR_CODE: 2,
-};
+import {
+  ImportHeader,
+  ImportTypeSelector,
+  GuidanceCard,
+} from "./components/ImportSections";
 
-const TAB_METADATA = {
-  [TABS.MASTER_DATA]: {
-    templateName: "Master_Data_Template.xlsx",
-    instructions: [
-      "**Note:** Both **Master Data Assembly** and **Master Data Drawing** files are mandatory to upload. The script upload will not proceed unless both fields are uploaded.",
-      "Ensure all data is accurate and validated before execution.",
-      "Verify that the correct Drawing Number and LN Item are selected.",
-    ],
-    downloadEndpoints: [
-      { endpoint: "/api/Script/DownloadTemplate/masterdata1", label: "Master Data Assembly", fileName: "MasterData_Drawing_Assembly_Template.xlsx" },
-      { endpoint: "/api/Script/DownloadTemplate/masterdata2", label: "Master Data Drawing", fileName: "MasterData_Drawing_Template.xlsx" },
-    ],
-  },
-  [TABS.QR_CODE]: {
-    templateName: "Old_QR_Code_Template.xlsx",
-    instructions: [
-      "Ensure all data is accurate and validated before execution.",
-      "Verify that the correct Drawing Number and LN Item are selected.",
-      "Ensure the Quantity value is greater than 0.",
-      "Confirm that the Quantity and Remaining Quantity fields contain the same value.",
-    ],
-    downloadEndpoints: [
-      { endpoint: "/api/Script/DownloadTemplate/qrcodeimport", label: "Old QR Code Template", fileName: "Old_QR_Code_Template.xlsx" },
-    ],
-  },
-  [TABS.STD_QR_CODE]: {
-    templateName: "New_STD_QR_Code_Template.xlsx",
-    instructions: [
-      "Ensure all data is accurate and validated before execution.",
-      "Verify that the correct Drawing Number and LN Item are selected.",
-      "Ensure the Quantity value is greater than 0.",
-      "Confirm that the Quantity and Remaining Quantity fields contain the same value.",
-    ],
-    downloadEndpoints: [
-      { endpoint: "/api/Script/DownloadTemplate/stdqrgeneration", label: "New Std QR Code Template", fileName: "New_STD_QR_Code_Template.xlsx" },
-    ],
-  },
-};
+import {
+  UploadDropzone,
+  PostUploadSummaryCard,
+} from "./components/UploadAndResults";
 
+import { DataGridPreview } from "./components/DataGridPreview";
 
-const normalizeHeader = (h: string): string => {
-  return h.toLowerCase().replace(/[\s\-_]/g, "").trim();
-};
-
-const detectTemplateType = (headers: string[], fileName?: string): { type: string; templateName: string } => {
-  if (fileName) {
-    const normName = fileName.toLowerCase().replace(/[\s\-_()]/g, "");
-    if (normName.includes("masterdatadrawingassembly")) {
-      return { type: "masterdata-drawing-assembly", templateName: "Master Data Assembly Template" };
-    }
-    if (normName.includes("masterdatadrawing")) {
-      return { type: "masterdata-drawing", templateName: "Master Data Drawing Template" };
-    }
-    if (normName.includes("stdqrcodesample") || normName.includes("newstdqrcodetemplate") || normName.includes("newstdqr")) {
-      return { type: "STDqrcodesample", templateName: "New STD QR Code Template" };
-    }
-    if (normName.includes("qrcodesample") || normName.includes("oldqrcodetemplate") || normName.includes("oldqr")) {
-      return { type: "qrcodesample", templateName: "Old QR Code Template" };
-    }
-  }
-
-  const headersSet = new Set(headers.map(h => normalizeHeader(h)));
-
-  const hasAssemblyLN = headersSet.has("assemblylnitemcode");
-  const hasChildPart = headersSet.has("childpartitemcode");
-  const hasLnItemCode = headersSet.has("lnitemcode");
-  const hasDrawingNumber = headersSet.has("drawingnumber");
-  const hasLnItem = headersSet.has("lnitem") || headersSet.has("lnitemcode");
-  const hasQuantity = headersSet.has("quantity");
-  const hasRemainingQuantity = headersSet.has("remainingquantity");
-
-  // Standard-specific columns
-  const stdColumns = [
-    "mrirnumber", "mrir", "customeritemcode", "htlotno", "htlotnumber",
-    "fanmannumber", "fanmanserialnumber", "gfnno", "wc", "material", "partno", "size"
-  ];
-  const hasStdColumn = stdColumns.some(col => headersSet.has(col));
-
-  if (hasAssemblyLN && hasChildPart) {
-    return { type: "masterdata-drawing-assembly", templateName: "Master Data Assembly Template" };
-  }
-  if (hasLnItemCode && !hasAssemblyLN && !hasChildPart) {
-    return { type: "masterdata-drawing", templateName: "Master Data Drawing Template" };
-  }
-  if (hasDrawingNumber && hasLnItem && hasQuantity && hasRemainingQuantity) {
-    if (hasStdColumn) {
-      return { type: "STDqrcodesample", templateName: "New STD QR Code Template" };
-    }
-    return { type: "qrcodesample", templateName: "Old QR Code Template" };
-  }
-
-  return { type: "unrelated", templateName: "Invalid Template" };
-};
-
-const isTemplateValidForTab = (detectedType: string, tabIndex: number): boolean => {
-  if (tabIndex === TABS.MASTER_DATA) {
-    return detectedType === "masterdata-drawing-assembly" || detectedType === "masterdata-drawing";
-  } else if (tabIndex === TABS.QR_CODE) {
-    return detectedType === "qrcodesample";
-  } else if (tabIndex === TABS.STD_QR_CODE) {
-    return detectedType === "STDqrcodesample";
-  }
-  return false;
-};
-
-const getExpectedTemplateName = (tabIndex: number): string => {
-  if (tabIndex === TABS.MASTER_DATA) {
-    return "Master Data Assembly Template and Master Data Drawing Template";
-  } else if (tabIndex === TABS.QR_CODE) {
-    return "Old QR Code Template";
-  } else if (tabIndex === TABS.STD_QR_CODE) {
-    return "New STD QR Code Template";
-  }
-  return "Unknown Template";
-};
-
-interface AssemblyStats {
-  childDrawings: number;
-  parentDrawings: number;
-  updatedMappings: number;
-}
-
-const parseAssemblyStats = (output: string): AssemblyStats => {
-  const defaultStats = { childDrawings: 0, parentDrawings: 0, updatedMappings: 0 };
-  if (!output) return defaultStats;
-  const childMatch = output.match(/New drawings\s*\(child\):\s*(\d+)/i);
-  const parentMatch = output.match(/New drawings\s*\(parent\):\s*(\d+)/i);
-  const updatedMappingsMatch = output.match(/Updated assembly mappings:\s*(\d+)/i);
-
-  return {
-    childDrawings: childMatch ? parseInt(childMatch[1], 10) : 0,
-    parentDrawings: parentMatch ? parseInt(parentMatch[1], 10) : 0,
-    updatedMappings: updatedMappingsMatch ? parseInt(updatedMappingsMatch[1], 10) : 0,
-  };
-};
-
-const parseTotalNewRecords = (output: string): number => {
-  if (!output) return 0;
-  const match = output.match(/TOTAL NEW RECORDS:\s*(\d+)/i);
-  return match ? parseInt(match[1], 10) : 0;
-};
+import {
+  ResultDialog,
+  ValidationErrorDialog,
+  LNValidationErrorDialog,
+  ScriptErrorDialog,
+  WrongFileDialog,
+} from "./components/ScriptDialogs";
 
 export default function ScriptExecutor() {
-  const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
 
   const [activeTab, setActiveTab] = useState<number>(TABS.MASTER_DATA);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [parsedData, setParsedData] = useState<any[]>([]);
-  const [fileColumns, setFileColumns] = useState<string[]>([]);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [isUploaded, setIsUploaded] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -226,9 +62,7 @@ export default function ScriptExecutor() {
     fileName: string;
   }>({ expectedTemplate: "", detectedTemplate: "", fileName: "" });
 
-  // Execution Simulation states
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [executionProgress, setExecutionProgress] = useState<number>(0);
   const [executionLogs, setExecutionLogs] = useState<LogEntry[]>([]);
   const [showResultDialog, setShowResultDialog] = useState<boolean>(false);
   const [showValidationErrorDialog, setShowValidationErrorDialog] = useState<boolean>(false);
@@ -239,6 +73,7 @@ export default function ScriptExecutor() {
     assemblyFileName: string;
     drawingFileName: string;
   } | null>(null);
+
   const [executionStats, setExecutionStats] = useState({
     total: 0,
     success: 0,
@@ -256,16 +91,34 @@ export default function ScriptExecutor() {
   } | null>(null);
   const [errorDialogTab, setErrorDialogTab] = useState<number>(0);
   const [copied, setCopied] = useState<boolean>(false);
-
   const [uploadTimeStr, setUploadTimeStr] = useState<string>("");
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const [downloadMenuAnchor, setDownloadMenuAnchor] = useState<HTMLElement | null>(null);
 
   const assemblyStats = useMemo(() => parseAssemblyStats(executionOutput), [executionOutput]);
   const totalNewRecords = useMemo(() => parseTotalNewRecords(executionOutput), [executionOutput]);
 
+  const showSnackbar = (message: string, severity: "success" | "error" | "warning" | "info" = "success") => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   const handleResetUpload = () => {
     setSelectedFiles([]);
     setParsedData([]);
-    setFileColumns([]);
     setFileValidationStatuses({});
     setIsUploaded(false);
     setIsUploading(false);
@@ -301,7 +154,7 @@ export default function ScriptExecutor() {
       "Quantity must be greater than 0",
       "LN Item Code missing in Master",
       "Duplicate record found",
-      "MRIR Number mismatch"
+      "MRIR Number mismatch",
     ];
     const fields = ["LN Item Code", "Quantity", "Drawing Number", "MRIR Number", "HT Lot No"];
 
@@ -336,27 +189,6 @@ export default function ScriptExecutor() {
     showSnackbar("Logs copied to clipboard!", "success");
   };
 
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "warning" | "info";
-  }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  // Download template menu anchor (for tabs with multiple download options)
-  const [downloadMenuAnchor, setDownloadMenuAnchor] = useState<HTMLElement | null>(null);
-
-  const showSnackbar = (message: string, severity: "success" | "error" | "warning" | "info" = "success") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  };
-
   const handleDownloadTemplate = async (endpoint: string, fileName: string) => {
     try {
       const response = await api.get(endpoint, {
@@ -378,28 +210,21 @@ export default function ScriptExecutor() {
   };
 
   const handleDownloadButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
-    const tabMeta = TAB_METADATA[activeTab];
+    const tabMeta = TAB_METADATA[activeTab as keyof typeof TAB_METADATA];
     if (tabMeta.downloadEndpoints.length > 1) {
-      // Multiple templates — show dropdown menu
       setDownloadMenuAnchor(event.currentTarget);
     } else if (tabMeta.downloadEndpoints.length === 1) {
-      // Single template — download directly
       const { endpoint, fileName } = tabMeta.downloadEndpoints[0];
       handleDownloadTemplate(endpoint, fileName);
     }
   };
 
-  const logEndRef = useRef<HTMLDivElement>(null);
-
-
   // Reset tab-specific data on tab switch
   useEffect(() => {
     setSelectedFiles([]);
     setParsedData([]);
-    setFileColumns([]);
     setFileValidationStatuses({});
     setIsExecuting(false);
-    setExecutionProgress(0);
     setExecutionLogs([]);
     setIsUploaded(false);
     setIsUploading(false);
@@ -417,27 +242,6 @@ export default function ScriptExecutor() {
     setExecutionOutput("");
   }, [activeTab]);
 
-  // Scroll logs terminal automatically
-  useEffect(() => {
-    if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [executionLogs]);
-
-  const combinedFileColumns = useMemo(() => {
-    const cols = new Set<string>();
-    selectedFiles.forEach((file) => {
-      const status = fileValidationStatuses[file.name];
-      if (status?.columns) {
-        status.columns.forEach((c) => cols.add(c));
-      }
-    });
-    return Array.from(cols);
-  }, [selectedFiles, fileValidationStatuses]);
-
-
-
-  // File validity check — all parsed files are considered valid and pass template check
   const isFileValid = useMemo(() => {
     if (selectedFiles.length === 0) return false;
     return selectedFiles.every((file) => {
@@ -469,15 +273,13 @@ export default function ScriptExecutor() {
     return missing;
   }, [selectedFiles, activeTab]);
 
-  // Aggregate parsed data and columns from all selected files
+  // Aggregate parsed data from all selected files
   useEffect(() => {
     let combinedRows: any[] = [];
-    const colsSet = new Set<string>();
 
     selectedFiles.forEach((file) => {
       const status = fileValidationStatuses[file.name];
       if (status) {
-        status.columns.forEach((col) => colsSet.add(col));
         const rowsWithSource = status.rows.map((row) => ({
           ...row,
           __fileSource: file.name,
@@ -492,10 +294,8 @@ export default function ScriptExecutor() {
     }));
 
     setParsedData(formattedRows);
-    setFileColumns(Array.from(colsSet));
   }, [selectedFiles, fileValidationStatuses]);
 
-  // Parse Excel / CSV File
   const handleFileParse = async (files: File[]) => {
     const supportedFiles = files.filter(file =>
       file.name.endsWith(".xls") || file.name.endsWith(".xlsx") || file.name.endsWith(".csv")
@@ -642,7 +442,6 @@ export default function ScriptExecutor() {
     e.target.value = "";
   };
 
-  // Stepper-based real-time log simulation
   const addLog = (message: string, type: "info" | "success" | "warning" | "error" = "info") => {
     const time = new Date().toLocaleTimeString();
     setExecutionLogs((prev) => [...prev, { timestamp: time, message, type }]);
@@ -657,7 +456,6 @@ export default function ScriptExecutor() {
         return;
       }
 
-      // Bidirectional LN Item Code validation
       const assemblyFile = selectedFiles.find((file) => {
         const normName = file.name.toLowerCase().replace(/[\s\-_()]/g, "");
         return normName.includes("assembly") || normName.includes("masterdatadrawingassembly");
@@ -718,26 +516,18 @@ export default function ScriptExecutor() {
           }
         });
 
-        // Case 1: Missing in Master Drawing
         const missingInDrawing: string[] = [];
         assemblyCodes.forEach((code) => {
-          if (!drawingCodesSet.has(code)) {
-            missingInDrawing.push(code);
-          }
+          if (!drawingCodesSet.has(code)) missingInDrawing.push(code);
         });
         childCodes.forEach((code) => {
-          if (!drawingCodesSet.has(code)) {
-            missingInDrawing.push(code);
-          }
+          if (!drawingCodesSet.has(code)) missingInDrawing.push(code);
         });
         const uniqueMissingInDrawing = Array.from(new Set(missingInDrawing));
 
-        // Case 2: Missing in Master Drawing Assembly
         const missingInAssembly: string[] = [];
         drawingCodes.forEach((code) => {
-          if (!allAssemblyCodesSet.has(code)) {
-            missingInAssembly.push(code);
-          }
+          if (!allAssemblyCodesSet.has(code)) missingInAssembly.push(code);
         });
         const uniqueMissingInAssembly = Array.from(new Set(missingInAssembly));
 
@@ -782,9 +572,7 @@ export default function ScriptExecutor() {
 
       try {
         const response = await api.post("/api/Script/UploadMasterDataExcel", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         });
 
         addLog("Master Data files uploaded and verified successfully.", "success");
@@ -794,10 +582,8 @@ export default function ScriptExecutor() {
         let assemblyRecords: any[] = [];
         let drawingRecords: any[] = [];
 
-        // Parse Response Dynamically
         const resData = response.data;
         if (resData) {
-          // If response lists file1 & file2 keys
           if (resData.file1) {
             if (typeof resData.file1 === "string") {
               assemblyServerFileName = resData.file1;
@@ -814,60 +600,6 @@ export default function ScriptExecutor() {
               drawingRecords = resData.file2.data || resData.file2.records || resData.file2.rows || [];
             }
           }
-
-          // If nested under data
-          if (resData.data) {
-            const d = resData.data;
-            if (d.file1) {
-              if (typeof d.file1 === "string") {
-                assemblyServerFileName = d.file1;
-              } else {
-                assemblyServerFileName = d.file1.fileName || d.file1.filename || d.file1.uploadedFileName || d.file1.filePath || assemblyServerFileName;
-                assemblyRecords = d.file1.data || d.file1.records || d.file1.rows || assemblyRecords;
-              }
-            }
-            if (d.file2) {
-              if (typeof d.file2 === "string") {
-                drawingServerFileName = d.file2;
-              } else {
-                drawingServerFileName = d.file2.fileName || d.file2.filename || d.file2.uploadedFileName || d.file2.filePath || drawingServerFileName;
-                drawingRecords = d.file2.data || d.file2.records || d.file2.rows || drawingRecords;
-              }
-            }
-
-            // Check if resData.data is an array
-            if (Array.isArray(d) && d.length >= 2) {
-              const item1 = d[0];
-              const item2 = d[1];
-              assemblyServerFileName = item1.fileName || item1.filename || item1.uploadedFileName || item1.filePath || assemblyServerFileName;
-              assemblyRecords = item1.data || item1.records || item1.rows || [];
-              drawingServerFileName = item2.fileName || item2.filename || item2.uploadedFileName || item2.filePath || drawingServerFileName;
-              drawingRecords = item2.data || item2.records || item2.rows || [];
-            }
-          }
-
-          // Flat properties
-          assemblyServerFileName = resData.file1Name || resData.file1Path || resData.fileName1 || resData.filePath1 || assemblyServerFileName;
-          drawingServerFileName = resData.file2Name || resData.file2Path || resData.fileName2 || resData.filePath2 || drawingServerFileName;
-
-          if (Array.isArray(resData.file1Data || resData.data1 || resData.rows1)) {
-            assemblyRecords = resData.file1Data || resData.data1 || resData.rows1;
-          }
-          if (Array.isArray(resData.file2Data || resData.data2 || resData.rows2)) {
-            drawingRecords = resData.file2Data || resData.data2 || resData.rows2;
-          }
-
-          if (resData.data) {
-            const d = resData.data;
-            assemblyServerFileName = d.file1Name || d.file1Path || d.fileName1 || d.filePath1 || assemblyServerFileName;
-            drawingServerFileName = d.file2Name || d.file2Path || d.fileName2 || d.filePath2 || drawingServerFileName;
-            if (Array.isArray(d.file1Data || d.data1 || d.rows1)) {
-              assemblyRecords = d.file1Data || d.data1 || d.rows1 || assemblyRecords;
-            }
-            if (Array.isArray(d.file2Data || d.data2 || d.rows2)) {
-              drawingRecords = d.file2Data || d.data2 || d.rows2 || drawingRecords;
-            }
-          }
         }
 
         setUploadedFileNamesFromServer([assemblyServerFileName, drawingServerFileName]);
@@ -877,20 +609,13 @@ export default function ScriptExecutor() {
         setFileValidationStatuses((prev) => {
           const next = { ...prev };
           if (assemblyRecords.length > 0 && next[assemblyFile.name]) {
-            next[assemblyFile.name] = {
-              ...next[assemblyFile.name],
-              rows: assemblyRecords,
-            };
+            next[assemblyFile.name] = { ...next[assemblyFile.name], rows: assemblyRecords };
           }
           if (drawingRecords.length > 0 && next[drawingFile.name]) {
-            next[drawingFile.name] = {
-              ...next[drawingFile.name],
-              rows: drawingRecords,
-            };
+            next[drawingFile.name] = { ...next[drawingFile.name], rows: drawingRecords };
           }
           return next;
         });
-
       } catch (err: any) {
         const errMsg = err.response?.data?.message || err.message || "Upload failed.";
         addLog(`Upload Error: ${errMsg}`, "error");
@@ -913,35 +638,22 @@ export default function ScriptExecutor() {
 
         try {
           const response = await api.post("/api/script/UploadExcel", formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
+            headers: { "Content-Type": "multipart/form-data" },
           });
 
           addLog(`File successfully uploaded and verified: ${file.name}`, "success");
 
-          let serverFileName = file.name; // fallback
+          let serverFileName = file.name;
           if (response.data) {
             serverFileName = response.data.fileName ||
               response.data.filename ||
               response.data.uploadedFileName ||
               response.data.file ||
               response.data.filePath ||
-              (response.data.data && (
-                response.data.data.fileName ||
-                response.data.data.filename ||
-                response.data.data.uploadedFileName ||
-                response.data.data.file ||
-                response.data.data.filePath
-              )) ||
               serverFileName;
           }
 
-          return {
-            fileName: file.name,
-            serverFileName,
-            data: response.data,
-          };
+          return { fileName: file.name, serverFileName, data: response.data };
         } catch (err: any) {
           const errMsg = err.response?.data?.message || err.message || "Upload failed.";
           addLog(`Upload Error for ${file.name}: ${errMsg}`, "error");
@@ -951,7 +663,6 @@ export default function ScriptExecutor() {
 
       try {
         const uploadResults = await Promise.all(uploadPromises);
-
         const serverNames = uploadResults.map(res => res.serverFileName);
         setUploadedFileNamesFromServer(serverNames);
         setIsFileUploadedToServer(true);
@@ -963,15 +674,11 @@ export default function ScriptExecutor() {
           uploadResults.forEach((res) => {
             const records = res.data?.data || res.data?.records || res.data?.rows;
             if (Array.isArray(records) && records.length > 0) {
-              next[res.fileName] = {
-                ...next[res.fileName],
-                rows: records,
-              };
+              next[res.fileName] = { ...next[res.fileName], rows: records };
             }
           });
           return next;
         });
-
       } catch (apiErr: any) {
         console.error("API Error during Multi-Import:", apiErr);
         showSnackbar(`Upload failed: ${apiErr.message}`, "error");
@@ -986,7 +693,6 @@ export default function ScriptExecutor() {
 
     setIsExecuting(true);
     addLog(`Initiating execution for ${uploadedFileNamesFromServer.length} file(s)...`, "info");
-    addLog(`Sending execution payload to server...`, "info");
 
     try {
       let endpoint = "";
@@ -999,10 +705,6 @@ export default function ScriptExecutor() {
       }
 
       const payload = { fileName: uploadedFileNamesFromServer };
-
-      addLog(`Calling execution endpoint: ${endpoint}...`, "info");
-      addLog(`Payload: ${JSON.stringify(payload, null, 2)}`, "info");
-
       const runResponse = await api.post(endpoint, payload);
       const responseData = runResponse.data || {};
 
@@ -1019,42 +721,21 @@ export default function ScriptExecutor() {
       }
 
       const total = responseData.total || responseData.totalRows || parsedData.length;
-
       const errorsCount = typeof responseData.errorsCount === "number"
         ? responseData.errorsCount
-        : (typeof responseData.errors === "number"
-          ? responseData.errors
-          : 0
-        );
+        : (typeof responseData.errors === "number" ? responseData.errors : 0);
 
       const successCount = typeof responseData.successCount === "number"
         ? responseData.successCount
-        : (typeof responseData.imported === "number"
-          ? responseData.imported
-          : (typeof responseData.success === "number"
-            ? responseData.success
-            : total - errorsCount
-          )
-        );
+        : (typeof responseData.imported === "number" ? responseData.imported : total - errorsCount);
 
       const warningsCount = typeof responseData.warningsCount === "number"
         ? responseData.warningsCount
-        : (typeof responseData.warnings === "number"
-          ? responseData.warnings
-          : (typeof responseData.skipped === "number"
-            ? responseData.skipped
-            : 0
-          )
-        );
+        : (typeof responseData.warnings === "number" ? responseData.warnings : 0);
 
       if (errorsCount > 0) {
-        if (successCount > 0) {
-          addLog(`Server transaction completed with ${errorsCount} error(s).`, "warning");
-          showSnackbar(`Script completed with ${errorsCount} error(s).`, "warning");
-        } else {
-          addLog("Server transaction failed.", "error");
-          showSnackbar("Script execution failed.", "error");
-        }
+        addLog(`Server transaction completed with ${errorsCount} error(s).`, "warning");
+        showSnackbar(`Script completed with ${errorsCount} error(s).`, "warning");
       } else {
         addLog("Server transaction executed successfully.", "success");
         showSnackbar(responseData.message || "Script executed successfully!", "success");
@@ -1068,12 +749,8 @@ export default function ScriptExecutor() {
         warnings: warningsCount,
         errors: errorsCount,
       });
-      setExecutionMessage(responseData.message || responseData.msg || responseData.errorMessage || responseData.data?.message || responseData.data?.msg || responseData.data?.errorMessage || "");
+      setExecutionMessage(responseData.message || responseData.msg || responseData.errorMessage || "");
       setExecutionOutput(responseData.output || responseData.data?.output || "");
-
-      // Keep isUploaded true so the Post-Upload Result Card displays directly on the page as requested
-      setIsUploaded(true);
-      setIsUploading(false);
     } catch (apiErr: any) {
       console.error("API Error during Execution:", apiErr);
       const resData = apiErr.response?.data;
@@ -1093,68 +770,6 @@ export default function ScriptExecutor() {
     }
   };
 
-  // Convert columns list into DataGrid columns per file
-  const getGridColumnsForFile = (cols: string[], rows: any[] = []) => {
-    if (cols.length === 0) return [];
-
-    const list: GridColDef[] = [
-      {
-        field: "id",
-        headerName: "Sr No",
-        width: 70,
-        headerAlign: "center",
-        align: "center",
-      },
-    ];
-
-    const seenFields = new Set<string>(["id"]);
-
-    cols.forEach((col) => {
-      const lowerCol = col.toLowerCase().trim();
-      let fieldName = col;
-
-      if (lowerCol === "id") {
-        fieldName = "__excel_id";
-      }
-
-      if (!seenFields.has(fieldName)) {
-        seenFields.add(fieldName);
-
-        // Calculate maximum length of content in this column to set dynamic width
-        let maxLen = col.length;
-        rows.forEach((row) => {
-          let val = row[fieldName] !== undefined ? row[fieldName] : row[col];
-          if (val === undefined || val === null) {
-            const lowerKey = fieldName.toLowerCase();
-            const foundKey = Object.keys(row).find(k => k.toLowerCase().trim() === lowerKey);
-            if (foundKey) {
-              val = row[foundKey];
-            }
-          }
-          if (val !== undefined && val !== null) {
-            const strVal = String(val);
-            if (strVal.length > maxLen) {
-              maxLen = strVal.length;
-            }
-          }
-        });
-
-        const calculatedWidth = Math.max(130, Math.min(500, maxLen * 8 + 50));
-
-        list.push({
-          field: fieldName,
-          headerName: col,
-          flex: 1,
-          minWidth: Math.round(calculatedWidth),
-          headerAlign: "center",
-          align: "center",
-        });
-      }
-    });
-
-    return list;
-  };
-
   const validFilesToPreview = useMemo(() => {
     return selectedFiles.filter(file => {
       const status = fileValidationStatuses[file.name];
@@ -1162,1258 +777,113 @@ export default function ScriptExecutor() {
     });
   }, [selectedFiles, fileValidationStatuses]);
 
-  const dialogSeverity = executionStats.errors > 0 ? (executionStats.success > 0 ? "warning" : "error") : "success";
-
-  const dialogIcon = executionStats.errors > 0 ? (
-    executionStats.success > 0 ? (
-      <WarningIcon sx={{ color: "#f59e0b", fontSize: 28 }} />
-    ) : (
-      <WarningIcon sx={{ color: "#ef4444", fontSize: 28 }} />
-    )
-  ) : (
-    <SuccessIcon sx={{ color: "#10b981", fontSize: 28 }} />
-  );
-
-  const dialogTitle = executionStats.errors > 0 ? (
-    executionStats.success > 0 ? "Execution Completed with Warnings" : "Execution Failed"
-  ) : "Execution Completed";
-
-  const dialogAlertMessage = executionMessage || (executionStats.errors > 0 ? (
-    executionStats.success > 0
-      ? `Script executed with ${executionStats.errors} error(s) and ${executionStats.warnings} warning(s).`
-      : `Script execution failed with ${executionStats.errors} error(s).`
-  ) : "Script executed successfully.");
-
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
-      {/* Top Header Bar */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          mb: 2,
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={700}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, letterSpacing: "-0.02em" }}
-          >
-            Bulk Import
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Import master data or QR code records from Excel
-          </Typography>
-        </Box>
+      {/* 1. Header Section */}
+      <ImportHeader selectedFilesCount={selectedFiles.length} />
 
-        <Button
-          variant="outlined"
-          color="inherit"
-          size="small"
-          startIcon={<AccessTimeIcon sx={{ fontSize: 16 }} />}
-          sx={{
-            borderRadius: 2,
-            borderColor: "neutral.border",
-            color: "text.primary",
-            fontWeight: 600,
-            textTransform: "none",
-            height: 36,
-            px: 2,
-            bgcolor: "background.paper",
-            "&:hover": { borderColor: "grey.400", bgcolor: "neutral.hoverBg" },
-          }}
-        >
-          Import history ({selectedFiles.length})
-        </Button>
-      </Box>
+      {/* 2. Import Type Selector Cards */}
+      <ImportTypeSelector activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* "What are you importing?" Radio Card Selector */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "text.primary", mb: 1 }}>
-          What are you importing?
-        </Typography>
-        <Grid container spacing={1.5} alignItems="stretch">
-          {[
-            {
-              tab: TABS.MASTER_DATA,
-              title: "Master data",
-              subtitle: "Units, stages, shapes, production series & drawing mappings",
-            },
-            {
-              tab: TABS.QR_CODE,
-              title: "QR codes (Old)",
-              subtitle: "Bulk QR code records with ID ranges",
-            },
-            {
-              tab: TABS.STD_QR_CODE,
-              title: "Std QR codes (New)",
-              subtitle: "Standardized QR code records with MRIR numbers",
-            },
-          ].map((item) => {
-            const isSelected = activeTab === item.tab;
-            return (
-              <Grid item xs={12} sm={4} key={item.tab} sx={{ display: "flex" }}>
-                <Card
-                  elevation={0}
-                  onClick={() => setActiveTab(item.tab)}
-                  sx={{
-                    p: 1.5,
-                    cursor: "pointer",
-                    borderRadius: 2.5,
-                    border: isSelected ? "2px solid" : "1px solid",
-                    borderColor: isSelected ? "primary.main" : "neutral.border",
-                    bgcolor: isSelected ? (theme) => theme.palette.primary.main + "05" : "background.paper",
-                    transition: "all 0.2s ease",
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      transform: "translateY(-1px)",
-                    },
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
-                    <Box sx={{ mt: 0.25 }}>
-                      {isSelected ? (
-                        <RadioButtonCheckedIcon sx={{ color: "primary.main", fontSize: 20 }} />
-                      ) : (
-                        <RadioButtonUncheckedIcon sx={{ color: "grey.400", fontSize: 20 }} />
-                      )}
-                    </Box>
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontWeight: 700,
-                          color: isSelected ? "primary.main" : "text.primary",
-                          fontSize: "0.9rem",
-                        }}
-                      >
-                        {item.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25, lineHeight: 1.35 }}>
-                        {item.subtitle}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Box>
+      {/* 3. Guidance & Template Downloads */}
+      <GuidanceCard
+        activeTab={activeTab}
+        downloadMenuAnchor={downloadMenuAnchor}
+        onOpenDownloadMenu={handleDownloadButtonClick}
+        onCloseDownloadMenu={() => setDownloadMenuAnchor(null)}
+        onDownloadTemplate={handleDownloadTemplate}
+      />
 
-      {/* Guidance Info Box ("Before you upload") */}
-      <Card
-        elevation={0}
-        sx={{
-          border: "1px solid",
-          borderColor: "#D0E2FF",
-          borderRadius: 2.5,
-          bgcolor: "#F0F5FF",
-          mb: 2,
-        }}
-      >
-        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1, flexWrap: "wrap", gap: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <InfoIcon sx={{ color: "info.main", fontSize: 20 }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "info.main", fontSize: "0.9rem" }}>
-                Before you upload
-              </Typography>
-            </Box>
-
-            <Button
-              variant="text"
-              size="small"
-              startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
-              onClick={handleDownloadButtonClick}
-              sx={{
-                color: "primary.main",
-                fontWeight: 700,
-                fontSize: "0.775rem",
-                textTransform: "none",
-                p: 0,
-                minHeight: "auto",
-                "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
-              }}
-            >
-              Download template
-            </Button>
-            {/* Dropdown Menu for tabs with multiple download options */}
-            <Menu
-              anchorEl={downloadMenuAnchor}
-              open={Boolean(downloadMenuAnchor)}
-              onClose={() => setDownloadMenuAnchor(null)}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              transitionDuration={0}
-              PaperProps={{
-                sx: {
-                  borderRadius: 2,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  mt: 0.5,
-                },
-              }}
-            >
-              {TAB_METADATA[activeTab].downloadEndpoints.map((dl) => (
-                <MenuItem
-                  key={dl.endpoint}
-                  onClick={() => {
-                    setDownloadMenuAnchor(null);
-                    handleDownloadTemplate(dl.endpoint, dl.fileName);
-                  }}
-                  sx={{ fontSize: "0.85rem", py: 1 }}
-                >
-                  <ListItemIcon>
-                    <DescriptionIcon sx={{ fontSize: 18, color: "primary.main" }} />
-                  </ListItemIcon>
-                  <ListItemText primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                    {dl.label}
-                  </ListItemText>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Box>
-
-          <Stack spacing={0.5}>
-            {TAB_METADATA[activeTab].instructions.map((inst, idx) => {
-              const isNote = inst.startsWith("**Note:");
-              return (
-                <Box key={idx} sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                  <Typography variant="body2" sx={{ color: "info.main", fontWeight: 700, mt: -0.1 }}>
-                    ✓
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: isNote ? "text.primary" : "text.secondary",
-                      lineHeight: 1.45,
-                      fontWeight: isNote ? 600 : 500,
-                      fontSize: "0.8rem",
-                    }}
-                  >
-                    {inst.split(/(\*\*.*?\*\*)/g).map((part, index) =>
-                      part.startsWith("**") && part.endsWith("**") ? (
-                        <strong key={index} style={{ color: "#1E4D92" }}>
-                          {part.slice(2, -2)}
-                        </strong>
-                      ) : (
-                        part
-                      )
-                    )}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {/* Upload Dropzone Card */}
-      {!isUploaded && (
-        <Card
-          elevation={0}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
+      {/* 4. Dropzone vs Post-Upload Summary Card */}
+      {!isUploaded ? (
+        <UploadDropzone
+          selectedFiles={selectedFiles}
+          fileValidationStatuses={fileValidationStatuses}
+          isFileUploadedToServer={isFileUploadedToServer}
+          isUploading={isUploading}
+          isExecuting={isExecuting}
+          isFileValid={isFileValid}
+          hasInvalidFile={hasInvalidFile}
+          isDragOver={isDragOver}
+          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleFileDrop}
-          sx={{
-            border: "2px dashed",
-            borderColor: isDragOver ? "primary.main" : (theme) => theme.palette.primary.light + "60",
-            borderRadius: 3,
-            bgcolor: isDragOver ? (theme) => theme.palette.primary.main + "0A" : (theme) => theme.palette.primary.main + "04",
-            transition: "all 0.25s ease",
-            p: 2,
-            cursor: "pointer",
-            textAlign: "center",
-            mb: 2,
-            "&:hover": {
-              borderColor: "primary.main",
-              bgcolor: (theme) => theme.palette.primary.main + "06",
-            },
+          onInputChange={handleInputChange}
+          onRemoveFile={(fileName) => {
+            setSelectedFiles((prev) => prev.filter((f) => f.name !== fileName));
+            setFileValidationStatuses((prev) => {
+              const next = { ...prev };
+              delete next[fileName];
+              return next;
+            });
           }}
-        >
-        <input
-          type="file"
-          id="file-upload-input"
-          hidden
-          multiple
-          accept=".xlsx,.xls,.csv"
-          onChange={handleInputChange}
+          onConfirmUpload={handleConfirmUpload}
+          onExecuteScript={handleExecuteScript}
+          onCancel={handleResetUpload}
         />
-
-        {selectedFiles.length === 0 ? (
-          <label htmlFor="file-upload-input" style={{ width: "100%", cursor: "pointer" }}>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1.25,
-                py: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: "50%",
-                  bgcolor: "background.paper",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <UploadIcon sx={{ fontSize: 22, color: "primary.main" }} />
-              </Box>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary" }}>
-                  Drag & drop your Excel file here
-                </Typography>
-                <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 700, mt: 0.25 }}>
-                  or browse files
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
-                  .xlsx, .xls, or .csv · up to 5 MB · multiple files supported
-                </Typography>
-              </Box>
-            </Box>
-          </label>
-        ) : (
-          <Box sx={{ width: "100%", cursor: "default" }} onClick={(e) => e.stopPropagation()}>
-            {/* Selected Files List */}
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {selectedFiles.map((file) => {
-                const status = fileValidationStatuses[file.name];
-                const isFileUploaded = isFileUploadedToServer;
-
-                return (
-                  <Box
-                    key={file.name}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      bgcolor: status?.isValid === false ? (theme) => theme.palette.error.main + "0A" : "background.paper",
-                      p: 1.25,
-                      borderRadius: 2,
-                      border: "1px solid",
-                      borderColor: status?.isValid === false ? "error.light" : "neutral.border",
-                      flexWrap: "wrap",
-                      gap: 2,
-                      boxShadow: "0 1px 3px rgba(16, 24, 40, 0.04)",
-                    }}
-                  >
-                    {/* File Info */}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                      <Box
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 1.5,
-                          bgcolor: status?.isValid ? (theme) => theme.palette.success.main + "12" : (theme) => theme.palette.error.main + "12",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <FileIcon sx={{ fontSize: 18, color: status?.isValid ? "success.main" : "error.main" }} />
-                      </Box>
-                      <Box sx={{ textAlign: "left" }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary", fontSize: "0.85rem" }}>
-                          {file.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.72rem" }}>
-                          {(file.size / 1024).toFixed(1)} KB • {status?.isValid ? "Headers OK" : status?.error || "Validating..."}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Status & Remove */}
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Chip
-                        label={isFileUploaded ? "Uploaded" : status?.isValid ? "Verified" : "Invalid"}
-                        color={isFileUploaded ? "info" : status?.isValid ? "success" : "error"}
-                        size="small"
-                        sx={{ fontWeight: 600, height: 24, fontSize: "0.72rem" }}
-                      />
-
-                      {!isFileUploadedToServer && (
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setSelectedFiles((prev) => prev.filter((f) => f.name !== file.name));
-                            setFileValidationStatuses((prev) => {
-                              const next = { ...prev };
-                              delete next[file.name];
-                              return next;
-                            });
-                          }}
-                          sx={{
-                            bgcolor: "neutral.chipBg",
-                            p: 0.4,
-                            "&:hover": { bgcolor: "neutral.border" },
-                          }}
-                        >
-                          <CloseIcon sx={{ fontSize: 12 }} />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                );
-              })}
-
-              {/* Action Control Bar */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  bgcolor: (theme) => theme.palette.primary.main + "08",
-                  p: 1,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: (theme) => theme.palette.primary.main + "20",
-                  flexWrap: "wrap",
-                  gap: 2,
-                  mt: 0.5,
-                }}
-              >
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.825rem" }}>
-                  {selectedFiles.length} File(s) Selected
-                </Typography>
-
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                  {!isFileUploadedToServer && (
-                    <Button
-                      variant="contained"
-                      onClick={handleConfirmUpload}
-                      disabled={isUploading || !isFileValid || hasInvalidFile}
-                      color="success"
-                      size="small"
-                      startIcon={<CheckIcon sx={{ fontSize: 14 }} />}
-                      sx={{ height: 32, fontSize: "0.775rem" }}
-                    >
-                      {isUploading ? `Uploading (${selectedFiles.length})...` : "Confirm & Upload"}
-                    </Button>
-                  )}
-
-                  {isFileUploadedToServer && (
-                    <Button
-                      variant="contained"
-                      onClick={handleExecuteScript}
-                      disabled={isExecuting || !isFileValid || hasInvalidFile}
-                      color="primary"
-                      size="small"
-                      startIcon={<PlayIcon sx={{ fontSize: 14 }} />}
-                      sx={{ height: 32, fontSize: "0.775rem" }}
-                    >
-                      {isExecuting ? "Executing..." : "Execute Script"}
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outlined"
-                    color="inherit"
-                    size="small"
-                    onClick={() => {
-                      setSelectedFiles([]);
-                      setParsedData([]);
-                      setFileColumns([]);
-                      setFileValidationStatuses({});
-                      setIsUploaded(false);
-                      setIsUploading(false);
-                      setIsFileUploadedToServer(false);
-                      setUploadedFileNamesFromServer([]);
-                      setShowLNValidationErrorDialog(false);
-                      setLnValidationErrors(null);
-                    }}
-                    sx={{ height: 32, fontSize: "0.775rem", borderColor: "grey.300" }}
-                  >
-                    Cancel
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Status Banner inside dropzone */}
-            <Box sx={{ mt: 1, textAlign: "left" }}>
-              {isUploaded ? (
-                <Alert severity="success" icon={<SuccessIcon sx={{ fontSize: 16 }} />} sx={{ py: 0, px: 1.5, borderRadius: 1.5, "& .MuiAlert-message": { fontSize: "0.775rem" } }}>
-                  Script executed successfully! Database records are now populated.
-                </Alert>
-              ) : isFileUploadedToServer ? (
-                <Alert severity="info" icon={<SuccessIcon sx={{ fontSize: 16, color: "success.main" }} />} sx={{ py: 0, px: 1.5, borderRadius: 1.5, bgcolor: (theme) => theme.palette.success.main + "0A", "& .MuiAlert-message": { fontSize: "0.775rem" } }}>
-                  All files are successfully stored on the server. Click <strong>Execute Script</strong> to commit database changes.
-                </Alert>
-              ) : !isFileValid ? (
-                <Alert severity="error" icon={<WarningIcon sx={{ fontSize: 16 }} />} sx={{ py: 0, px: 1.5, borderRadius: 1.5, "& .MuiAlert-message": { fontSize: "0.775rem" } }}>
-                  Header columns mismatch in one or more selected files. Correct your file headers before executing.
-                </Alert>
-              ) : (
-                <Alert severity="info" icon={<InfoIcon sx={{ fontSize: 16 }} />} sx={{ py: 0, px: 1.5, borderRadius: 1.5, "& .MuiAlert-message": { fontSize: "0.775rem" } }}>
-                  Template columns validated successfully across all files. Click <strong>Confirm & Upload</strong> to send files to the server.
-                </Alert>
-              )}
-            </Box>
-          </Box>
-        )}
-      </Card>
+      ) : (
+        <PostUploadSummaryCard
+          fileName={uploadedFileNamesFromServer[0] || selectedFiles[0]?.name || "uploaded_template.xlsx"}
+          totalRows={executionStats.total}
+          uploadTimeStr={uploadTimeStr}
+          userName={user?.username || "User"}
+          executionStats={executionStats}
+          attentionRows={attentionRows}
+          onDownloadErrorReport={handleDownloadErrorReport}
+          onResetUpload={handleResetUpload}
+          onFixInSheet={(row, issue) => showSnackbar(`Row ${row}: ${issue}. Please update your template file and re-upload.`, "info")}
+        />
       )}
 
-      {/* Post-Upload Summary & Results Card (Reference UI) */}
-      {isUploaded && (
-        <Card
-          elevation={0}
-          sx={{
-            border: "1px solid",
-            borderColor: "neutral.border",
-            borderRadius: 2.5,
-            bgcolor: "background.paper",
-            p: 2,
-            mb: 2,
-          }}
-        >
-          {/* Top File Banner Header */}
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1.5 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 2,
-                  bgcolor: "grey.100",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1px solid",
-                  borderColor: "neutral.border",
-                }}
-              >
-                <FileIcon sx={{ color: "grey.600", fontSize: 20 }} />
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "text.primary", fontSize: "0.875rem" }}>
-                  {uploadedFileNamesFromServer[0] || selectedFiles[0]?.name || "qr_codes_sep_2026.xlsx"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-                  {executionStats.total.toLocaleString()} rows · uploaded today at {uploadTimeStr || "10:15"} by {user?.username || "Shree"}
-                </Typography>
-              </Box>
-            </Box>
+      {/* 5. DataGrid Preview Tables */}
+      <DataGridPreview
+        validFilesToPreview={validFilesToPreview}
+        fileValidationStatuses={fileValidationStatuses}
+      />
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<DownloadIcon sx={{ fontSize: 15 }} />}
-                onClick={handleDownloadErrorReport}
-                sx={{
-                  height: 34,
-                  px: 1.75,
-                  borderRadius: 2,
-                  borderColor: "neutral.border",
-                  color: "text.primary",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  fontSize: "0.8rem",
-                  bgcolor: "background.paper",
-                  "&:hover": { borderColor: "grey.400", bgcolor: "neutral.hoverBg" },
-                }}
-              >
-                Download error report
-              </Button>
-              <Button
-                variant="text"
-                size="small"
-                onClick={handleResetUpload}
-                sx={{
-                  color: "text.primary",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  fontSize: "0.8rem",
-                  "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
-                }}
-              >
-                Upload another file
-              </Button>
-            </Box>
-          </Box>
-
-          <Divider sx={{ mb: 2, borderColor: "neutral.chipBg" }} />
-
-          {/* Stats Summary Numbers */}
-          <Grid container spacing={2} sx={{ mb: 1.5 }}>
-            <Grid item xs={4}>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: "success.main", fontSize: "1.65rem" }}>
-                {executionStats.success.toLocaleString()}
-              </Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, fontSize: "0.75rem" }}>
-                Imported
-              </Typography>
-            </Grid>
-            <Grid item xs={4}>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: executionStats.errors > 0 ? "error.main" : "text.secondary", fontSize: "1.65rem" }}>
-                {executionStats.errors.toLocaleString()}
-              </Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, fontSize: "0.75rem" }}>
-                Errors — not imported
-              </Typography>
-            </Grid>
-            <Grid item xs={4}>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: "grey.500", fontSize: "1.65rem" }}>
-                {executionStats.warnings.toLocaleString()}
-              </Typography>
-              <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, fontSize: "0.75rem" }}>
-                Duplicates skipped
-              </Typography>
-            </Grid>
-          </Grid>
-
-          {/* Proportional Segmented Progress Bar */}
-          <Box sx={{ width: "100%", height: 6, bgcolor: "grey.200", borderRadius: 3, overflow: "hidden", display: "flex", mb: executionStats.errors > 0 ? 2 : 0 }}>
-            <Box
-              sx={{
-                width: `${executionStats.total > 0 ? (executionStats.success / executionStats.total) * 100 : 100}%`,
-                bgcolor: "success.main",
-                height: "100%",
-                transition: "width 0.5s ease",
-              }}
-            />
-            {executionStats.errors > 0 && (
-              <Box
-                sx={{
-                  width: `${(executionStats.errors / executionStats.total) * 100}%`,
-                  bgcolor: "error.main",
-                  height: "100%",
-                  transition: "width 0.5s ease",
-                }}
-              />
-            )}
-          </Box>
-
-          {/* Rows that need attention Section */}
-          {executionStats.errors > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Divider sx={{ mb: 1.5, borderColor: "neutral.chipBg" }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "text.primary", mb: 1.25, fontSize: "0.85rem" }}>
-                Rows that need attention
-              </Typography>
-
-              <Box sx={{ border: "1px solid", borderColor: "neutral.border", borderRadius: 2, overflow: "hidden" }}>
-                <Box sx={{ display: "flex", bgcolor: "grey.50", py: 0.8, px: 2, borderBottom: "1px solid", borderColor: "neutral.border" }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", width: "10%", fontSize: "0.75rem" }}>Row</Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", width: "20%", fontSize: "0.75rem" }}>Key</Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", width: "25%", fontSize: "0.75rem" }}>Field</Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", width: "30%", fontSize: "0.75rem" }}>Issue</Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", width: "15%", textAlign: "right" }}></Typography>
-                </Box>
-
-                {attentionRows.map((item, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      py: 1,
-                      px: 2,
-                      borderBottom: idx < attentionRows.length - 1 ? "1px solid" : "none",
-                      borderColor: "neutral.chipBg",
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ width: "10%", fontSize: "0.8rem", color: "text.primary" }}>
-                      {item.row}
-                    </Typography>
-                    <Typography variant="body2" sx={{ width: "20%", fontSize: "0.8rem", color: "text.primary", fontWeight: 600 }}>
-                      {item.key}
-                    </Typography>
-                    <Typography variant="body2" sx={{ width: "25%", fontSize: "0.8rem", color: "text.primary" }}>
-                      {item.field}
-                    </Typography>
-                    <Box sx={{ width: "30%", display: "flex", alignItems: "center", gap: 0.75 }}>
-                      <WarningIcon sx={{ fontSize: 14, color: "error.main" }} />
-                      <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
-                        {item.issue}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ width: "15%", textAlign: "right" }}>
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => showSnackbar(`Row ${item.row}: ${item.issue}. Please update your template file and re-upload.`, "info")}
-                        sx={{
-                          color: "primary.main",
-                          fontWeight: 700,
-                          fontSize: "0.775rem",
-                          textTransform: "none",
-                          p: 0,
-                          minWidth: "auto",
-                          "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
-                        }}
-                      >
-                        Fix in sheet
-                      </Button>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          )}
-        </Card>
-      )}
-
-    
-
-      {/* Data Grid Preview Tables */}
-      {validFilesToPreview.map((file) => {
-        const status = fileValidationStatuses[file.name];
-        if (!status) return null;
-
-        const fileRows = status.rows.map((row, idx) => {
-          const mappedRow = { ...row, id: idx + 1 };
-          Object.keys(row).forEach((key) => {
-            if (key.toLowerCase().trim() === "id") {
-              mappedRow.__excel_id = row[key];
-            }
-          });
-          return mappedRow;
-        });
-        const columns = getGridColumnsForFile(status.columns, fileRows);
-
-        return (
-          <Card
-            key={file.name}
-            elevation={0}
-            sx={{
-              border: "1px solid",
-              borderColor: "neutral.border",
-              borderRadius: 2.5,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-              overflow: "hidden",
-              bgcolor: "background.paper",
-              mb: 2,
-            }}
-          >
-            <CardContent sx={{ p: 1.5 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.25, flexWrap: "wrap", gap: 1.5 }}>
-                <Typography variant="h6" color="text.heading" sx={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 1, fontSize: "0.95rem" }}>
-                  <FileIcon sx={{ color: "primary.main", fontSize: 20 }} />
-                  {file.name} Preview
-                </Typography>
-                <Chip
-                  label={`Total Rows: ${fileRows.length}`}
-                  size="small"
-                  color="primary"
-                  sx={{ fontWeight: 700, borderRadius: 1.5, fontSize: "0.75rem" }}
-                />
-              </Box>
-
-              <Box sx={{ height: 320, width: "100%" }}>
-                <DataGrid
-                  rows={fileRows}
-                  columns={columns}
-                  rowHeight={34}
-                  columnHeaderHeight={40}
-                  disableRowSelectionOnClick
-                  density="compact"
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10 },
-                    },
-                  }}
-                  pageSizeOptions={[10, 25, 50, 100]}
-                  sx={{
-                    border: "none",
-                    "& .MuiDataGrid-columnHeaders": {
-                      bgcolor: "neutral.hoverBg",
-                      borderBottom: "1px solid",
-                      borderColor: "neutral.border",
-                      fontWeight: 600,
-                      color: "neutral.600",
-                    },
-                    "& .MuiDataGrid-cell": {
-                      borderBottom: "1px solid",
-                      borderColor: "neutral.chipBg",
-                      fontSize: "0.8125rem",
-                      color: "text.primary",
-                    },
-                  }}
-                />
-              </Box>
-            </CardContent>
-          </Card>
-        );
-      })}
-
-      {/* Dialog Result Popup */}
-      <Dialog
+      {/* 6. Modal Dialogs */}
+      <ResultDialog
         open={showResultDialog}
         onClose={() => setShowResultDialog(false)}
-        maxWidth={executionOutput ? "md" : "sm"}
-        fullWidth={!!executionOutput}
-        PaperProps={{
-          sx: {
-            borderRadius: 3.5,
-            p: 1.5,
-            width: "100%",
-            maxWidth: executionOutput ? "md" : 440,
-          },
-        }}
-      >
-        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", gap: 1.5 }}>
-          {dialogIcon}
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
-            {dialogTitle}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ py: 2 }}>
-          <Alert
-            severity={dialogSeverity}
-            icon={dialogIcon}
-            sx={{ mb: 2, borderRadius: 2, fontWeight: 600, "& .MuiAlert-message": { whiteSpace: "pre-wrap" } }}
-          >
-            {dialogAlertMessage}
-          </Alert>
+        activeTab={activeTab}
+        executionStats={executionStats}
+        executionMessage={executionMessage}
+        executionOutput={executionOutput}
+        totalNewRecords={totalNewRecords}
+        assemblyStats={assemblyStats}
+        onDone={() => setShowResultDialog(false)}
+      />
 
-          {activeTab === TABS.MASTER_DATA ? (
-            <Stack spacing={1.5} sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2.5, border: "1px solid", borderColor: "neutral.border" }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">TOTAL NEW RECORDS</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{totalNewRecords}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">New drawings (child)</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{assemblyStats.childDrawings}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">New drawings (parent)</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{assemblyStats.parentDrawings}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Updated assembly mappings</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{assemblyStats.updatedMappings}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Resolved Warnings</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "warning.main" }}>{executionStats.warnings}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Errors / Failed Rows</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: executionStats.errors > 0 ? "error.main" : "text.secondary" }}>{executionStats.errors}</Typography>
-              </Box>
-            </Stack>
-          ) : (
-            <Stack spacing={1.5} sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2.5, border: "1px solid", borderColor: "neutral.border" }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Processed Rows</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700 }}>{executionStats.total}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Successfully Saved</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{executionStats.success}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Resolved Warnings</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "warning.main" }}>{executionStats.warnings}</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="caption" color="text.secondary">Errors / Failed Rows</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: executionStats.errors > 0 ? "error.main" : "text.secondary" }}>{executionStats.errors}</Typography>
-              </Box>
-            </Stack>
-          )}
-
-          {executionOutput && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: "block", mb: 1 }}>
-                EXECUTION OUTPUT REPORT
-              </Typography>
-              <Box
-                sx={{
-                  bgcolor: "grey.900",
-                  color: "grey.300",
-                  p: 2,
-                  borderRadius: 2.5,
-                  border: "1px solid",
-                  borderColor: "grey.800",
-                  fontFamily: 'Consolas, Monaco, "Andale Mono", monospace',
-                  fontSize: "0.825rem",
-                  lineHeight: 1.4,
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-all",
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                }}
-              >
-                {executionOutput}
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => {
-              setShowResultDialog(false);
-              if (executionStats.errors > 0) {
-                if (executionStats.success > 0) {
-                  showSnackbar(`Script completed with ${executionStats.errors} error(s).`, "warning");
-                } else {
-                  showSnackbar("Script execution failed.", "error");
-                }
-              } else {
-                showSnackbar(executionMessage || "Script executed successfully.", "success");
-              }
-            }}
-            sx={{ px: 3, fontWeight: 700 }}
-          >
-            Done
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Validation Error Dialog */}
-      <Dialog
+      <ValidationErrorDialog
         open={showValidationErrorDialog}
         onClose={() => setShowValidationErrorDialog(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 3.5,
-            p: 1.5,
-            width: "100%",
-            maxWidth: 420,
-          },
-        }}
-      >
-        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", gap: 1.5 }}>
-          <WarningIcon sx={{ color: "warning.main", fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Missing Required File
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ py: 1 }}>
-          {missingFiles.length > 0 && (
-            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-              Missing file: <strong>{missingFiles.join(" and ")}</strong>
-            </Alert>
-          )}
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.5 }}>
-            Both <strong>Master Data Assembly</strong> and <strong>Master Data Drawing</strong> files are mandatory to upload.
-          </Typography>
+        missingFiles={missingFiles}
+        onBrowseFiles={() => document.getElementById("file-upload-input")?.click()}
+      />
 
-          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-            Please ensure both files are selected before proceeding with the upload.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            variant="contained"
-            size="small"
-            color="primary"
-            onClick={() => {
-              setShowValidationErrorDialog(false);
-              document.getElementById("file-upload-input")?.click();
-            }}
-            sx={{ px: 3, fontWeight: 700 }}
-          >
-            Okay
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* LN Item Code Validation Error Dialog */}
-      <Dialog
+      <LNValidationErrorDialog
         open={showLNValidationErrorDialog}
         onClose={() => setShowLNValidationErrorDialog(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 3.5,
-            p: 1.5,
-            width: "100%",
-            maxWidth: 500,
-          },
-        }}
-      >
-        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", gap: 1.5 }}>
-          <WarningIcon sx={{ color: "error.main", fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "error.main" }}>
-            LN Item Code Mismatch
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ py: 1.5 }}>
-          {lnValidationErrors?.missingInDrawing && lnValidationErrors.missingInDrawing.length > 0 && (
-            <Box sx={{ mb: (lnValidationErrors?.missingInAssembly?.length ?? 0) > 0 ? 3 : 0 }}>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, lineHeight: 1.6, color: "text.primary" }}>
-                The following LN Item Codes are present in the Master Drawing Assembly file ({lnValidationErrors?.assemblyFileName}) but do not exist in the Master Drawing file ({lnValidationErrors?.drawingFileName}):
-              </Typography>
+        lnValidationErrors={lnValidationErrors}
+      />
 
-              <Box sx={{
-                maxHeight: 120,
-                overflowY: "auto",
-                p: 1.5,
-                mb: 1.5,
-                bgcolor: (theme) => theme.palette.error.main + "0C",
-                border: "1px solid",
-                borderColor: "error.light",
-                borderRadius: 2,
-                fontFamily: "monospace",
-                fontSize: "0.85rem",
-                color: "error.main",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-all"
-              }}>
-                {lnValidationErrors.missingInDrawing.join(", ")}
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-                Please ensure all Assembly LN Item Codes and Child Part Item Codes are available in the Master Drawing file.
-              </Typography>
-            </Box>
-          )}
-
-          {lnValidationErrors?.missingInAssembly && lnValidationErrors.missingInAssembly.length > 0 && (
-            <Box>
-              {(lnValidationErrors?.missingInDrawing?.length ?? 0) > 0 && <Divider sx={{ my: 2.5 }} />}
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, lineHeight: 1.6, color: "text.primary" }}>
-                The following LN Item Codes are present in the Master Drawing file ({lnValidationErrors?.drawingFileName}) but do not exist in the Master Drawing Assembly file ({lnValidationErrors?.assemblyFileName}):
-              </Typography>
-
-              <Box sx={{
-                maxHeight: 120,
-                overflowY: "auto",
-                p: 1.5,
-                mb: 1.5,
-                bgcolor: (theme) => theme.palette.error.main + "0C",
-                border: "1px solid",
-                borderColor: "error.light",
-                borderRadius: 2,
-                fontFamily: "monospace",
-                fontSize: "0.85rem",
-                color: "error.main",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-all"
-              }}>
-                {lnValidationErrors.missingInAssembly.join(", ")}
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-                Please ensure all LN Item Codes from the Master Drawing file are mapped as either Assembly LN Item Codes or Child Part Item Codes in the Master Drawing Assembly file.
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setShowLNValidationErrorDialog(false)}
-            sx={{ px: 3, fontWeight: 700 }}
-          >
-            Okay
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Script Execution Error Dialog */}
-      <Dialog
+      <ScriptErrorDialog
         open={showScriptErrorDialog}
         onClose={() => setShowScriptErrorDialog(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3.5,
-            p: 0,
-            overflow: "hidden",
-            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
-          },
-        }}
-      >
-        <Box
-          sx={{
-            background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            color: "white",
-            px: 3,
-            py: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <WarningIcon sx={{ fontSize: 28 }} />
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, color: "white" }}>
-                Script Execution Failed
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8, fontSize: "0.75rem" }}>
-                {scriptErrorDetails?.message || "Execution encountered an error."}
-              </Typography>
-            </Box>
-          </Box>
-          <IconButton onClick={() => setShowScriptErrorDialog(false)} sx={{ color: "white" }}>
-            <CloseIcon />
-          </IconButton>
-        </Box>
+        scriptErrorDetails={scriptErrorDetails}
+        errorDialogTab={errorDialogTab}
+        onErrorDialogTabChange={setErrorDialogTab}
+        copied={copied}
+        onCopyLog={handleCopyErrorLog}
+      />
 
-        <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column", bgcolor: "grey.50" }}>
-          {scriptErrorDetails?.output && scriptErrorDetails?.error && (
-            <Tabs
-              value={errorDialogTab}
-              onChange={(_, val) => {
-                setErrorDialogTab(val);
-                setCopied(false);
-              }}
-              sx={{
-                borderBottom: "1px solid",
-                borderColor: "neutral.border",
-                px: 2,
-                bgcolor: "background.paper",
-                "& .MuiTabs-indicator": {
-                  backgroundColor: "primary.main",
-                  height: 3,
-                },
-                "& .MuiTab-root": {
-                  textTransform: "none",
-                  fontWeight: 600,
-                  color: "text.secondary",
-                  "&.Mui-selected": {
-                    color: "primary.main",
-                  },
-                },
-              }}
-            >
-              <Tab label="Validation Report" value={0} />
-              <Tab label="Developer Stacktrace" value={1} />
-            </Tabs>
-          )}
-
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 1.5, bgcolor: "background.paper" }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-              {errorDialogTab === 0 ? "OUTPUT REPORT" : "DEVELOPER STACKTRACE"}
-            </Typography>
-            <Button
-              size="small"
-              onClick={handleCopyErrorLog}
-              startIcon={copied ? <CheckIcon sx={{ fontSize: 14 }} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
-              sx={{
-                textTransform: "none",
-                fontWeight: 600,
-                color: "primary.main",
-                "&:hover": { bgcolor: (theme) => theme.palette.primary.main + "0A" },
-              }}
-            >
-              {copied ? "Copied" : "Copy Log"}
-            </Button>
-          </Box>
-
-          <Box sx={{ px: 3, pb: 3, pt: 0 }}>
-            <Box
-              sx={{
-                bgcolor: "grey.900",
-                color: "grey.300",
-                p: 2.5,
-                borderRadius: 2.5,
-                border: "1px solid",
-                borderColor: "grey.800",
-                fontFamily: 'Consolas, Monaco, "Andale Mono", monospace',
-                fontSize: "0.85rem",
-                lineHeight: 1.5,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-all",
-                maxHeight: "420px",
-                overflowY: "auto",
-              }}
-            >
-              {errorDialogTab === 0
-                ? (scriptErrorDetails?.output || "No output report available.")
-                : (scriptErrorDetails?.error || "No traceback available.")
-              }
-            </Box>
-          </Box>
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, py: 2, bgcolor: "background.paper", borderTop: "1px solid", borderColor: "neutral.border" }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setShowScriptErrorDialog(false)}
-            sx={{ px: 4, fontWeight: 700 }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Wrong File Uploaded Dialog */}
-      <Dialog
+      <WrongFileDialog
         open={showWrongFileDialog}
         onClose={() => setShowWrongFileDialog(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 3.5,
-            p: 1.5,
-            width: "100%",
-            maxWidth: 450,
-          },
-        }}
-      >
-        <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", gap: 1.5 }}>
-          <WarningIcon sx={{ color: "error.main", fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "error.main" }}>
-            Wrong File Uploaded
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ py: 1.5 }}>
-          <Typography variant="body2" sx={{ mb: 2, fontWeight: 500, color: "text.primary" }}>
-            The uploaded file does not match the selected module template.
-          </Typography>
+        expectedTemplate={wrongFileDialogData.expectedTemplate}
+      />
 
-          <Stack spacing={1.5} sx={{ p: 2, bgcolor: "grey.50", borderRadius: 2.5, border: "1px solid", borderColor: "neutral.border" }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Expected Template:</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700, color: "success.main" }}>{wrongFileDialogData.expectedTemplate}</Typography>
-            </Box>
-          </Stack>
-
-          <Typography variant="body2" sx={{ mt: 2, color: "text.secondary" }}>
-            Please upload the correct template and try again.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setShowWrongFileDialog(false)}
-            sx={{ px: 3, fontWeight: 700 }}
-          >
-            Okay
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar for notifications */}
+      {/* 7. Snackbar Notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={snackbar.severity === "error" ? null : 6000}
