@@ -108,6 +108,16 @@ interface PaginatedResponse<T> {
   hasPreviousPage: boolean;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  totalRecords: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 interface UploadResult {
   totalRows: number;
   imported: number;
@@ -438,8 +448,9 @@ const ProductionOrderUpload: React.FC = () => {
     return payload;
   };
 
-  // Fetch production orders with filters
+  // Fetch production orders with filters & pagination
   const {
+    data: paginatedResponse,
     data: paginatedResponse,
     isLoading: isHistoryLoading,
   } = useQuery<PaginatedResponse<ProductionOrder>>({
