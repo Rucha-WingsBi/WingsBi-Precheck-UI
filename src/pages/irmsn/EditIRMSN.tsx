@@ -299,16 +299,18 @@ export default function EditIRMSN() {
 
   const readOnlyStyle = {
     "& .MuiOutlinedInput-root": {
-      backgroundColor: "#F9FAFB",
-      borderRadius: "8px",
-      fontSize: "0.875rem",
+      backgroundColor: "grey.50",
+      borderRadius: "6px",
+      fontSize: "0.8rem",
+      height: 34,
     },
   };
 
   const inputStyle = {
     "& .MuiOutlinedInput-root": {
-      borderRadius: "8px",
-      fontSize: "0.875rem",
+      borderRadius: "6px",
+      fontSize: "0.8rem",
+      height: 34,
     },
   };
 
@@ -320,7 +322,7 @@ export default function EditIRMSN() {
         minHeight: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "background.default",
         width: "100%",
         boxSizing: "border-box",
       }}
@@ -336,10 +338,11 @@ export default function EditIRMSN() {
           onClick={() => navigate(-1)}
           size="small"
           sx={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #D0D5DD",
-            color: "#344054",
-            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+            backgroundColor: "background.paper",
+            border: "1px solid",
+            borderColor: "grey.300",
+            color: "text.secondary",
+            "&:hover": { backgroundColor: "grey.50", borderColor: "grey.400" },
           }}
         >
           <ArrowBackIcon fontSize="small" />
@@ -360,7 +363,7 @@ export default function EditIRMSN() {
       {apiError && (
         <Alert
           severity="error"
-          sx={{ mb: 2, borderRadius: "8px" }}
+          sx={{ mb: 2, borderRadius: "6px" }}
           onClose={() => dispatch(clearIrmsnError())}
         >
           {apiError}
@@ -373,8 +376,9 @@ export default function EditIRMSN() {
         sx={{
           p: { xs: 2, sm: 2.5, md: 3 },
           borderRadius: "10px",
-          border: "1px solid #EAECF0",
-          backgroundColor: "#ffffff",
+          border: "1px solid",
+          borderColor: "grey.200",
+          backgroundColor: "background.paper",
           flexGrow: 1,
         }}
       >
@@ -650,8 +654,8 @@ export default function EditIRMSN() {
                   onClick={() => navigate(-1)}
                   disabled={isSubmitting}
                   sx={{
-                    borderColor: "#D0D5DD",
-                    color: "#344054",
+                    borderColor: "grey.300",
+                    color: "text.secondary",
                     fontWeight: 600,
                     fontSize: "0.8rem",
                     borderRadius: "6px",
@@ -659,7 +663,7 @@ export default function EditIRMSN() {
                     py: 0.5,
                     height: 34,
                     textTransform: "none",
-                    "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                    "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
                   }}
                 >
                   Cancel

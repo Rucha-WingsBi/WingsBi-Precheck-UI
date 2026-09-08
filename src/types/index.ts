@@ -91,6 +91,7 @@ export interface DrawingNumber {
   modifiedDate?: string;
   qty?: number;
   findNo?: string;
+  productionSeries?: string | null;
 }
 
 export interface FormData {

@@ -299,6 +299,49 @@ export const useDrawingNumbers = (componentType = "", search = "") => {
   });
 };
 
+export const useFetchAllDrawingNumbers = (
+  searchQuery = "",
+  pageNumber = 1,
+  pageSize = 20,
+  componentType = ""
+) => {
+  return useQuery<DrawingNumber[]>({
+    queryKey: ["fetchAllDrawingNumbers", searchQuery, pageNumber, pageSize, componentType],
+    queryFn: async () => {
+      try {
+        const response = await api.get("/api/Common/FetchAllDrawingNumbers", {
+          params: {
+            searchQuery,
+            pageNumber,
+            pageSize,
+            ...(componentType ? { ComponentType: componentType } : {}),
+          },
+        });
+        const rawData = response.data?.data || response.data?.$values || response.data;
+        if (Array.isArray(rawData)) {
+          return rawData;
+        }
+        if (Array.isArray(response.data)) {
+          return response.data;
+        }
+        return [];
+      } catch (err) {
+        console.warn("FetchAllDrawingNumbers API call failed, falling back to GetAllDrawingNumber:", err);
+        const fallbackResponse = await api.get("/api/Common/GetAllDrawingNumber", {
+          params: {
+            ComponentType: componentType,
+            search: searchQuery,
+          },
+        });
+        const fallbackRaw = fallbackResponse.data?.data || fallbackResponse.data?.$values || fallbackResponse.data;
+        return Array.isArray(fallbackRaw) ? fallbackRaw : [];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+
 export const useAssemblyNumbers = () => {
   return useQuery({
     queryKey: ["assemblyNumbers"],

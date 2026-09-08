@@ -17,13 +17,12 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
-  InputAdornment,
+
   debounce,
   IconButton,
 } from "@mui/material";
 
 import { Save as SaveIcon, Refresh as RefreshIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -35,7 +34,7 @@ import {
   insertDrawingMappings,
   clearError,
 } from "../../store/slices/qrcodeSlice";
-import { useDrawingNumbers, useUnits } from "../../hooks/useMasterData";
+import { useFetchAllDrawingNumbers, useUnits } from "../../hooks/useMasterData";
 
 // Create typed versions of the hooks
 const useAppDispatch: () => AppDispatch = useDispatch;
@@ -82,7 +81,7 @@ export default function InsertMappings() {
   const { data: units = [] } = useUnits();
   const [searchQuery, setSearchQuery] = useState("");
   const { data: drawingNumbers = [], isLoading: loadingDrawings } =
-    useDrawingNumbers("", searchQuery);
+    useFetchAllDrawingNumbers(searchQuery, 1, 50);
   const user = useSelector((state: RootState) => state.auth.user);
 
   // Local state
@@ -91,14 +90,15 @@ export default function InsertMappings() {
   );
 
   // Manual fetch for edit mode if state is missing
-  const { data: allDrawings = [] } = useDrawingNumbers("", "");
+  const { data: allDrawings = [] } = useFetchAllDrawingNumbers("", 1, 100);
 
   const [selectedAssemblyDrawing, setSelectedAssemblyDrawing] = useState<DrawingNumber | null>(
     null
   );
   const [assemblySearchQuery, setAssemblySearchQuery] = useState("");
   const { data: assemblyDrawingNumbers = [], isLoading: loadingAssemblyDrawings } =
-    useDrawingNumbers("", assemblySearchQuery);
+    useFetchAllDrawingNumbers(assemblySearchQuery, 1, 50);
+
 
   const debouncedAssemblySearch = useMemo(
     () =>
@@ -120,7 +120,7 @@ export default function InsertMappings() {
     }
   }, [isEditMode, editRow, allDrawings, id]);
   const [successMessage, setSuccessMessage] = useState<string>("");
-  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [, setIsReadOnly] = useState(false);
 
   // Check if user is admin
   const isAdmin = user?.role === "Admin";
@@ -131,7 +131,6 @@ export default function InsertMappings() {
     handleSubmit,
     setValue,
     reset,
-    watch,
     formState: { errors },
   } = useForm<InsertMappingsFormData>({
     defaultValues: {
@@ -388,7 +387,9 @@ export default function InsertMappings() {
       await dispatch(insertDrawingMappings(payload)).unwrap();
       await queryClient.invalidateQueries({ queryKey: ["drawingNumbers"] });
       await queryClient.invalidateQueries({ queryKey: ["allDrawingNumbers"] });
+      await queryClient.invalidateQueries({ queryKey: ["fetchAllDrawingNumbers"] });
       await queryClient.refetchQueries({ queryKey: ["allDrawingNumbers"] });
+      await queryClient.refetchQueries({ queryKey: ["fetchAllDrawingNumbers"] });
       setSuccessMessage(
         isEditMode
           ? "Drawing mappings updated successfully!"

@@ -13,6 +13,54 @@ const customBreakpoints = {
   },
 };
 
+// Module Augmentation for custom theme palette tokens
+declare module '@mui/material/styles' {
+  interface TypeText {
+    heading?: string;
+    body?: string;
+    muted?: string;
+    subtle?: string;
+  }
+  interface Palette {
+    neutral?: {
+      50?: string;
+      100?: string;
+      200?: string;
+      300?: string;
+      400?: string;
+      500?: string;
+      600?: string;
+      700?: string;
+      800?: string;
+      900?: string;
+      border?: string;
+      cardBg?: string;
+      hoverBg?: string;
+      chipBg?: string;
+      appBg?: string;
+    };
+  }
+  interface PaletteOptions {
+    neutral?: {
+      50?: string;
+      100?: string;
+      200?: string;
+      300?: string;
+      400?: string;
+      500?: string;
+      600?: string;
+      700?: string;
+      800?: string;
+      900?: string;
+      border?: string;
+      cardBg?: string;
+      hoverBg?: string;
+      chipBg?: string;
+      appBg?: string;
+    };
+  }
+}
+
 let theme = createTheme({
   breakpoints: customBreakpoints,
   palette: {
@@ -50,12 +98,45 @@ let theme = createTheme({
       dark: '#1b5e20',
     },
     background: {
-      default: '#EEF1F6',
+      default: '#F8FAF2',
       paper: '#ffffff',
     },
     text: {
-      primary: 'rgba(0, 0, 0, 0.87)',
-      secondary: 'rgba(0, 0, 0, 0.6)',
+      primary: '#101828',
+      secondary: '#344054',
+      heading: '#6B288A',
+      body: '#344054',
+      muted: '#667085',
+      subtle: '#475467',
+    },
+    grey: {
+      50: '#F9FAFB',
+      100: '#F2F4F7',
+      200: '#EAECF0',
+      300: '#D0D5DD',
+      400: '#98A2B3',
+      500: '#667085',
+      600: '#475467',
+      700: '#344054',
+      800: '#1D2939',
+      900: '#101828',
+    },
+    neutral: {
+      50: '#F9FAFB',
+      100: '#F2F4F7',
+      200: '#EAECF0',
+      300: '#D0D5DD',
+      400: '#98A2B3',
+      500: '#667085',
+      600: '#475467',
+      700: '#344054',
+      800: '#1D2939',
+      900: '#101828',
+      border: '#EAECF0',
+      cardBg: '#ffffff',
+      hoverBg: '#F9FAFB',
+      chipBg: '#F2F4F7',
+      appBg: '#F8FAF2',
     },
   },
   typography: {
@@ -71,6 +152,7 @@ let theme = createTheme({
     ].join(','),
     // Responsive typography
     h1: {
+      color: '#6B288A',
       fontSize: '2rem',
       fontWeight: 600,
       '@media (min-width:600px)': {
@@ -87,6 +169,7 @@ let theme = createTheme({
       },
     },
     h2: {
+      color: '#6B288A',
       fontSize: '1.75rem',
       fontWeight: 600,
       '@media (min-width:600px)': {
@@ -103,6 +186,7 @@ let theme = createTheme({
       },
     },
     h3: {
+      color: '#6B288A',
       fontSize: '1.5rem',
       fontWeight: 600,
       '@media (min-width:600px)': {
@@ -119,6 +203,7 @@ let theme = createTheme({
       },
     },
     h4: {
+      color: '#6B288A',
       fontSize: '1.25rem',
       fontWeight: 500,
       '@media (min-width:600px)': {
@@ -135,6 +220,7 @@ let theme = createTheme({
       },
     },
     h5: {
+      color: '#6B288A',
       fontSize: '1.125rem',
       fontWeight: 500,
       '@media (min-width:600px)': {
@@ -151,6 +237,7 @@ let theme = createTheme({
       },
     },
     h6: {
+      color: '#6B288A',
       fontSize: '1rem',
       fontWeight: 500,
       '@media (min-width:600px)': {
@@ -347,49 +434,96 @@ let theme = createTheme({
         },
       },
     },
-    MuiTableCell: {
+    MuiTableContainer: {
       styleOverrides: {
         root: {
-          fontSize: '0.85rem',
-          padding: '4px 8px',
-          whiteSpace: 'nowrap',
-          '& .MuiTableSortLabel-root': {
-            whiteSpace: 'nowrap',
-          },
-          '@media (min-width:600px)': {
-            fontSize: '0.85rem',
-            padding: '4px 8px',
-          },
-          '@media (min-width:960px)': {
-            fontSize: '0.875rem',
-            padding: '4px 8px',
-          },
-          '@media (min-width:1920px)': {
-            fontSize: '1rem',
-            padding: '6px 10px',
-          },
-          '@media (min-width:2560px)': {
-            fontSize: '1.2rem',
+          borderRadius: 6,
+          border: '1px solid #EAECF0',
+          backgroundColor: '#ffffff',
+          overflowX: 'auto',
+          boxShadow: 'none',
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        },
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#F9FAFB',
+          '& .MuiTableCell-root': {
+            backgroundColor: '#F9FAFB',
+            color: '#475467',
+            fontWeight: 600,
+            fontSize: '0.75rem',
+            fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            borderBottom: '1px solid #EAECF0',
             padding: '8px 12px',
           },
         },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSize: '0.8rem',
+          padding: '6px 12px',
+          whiteSpace: 'nowrap',
+          borderBottom: '1px solid #F2F4F7',
+          color: '#344054',
+          '& .MuiTableSortLabel-root': {
+            whiteSpace: 'nowrap',
+          },
+        },
         head: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           fontWeight: 600,
-          backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          padding: '5px 8px',
-          '@media (min-width:1920px)': {
-            padding: '7px 10px',
-          },
-          '@media (min-width:2560px)': {
-            padding: '9px 12px',
-          },
+          backgroundColor: '#F9FAFB',
+          color: '#475467',
+          padding: '8px 12px',
+          fontSize: '0.75rem',
+          borderBottom: '1px solid #EAECF0',
         },
       },
     },
     MuiTableRow: {
       styleOverrides: {
         root: {
-          height: 50,
+          height: 40,
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          '&:hover': {
+            backgroundColor: '#F9FAFB !important',
+          },
+          '&.Mui-selected': {
+            backgroundColor: '#F2F4F7',
+            '&:hover': {
+              backgroundColor: '#EAECF0',
+            },
+          },
+        },
+      },
+    },
+    MuiTablePagination: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSize: '0.75rem',
+          color: '#475467',
+        },
+        selectLabel: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSize: '0.75rem',
+          color: '#475467',
+        },
+        displayedRows: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSize: '0.75rem',
+          color: '#475467',
+          fontWeight: 500,
+        },
+        select: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontSize: '0.75rem',
         },
       },
     },
@@ -445,9 +579,15 @@ let theme = createTheme({
         },
       },
     },
+    MuiMenu: {
+      defaultProps: {
+        transitionDuration: 0,
+      },
+    },
     MuiDataGrid: {
       styleOverrides: {
         root: {
+          fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           '& .MuiDataGrid-virtualScroller': {
             overflowX: 'auto !important',
           },
