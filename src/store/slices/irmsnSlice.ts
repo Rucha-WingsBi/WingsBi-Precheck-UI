@@ -48,6 +48,7 @@ interface IRMSNState {
   error: string | null;
   generatedNumber: string | null;
   lastSearchParams: any | null;
+  totalCount: number;
 }
 
 const initialState: IRMSNState = {
@@ -58,6 +59,7 @@ const initialState: IRMSNState = {
   error: null,
   generatedNumber: null,
   lastSearchParams: null,
+  totalCount: 0,
 };
 
 // Search IRMSN
@@ -245,135 +247,38 @@ export const updateMSNNumber = createAsyncThunk(
   }
 );
 
-// Generate IRMSN
-export const fetchIRMSNList = createAsyncThunk(
-  "irmsn/fetchIRMSNList",
+// Fetch View IR/MSN list via POST API
+export const fetchViewIrMsn = createAsyncThunk(
+  "irmsn/fetchViewIrMsn",
   async (
-    {
-      drawingNumber,
-      stage,
-      productionSeries,
-      departmentTypeId,
-      lnItemCode,
-      fromDate,
-      toDate,
-      IRNumeberId,
-    }: {
-      drawingNumber?: string;
-      stage?: string;
-      productionSeries?: string;
-      departmentTypeId?: string | number;
-      lnItemCode?: string;
-      fromDate?: string;
-      toDate?: string;
-      IRNumeberId?: string | number;
+    payload: {
+      pageNumber: number;
+      pageSize: number;
+      searchQuery: string;
+      productionSeries: string[];
+      departmentTypeId: number[];
+      fromDate: string | null;
+      toDate: string | null;
+      documentType: string[];
     },
     { rejectWithValue }
   ) => {
     try {
-      const params: any = {};
-
-      // Only add parameters if they have values (don't send empty strings)
-      if (drawingNumber && drawingNumber.trim() !== "") {
-        params.DrawingNumber = drawingNumber;
-      }
-      if (stage && stage.trim() !== "") {
-        params.Stage = stage;
-      }
-      if (productionSeries && productionSeries.trim() !== "") {
-        params.Productionseries = productionSeries;
-      }
-      if (departmentTypeId !== undefined && departmentTypeId !== null && String(departmentTypeId).trim() !== "") {
-        params.DepartmentTypeId = departmentTypeId;
-      }
-      if (lnItemCode && lnItemCode.trim() !== "") {
-        params.LnItemCode = lnItemCode;
-      }
-      if (fromDate) {
-        params.FromDate = fromDate;
-      }
-      if (toDate) {
-        params.ToDate = toDate;
-      }
-      if (IRNumeberId) {
-        params.IRNumeberId = IRNumeberId;
-      }
-
-      const response = await api.get(
-        "/api/reports/GetIRNumberByDrawingNumber",
-        { params }
+      const response = await api.post(
+        `/api/reports/viewIrMsn?pageNumber=${payload.pageNumber}&pageSize=${payload.pageSize}`,
+        {
+          searchQuery: payload.searchQuery,
+          productionSeries: payload.productionSeries,
+          departmentTypeId: payload.departmentTypeId,
+          fromDate: payload.fromDate,
+          toDate: payload.toDate,
+          documentType: payload.documentType,
+        }
       );
       return response.data;
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch IR numbers"
-      );
-    }
-  }
-);
-
-// Fetch MSN List
-export const fetchMSNList = createAsyncThunk(
-  "irmsn/fetchMSNList",
-  async (
-    {
-      drawingNumber,
-      stage,
-      productionSeries,
-      departmentTypeId,
-      lnItemCode,
-      fromDate,
-      toDate,
-      MSNNumberId,
-    }: {
-      drawingNumber?: string;
-      stage?: string;
-      productionSeries?: string;
-      departmentTypeId?: string | number;
-      lnItemCode?: string;
-      fromDate?: string;
-      toDate?: string;
-      MSNNumberId?: string | number;
-    },
-    { rejectWithValue }
-  ) => {
-    try {
-      const params: any = {};
-
-      // Only add parameters if they have values (don't send empty strings)
-      if (drawingNumber && drawingNumber.trim() !== "") {
-        params.DrawingNumber = drawingNumber;
-      }
-      if (stage && stage.trim() !== "") {
-        params.Stage = stage;
-      }
-      if (productionSeries && productionSeries.trim() !== "") {
-        params.Productionseries = productionSeries;
-      }
-      if (departmentTypeId !== undefined && departmentTypeId !== null && String(departmentTypeId).trim() !== "") {
-        params.DepartmentTypeId = departmentTypeId;
-      }
-      if (lnItemCode && lnItemCode.trim() !== "") {
-        params.LnItemCode = lnItemCode;
-      }
-      if (fromDate) {
-        params.FromDate = fromDate;
-      }
-      if (toDate) {
-        params.ToDate = toDate;
-      }
-      if (MSNNumberId) {
-        params.MSNNumberId = MSNNumberId;
-      }
-
-      const response = await api.get(
-        "/api/reports/GetMSNNumberByDrawingNumber",
-        { params }
-      );
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch MSN numbers"
+        error.response?.data?.message || "Failed to fetch IR/MSN records"
       );
     }
   }
@@ -391,7 +296,7 @@ const irmsnSlice = createSlice({
     },
     clearTables: (state) => {
       state.irmsnList = [];
-      state.msnList = [];
+      state.totalCount = 0;
     },
     setSearchParams: (state, action) => {
       state.lastSearchParams = action.payload;
@@ -412,42 +317,35 @@ const irmsnSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // Fetch IRMSN List
-      .addCase(fetchIRMSNList.pending, (state) => {
+      // Fetch View IR/MSN List
+      .addCase(fetchViewIrMsn.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchIRMSNList.fulfilled, (state, action) => {
+      .addCase(fetchViewIrMsn.fulfilled, (state, action) => {
         state.loading = false;
-        // Sort by created date descending (newest first)
-        const sortedData = [...action.payload].sort((a, b) => {
-          const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
-          const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
-          return dateB - dateA;
-        });
-        state.irmsnList = sortedData;
+        const payload = action.payload;
+        let items: any[] = [];
+        let total = 0;
+
+        if (Array.isArray(payload)) {
+          items = payload;
+          total = payload.length;
+        } else if (payload && typeof payload === "object") {
+          items = payload.data || payload.items || payload.records || payload.results || [];
+          total = payload.totalCount ?? payload.totalRecords ?? payload.total ?? items.length;
+        }
+
+        // Standardize fields on each item
+        state.irmsnList = items.map((item: any) => ({
+          ...item,
+          recordType: item.documentType || item.recordType || (item.irNumber ? "IR" : item.msnNumber ? "MSN" : "IR"),
+          displayNumber: item.irNumber || item.msnNumber || item.displayNumber || item.documentNumber || "-",
+          orderNumber: item.purchaseOrderNumber || item.poNumber || item.productionOrderNumber || "-",
+        }));
+        state.totalCount = total;
       })
-      .addCase(fetchIRMSNList.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      // Fetch MSN List
-      .addCase(fetchMSNList.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchMSNList.fulfilled, (state, action) => {
-        state.loading = false;
-        console.log("MSN List received:", action.payload); // Debug log
-        // Sort by created date descending (newest first)
-        const sortedData = [...action.payload].sort((a, b) => {
-          const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
-          const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
-          return dateB - dateA;
-        });
-        state.msnList = sortedData;
-      })
-      .addCase(fetchMSNList.rejected, (state, action) => {
+      .addCase(fetchViewIrMsn.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

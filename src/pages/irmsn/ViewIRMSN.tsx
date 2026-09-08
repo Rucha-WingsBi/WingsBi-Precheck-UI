@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
@@ -41,9 +41,8 @@ import {
   MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import {
-  fetchIRMSNList,
+  fetchViewIrMsn,
   clearTables,
-  fetchMSNList,
   setSearchParams,
 } from "../../store/slices/irmsnSlice";
 import {
@@ -62,11 +61,12 @@ const checkedIcon = <CheckBoxIcon fontSize="small" />;
 
 const ViewIRMSN: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { irmsnList, msnList, loading, lastSearchParams } = useSelector(
+  const { irmsnList, totalCount: reduxTotalCount, loading, lastSearchParams } = useSelector(
     (state: RootState) => state.irmsn
   );
   const navigate = useNavigate();
   const hasRestored = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Local state - Unified Search Bar
   const [drawingOrLnSearch, setDrawingOrLnSearch] = useState<string>("");
@@ -117,6 +117,77 @@ const ViewIRMSN: React.FC = () => {
     }
   }, [statusMessage]);
 
+  const executeFetch = useCallback(
+    async (
+      targetPage: number,
+      targetRowsPerPage: number,
+      overrides?: {
+        search?: string;
+        series?: any[];
+        depts?: any[];
+        type?: string;
+        fDate?: Date | null;
+        tDate?: Date | null;
+      }
+    ) => {
+      const searchVal = overrides?.search !== undefined ? overrides.search : drawingOrLnSearch;
+      const seriesVal = overrides?.series !== undefined ? overrides.series : selectedProductionSeries;
+      const deptsVal = overrides?.depts !== undefined ? overrides.depts : selectedDepartments;
+      const typeVal = overrides?.type !== undefined ? overrides.type : typeFilter;
+      const fromDVal = overrides?.fDate !== undefined ? overrides.fDate : fromDate;
+      const toDVal = overrides?.tDate !== undefined ? overrides.tDate : toDate;
+
+      const docTypes = typeVal === "All" ? [] : [typeVal];
+
+      const payload = {
+        pageNumber: targetPage + 1,
+        pageSize: targetRowsPerPage,
+        searchQuery: searchVal.trim(),
+        productionSeries: seriesVal
+          .map((ps: any) => (typeof ps === "string" ? ps : ps.productionSeries))
+          .filter(Boolean),
+        departmentTypeId: deptsVal
+          .map((d: any) => d.id)
+          .filter(Boolean),
+        fromDate: fromDVal ? format(fromDVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : null,
+        toDate: toDVal ? format(toDVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : null,
+        documentType: docTypes,
+      };
+
+      dispatch(setSearchParams(payload));
+
+      try {
+        const result = await dispatch(fetchViewIrMsn(payload));
+        if (fetchViewIrMsn.fulfilled.match(result)) {
+          const resPayload = result.payload;
+          const count =
+            resPayload?.totalCount ??
+            resPayload?.totalRecords ??
+            (Array.isArray(resPayload) ? resPayload.length : resPayload?.data?.length || 0);
+
+          if (count > 0) {
+            setStatusMessage({
+              type: "success",
+              message: `Data loaded successfully. Loaded ${count} records.`,
+            });
+          } else {
+            setStatusMessage({
+              type: "info",
+              message: "No records found for the selected criteria.",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching IR/MSN records:", err);
+        setStatusMessage({
+          type: "error",
+          message: "Failed to load IR/MSN records. Please try again.",
+        });
+      }
+    },
+    [dispatch, drawingOrLnSearch, selectedProductionSeries, selectedDepartments, typeFilter, fromDate, toDate]
+  );
+
   // Restore filters and auto-search on mount
   useEffect(() => {
     if (
@@ -125,48 +196,27 @@ const ViewIRMSN: React.FC = () => {
       productionSeries.length &&
       !hasRestored.current
     ) {
-      const restoreAndFetch = async () => {
-        hasRestored.current = true;
+      hasRestored.current = true;
+      if (lastSearchParams.searchQuery) setDrawingOrLnSearch(lastSearchParams.searchQuery);
+      if (lastSearchParams.productionSeries && Array.isArray(lastSearchParams.productionSeries)) {
+        const matchedSeries = productionSeries.filter((ps: any) =>
+          lastSearchParams.productionSeries.includes(ps.productionSeries)
+        );
+        setSelectedProductionSeries(matchedSeries);
+      }
+      if (lastSearchParams.departmentTypeId && Array.isArray(lastSearchParams.departmentTypeId)) {
+        const matchedDepts = departments.filter((d: any) =>
+          lastSearchParams.departmentTypeId.includes(d.id)
+        );
+        setSelectedDepartments(matchedDepts);
+      }
+      if (lastSearchParams.fromDate) setFromDate(new Date(lastSearchParams.fromDate));
+      if (lastSearchParams.toDate) setToDate(new Date(lastSearchParams.toDate));
+      if (lastSearchParams.documentType && lastSearchParams.documentType.length === 1) {
+        setTypeFilter(lastSearchParams.documentType[0]);
+      }
 
-        if (lastSearchParams.drawingNumber || lastSearchParams.lnItemCode) {
-          setDrawingOrLnSearch(
-            lastSearchParams.drawingNumber || lastSearchParams.lnItemCode || ""
-          );
-        }
-
-        if (lastSearchParams.productionSeries) {
-          const seriesArr = lastSearchParams.productionSeries.split(",");
-          const matchedSeries = productionSeries.filter((ps: any) =>
-            seriesArr.includes(ps.productionSeries)
-          );
-          setSelectedProductionSeries(matchedSeries);
-        }
-
-        if (lastSearchParams.departmentTypeId) {
-          const deptIds = String(lastSearchParams.departmentTypeId)
-            .split(",")
-            .map(Number);
-          const matchedDepts = departments.filter((d: any) =>
-            deptIds.includes(d.id)
-          );
-          setSelectedDepartments(matchedDepts);
-        }
-
-        if (lastSearchParams.fromDate)
-          setFromDate(new Date(lastSearchParams.fromDate));
-        if (lastSearchParams.toDate) setToDate(new Date(lastSearchParams.toDate));
-
-        try {
-          await Promise.all([
-            dispatch(fetchIRMSNList(lastSearchParams)),
-            dispatch(fetchMSNList(lastSearchParams)),
-          ]);
-        } catch (e) {
-          console.error("Auto-fetch failed", e);
-        }
-      };
-
-      restoreAndFetch();
+      dispatch(fetchViewIrMsn(lastSearchParams));
     }
   }, [departments, productionSeries, lastSearchParams, dispatch]);
 
@@ -183,67 +233,39 @@ const ViewIRMSN: React.FC = () => {
     dispatch(setSearchParams(null));
   };
 
-  const handleSearch = async () => {
-    if (
-      !(fromDate && toDate) &&
-      selectedProductionSeries.length === 0 &&
-      !drawingOrLnSearch.trim() &&
-      selectedDepartments.length === 0
-    ) {
-      setStatusMessage({
-        type: "error",
-        message:
-          "Please enter search criteria or select Production Series / Department or Date Range",
-      });
-      return;
-    }
-
-    try {
-      const params: any = {
-        drawingNumber: drawingOrLnSearch.trim(),
-        productionSeries: selectedProductionSeries
-          .map((ps: any) => ps.productionSeries)
-          .join(","),
-        stage: "",
-        lnItemCode: drawingOrLnSearch.trim(),
-        fromDate: fromDate ? format(fromDate, "yyyy-MM-dd") : undefined,
-        toDate: toDate ? format(addDays(toDate, 1), "yyyy-MM-dd") : undefined,
-        departmentTypeId: selectedDepartments
-          .map((d: any) => d.id)
-          .join(","),
-      };
-
-      dispatch(setSearchParams(params));
-      setPage(0);
-
-      const [irRes, msnRes] = await Promise.all([
-        dispatch(fetchIRMSNList(params)),
-        dispatch(fetchMSNList(params)),
-      ]);
-
-      const irCount = irRes.payload?.length || 0;
-      const msnCount = msnRes.payload?.length || 0;
-      const totalCount = irCount + msnCount;
-
-      if (totalCount > 0) {
-        setStatusMessage({
-          type: "success",
-          message: `Data loaded successfully. Total Records: ${totalCount} (IR: ${irCount}, MSN: ${msnCount})`,
-        });
-      } else {
-        setStatusMessage({
-          type: "info",
-          message: "No records found for the selected criteria.",
-        });
-      }
-    } catch (error) {
-      console.error("Error loading IR/MSN numbers:", error);
-      setStatusMessage({
-        type: "error",
-        message: "Error loading IR/MSN numbers. Please try again.",
-      });
-    }
+  const handleSearch = () => {
+    setPage(0);
+    executeFetch(0, rowsPerPage);
   };
+
+  // Debounced auto-search: trigger API when 3+ chars typed, or when cleared
+  useEffect(() => {
+    // Skip during restore
+    if (!hasRestored.current && lastSearchParams) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (drawingOrLnSearch.trim().length >= 3) {
+      debounceTimerRef.current = setTimeout(() => {
+        setPage(0);
+        executeFetch(0, rowsPerPage, { search: drawingOrLnSearch });
+      }, 500);
+    } else if (drawingOrLnSearch.trim().length === 0 && irmsnList.length > 0) {
+      // Re-fetch without search when cleared
+      debounceTimerRef.current = setTimeout(() => {
+        setPage(0);
+        executeFetch(0, rowsPerPage, { search: "" });
+      }, 300);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [drawingOrLnSearch]);
 
   // Export handler connecting to ExportIR and ExportMSN APIs
   const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -329,96 +351,24 @@ const ViewIRMSN: React.FC = () => {
 
   const isResetEnabled = !!(
     isFilterApplied ||
-    irmsnList.length > 0 ||
-    msnList.length > 0
+    irmsnList.length > 0
   );
 
-  // Combine IR and MSN lists into one single list with distinct type
-  const combinedList = useMemo(() => {
-    const irs = (irmsnList || []).map((item: any) => ({
+  const displayList = useMemo(() => {
+    return (irmsnList || []).map((item: any) => ({
       ...item,
-      recordType: "IR" as const,
-      displayNumber: item.irNumber,
-      orderNumber:
-        item.purchaseOrderNumber || item.poNumber || item.productionOrderNumber || "",
+      recordType: item.recordType || item.documentType || (item.irNumber ? "IR" : "MSN"),
+      displayNumber: item.displayNumber || item.irNumber || item.msnNumber || "-",
+      orderNumber: item.orderNumber || item.purchaseOrderNumber || item.poNumber || item.productionOrderNumber || "-",
     }));
-    const msns = (msnList || []).map((item: any) => ({
-      ...item,
-      recordType: "MSN" as const,
-      displayNumber: item.msnNumber,
-      orderNumber:
-        item.productionOrderNumber || item.purchaseOrderNumber || item.poNumber || "",
-    }));
-
-    let list: any[] = [...irs, ...msns];
-
-    if (typeFilter !== "All") {
-      list = list.filter((item) => item.recordType === typeFilter);
-    }
-
-    if (drawingOrLnSearch.trim()) {
-      const searchLower = drawingOrLnSearch.trim().toLowerCase();
-      list = list.filter(
-        (item) =>
-          item.drawingNumber?.toLowerCase().includes(searchLower) ||
-          item.drawingNumberIdName?.toLowerCase().includes(searchLower) ||
-          item.lnItemCode?.toLowerCase().includes(searchLower) ||
-          item.displayNumber?.toLowerCase().includes(searchLower) ||
-          item.irNumber?.toLowerCase().includes(searchLower) ||
-          item.msnNumber?.toLowerCase().includes(searchLower) ||
-          item.orderNumber?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (selectedDepartments.length > 0) {
-      const deptIds = selectedDepartments.map((d: any) => d.id);
-      const deptNames = selectedDepartments.map((d: any) =>
-        d.name?.toLowerCase()
-      );
-      list = list.filter(
-        (item) =>
-          deptIds.includes(item.departmentId) ||
-          (item.departmentName &&
-            deptNames.includes(item.departmentName.toLowerCase()))
-      );
-    }
-
-    if (selectedProductionSeries.length > 0) {
-      const seriesNames = selectedProductionSeries.map((ps: any) =>
-        ps.productionSeries?.toLowerCase()
-      );
-      const seriesIds = selectedProductionSeries.map((ps: any) => ps.id);
-      list = list.filter(
-        (item) =>
-          seriesIds.includes(item.prodSeriesId) ||
-          (item.productionSeries &&
-            seriesNames.includes(item.productionSeries.toLowerCase())) ||
-          (item.productionSeriesName &&
-            seriesNames.includes(item.productionSeriesName.toLowerCase()))
-      );
-    }
-
-    return list;
-  }, [
-    irmsnList,
-    msnList,
-    typeFilter,
-    drawingOrLnSearch,
-    selectedDepartments,
-    selectedProductionSeries,
-  ]);
+  }, [irmsnList]);
 
   // Reset page to 0 if pagination exceeds list range
   useEffect(() => {
     setPage(0);
   }, [drawingOrLnSearch, selectedDepartments, selectedProductionSeries, typeFilter, fromDate, toDate]);
 
-  const paginatedList = useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    return combinedList.slice(startIndex, startIndex + rowsPerPage);
-  }, [combinedList, page, rowsPerPage]);
-
-  const totalCount = combinedList.length;
+  const totalCount = reduxTotalCount || displayList.length;
   const startRow = totalCount > 0 ? page * rowsPerPage + 1 : 0;
   const endRow = Math.min((page + 1) * rowsPerPage, totalCount);
 
@@ -617,7 +567,11 @@ const ViewIRMSN: React.FC = () => {
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
-                      onClick={() => setDrawingOrLnSearch("")}
+                      onClick={() => {
+                      setDrawingOrLnSearch("");
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { search: "" });
+                    }}
                       edge="end"
                     >
                       <ClearIcon sx={{ fontSize: 16 }} />
@@ -1240,8 +1194,8 @@ const ViewIRMSN: React.FC = () => {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : paginatedList.length > 0 ? (
-                  paginatedList.map((item, index) => (
+                ) : displayList.length > 0 ? (
+                  displayList.map((item, index) => (
                     <TableRow
                       key={`${item.recordType}-${item.id}`}
                       hover
@@ -1366,8 +1320,10 @@ const ViewIRMSN: React.FC = () => {
               <Select
                 value={rowsPerPage}
                 onChange={(e) => {
-                  setRowsPerPage(Number(e.target.value));
+                  const newRowsPerPage = Number(e.target.value);
+                  setRowsPerPage(newRowsPerPage);
                   setPage(0);
+                  executeFetch(0, newRowsPerPage);
                 }}
                 size="small"
                 sx={{
@@ -1395,7 +1351,11 @@ const ViewIRMSN: React.FC = () => {
                   size="small"
                   variant="outlined"
                   disabled={page === 0 || loading}
-                  onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                  onClick={() => {
+                    const newPage = Math.max(0, page - 1);
+                    setPage(newPage);
+                    executeFetch(newPage, rowsPerPage);
+                  }}
                   sx={{
                     minWidth: 32,
                     width: 32,
@@ -1412,7 +1372,11 @@ const ViewIRMSN: React.FC = () => {
                   size="small"
                   variant="outlined"
                   disabled={(page + 1) * rowsPerPage >= totalCount || loading}
-                  onClick={() => setPage((prev) => prev + 1)}
+                  onClick={() => {
+                    const newPage = page + 1;
+                    setPage(newPage);
+                    executeFetch(newPage, rowsPerPage);
+                  }}
                   sx={{
                     minWidth: 32,
                     width: 32,
