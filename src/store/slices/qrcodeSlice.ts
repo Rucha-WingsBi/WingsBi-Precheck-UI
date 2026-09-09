@@ -210,41 +210,36 @@ export const getBarcodeDetails = createAsyncThunk(
   },
 );
 
-// Get Barcode Details with Parameters
+// Get Barcode Details with Parameters (POST endpoint)
 export const getBarcodeDetailsWithParameters = createAsyncThunk(
   "qrcode/getBarcodeDetailsWithParameters",
   async (
-    params: {
-      prodSeriesId?: number;
-      drawingNumberId?: number;
-      lnItemCodeId?: number;
-      productionOrderNumber?: string;
-      fromDate?: string;
-      toDate?: string;
-      createdBy?: number;
-      fromBatchId?: string;
-      toBatchId?: string;
-      fanManNumber?: string;
+    payload: {
+      pageNumber?: number;
+      pageSize?: number;
+      searchQuery?: string;
+      prodSeries?: string[];
+      department?: string[];
+      fromDate?: string | null;
+      toDate?: string | null;
     },
     { rejectWithValue },
   ) => {
     try {
-      let query = `/api/QRCode/GetBarcodeDetailsWithParameters?`;
-      if (params.prodSeriesId) query += `ProdSeriesId=${params.prodSeriesId}&`;
-      if (params.drawingNumberId)
-        query += `DrawingNumberId=${params.drawingNumberId}&`;
-      if (params.lnItemCodeId) query += `LnItemCodeId=${params.lnItemCodeId}&`;
-      if (params.productionOrderNumber)
-        query += `ProductionOrderNumber=${params.productionOrderNumber}&`;
-      if (params.fromDate) query += `FromDate=${params.fromDate}&`;
-      if (params.toDate) query += `ToDate=${params.toDate}&`;
-      if (params.createdBy) query += `CreatedBy=${params.createdBy}&`;
-      if (params.fromBatchId) query += `FromBatchId=${params.fromBatchId}&`;
-      if (params.toBatchId) query += `ToBatchId=${params.toBatchId}&`;
-      if (params.fanManNumber) query += `FanManNumber=${params.fanManNumber}&`;
+      const pageNumber = payload.pageNumber || 1;
+      const pageSize = payload.pageSize || 20;
 
-      const response = await api.get(
-        query.endsWith("&") ? query.slice(0, -1) : query,
+      const body = {
+        searchQuery: payload.searchQuery || "",
+        prodSeries: payload.prodSeries || [],
+        department: payload.department || [],
+        fromDate: payload.fromDate || null,
+        toDate: payload.toDate || null,
+      };
+
+      const response = await api.post(
+        `/api/QRCode/GetBarcodeDetailsWithParameters?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        body,
       );
       return response.data;
     } catch (error: any) {

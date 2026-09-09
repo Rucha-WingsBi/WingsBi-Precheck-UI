@@ -258,19 +258,27 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
     }
   };
 
+  const rows = useMemo(() => {
+    return userRoles.map((r: any, index: number) => ({
+      ...r,
+      srNo: index + 1,
+    }));
+  }, [userRoles]);
+
   const columns: GridColDef[] = [
     {
       field: "srNo",
       headerName: "Sr No",
-      width: 80,
-      renderCell: (params) =>
-        userRoles.findIndex((r: any) => r.id === params.row.id) + 1,
+      width: 110,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "role",
       headerName: "Role Name",
       flex: 1,
-      minWidth: 140,
+      minWidth: 190,
     },
     {
       field: "description",
@@ -281,7 +289,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
     },
     {
       field: "createdDate",
-      headerName: "Last Active ↑",
+      headerName: "Last Active",
       width: 170,
       renderCell: (params) => {
         if (!params.value) return "-";
@@ -339,7 +347,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
           <Box sx={{ width: "100%" }}>
             <DataGrid
               autoHeight
-              rows={userRoles}
+              rows={rows}
               columns={columns}
               initialState={{
                 pagination: {
@@ -526,16 +534,22 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
   };
 
   const activeDepartments = useMemo(() => {
-    return departments.filter((d: any) => d.isActive === 1 || d.isActive === true);
+    return departments
+      .filter((d: any) => d.isActive === 1 || d.isActive === true)
+      .map((r: any, index: number) => ({
+        ...r,
+        srNo: index + 1,
+      }));
   }, [departments]);
 
   const columns: GridColDef[] = [
     {
       field: "srNo",
       headerName: "Sr No",
-      width: 80,
-      renderCell: (params) =>
-        activeDepartments.findIndex((r: any) => r.id === params.row.id) + 1,
+      width: 110,
+      type: "number",
+      headerAlign: "left",
+      align: "left",
     },
     {
       field: "name",
@@ -546,7 +560,7 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
     },
     {
       field: "createdDate",
-      headerName: "Last Active ↑",
+      headerName: "Last Active",
       width: 170,
       renderCell: (params) => {
         if (!params.row.createdDate && !params.row.modifiedDate) return "-";

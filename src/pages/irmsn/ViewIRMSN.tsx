@@ -149,8 +149,8 @@ const ViewIRMSN: React.FC = () => {
         departmentTypeId: deptsVal
           .map((d: any) => d.id)
           .filter(Boolean),
-        fromDate: fromDVal ? format(fromDVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : null,
-        toDate: toDVal ? format(toDVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : null,
+        fromDate: fromDVal ? format(fromDVal, "yyyy-MM-dd") : null,
+        toDate: toDVal ? format(toDVal, "yyyy-MM-dd") : null,
         documentType: docTypes,
       };
 

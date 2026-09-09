@@ -41,7 +41,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CallSplitIcon from '@mui/icons-material/CallSplit';
-import { getBarcodeDetails, getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
+import { getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
 import { useProductionSeries, useQRUsers } from '../../hooks/useMasterData';
 import { type ProductionOrderMaster } from '../../hooks/usePONumbers';
 
@@ -289,9 +289,7 @@ const ViewBarcode: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Keep track of the last search query and parameters to refresh correctly
-  const [lastSearchType, setLastSearchType] = useState<'none' | 'query' | 'parameters'>('none');
-  const [lastSearchQuery, setLastSearchQuery] = useState('');
+  // Keep track of the last search parameters to refresh correctly
   const [lastSearchParams, setLastSearchParams] = useState<any>(null);
 
   // Disable QR Code dialog states
@@ -328,6 +326,28 @@ const ViewBarcode: React.FC = () => {
   const isProcessing = React.useRef(false);
   const scannerTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  const buildApiParams = (
+    queryStr: string = searchQuery,
+    seriesArr: any[] = selectedProductionSeries,
+    fromD: Date | null = fromDate,
+    toD: Date | null = toDate,
+    pSize: number = 20
+  ) => {
+    const prodSeries = seriesArr
+      .map((s: any) => (typeof s === 'string' ? s : s.productionSeries))
+      .filter(Boolean);
+
+    return {
+      pageNumber: 1,
+      pageSize: pSize,
+      searchQuery: queryStr.trim(),
+      prodSeries,
+      department: [],
+      fromDate: fromD ? fromD.toISOString() : null,
+      toDate: toD ? toD.toISOString() : null,
+    };
+  };
+
   const currentFilters = React.useMemo(() => ({
     searchQuery,
     selectedProductionSeries,
@@ -344,8 +364,6 @@ const ViewBarcode: React.FC = () => {
     selectedUser,
     selectedFromId,
     selectedToId,
-    lastSearchType,
-    lastSearchQuery,
     lastSearchParams,
   }), [
     searchQuery,
@@ -363,12 +381,15 @@ const ViewBarcode: React.FC = () => {
     selectedUser,
     selectedFromId,
     selectedToId,
-    lastSearchType,
-    lastSearchQuery,
     lastSearchParams,
   ]);
 
+  const hasFetchedOnMount = React.useRef(false);
+
   useEffect(() => {
+    if (hasFetchedOnMount.current) return;
+    hasFetchedOnMount.current = true;
+
     const returnFilters = (location.state as any)?.returnFilters;
     if (returnFilters) {
       if (returnFilters.searchQuery !== undefined) setSearchQuery(returnFilters.searchQuery);
@@ -386,41 +407,25 @@ const ViewBarcode: React.FC = () => {
       if (returnFilters.selectedUser !== undefined) setSelectedUser(returnFilters.selectedUser);
       if (returnFilters.selectedFromId !== undefined) setSelectedFromId(returnFilters.selectedFromId);
       if (returnFilters.selectedToId !== undefined) setSelectedToId(returnFilters.selectedToId);
-
-      if (returnFilters.lastSearchType !== undefined) setLastSearchType(returnFilters.lastSearchType);
-      if (returnFilters.lastSearchQuery !== undefined) setLastSearchQuery(returnFilters.lastSearchQuery);
       if (returnFilters.lastSearchParams !== undefined) setLastSearchParams(returnFilters.lastSearchParams);
 
       navigate(location.pathname, { replace: true, state: null });
 
-      if (returnFilters.lastSearchType === 'query' && returnFilters.lastSearchQuery) {
-        dispatch(getBarcodeDetails(returnFilters.lastSearchQuery));
-      } else if (returnFilters.lastSearchType === 'parameters' && returnFilters.lastSearchParams) {
-        dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams as any));
-      } else if (returnFilters.searchQuery?.trim()) {
-        dispatch(getBarcodeDetails(returnFilters.searchQuery.trim()));
+      if (returnFilters.lastSearchParams) {
+        dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams));
       } else {
-        const drawing = returnFilters.selectedDrawingNumber || returnFilters.selectedLnItem;
-        const hasFilter = returnFilters.selectedFanMan || returnFilters.selectedProductionSeries || returnFilters.selectedLnItem || returnFilters.selectedDrawingNumber || returnFilters.selectedPO || returnFilters.fromDate || returnFilters.toDate || returnFilters.selectedUser || returnFilters.selectedFromId || returnFilters.selectedToId;
-        if (hasFilter) {
-          const params = {
-            prodSeriesId: returnFilters.selectedProductionSeries?.id,
-            drawingNumberId: drawing?.id,
-            lnItemCodeId: drawing?.lnItemCodeId,
-            productionOrderNumber: returnFilters.selectedPO?.productionOrderNumber || undefined,
-            fromDate: returnFilters.fromDate ? format(new Date(returnFilters.fromDate), 'yyyy-MM-dd') : undefined,
-            toDate: returnFilters.toDate ? format(new Date(returnFilters.toDate), 'yyyy-MM-dd') : undefined,
-            createdBy: returnFilters.selectedUser?.id || undefined,
-            fromBatchId: returnFilters.selectedFromId || undefined,
-            toBatchId: returnFilters.selectedToId || undefined,
-            fanManNumber: returnFilters.selectedFanMan || undefined,
-          };
-          dispatch(getBarcodeDetailsWithParameters(params as any));
-        }
+        const queryStr = returnFilters.searchQuery || "";
+        const seriesArr = returnFilters.selectedProductionSeries || [];
+        const fromD = returnFilters.fromDate ? new Date(returnFilters.fromDate) : null;
+        const toD = returnFilters.toDate ? new Date(returnFilters.toDate) : null;
+        const params = buildApiParams(queryStr, seriesArr, fromD, toD, 20);
+        dispatch(getBarcodeDetailsWithParameters(params));
       }
     } else {
-      // Clear search results when entering ViewBarcode page fresh
-      dispatch(clearBarcodeDetails());
+      // Call API on initial page mount with default parameters and pageSize = 20
+      const initialParams = buildApiParams("", [], null, null, 20);
+      setLastSearchParams(initialParams);
+      dispatch(getBarcodeDetailsWithParameters(initialParams));
     }
   }, []);
 
@@ -606,26 +611,13 @@ const ViewBarcode: React.FC = () => {
 
 
   const handleFilterSearch = () => {
-    // Prefer selectedDrawingNumber; fall back to selectedLnItem for drawingNumberId/lnItemCodeId
-    const drawing = selectedDrawingNumber || selectedLnItem;
-    const prodSeriesIds = selectedProductionSeries.map((s: any) => s.id || s).filter(Boolean);
-    const userIds = selectedUser.map((u: any) => u.id || u).filter(Boolean);
-
-    const params = {
-      prodSeriesId: prodSeriesIds.length > 0 ? prodSeriesIds.join(',') : undefined,
-      drawingNumberId: drawing?.id,
-      lnItemCodeId: drawing?.lnItemCodeId,
-      productionOrderNumber: selectedPO?.productionOrderNumber || undefined,
-      fromDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
-      toDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
-      createdBy: userIds.length > 0 ? userIds.join(',') : undefined,
-      fromBatchId: selectedFromId || undefined,
-      toBatchId: selectedToId || undefined,
-      fanManNumber: selectedFanMan || undefined,
-    };
-    setLastSearchType('parameters');
+    if (scannerTimeoutRef.current) {
+      clearTimeout(scannerTimeoutRef.current);
+      scannerTimeoutRef.current = null;
+    }
+    const params = buildApiParams(searchQuery, selectedProductionSeries, fromDate, toDate);
     setLastSearchParams(params);
-    dispatch(getBarcodeDetailsWithParameters(params as any));
+    dispatch(getBarcodeDetailsWithParameters(params));
   };
 
   const handleCloseSnackbar = () => {
@@ -640,32 +632,10 @@ const ViewBarcode: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    if (lastSearchType === 'query' && lastSearchQuery) {
-      dispatch(getBarcodeDetails(lastSearchQuery));
-    } else if (lastSearchType === 'parameters' && lastSearchParams) {
-      dispatch(getBarcodeDetailsWithParameters(lastSearchParams as any));
-    } else if (searchQuery.trim()) {
-      dispatch(getBarcodeDetails(searchQuery.trim()));
+    if (lastSearchParams) {
+      dispatch(getBarcodeDetailsWithParameters(lastSearchParams));
     } else {
-      const drawing = selectedDrawingNumber || selectedLnItem;
-      const hasFilter = selectedFanMan || selectedProductionSeries.length > 0 || selectedLnItem || selectedDrawingNumber || selectedPO || fromDate || toDate || selectedUser.length > 0 || selectedFromId || selectedToId;
-      if (hasFilter) {
-        const prodSeriesIds = selectedProductionSeries.map((s: any) => s.id || s).filter(Boolean);
-        const userIds = selectedUser.map((u: any) => u.id || u).filter(Boolean);
-        const params = {
-          prodSeriesId: prodSeriesIds.length > 0 ? prodSeriesIds.join(',') : undefined,
-          drawingNumberId: drawing?.id,
-          lnItemCodeId: drawing?.lnItemCodeId,
-          productionOrderNumber: selectedPO?.productionOrderNumber || undefined,
-          fromDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
-          toDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
-          createdBy: userIds.length > 0 ? userIds.join(',') : undefined,
-          fromBatchId: selectedFromId || undefined,
-          toBatchId: selectedToId || undefined,
-          fanManNumber: selectedFanMan || undefined,
-        };
-        dispatch(getBarcodeDetailsWithParameters(params as any));
-      }
+      handleFilterSearch();
     }
   };
 
@@ -794,8 +764,6 @@ const ViewBarcode: React.FC = () => {
     setSelectedFromId(null);
     setSelectedToId(null);
     setSelectedFanMan(null);
-    setLastSearchType('none');
-    setLastSearchQuery('');
     setLastSearchParams(null);
     dispatch(clearBarcodeDetails());
     dispatch(clearError());
@@ -812,43 +780,29 @@ const ViewBarcode: React.FC = () => {
     clearFilters();
   };
 
-  const processBarcodeScan = React.useCallback(async (barcode: string, isFanMan: boolean = false) => {
+  const processBarcodeScan = React.useCallback(async (barcode: string) => {
     if (!barcode || isProcessing.current) return;
 
     try {
       isProcessing.current = true;
-      if (isFanMan) {
-        const params = { fanManNumber: barcode.trim() };
-        setLastSearchType('parameters');
-        setLastSearchParams(params);
-        await dispatch(getBarcodeDetailsWithParameters(params)).unwrap();
-      } else {
-        const query = barcode.trim();
-        setLastSearchType('query');
-        setLastSearchQuery(query);
-        await dispatch(getBarcodeDetails(query)).unwrap();
+      if (scannerTimeoutRef.current) {
+        clearTimeout(scannerTimeoutRef.current);
+        scannerTimeoutRef.current = null;
       }
+      const query = barcode.trim();
+      const params = buildApiParams(query, selectedProductionSeries, fromDate, toDate);
+      setLastSearchParams(params);
+      await dispatch(getBarcodeDetailsWithParameters(params)).unwrap();
     } catch (err) {
       console.error("Error fetching barcode details:", err);
     } finally {
       isProcessing.current = false;
     }
-  }, [dispatch, setLastSearchType, setLastSearchQuery, setLastSearchParams]);
+  }, [dispatch, selectedProductionSeries, fromDate, toDate]);
 
-  // Smart QR Code processing logic for View Barcode
+  // Auto-call API after typing 3+ characters (with 500ms debounce) or instant 15-digit barcode scan
   useEffect(() => {
     const query = searchQuery.trim();
-    if (!query) {
-      if (scannerTimeoutRef.current) {
-        clearTimeout(scannerTimeoutRef.current);
-        scannerTimeoutRef.current = null;
-      }
-      return;
-    }
-
-    // Only auto-trigger for numeric QR codes of length 12 or 15
-    const isNumeric = /^\d+$/.test(query);
-    if (!isNumeric) return;
 
     // Clear any existing timer on every keystroke
     if (scannerTimeoutRef.current) {
@@ -856,23 +810,26 @@ const ViewBarcode: React.FC = () => {
       scannerTimeoutRef.current = null;
     }
 
-    if (isProcessing.current) return;
+    if (!query || query.length < 3 || isProcessing.current) {
+      return;
+    }
 
-    if (query.length === 15) {
-      // Process 15-digit codes immediately
+    if (query.length === 15 && /^\d+$/.test(query)) {
+      // Process 15-digit numeric barcode scanner input immediately
       processBarcodeScan(query);
-    } else if (query.length === 12) {
-      // Process 12-digit codes after a 1000ms delay
+    } else {
+      // Trigger API call for 3+ characters after 500ms debounce
       scannerTimeoutRef.current = setTimeout(() => {
         if (!isProcessing.current) {
           processBarcodeScan(query);
         }
-      }, 1000);
+      }, 500);
     }
 
     return () => {
       if (scannerTimeoutRef.current) {
         clearTimeout(scannerTimeoutRef.current);
+        scannerTimeoutRef.current = null;
       }
     };
   }, [searchQuery, processBarcodeScan]);
@@ -1086,7 +1043,7 @@ const ViewBarcode: React.FC = () => {
                 color="primary"
                 onClick={handleFilterSearch}
                 size="small"
-                disabled={!!searchQuery || (!selectedFanMan && selectedProductionSeries.length === 0 && !selectedLnItem && !selectedDrawingNumber && !selectedPO && !fromDate && !toDate && selectedUser.length === 0 && !selectedFromId && !selectedToId)}
+                disabled={!searchQuery.trim() && selectedProductionSeries.length === 0 && !fromDate && !toDate}
                 sx={{ height: 36, minWidth: 70, px: 1.5 }}
               >
                 Search
