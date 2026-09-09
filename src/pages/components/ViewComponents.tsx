@@ -518,351 +518,397 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         </Stack>
       )}
 
-      {/* Main Filter & Table Card */}
+      {/* Main Filter & Table Single Container Card */}
       <Paper
         elevation={0}
         sx={{
-          p: { xs: 1.5, md: 2 },
-          borderRadius: "10px",
-          border: "1px solid",
-          borderColor: "grey.200",
-          backgroundColor: "background.paper",
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
           mb: 2,
         }}
       >
-        {/* Filter Bar */}
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            mb: 1.5,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
-          {/* Search Box */}
-          <TextField
-            variant="outlined"
-            size="small"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search component, Drawing No., LN Item Code..."
+        {/* Section 1: Filter Bar & Active Chips */}
+        <Box sx={{ p: 1.5, pb: 1, borderBottom: "1px solid #EAECF0" }}>
+          {/* Horizontal Filter Bar */}
+          <Box
             sx={{
-              flexGrow: 1,
-              minWidth: { xs: "100%", sm: 260, md: 320 },
-              "& .MuiOutlinedInput-root": {
-                height: 34,
-                borderRadius: "6px",
-                fontSize: "0.8rem",
-                backgroundColor: "background.paper",
-              },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "text.muted", fontSize: "1.1rem" }} />
-                </InputAdornment>
-              ),
-            }}
-          />
-
-          {/* Multi-Select Prod. Series Dropdown (No 'All' option) */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={selectedSeries}
-              onChange={(e) => {
-                const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
-                setSelectedSeries(val);
-                setPage(0);
-              }}
-              renderValue={(selected) => {
-                if (selected.length === 0) {
-                  return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Prod. Series</Typography>;
-                }
-                return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.8rem" }}>{`Prod. Series (${selected.length})`}</Typography>;
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 260,
-                    borderRadius: "8px",
-                    "& .MuiMenuItem-root": {
-                      minHeight: "28px !important",
-                      py: "2px !important",
-                      px: "6px !important",
-                    },
-                  },
-                },
-              }}
-              sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem" }}
-            >
-              {seriesList.map((s) => (
-                <MenuItem key={s.id} value={s.productionSeries}>
-                  <Checkbox size="small" checked={selectedSeries.indexOf(s.productionSeries) > -1} sx={{ p: "2px", mr: 0.75 }} />
-                  <ListItemText primary={s.productionSeries} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Multi-Select Type Dropdown (No 'All' option) */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={selectedTypes}
-              onChange={(e) => {
-                const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
-                setSelectedTypes(val);
-                setPage(0);
-              }}
-              renderValue={(selected) => {
-                if (selected.length === 0) {
-                  return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Type</Typography>;
-                }
-                return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.8rem" }}>{`Type (${selected.length})`}</Typography>;
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 260,
-                    borderRadius: "8px",
-                    "& .MuiMenuItem-root": {
-                      minHeight: "28px !important",
-                      py: "2px !important",
-                      px: "6px !important",
-                    },
-                  },
-                },
-              }}
-              sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem" }}
-            >
-              {ComponentTypesList.map((t) => (
-                <MenuItem key={t} value={t}>
-                  <Checkbox size="small" checked={selectedTypes.indexOf(t) > -1} sx={{ p: "2px", mr: 0.75 }} />
-                  <ListItemText primary={t} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Multi-Select Unit Dropdown (No 'All' option) */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={selectedUnits}
-              onChange={(e) => {
-                const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
-                setSelectedUnits(val);
-                setPage(0);
-              }}
-              renderValue={(selected) => {
-                if (selected.length === 0) {
-                  return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Unit</Typography>;
-                }
-                return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.8rem" }}>{`Unit (${selected.length})`}</Typography>;
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 260,
-                    borderRadius: "8px",
-                    "& .MuiMenuItem-root": {
-                      minHeight: "28px !important",
-                      py: "2px !important",
-                      px: "6px !important",
-                    },
-                  },
-                },
-              }}
-              sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem" }}
-            >
-              {unitsList.map((u) => (
-                <MenuItem key={u.id} value={u.unitName}>
-                  <Checkbox size="small" checked={selectedUnits.indexOf(u.unitName) > -1} sx={{ p: "2px", mr: 0.75 }} />
-                  <ListItemText primary={u.unitName} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Clear Button */}
-          <Button
-            variant="text"
-            size="small"
-            onClick={handleClearFilters}
-            disabled={!hasActiveFilters}
-            sx={{
-              height: 34,
-              minWidth: 55,
-              color: "#667085",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              textTransform: "none",
-              "&:hover": { color: "#101828", backgroundColor: "transparent" },
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "nowrap",
+              width: "100%",
+              overflowX: "auto",
+              py: 0.5,
+              "&::-webkit-scrollbar": { height: 6 },
+              "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
             }}
           >
-            Clear
-          </Button>
-        </Box>
+            {/* Search Box */}
+            <TextField
+              variant="outlined"
+              size="small"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search component, Drawing No., LN Item Code, nomenclature..."
+              sx={{
+                flex: "1 1 240px",
+                minWidth: 200,
+                "& .MuiOutlinedInput-root": {
+                  height: 38,
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  backgroundColor: "background.paper",
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-        {/* Active Filter Chips & Counter Bar */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: 1,
-            minHeight: 24,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-            {hasActiveFilters && (
-              <>
-                {searchQuery.trim() && (
-                  <Chip
-                    label={`Search: "${searchQuery}"`}
-                    onDelete={() => setSearchQuery("")}
-                    size="small"
-                    sx={{
-                      backgroundColor: "#F2F4F7",
-                      color: "#344054",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      borderRadius: "16px",
-                      border: "1px solid #E9EAEB",
-                      "& .MuiChip-deleteIcon": {
-                        color: "#667085",
-                        fontSize: 14,
-                        "&:hover": { color: "#344054" },
+            {/* Multi-Select Prod. Series Dropdown */}
+            <FormControl size="small" sx={{ flex: "0 0 140px", minWidth: 120 }}>
+              <Select
+                multiple
+                displayEmpty
+                value={selectedSeries}
+                onChange={(e) => {
+                  const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
+                  setSelectedSeries(val);
+                  setPage(0);
+                }}
+                renderValue={(selected) => {
+                  if (selected.length === 0) {
+                    return <Typography variant="body2" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>Prod. Series</Typography>;
+                  }
+                  return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>{`Prod. Series (${selected.length})`}</Typography>;
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 260,
+                      borderRadius: "8px",
+                      "& .MuiMenuItem-root": {
+                        minHeight: "28px !important",
+                        py: "2px !important",
+                        px: "6px !important",
                       },
-                    }}
-                  />
-                )}
-
-                {selectedSeries.map((s) => (
-                  <Chip
-                    key={`series-${s}`}
-                    label={`Series: ${s}`}
-                    onDelete={() => setSelectedSeries((prev) => prev.filter((x) => x !== s))}
-                    size="small"
-                    sx={{
-                      backgroundColor: "#F2F4F7",
-                      color: "#344054",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      borderRadius: "16px",
-                      border: "1px solid #E9EAEB",
-                      "& .MuiChip-deleteIcon": {
-                        color: "#667085",
-                        fontSize: 14,
-                        "&:hover": { color: "#344054" },
-                      },
-                    }}
-                  />
+                    },
+                  },
+                }}
+                sx={{
+                  height: 38,
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                }}
+              >
+                {seriesList.map((s) => (
+                  <MenuItem key={s.id} value={s.productionSeries}>
+                    <Checkbox size="small" checked={selectedSeries.indexOf(s.productionSeries) > -1} sx={{ p: "2px", mr: 0.75 }} />
+                    <ListItemText primary={s.productionSeries} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.82rem" }} />
+                  </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
 
-                {selectedTypes.map((t) => (
-                  <Chip
-                    key={`type-${t}`}
-                    label={`Type: ${t}`}
-                    onDelete={() => setSelectedTypes((prev) => prev.filter((x) => x !== t))}
-                    size="small"
-                    sx={{
-                      backgroundColor: "#F2F4F7",
-                      color: "#344054",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      borderRadius: "16px",
-                      border: "1px solid #E9EAEB",
-                      "& .MuiChip-deleteIcon": {
-                        color: "#667085",
-                        fontSize: 14,
-                        "&:hover": { color: "#344054" },
+            {/* Multi-Select Type Dropdown */}
+            <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
+              <Select
+                multiple
+                displayEmpty
+                value={selectedTypes}
+                onChange={(e) => {
+                  const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
+                  setSelectedTypes(val);
+                  setPage(0);
+                }}
+                renderValue={(selected) => {
+                  if (selected.length === 0) {
+                    return <Typography variant="body2" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>Type</Typography>;
+                  }
+                  return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>{`Type (${selected.length})`}</Typography>;
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 260,
+                      borderRadius: "8px",
+                      "& .MuiMenuItem-root": {
+                        minHeight: "28px !important",
+                        py: "2px !important",
+                        px: "6px !important",
                       },
-                    }}
-                  />
+                    },
+                  },
+                }}
+                sx={{
+                  height: 38,
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                }}
+              >
+                {ComponentTypesList.map((t) => (
+                  <MenuItem key={t} value={t}>
+                    <Checkbox size="small" checked={selectedTypes.indexOf(t) > -1} sx={{ p: "2px", mr: 0.75 }} />
+                    <ListItemText primary={t} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.82rem" }} />
+                  </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
 
-                {selectedUnits.map((u) => (
-                  <Chip
-                    key={`unit-${u}`}
-                    label={`Unit: ${u}`}
-                    onDelete={() => setSelectedUnits((prev) => prev.filter((x) => x !== u))}
-                    size="small"
-                    sx={{
-                      backgroundColor: "#F2F4F7",
-                      color: "#344054",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      borderRadius: "16px",
-                      border: "1px solid #E9EAEB",
-                      "& .MuiChip-deleteIcon": {
-                        color: "#667085",
-                        fontSize: 14,
-                        "&:hover": { color: "#344054" },
+            {/* Multi-Select Unit Dropdown */}
+            <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
+              <Select
+                multiple
+                displayEmpty
+                value={selectedUnits}
+                onChange={(e) => {
+                  const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
+                  setSelectedUnits(val);
+                  setPage(0);
+                }}
+                renderValue={(selected) => {
+                  if (selected.length === 0) {
+                    return <Typography variant="body2" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>Unit</Typography>;
+                  }
+                  return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>{`Unit (${selected.length})`}</Typography>;
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 260,
+                      borderRadius: "8px",
+                      "& .MuiMenuItem-root": {
+                        minHeight: "28px !important",
+                        py: "2px !important",
+                        px: "6px !important",
                       },
-                    }}
-                  />
+                    },
+                  },
+                }}
+                sx={{
+                  height: 38,
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                }}
+              >
+                {unitsList.map((u) => (
+                  <MenuItem key={u.id} value={u.unitName}>
+                    <Checkbox size="small" checked={selectedUnits.indexOf(u.unitName) > -1} sx={{ p: "2px", mr: 0.75 }} />
+                    <ListItemText primary={u.unitName} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.82rem" }} />
+                  </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
 
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={handleClearFilters}
-                  sx={{
-                    color: "#6B288A",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    textTransform: "none",
-                    p: 0,
-                    minWidth: "auto",
-                    "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
-                  }}
-                >
-                  Clear all
-                </Button>
-              </>
-            )}
+            {/* Apply Button */}
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => setPage(0)}
+              sx={{
+                flex: "0 0 auto",
+                backgroundColor: "primary.main",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: "0.82rem",
+                borderRadius: "8px",
+                px: 2,
+                height: 38,
+                textTransform: "none",
+                boxShadow: "none",
+                minWidth: 65,
+                "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+              }}
+            >
+              Apply
+            </Button>
+
+            {/* Clear Button */}
+            <Button
+              size="small"
+              variant="text"
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+              sx={{
+                flex: "0 0 auto",
+                color: "#667085",
+                fontWeight: 600,
+                fontSize: "0.82rem",
+                height: 38,
+                minWidth: 55,
+                textTransform: "none",
+                "&:hover": { color: "#101828", backgroundColor: "transparent" },
+              }}
+            >
+              Clear
+            </Button>
           </Box>
 
-          <Typography variant="caption" sx={{ color: "#667085", fontWeight: 600, ml: "auto" }}>
-            {totalCount.toLocaleString()} results
-          </Typography>
+          {/* Active Filter Chips & Counter Bar */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mt: 1,
+              pt: 0.75,
+              borderTop: "1px solid #F2F4F7",
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+              {hasActiveFilters ? (
+                <>
+                  {searchQuery.trim() && (
+                    <Chip
+                      label={`Search: "${searchQuery}"`}
+                      onDelete={() => setSearchQuery("")}
+                      size="small"
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        border: "1px solid #E9EAEB",
+                        "& .MuiChip-deleteIcon": {
+                          color: "#667085",
+                          fontSize: 14,
+                          "&:hover": { color: "#344054" },
+                        },
+                      }}
+                    />
+                  )}
+
+                  {selectedSeries.map((s) => (
+                    <Chip
+                      key={`series-${s}`}
+                      label={`Series: ${s}`}
+                      onDelete={() => setSelectedSeries((prev) => prev.filter((x) => x !== s))}
+                      size="small"
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        border: "1px solid #E9EAEB",
+                        "& .MuiChip-deleteIcon": {
+                          color: "#667085",
+                          fontSize: 14,
+                          "&:hover": { color: "#344054" },
+                        },
+                      }}
+                    />
+                  ))}
+
+                  {selectedTypes.map((t) => (
+                    <Chip
+                      key={`type-${t}`}
+                      label={`Type: ${t}`}
+                      onDelete={() => setSelectedTypes((prev) => prev.filter((x) => x !== t))}
+                      size="small"
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        border: "1px solid #E9EAEB",
+                        "& .MuiChip-deleteIcon": {
+                          color: "#667085",
+                          fontSize: 14,
+                          "&:hover": { color: "#344054" },
+                        },
+                      }}
+                    />
+                  ))}
+
+                  {selectedUnits.map((u) => (
+                    <Chip
+                      key={`unit-${u}`}
+                      label={`Unit: ${u}`}
+                      onDelete={() => setSelectedUnits((prev) => prev.filter((x) => x !== u))}
+                      size="small"
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        border: "1px solid #E9EAEB",
+                        "& .MuiChip-deleteIcon": {
+                          color: "#667085",
+                          fontSize: 14,
+                          "&:hover": { color: "#344054" },
+                        },
+                      }}
+                    />
+                  ))}
+
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleClearFilters}
+                    sx={{
+                      color: "#6B288A",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      textTransform: "none",
+                      p: 0,
+                      minWidth: "auto",
+                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                    }}
+                  >
+                    Clear all
+                  </Button>
+                </>
+              ) : <Box />}
+            </Box>
+
+            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
+              {totalCount.toLocaleString()} {totalCount === 1 ? "result" : "results"}
+            </Typography>
+          </Box>
         </Box>
 
-        {/* Table */}
+        {/* Section 2: Table */}
         {isLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
             <CircularProgress color="primary" size={32} />
           </Box>
         ) : (
           <TableContainer
             sx={{
-              borderRadius: "6px",
-              border: "1px solid #EAECF0",
               overflowX: "auto",
+              maxHeight: "calc(100vh - 290px)",
             }}
           >
             <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
               <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: "45px", textAlign: "center" }}>Sr. No.</TableCell>
-                  <TableCell>Drawing No.</TableCell>
-                  <TableCell>LN Item Code</TableCell>
-                  <TableCell>Nomenclature</TableCell>
-                  <TableCell sx={{ textAlign: "center" }}>Type</TableCell>
-                  <TableCell sx={{ textAlign: "center" }}>Unit</TableCell>
-                  <TableCell sx={{ textAlign: "center" }}>Qty/Assy</TableCell>
-                  <TableCell sx={{ textAlign: "center" }}>
+                <TableRow sx={{ height: 42 }}>
+                  <TableCell sx={{ width: "55px", textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>#</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Drawing No.</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>LN Item Code</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Nomenclature</TableCell>
+                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Type</TableCell>
+                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Unit</TableCell>
+                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Qty/Assy</TableCell>
+                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>
                     <Box
                       onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                       sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, cursor: "pointer", userSelect: "none" }}
@@ -870,14 +916,14 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                       Updated On {sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: "0.75rem" }} /> : <ArrowDownwardIcon sx={{ fontSize: "0.75rem" }} />}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ textAlign: "center", width: "60px" }}>Actions</TableCell>
+                  <TableCell sx={{ textAlign: "center", width: "60px", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {displayData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} sx={{ textAlign: "center", py: 4 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                    <TableCell colSpan={9} sx={{ textAlign: "center", py: 5 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.85rem" }}>
                         {hasActiveFilters
                           ? "No components match your filter criteria"
                           : "No components found"}
@@ -899,20 +945,19 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
           </TableContainer>
         )}
 
-        {/* Footer Pagination */}
+        {/* Section 3: Footer Pagination */}
         <Box
           sx={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            pt: 1.5,
-            px: 0.5,
-            flexWrap: "wrap",
-            gap: 1.5,
+            justifyContent: "space-between",
+            py: 1,
+            px: 1.5,
+            borderTop: "1px solid #EAECF0",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="caption" sx={{ color: "#475467", fontWeight: 500 }}>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
               Rows per page
             </Typography>
             <Select
@@ -922,28 +967,36 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                 setRowsPerPage(Number(e.target.value));
                 setPage(0);
               }}
-              sx={{ height: 28, borderRadius: "4px", fontSize: "0.75rem" }}
+              sx={{
+                height: 32,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                borderRadius: "6px",
+                backgroundColor: "#ffffff",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              }}
             >
-              <MenuItem value={10} sx={{ fontSize: "0.75rem" }}>10</MenuItem>
-              <MenuItem value={20} sx={{ fontSize: "0.75rem" }}>20</MenuItem>
-              <MenuItem value={50} sx={{ fontSize: "0.75rem" }}>50</MenuItem>
-              <MenuItem value={100} sx={{ fontSize: "0.75rem" }}>100</MenuItem>
+              {[10, 20, 50, 100].map((opt) => (
+                <MenuItem key={opt} value={opt} sx={{ fontSize: "0.85rem" }}>
+                  {opt}
+                </MenuItem>
+              ))}
             </Select>
-          </Box>
+          </Stack>
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Typography variant="caption" sx={{ color: "#475467", fontWeight: 500 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography variant="body2" sx={{ color: "#344054", fontSize: "0.85rem", fontWeight: 600 }}>
               {totalCount === 0
                 ? "0 of 0"
                 : `${page * rowsPerPage + 1}–${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount.toLocaleString()}`}
             </Typography>
 
-            <Box sx={{ display: "flex", gap: 0.25 }}>
+            <Stack direction="row" spacing={0.5}>
               <IconButton
                 size="small"
                 disabled={page === 0}
                 onClick={() => setPage(page - 1)}
-                sx={{ border: "1px solid #D0D5DD", borderRadius: "4px", p: 0.25 }}
+                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
               >
                 <ChevronLeftIcon fontSize="small" />
               </IconButton>
@@ -951,12 +1004,12 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                 size="small"
                 disabled={(page + 1) * rowsPerPage >= totalCount || displayData.length < rowsPerPage}
                 onClick={() => setPage(page + 1)}
-                sx={{ border: "1px solid #D0D5DD", borderRadius: "4px", p: 0.25 }}
+                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
               >
                 <ChevronRightIcon fontSize="small" />
               </IconButton>
-            </Box>
-          </Box>
+            </Stack>
+          </Stack>
         </Box>
       </Paper>
 

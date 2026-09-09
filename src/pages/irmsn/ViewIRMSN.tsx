@@ -524,461 +524,461 @@ const ViewIRMSN: React.FC = () => {
           </Alert>
         )}
 
-        {/* Filter Card / Controls */}
+        {/* ── Unified Single Paper Container ────────────────────────────── */}
         <Paper
           elevation={0}
           sx={{
-            p: 1.5,
-            mb: 1,
-            borderRadius: "10px",
-            border: "1px solid #EAECF0",
-            backgroundColor: "#ffffff",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 1.25,
-              alignItems: "center",
-            }}
-          >
-            {/* Search Bar */}
-            <TextField
-              size="small"
-              sx={{
-                flex: { xs: "1 1 100%", md: "1 1 240px" },
-                minWidth: 200,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                },
-              }}
-              placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
-              value={drawingOrLnSearch}
-              onChange={(e) => setDrawingOrLnSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18, color: "#667085" }} />
-                  </InputAdornment>
-                ),
-                endAdornment: drawingOrLnSearch ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                      setDrawingOrLnSearch("");
-                      setPage(0);
-                      executeFetch(0, rowsPerPage, { search: "" });
-                    }}
-                      edge="end"
-                    >
-                      <ClearIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-            />
-
-            {/* Production Series Filter */}
-            <FormControl
-              sx={{ flex: { xs: "1 1 45%", md: "0 1 170px" }, minWidth: 140 }}
-              size="small"
-            >
-              <Autocomplete
-                multiple
-                size="small"
-                options={productionSeries}
-                disableCloseOnSelect
-                renderTags={() => null}
-                getOptionLabel={(option: any) =>
-                  typeof option === "string" ? option : option.productionSeries || ""
-                }
-                value={selectedProductionSeries}
-                loading={isLoadingCommon}
-                onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <Box
-                      component="li"
-                      key={key}
-                      {...optionProps}
-                      sx={{
-                        py: "4px !important",
-                        px: "8px !important",
-                        minHeight: "28px !important",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      <Checkbox
-                        icon={icon}
-                        checkedIcon={checkedIcon}
-                        sx={{ p: "2px", mr: 0.5 }}
-                        checked={selected}
-                        size="small"
-                      />
-                      <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                        {option.productionSeries}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={`Prod. Series `}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                      },
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLoadingCommon ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            {/* Department / Type Multi-select */}
-            <FormControl
-              sx={{ flex: { xs: "1 1 45%", md: "0 1 170px" }, minWidth: 140 }}
-              size="small"
-            >
-              <Autocomplete
-                multiple
-                size="small"
-                options={departments}
-                disableCloseOnSelect
-                renderTags={() => null}
-                getOptionLabel={(option: any) =>
-                  typeof option === "string" ? option : option.name || ""
-                }
-                value={selectedDepartments}
-                loading={isLoadingCommon}
-                onChange={(_, newValue) => setSelectedDepartments(newValue)}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <Box
-                      component="li"
-                      key={key}
-                      {...optionProps}
-                      sx={{
-                        py: "4px !important",
-                        px: "8px !important",
-                        minHeight: "28px !important",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      <Checkbox
-                        icon={icon}
-                        checkedIcon={checkedIcon}
-                        sx={{ p: "2px", mr: 0.5 }}
-                        checked={selected}
-                        size="small"
-                      />
-                      <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                        {option.name}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={`Dept Type`}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                      },
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLoadingCommon ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            {/* Document Type Selector (All / IR / MSN) */}
-            <FormControl size="small" sx={{ minWidth: 140, flex: "0 0 auto" }}>
-              <Select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                displayEmpty
-                renderValue={(selected) => {
-                  if (!selected || selected === "All") {
-                    return (
-                      <Box component="span" sx={{ color: "text.secondary" }}>
-                        Document Type
-                      </Box>
-                    );
-                  }
-                  return selected;
-                }}
-                endAdornment={
-                  typeFilter !== "All" ? (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTypeFilter("All");
-                      }}
-                      sx={{ mr: 1, p: 0.25, color: "text.secondary" }}
-                    >
-                      <ClearIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  ) : null
-                }
-                sx={{
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  height: 38,
-                }}
-              >
-                <SelectMenuItem value="IR">IR</SelectMenuItem>
-                <SelectMenuItem value="MSN">MSN</SelectMenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Date Range Pickers */}
-            <DatePicker
-              label="From Date"
-              value={fromDate}
-              onChange={(newValue) => setFromDate(newValue)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  sx: {
-                    minWidth: 135,
-                    width: 145,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "8px",
-                      fontSize: "0.85rem",
-                      backgroundColor: "#ffffff",
-                    },
-                    "& .MuiInputLabel-root": {
-                      fontSize: "0.85rem",
-                      backgroundColor: "#ffffff",
-                      px: 0.5,
-                    },
-                  },
-                },
-              }}
-            />
-            <DatePicker
-              label="To Date"
-              value={toDate}
-              onChange={(newValue) => setToDate(newValue)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  sx: {
-                    minWidth: 135,
-                    width: 145,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "8px",
-                      fontSize: "0.85rem",
-                      backgroundColor: "#ffffff",
-                    },
-                    "& .MuiInputLabel-root": {
-                      fontSize: "0.85rem",
-                      backgroundColor: "#ffffff",
-                      px: 0.5,
-                    },
-                  },
-                },
-              }}
-            />
-
-            {/* Action Buttons: Apply & Clear */}
-            <Button
-              variant="contained"
-              size="small"
-              onClick={handleSearch}
-              disabled={
-                (!(fromDate && toDate) &&
-                  selectedProductionSeries.length === 0 &&
-                  !drawingOrLnSearch.trim() &&
-                  selectedDepartments.length === 0) ||
-                loading
-              }
-              sx={{
-                minWidth: 80,
-                height: 38,
-                borderRadius: "8px",
-                backgroundColor: "primary.main",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "none",
-                boxShadow: "none",
-                "&:hover": { backgroundColor: "primary.dark" },
-              }}
-            >
-              Apply
-            </Button>
-            <Button
-              variant="text"
-              size="small"
-              onClick={handleReset}
-              disabled={!isResetEnabled}
-              sx={{
-                minWidth: 60,
-                height: 38,
-                color: "#667085",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "none",
-                "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
-              }}
-            >
-              Clear
-            </Button>
-          </Box>
-        </Paper>
-
-        {/* Active Filter Chips & Counter Bar */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 1,
-            mb: 1.25,
-            px: 0.5,
-          }}
-        >
-          {/* Active Chips */}
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
-            {selectedProductionSeries.map((item: any) => {
-              const label = typeof item === "string" ? item : item.productionSeries;
-              return (
-                <Chip
-                  key={`series-${item.id || label}`}
-                  label={`Series: ${label}`}
-                  size="small"
-                  onDelete={() => {
-                    setSelectedProductionSeries((prev) =>
-                      prev.filter((s: any) => (s.id || s) !== (item.id || item))
-                    );
-                  }}
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.75rem",
-                    borderRadius: "6px",
-                  }}
-                />
-              );
-            })}
-            {selectedDepartments.map((item: any) => {
-              const label = typeof item === "string" ? item : item.name;
-              return (
-                <Chip
-                  key={`dept-${item.id || label}`}
-                  label={`Dept: ${label}`}
-                  size="small"
-                  onDelete={() => {
-                    setSelectedDepartments((prev) =>
-                      prev.filter((d: any) => (d.id || d) !== (item.id || item))
-                    );
-                  }}
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.75rem",
-                    borderRadius: "6px",
-                  }}
-                />
-              );
-            })}
-            {typeFilter !== "All" && (
-              <Chip
-                label={`Type: ${typeFilter}`}
-                size="small"
-                onDelete={() => setTypeFilter("All")}
-                sx={{
-                  backgroundColor: "#F2F4F7",
-                  color: "#344054",
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  borderRadius: "6px",
-                }}
-              />
-            )}
-            {(selectedDepartments.length > 0 ||
-              selectedProductionSeries.length > 0 ||
-              typeFilter !== "All") && (
-              <Button
-                size="small"
-                color="error"
-                variant="text"
-                onClick={() => {
-                  setSelectedDepartments([]);
-                  setSelectedProductionSeries([]);
-                  setTypeFilter("All");
-                }}
-                sx={{
-                  fontSize: "0.75rem",
-                  py: 0,
-                  px: 1,
-                  height: "24px",
-                  minWidth: "auto",
-                  fontWeight: 600,
-                  textTransform: "none",
-                }}
-              >
-                Clear all
-              </Button>
-            )}
-          </Box>
-
-          {/* Results Count Display */}
-          <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
-            {totalCount} {totalCount === 1 ? "result" : "results"}
-          </Typography>
-        </Box>
-
-        {/* Data Table Container */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: "10px",
+            borderRadius: "12px",
             border: "1px solid #EAECF0",
             backgroundColor: "#ffffff",
             overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            flexGrow: 1,
+            mb: 2,
           }}
         >
-          <TableContainer sx={{ maxHeight: "calc(100vh - 290px)", overflow: "auto" }}>
+          {/* Section 1: Filter Card / Controls */}
+          <Box sx={{ p: 1.5, pb: 1.25 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "nowrap",
+                gap: 1,
+                alignItems: "center",
+                width: "100%",
+                overflowX: "auto",
+                py: 0.5,
+                "&::-webkit-scrollbar": { height: 6 },
+                "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
+              }}
+            >
+              {/* Search Bar */}
+              <TextField
+                size="small"
+                sx={{
+                  flex: "1 1 200px",
+                  minWidth: 160,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                  },
+                }}
+                placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
+                value={drawingOrLnSearch}
+                onChange={(e) => setDrawingOrLnSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: 18, color: "#667085" }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: drawingOrLnSearch ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setDrawingOrLnSearch("");
+                          setPage(0);
+                          executeFetch(0, rowsPerPage, { search: "" });
+                        }}
+                        edge="end"
+                      >
+                        <ClearIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+              />
+
+              {/* Production Series Filter */}
+              <FormControl
+                sx={{ flex: "0 0 130px", minWidth: 110 }}
+                size="small"
+              >
+                <Autocomplete
+                  multiple
+                  size="small"
+                  options={productionSeries}
+                  disableCloseOnSelect
+                  renderTags={() => null}
+                  getOptionLabel={(option: any) =>
+                    typeof option === "string" ? option : option.productionSeries || ""
+                  }
+                  value={selectedProductionSeries}
+                  loading={isLoadingCommon}
+                  onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderOption={(props, option, { selected }) => {
+                    const { key, ...optionProps } = props;
+                    return (
+                      <Box
+                        component="li"
+                        key={key}
+                        {...optionProps}
+                        sx={{
+                          py: "4px !important",
+                          px: "8px !important",
+                          minHeight: "28px !important",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        <Checkbox
+                          icon={icon}
+                          checkedIcon={checkedIcon}
+                          sx={{ p: "2px", mr: 0.5 }}
+                          checked={selected}
+                          size="small"
+                        />
+                        <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                          {option.productionSeries}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={`Prod. Series `}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: "8px",
+                          fontSize: "0.85rem",
+                        },
+                      }}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {isLoadingCommon ? (
+                              <CircularProgress color="inherit" size={16} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </FormControl>
+
+              {/* Department / Type Multi-select */}
+              <FormControl
+                sx={{ flex: "0 0 130px", minWidth: 110 }}
+                size="small"
+              >
+                <Autocomplete
+                  multiple
+                  size="small"
+                  options={departments}
+                  disableCloseOnSelect
+                  renderTags={() => null}
+                  getOptionLabel={(option: any) =>
+                    typeof option === "string" ? option : option.name || ""
+                  }
+                  value={selectedDepartments}
+                  loading={isLoadingCommon}
+                  onChange={(_, newValue) => setSelectedDepartments(newValue)}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderOption={(props, option, { selected }) => {
+                    const { key, ...optionProps } = props;
+                    return (
+                      <Box
+                        component="li"
+                        key={key}
+                        {...optionProps}
+                        sx={{
+                          py: "4px !important",
+                          px: "8px !important",
+                          minHeight: "28px !important",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        <Checkbox
+                          icon={icon}
+                          checkedIcon={checkedIcon}
+                          sx={{ p: "2px", mr: 0.5 }}
+                          checked={selected}
+                          size="small"
+                        />
+                        <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder={`Dept Type`}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: "8px",
+                          fontSize: "0.85rem",
+                        },
+                      }}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {isLoadingCommon ? (
+                              <CircularProgress color="inherit" size={16} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              </FormControl>
+
+              {/* Document Type Selector (All / IR / MSN) */}
+              <FormControl size="small" sx={{ flex: "0 0 140px", minWidth: 120 }}>
+                <Select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  displayEmpty
+                  renderValue={(selected) => {
+                    if (!selected || selected === "All") {
+                      return (
+                        <Box component="span" sx={{ color: "text.secondary" }}>
+                          Document Type
+                        </Box>
+                      );
+                    }
+                    return selected;
+                  }}
+                  endAdornment={
+                    typeFilter !== "All" ? (
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTypeFilter("All");
+                        }}
+                        sx={{ mr: 1, p: 0.25, color: "text.secondary" }}
+                      >
+                        <ClearIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    ) : null
+                  }
+                  sx={{
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    height: 38,
+                  }}
+                >
+                  <SelectMenuItem value="IR">IR</SelectMenuItem>
+                  <SelectMenuItem value="MSN">MSN</SelectMenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Date Range Pickers */}
+              <DatePicker
+                label="From Date"
+                value={fromDate}
+                onChange={(newValue) => setFromDate(newValue)}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    sx: {
+                      flex: "0 0 130px",
+                      minWidth: 115,
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        fontSize: "0.85rem",
+                        backgroundColor: "#ffffff",
+                      },
+                      "& .MuiInputLabel-root": {
+                        fontSize: "0.85rem",
+                        backgroundColor: "#ffffff",
+                        px: 0.5,
+                      },
+                    },
+                  },
+                }}
+              />
+              <DatePicker
+                label="To Date"
+                value={toDate}
+                onChange={(newValue) => setToDate(newValue)}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    sx: {
+                      flex: "0 0 130px",
+                      minWidth: 115,
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        fontSize: "0.85rem",
+                        backgroundColor: "#ffffff",
+                      },
+                      "& .MuiInputLabel-root": {
+                        fontSize: "0.85rem",
+                        backgroundColor: "#ffffff",
+                        px: 0.5,
+                      },
+                    },
+                  },
+                }}
+              />
+
+              {/* Action Buttons: Apply & Clear */}
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleSearch}
+                disabled={
+                  (!(fromDate && toDate) &&
+                    selectedProductionSeries.length === 0 &&
+                    !drawingOrLnSearch.trim() &&
+                    selectedDepartments.length === 0) ||
+                  loading
+                }
+                sx={{
+                  flex: "0 0 auto",
+                  minWidth: 65,
+                  height: 38,
+                  borderRadius: "8px",
+                  backgroundColor: "primary.main",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  textTransform: "none",
+                  boxShadow: "none",
+                  px: 1.75,
+                  "&:hover": { backgroundColor: "primary.dark" },
+                }}
+              >
+                Apply
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                onClick={handleReset}
+                disabled={!isResetEnabled}
+                sx={{
+                  flex: "0 0 auto",
+                  minWidth: 55,
+                  height: 38,
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  textTransform: "none",
+                  px: 1,
+                  "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+
+            {/* Active Filter Chips & Counter Bar */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 1,
+                mt: 1.25,
+                pt: 1,
+                borderTop: "1px solid #F2F4F7",
+              }}
+            >
+              {/* Active Chips */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
+                {selectedProductionSeries.map((item: any) => {
+                  const label = typeof item === "string" ? item : item.productionSeries;
+                  return (
+                    <Chip
+                      key={`series-${item.id || label}`}
+                      label={`Series: ${label}`}
+                      size="small"
+                      onDelete={() => {
+                        setSelectedProductionSeries((prev) =>
+                          prev.filter((s: any) => (s.id || s) !== (item.id || item))
+                        );
+                      }}
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        fontWeight: 600,
+                        fontSize: "0.75rem",
+                        borderRadius: "6px",
+                      }}
+                    />
+                  );
+                })}
+                {selectedDepartments.map((item: any) => {
+                  const label = typeof item === "string" ? item : item.name;
+                  return (
+                    <Chip
+                      key={`dept-${item.id || label}`}
+                      label={`Dept: ${label}`}
+                      size="small"
+                      onDelete={() => {
+                        setSelectedDepartments((prev) =>
+                          prev.filter((d: any) => (d.id || d) !== (item.id || item))
+                        );
+                      }}
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        fontWeight: 600,
+                        fontSize: "0.75rem",
+                        borderRadius: "6px",
+                      }}
+                    />
+                  );
+                })}
+                {typeFilter !== "All" && (
+                  <Chip
+                    label={`Type: ${typeFilter}`}
+                    size="small"
+                    onDelete={() => setTypeFilter("All")}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      borderRadius: "6px",
+                    }}
+                  />
+                )}
+                {(selectedDepartments.length > 0 ||
+                  selectedProductionSeries.length > 0 ||
+                  typeFilter !== "All") && (
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="text"
+                    onClick={() => {
+                      setSelectedDepartments([]);
+                      setSelectedProductionSeries([]);
+                      setTypeFilter("All");
+                    }}
+                    sx={{
+                      fontSize: "0.75rem",
+                      py: 0,
+                      px: 1,
+                      height: "24px",
+                      minWidth: "auto",
+                      fontWeight: 600,
+                      textTransform: "none",
+                    }}
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </Box>
+
+              {/* Results Count Display */}
+              <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
+                {totalCount} {totalCount === 1 ? "result" : "results"}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Section 2: Table */}
+          <TableContainer sx={{ borderTop: "1px solid #EAECF0", maxHeight: "calc(100vh - 310px)", overflow: "auto" }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
@@ -1299,7 +1299,7 @@ const ViewIRMSN: React.FC = () => {
             </Table>
           </TableContainer>
 
-          {/* Pagination Footer */}
+          {/* Section 3: Pagination Footer */}
           <Box
             sx={{
               display: "flex",

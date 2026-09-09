@@ -2,8 +2,6 @@ import { useState } from "react";
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   CircularProgress,
   Button,
   Dialog,
@@ -23,6 +21,8 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
+  Paper,
+  
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
@@ -614,7 +614,7 @@ export default function UserManagement() {
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={2}
-        sx={{ mb: 1 }}
+        sx={{ mb: 1.5 }}
       >
         <Box>
           <Typography
@@ -651,154 +651,122 @@ export default function UserManagement() {
         )}
       </Stack>
 
-      {/* Outer Card Wrapper */}
-      <Card
+      {/* Main Single Container Card */}
+      <Paper
         elevation={0}
         sx={{
-          mb: 0,
-          border: "1px solid",
-          borderColor: "neutral.border",
-          borderRadius: 3,
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
           overflow: "hidden",
-          background: "background.paper",
+          mb: 2,
         }}
       >
-        {/* Header Toolbar: Search Bar on Left, User Count & Tabs on Right */}
+        {/* Controls Bar: Tabs and Search */}
         <Box
           sx={{
             p: 2,
-            px: 3,
-            bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "neutral.border",
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
+            alignItems: "center",
             flexWrap: "wrap",
             gap: 2,
+            borderBottom: "1px solid #EAECF0",
           }}
         >
-          {/* Left: Search Bar */}
+          <Tabs
+            value={mainTab}
+            onChange={(_e, newValue) => setMainTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
+            sx={{
+              minHeight: 40,
+              "& .MuiTab-root": {
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                minWidth: 100,
+              },
+            }}
+          >
+            <Tab label="All Users" />
+            <Tab label={`Pending Approval (${pendingUsersCount})`} />
+          </Tabs>
+
           <TextField
-            placeholder="Search name or email..."
+            placeholder="Search by Name, Email, Role, Dept..."
             size="small"
             variant="outlined"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             sx={{
-              width: { xs: "100%", sm: 320 },
+              width: { xs: "100%", sm: 280 },
               "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                backgroundColor: "background.paper",
+                borderRadius: 1.5,
+                fontSize: "0.875rem",
               },
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="action" fontSize="small" />
+                  <SearchIcon sx={{ color: "text.secondary", fontSize: 20 }} />
                 </InputAdornment>
               ),
             }}
           />
-
-          {/* Right: User Count & Tabs */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-            <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 600 }}>
-              Total users {displayedUsers.length} 
-            </Typography>
-            <Tabs
-              value={mainTab}
-              onChange={(_e, newValue) => setMainTab(newValue)}
-              textColor="primary"
-              indicatorColor="primary"
-              sx={{
-                minHeight: 38,
-                "& .MuiTab-root": {
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  textTransform: "none",
-                  minWidth: 90,
-                  minHeight: 38,
-                  py: 0,
-                  color: "text.muted",
-                },
-                "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-                "& .MuiTabs-indicator": {
-                  backgroundColor: "primary.main",
-                  height: 3,
-                  borderRadius: "3px 3px 0 0",
-                },
-              }}
-            >
-              <Tab label="All Users" />
-              <Tab label={`Pending Approval (${pendingUsersCount})`} />
-            </Tabs>
-          </Box>
         </Box>
 
         {/* DataGrid Container */}
-        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "background.paper" }}>
-          <Card
-            elevation={0}
-            sx={{
-              border: "1px solid",
-              borderColor: "neutral.border",
-              borderRadius: "10px",
-              overflow: "hidden",
-              background: "background.paper",
+        <Box sx={{ width: "100%" }}>
+          <DataGrid
+            autoHeight
+            rows={displayedUsers}
+            columns={mainTab === 0 ? userColumns : pendingColumns}
+            loading={mainTab === 0 ? isUsersLoading : isPendingUsersLoading}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10 },
+              },
             }}
-          >
-            <Box sx={{ width: "100%" }}>
-              <DataGrid
-                autoHeight
-                rows={displayedUsers}
-                columns={mainTab === 0 ? userColumns : pendingColumns}
-                loading={mainTab === 0 ? isUsersLoading : isPendingUsersLoading}
-                initialState={{
-                  pagination: {
-                    paginationModel: { pageSize: 10 },
-                  },
-                }}
-                pageSizeOptions={[10, 20, 50]}
-                disableRowSelectionOnClick
-                disableColumnMenu
-                disableColumnFilter
-                disableColumnSelector
-                sx={{
-                  border: "none",
-                  "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "neutral.hoverBg",
-                    borderBottom: "1px solid",
-                    borderColor: "neutral.border",
-                    color: "text.subtle",
-                    fontWeight: 700,
-                    fontSize: "0.8rem",
-                  },
-                  "& .MuiDataGrid-columnHeaderTitle": {
-                    fontWeight: 700,
-                    fontSize: "0.8rem",
-                    color: "text.subtle",
-                  },
-                  "& .MuiDataGrid-cell": {
-                    fontSize: "0.85rem",
-                    color: "text.secondary",
-                    borderBottom: "1px solid",
-                    borderColor: "neutral.chipBg",
-                  },
-                  "& .MuiDataGrid-row": {
-                    "&:hover": { backgroundColor: "neutral.hoverBg" },
-                    transition: "background-color 0.2s ease",
-                  },
-                  "& .MuiDataGrid-cell:focus": { outline: "none" },
-                  "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-                  "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-                  "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-                }}
-              />
-            </Box>
-          </Card>
-        </CardContent>
-      </Card>
+            pageSizeOptions={[10, 20, 50]}
+            disableRowSelectionOnClick
+            disableColumnMenu
+            disableColumnFilter
+            disableColumnSelector
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-columnHeaders": {
+                backgroundColor: "#F9FAFB",
+                borderBottom: "1px solid #EAECF0",
+                color: "#475467",
+                fontWeight: 700,
+                fontSize: "0.8rem",
+              },
+              "& .MuiDataGrid-columnHeaderTitle": {
+                fontWeight: 700,
+                fontSize: "0.8rem",
+                color: "#475467",
+              },
+              "& .MuiDataGrid-cell": {
+                fontSize: "0.85rem",
+                color: "#344054",
+                borderBottom: "1px solid #F2F4F7",
+              },
+              "& .MuiDataGrid-row": {
+                "&:hover": { backgroundColor: "#F9FAFB" },
+                transition: "background-color 0.2s ease",
+              },
+              "& .MuiDataGrid-cell:focus": { outline: "none" },
+              "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+              "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
+              "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+              "& .MuiDataGrid-footerContainer": {
+                borderTop: "1px solid #EAECF0",
+              },
+            }}
+          />
+        </Box>
+      </Paper>
 
       <Dialog
         open={userDialogOpen}

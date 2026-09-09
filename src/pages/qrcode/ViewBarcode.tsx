@@ -1133,451 +1133,468 @@ const ViewBarcode: React.FC = () => {
           </Stack>
         </Box>
 
-        {/* Filter Bar */}
-        <Box
+        {/* Unified Single Outer Paper Container */}
+        <Paper
+          elevation={0}
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.25,
-            flexWrap: 'wrap',
-            p: 1.25,
-            bgcolor: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #eaecf0',
-            mb: 1,
+            borderRadius: "12px",
+            border: "1px solid #eaecf0",
+            backgroundColor: "#ffffff",
+            overflow: "hidden",
+            mb: 2,
           }}
         >
-          {/* Search Input */}
-          <TextField
-            size="small"
-            placeholder="Search QR Code ID, PO Num..."
-            value={searchQuery}
-            onChange={(e) => {
-              if (error) dispatch(clearError());
-              setSearchQuery(e.target.value);
-            }}
-            onKeyDown={handleQueryKeyDown}
-            error={!!error && !!searchQuery.trim()}
-            helperText={(searchQuery.trim() && (typeof error === 'string' ? error : error?.message)) || ''}
-            FormHelperTextProps={{
-              sx: {
-                position: 'absolute',
-                top: '100%',
-                left: 4,
-                margin: 0,
-                fontSize: '0.72rem',
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap',
-              },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#667085', fontSize: 18 }} />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  {loading ? (
-                    <CircularProgress size={16} />
-                  ) : searchQuery ? (
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setSearchQuery('');
-                        if (error) dispatch(clearError());
-                        const params = buildApiParams('', selectedProductionSeries, selectedDepartment, fromDate, toDate);
-                        setLastSearchParams(params);
-                        dispatch(getBarcodeDetailsWithParameters(params));
-                      }}
-                      sx={{ p: 0.25, color: '#667085', '&:hover': { color: '#101828' } }}
-                      title="Clear search"
-                    >
-                      <CloseIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  ) : null}
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              flex: { xs: '1 1 100%', md: '1 1 240px' },
-              minWidth: 200,
-              position: 'relative',
-              '& .MuiOutlinedInput-root': {
-                height: 34,
-                borderRadius: '6px',
-                bgcolor: '#fff',
-                fontSize: '0.8rem',
-              },
-            }}
-          />
-
-          {/* Multiselect Prod. Series Dropdown */}
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={selectedProductionSeries}
-              onChange={(e) => {
-                const val = typeof e.target.value === "string" ? e.target.value.split(",") : (e.target.value as string[]);
-                setSelectedProductionSeries(val);
+          {/* Section 1: Filter Bar & Active Chips */}
+          <Box sx={{ p: 1.5, pb: 1, borderBottom: "1px solid #eaecf0" }}>
+            {/* Single Row Filter Controls */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                py: 0.5,
+                "&::-webkit-scrollbar": { height: 6 },
+                "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
               }}
-              renderValue={(selected) => {
-                if (selected.length === 0) {
-                  return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Prod. Series</Typography>;
-                }
-                if (selected.length === 1) {
-                  return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Prod. Series · ${selected[0]}`}</Typography>;
-                }
-                return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Prod. Series (${selected.length})`}</Typography>;
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 260,
-                    borderRadius: "8px",
-                    "& .MuiMenuItem-root": {
-                      minHeight: "28px !important",
-                      py: "2px !important",
-                      px: "6px !important",
-                    },
-                  },
-                },
-              }}
-              sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem", backgroundColor: "background.paper" }}
             >
-              {prodSeriesOptions.map((s) => (
-                <MenuItem key={s} value={s}>
-                  <Checkbox size="small" checked={selectedProductionSeries.indexOf(s) > -1} sx={{ p: "2px", mr: 0.75, color: "primary.main", '&.Mui-checked': { color: "primary.main" } }} />
-                  <ListItemText primary={s} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Multiselect Status Dropdown */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={selectedStatus}
-              onChange={(e) => {
-                const val = typeof e.target.value === "string" ? e.target.value.split(",") : (e.target.value as string[]);
-                setSelectedStatus(val);
-              }}
-              renderValue={(selected) => {
-                if (selected.length === 0) {
-                  return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Status</Typography>;
-                }
-                if (selected.length === 1) {
-                  return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Status · ${selected[0]}`}</Typography>;
-                }
-                return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Status (${selected.length})`}</Typography>;
-              }}
-              MenuProps={{
-                PaperProps: {
+              {/* Search Input */}
+              <TextField
+                size="small"
+                placeholder="Search QR Code ID, PO Num..."
+                value={searchQuery}
+                onChange={(e) => {
+                  if (error) dispatch(clearError());
+                  setSearchQuery(e.target.value);
+                }}
+                onKeyDown={handleQueryKeyDown}
+                error={!!error && !!searchQuery.trim()}
+                helperText={(searchQuery.trim() && (typeof error === 'string' ? error : error?.message)) || ''}
+                FormHelperTextProps={{
                   sx: {
-                    maxHeight: 260,
-                    borderRadius: "8px",
-                    "& .MuiMenuItem-root": {
-                      minHeight: "28px !important",
-                      py: "2px !important",
-                      px: "6px !important",
-                    },
+                    position: 'absolute',
+                    top: '100%',
+                    left: 4,
+                    margin: 0,
+                    fontSize: '0.72rem',
+                    lineHeight: 1.2,
+                    whiteSpace: 'nowrap',
                   },
-                },
-              }}
-              sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem", backgroundColor: "background.paper" }}
-            >
-              {['Active', 'Consumed'].map((st) => (
-                <MenuItem key={st} value={st}>
-                  <Checkbox size="small" checked={selectedStatus.indexOf(st) > -1} sx={{ p: "2px", mr: 0.75, color: "primary.main", '&.Mui-checked': { color: "primary.main" } }} />
-                  <ListItemText primary={st} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Multiselect Department Dropdown */}
-          <FormControl size="small" sx={{ minWidth: 130 }}>
-            <Select
-              multiple
-              displayEmpty
-              value={selectedDepartment}
-              onChange={(e) => {
-                const val = typeof e.target.value === "string" ? e.target.value.split(",") : (e.target.value as string[]);
-                setSelectedDepartment(val);
-              }}
-              renderValue={(selected) => {
-                if (selected.length === 0) {
-                  return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Department</Typography>;
-                }
-                if (selected.length === 1) {
-                  return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Department · ${selected[0]}`}</Typography>;
-                }
-                return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Department (${selected.length})`}</Typography>;
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 260,
-                    borderRadius: "8px",
-                    "& .MuiMenuItem-root": {
-                      minHeight: "28px !important",
-                      py: "2px !important",
-                      px: "6px !important",
-                    },
-                  },
-                },
-              }}
-              sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem", backgroundColor: "background.paper" }}
-            >
-              {departmentOptions.map((dept) => (
-                <MenuItem key={dept} value={dept}>
-                  <Checkbox size="small" checked={selectedDepartment.indexOf(dept) > -1} sx={{ p: "2px", mr: 0.75, color: "primary.main", '&.Mui-checked': { color: "primary.main" } }} />
-                  <ListItemText primary={dept} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Date Picker */}
-          <DatePicker
-            value={fromDate}
-            onChange={(newValue) => setFromDate(newValue)}
-            slotProps={{
-              textField: {
-                size: 'small',
-                placeholder: 'Created On · any date',
-                sx: {
-                  width: 180,
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: '#667085', fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {loading ? (
+                        <CircularProgress size={16} />
+                      ) : searchQuery ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setSearchQuery('');
+                            if (error) dispatch(clearError());
+                            const params = buildApiParams('', selectedProductionSeries, selectedDepartment, fromDate, toDate);
+                            setLastSearchParams(params);
+                            dispatch(getBarcodeDetailsWithParameters(params));
+                          }}
+                          sx={{ p: 0.25, color: '#667085', '&:hover': { color: '#101828' } }}
+                          title="Clear search"
+                        >
+                          <CloseIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      ) : null}
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  flex: "1 1 200px",
+                  minWidth: 160,
+                  position: 'relative',
                   '& .MuiOutlinedInput-root': {
                     height: 34,
                     borderRadius: '6px',
+                    bgcolor: '#fff',
                     fontSize: '0.8rem',
                   },
-                },
-              },
-            }}
-          />
+                }}
+              />
 
-          {/* Apply Button */}
-          <Button
-            variant="outlined"
-            onClick={handleFilterSearch}
-            size="small"
-            sx={{
-              borderRadius: '6px',
-              borderColor: 'primary.main',
-              color: 'primary.main',
-              fontWeight: 600,
-              textTransform: 'none',
-              px: 2,
-              height: 34,
-              fontSize: '0.8rem',
-              boxShadow: 'none',
-              '&:hover': {
-                borderColor: 'primary.dark',
-                bgcolor: 'rgba(107, 40, 138, 0.05)',
-                boxShadow: 'none',
-              },
-            }}
-          >
-            Apply
-          </Button>
+              {/* Multiselect Prod. Series Dropdown */}
+              <FormControl size="small" sx={{ flex: "0 0 130px", minWidth: 110 }}>
+                <Select
+                  multiple
+                  displayEmpty
+                  value={selectedProductionSeries}
+                  onChange={(e) => {
+                    const val = typeof e.target.value === "string" ? e.target.value.split(",") : (e.target.value as string[]);
+                    setSelectedProductionSeries(val);
+                  }}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Prod. Series</Typography>;
+                    }
+                    if (selected.length === 1) {
+                      return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Prod. Series · ${selected[0]}`}</Typography>;
+                    }
+                    return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Prod. Series (${selected.length})`}</Typography>;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 260,
+                        borderRadius: "8px",
+                        "& .MuiMenuItem-root": {
+                          minHeight: "28px !important",
+                          py: "2px !important",
+                          px: "6px !important",
+                        },
+                      },
+                    },
+                  }}
+                  sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem", backgroundColor: "background.paper" }}
+                >
+                  {prodSeriesOptions.map((s) => (
+                    <MenuItem key={s} value={s}>
+                      <Checkbox size="small" checked={selectedProductionSeries.indexOf(s) > -1} sx={{ p: "2px", mr: 0.75, color: "primary.main", '&.Mui-checked': { color: "primary.main" } }} />
+                      <ListItemText primary={s} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          {/* Clear Link */}
-          <Button
-            variant="text"
-            onClick={handleReset}
-            size="small"
-            disabled={!isResetEnabled}
-            sx={{
-              height: 34,
-              color: '#667085',
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              minWidth: 'auto',
-              '&:hover': { color: '#101828', bgcolor: 'transparent' },
-            }}
-          >
-            Clear
-          </Button>
-        </Box>
+              {/* Multiselect Status Dropdown */}
+              <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
+                <Select
+                  multiple
+                  displayEmpty
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    const val = typeof e.target.value === "string" ? e.target.value.split(",") : (e.target.value as string[]);
+                    setSelectedStatus(val);
+                  }}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Status</Typography>;
+                    }
+                    if (selected.length === 1) {
+                      return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Status · ${selected[0]}`}</Typography>;
+                    }
+                    return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Status (${selected.length})`}</Typography>;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 260,
+                        borderRadius: "8px",
+                        "& .MuiMenuItem-root": {
+                          minHeight: "28px !important",
+                          py: "2px !important",
+                          px: "6px !important",
+                        },
+                      },
+                    },
+                  }}
+                  sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem", backgroundColor: "background.paper" }}
+                >
+                  {['Active', 'Consumed'].map((st) => (
+                    <MenuItem key={st} value={st}>
+                      <Checkbox size="small" checked={selectedStatus.indexOf(st) > -1} sx={{ p: "2px", mr: 0.75, color: "primary.main", '&.Mui-checked': { color: "primary.main" } }} />
+                      <ListItemText primary={st} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-        {/* Active Filter Chips Row & Results / Columns */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justify: 'space-between',
-            mb: 1,
-            px: 0.5,
-            flexWrap: 'wrap',
-            gap: 1,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            {selectedProductionSeries.map((s) => (
-              <Chip
-                key={`series-${s}`}
-                label={
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                    <Box component="span" sx={{ fontWeight: 600, color: '#475467' }}>Series:&nbsp;</Box>
-                    <Box component="span" sx={{ fontWeight: 700, color: '#101828' }}>{s}</Box>
-                  </Box>
-                }
-                size="small"
-                onDelete={() => setSelectedProductionSeries(selectedProductionSeries.filter((v) => v !== s))}
-                sx={{
-                  borderRadius: '16px',
-                  bgcolor: '#f2f4f7',
-                  border: '1px solid #e4e7ec',
-                  fontSize: '0.8rem',
-                  height: '26px',
-                  '& .MuiChip-deleteIcon': {
-                    fontSize: '14px',
-                    color: '#667085',
-                    '&:hover': { color: '#101828' },
+              {/* Multiselect Department Dropdown */}
+              <FormControl size="small" sx={{ flex: "0 0 130px", minWidth: 110 }}>
+                <Select
+                  multiple
+                  displayEmpty
+                  value={selectedDepartment}
+                  onChange={(e) => {
+                    const val = typeof e.target.value === "string" ? e.target.value.split(",") : (e.target.value as string[]);
+                    setSelectedDepartment(val);
+                  }}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>Department</Typography>;
+                    }
+                    if (selected.length === 1) {
+                      return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Department · ${selected[0]}`}</Typography>;
+                    }
+                    return <Typography variant="body2" sx={{ color: "primary.main", fontWeight: 600, fontSize: "0.8rem" }}>{`Department (${selected.length})`}</Typography>;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 260,
+                        borderRadius: "8px",
+                        "& .MuiMenuItem-root": {
+                          minHeight: "28px !important",
+                          py: "2px !important",
+                          px: "6px !important",
+                        },
+                      },
+                    },
+                  }}
+                  sx={{ height: 34, borderRadius: "6px", fontSize: "0.8rem", backgroundColor: "background.paper" }}
+                >
+                  {departmentOptions.map((dept) => (
+                    <MenuItem key={dept} value={dept}>
+                      <Checkbox size="small" checked={selectedDepartment.indexOf(dept) > -1} sx={{ p: "2px", mr: 0.75, color: "primary.main", '&.Mui-checked': { color: "primary.main" } }} />
+                      <ListItemText primary={dept} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.8rem" }} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Date Picker */}
+              <DatePicker
+                value={fromDate}
+                onChange={(newValue) => setFromDate(newValue)}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    placeholder: 'Created On · any date',
+                    sx: {
+                      flex: "0 0 160px",
+                      minWidth: 140,
+                      '& .MuiOutlinedInput-root': {
+                        height: 34,
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                      },
+                    },
                   },
                 }}
               />
-            ))}
 
-            {selectedStatus.map((st) => (
-              <Chip
-                key={`status-${st}`}
-                label={
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                    <Box component="span" sx={{ fontWeight: 600, color: '#475467' }}>Status:&nbsp;</Box>
-                    <Box component="span" sx={{ fontWeight: 700, color: '#101828' }}>{st}</Box>
-                  </Box>
-                }
-                size="small"
-                onDelete={() => setSelectedStatus(selectedStatus.filter((v) => v !== st))}
-                sx={{
-                  borderRadius: '16px',
-                  bgcolor: '#f2f4f7',
-                  border: '1px solid #e4e7ec',
-                  fontSize: '0.8rem',
-                  height: '26px',
-                  '& .MuiChip-deleteIcon': {
-                    fontSize: '14px',
-                    color: '#667085',
-                    '&:hover': { color: '#101828' },
-                  },
-                }}
-              />
-            ))}
-
-            {selectedDepartment.map((d) => (
-              <Chip
-                key={`dept-${d}`}
-                label={
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                    <Box component="span" sx={{ fontWeight: 600, color: '#475467' }}>Dept:&nbsp;</Box>
-                    <Box component="span" sx={{ fontWeight: 700, color: '#101828' }}>{d}</Box>
-                  </Box>
-                }
-                size="small"
-                onDelete={() => setSelectedDepartment(selectedDepartment.filter((v) => v !== d))}
-                sx={{
-                  borderRadius: '16px',
-                  bgcolor: '#f2f4f7',
-                  border: '1px solid #e4e7ec',
-                  fontSize: '0.8rem',
-                  height: '26px',
-                  '& .MuiChip-deleteIcon': {
-                    fontSize: '14px',
-                    color: '#667085',
-                    '&:hover': { color: '#101828' },
-                  },
-                }}
-              />
-            ))}
-
-            {hasActiveChips && (
+              {/* Apply Button */}
               <Button
-                variant="text"
-                onClick={() => {
-                  setSelectedProductionSeries([]);
-                  setSelectedStatus([]);
-                  setSelectedDepartment([]);
-                }}
+                variant="outlined"
+                onClick={handleFilterSearch}
+                size="small"
                 sx={{
+                  flex: "0 0 auto",
+                  borderRadius: '6px',
+                  borderColor: 'primary.main',
                   color: 'primary.main',
-                  fontSize: '0.8rem',
                   fontWeight: 600,
                   textTransform: 'none',
-                  minWidth: 'auto',
-                  px: 1,
-                  py: 0,
-                  height: '26px',
+                  px: 2,
+                  height: 34,
+                  fontSize: '0.8rem',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                    bgcolor: 'rgba(107, 40, 138, 0.05)',
+                    boxShadow: 'none',
+                  },
                 }}
               >
-                Clear all
+                Apply
               </Button>
-            )}
-          </Box>
 
-         
-        </Box>
-
-        {/* Bulk Action Bar */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justify: 'space-between',
-            width: '100%',
-            px: 2,
-            py: 1,
-            bgcolor: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #eaecf0',
-            mb: 1.5,
-          }}
-        >
-          <Typography variant="body2" sx={{ color: '#475467', fontSize: '0.85rem' }}>
-            <Box component="span" sx={{ fontWeight: 600, color: '#101828' }}>
-              {selectedQRCodes.length} of {displayedData.length} selected
+              {/* Clear Link */}
+              <Button
+                variant="text"
+                onClick={handleReset}
+                size="small"
+                disabled={!isResetEnabled}
+                sx={{
+                  flex: "0 0 auto",
+                  height: 34,
+                  color: '#667085',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  minWidth: 'auto',
+                  '&:hover': { color: '#101828', bgcolor: 'transparent' },
+                }}
+              >
+                Clear
+              </Button>
             </Box>
-            {' · select rows to  download'}
-          </Typography>
 
-          <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<CallSplitIcon fontSize="small" />}
-              onClick={handleSplitAll}
-              disabled={displayedData.length === 0 || !canSplitSelected}
+            {/* Active Filter Chips Row & Results Count */}
+            <Box
               sx={{
-                height: 34,
-                borderRadius: '6px',
-                backgroundColor: 'primary.main',
-                color: '#ffffff',
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
-                '&:hover': { backgroundColor: 'primary.dark' },
-                '&.Mui-disabled': {
-                  bgcolor: 'rgba(107, 40, 138, 0.3)',
-                  color: '#ffffff',
-                },
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                mt: 1,
+                pt: 0.75,
+                borderTop: '1px solid #f2f4f7',
+                flexWrap: 'wrap',
+                gap: 1,
               }}
             >
-              {hasAnySplit ? 'Close Split' : 'Split selected'}
-            </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                {selectedProductionSeries.map((s) => (
+                  <Chip
+                    key={`series-${s}`}
+                    label={
+                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <Box component="span" sx={{ fontWeight: 600, color: '#475467' }}>Series:&nbsp;</Box>
+                        <Box component="span" sx={{ fontWeight: 700, color: '#101828' }}>{s}</Box>
+                      </Box>
+                    }
+                    size="small"
+                    onDelete={() => setSelectedProductionSeries(selectedProductionSeries.filter((v) => v !== s))}
+                    sx={{
+                      borderRadius: '16px',
+                      bgcolor: '#f2f4f7',
+                      border: '1px solid #e4e7ec',
+                      fontSize: '0.8rem',
+                      height: '26px',
+                      '& .MuiChip-deleteIcon': {
+                        fontSize: '14px',
+                        color: '#667085',
+                        '&:hover': { color: '#101828' },
+                      },
+                    }}
+                  />
+                ))}
 
-          </Stack>
-        </Box>
+                {selectedStatus.map((st) => (
+                  <Chip
+                    key={`status-${st}`}
+                    label={
+                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <Box component="span" sx={{ fontWeight: 600, color: '#475467' }}>Status:&nbsp;</Box>
+                        <Box component="span" sx={{ fontWeight: 700, color: '#101828' }}>{st}</Box>
+                      </Box>
+                    }
+                    size="small"
+                    onDelete={() => setSelectedStatus(selectedStatus.filter((v) => v !== st))}
+                    sx={{
+                      borderRadius: '16px',
+                      bgcolor: '#f2f4f7',
+                      border: '1px solid #e4e7ec',
+                      fontSize: '0.8rem',
+                      height: '26px',
+                      '& .MuiChip-deleteIcon': {
+                        fontSize: '14px',
+                        color: '#667085',
+                        '&:hover': { color: '#101828' },
+                      },
+                    }}
+                  />
+                ))}
 
-        {/* Data Table */}
-        <Paper sx={{ borderRadius: '12px', border: '1px solid #eaecf0', boxShadow: 'none', overflow: 'hidden' }}>
-          <TableContainer sx={{ width: '100%', maxHeight: 'calc(100vh - 290px)', minHeight: '400px', overflowX: 'auto', overflowY: 'auto' }}>
+                {selectedDepartment.map((d) => (
+                  <Chip
+                    key={`dept-${d}`}
+                    label={
+                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <Box component="span" sx={{ fontWeight: 600, color: '#475467' }}>Dept:&nbsp;</Box>
+                        <Box component="span" sx={{ fontWeight: 700, color: '#101828' }}>{d}</Box>
+                      </Box>
+                    }
+                    size="small"
+                    onDelete={() => setSelectedDepartment(selectedDepartment.filter((v) => v !== d))}
+                    sx={{
+                      borderRadius: '16px',
+                      bgcolor: '#f2f4f7',
+                      border: '1px solid #e4e7ec',
+                      fontSize: '0.8rem',
+                      height: '26px',
+                      '& .MuiChip-deleteIcon': {
+                        fontSize: '14px',
+                        color: '#667085',
+                        '&:hover': { color: '#101828' },
+                      },
+                    }}
+                  />
+                ))}
+
+                {hasActiveChips && (
+                  <Button
+                    variant="text"
+                    onClick={() => {
+                      setSelectedProductionSeries([]);
+                      setSelectedStatus([]);
+                      setSelectedDepartment([]);
+                    }}
+                    sx={{
+                      color: 'primary.main',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      px: 1,
+                      py: 0,
+                      height: '26px',
+                    }}
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </Box>
+
+              {/* Total Results Count */}
+              <Typography variant="body2" sx={{ color: '#667085', fontSize: '0.85rem', fontWeight: 500, ml: 'auto' }}>
+                {totalRecordsCount} {totalRecordsCount === 1 ? 'result' : 'results'}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Section 2: Bulk Action Bar */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              width: '100%',
+              px: 2,
+              py: 1,
+              bgcolor: '#ffffff',
+              borderBottom: '1px solid #eaecf0',
+            }}
+          >
+            <Typography variant="body2" sx={{ color: '#475467', fontSize: '0.85rem' }}>
+              <Box component="span" sx={{ fontWeight: 600, color: '#101828' }}>
+                {selectedQRCodes.length} of {displayedData.length} selected
+              </Box>
+              {' · select rows to download'}
+            </Typography>
+
+            <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<CallSplitIcon fontSize="small" />}
+                onClick={handleSplitAll}
+                disabled={displayedData.length === 0 || !canSplitSelected}
+                sx={{
+                  height: 34,
+                  borderRadius: '6px',
+                  backgroundColor: 'primary.main',
+                  color: '#ffffff',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
+                  '&:hover': { backgroundColor: 'primary.dark' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(107, 40, 138, 0.3)',
+                    color: '#ffffff',
+                  },
+                }}
+              >
+                {hasAnySplit ? 'Close Split' : 'Split selected'}
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Section 3: Data Table */}
+          <TableContainer sx={{ width: '100%', maxHeight: 'calc(100vh - 290px)', minHeight: '380px', overflowX: 'auto', overflowY: 'auto' }}>
             <Table sx={{ width: '100%', minWidth: '1300px', tableLayout: 'auto' }} stickyHeader aria-label="QR codes table">
               <TableHead>
                 <TableRow sx={{ height: 40 }}>
@@ -1641,7 +1658,7 @@ const ViewBarcode: React.FC = () => {
             </Table>
           </TableContainer>
 
-          {/* Footer Bar */}
+          {/* Section 4: Footer Bar */}
           <Box
             sx={{
               display: 'flex',

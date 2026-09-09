@@ -1545,257 +1545,294 @@ const ProductionOrderUpload: React.FC = () => {
             />
           </Stack>
 
-          {/* Filter Bar */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1,
-              mb: 0.75,
-              borderRadius: "10px",
-              border: "1px solid #E9EAEB",
-              backgroundColor: "#ffffff",
-            }}
-          >
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                flexWrap="wrap"
-                alignItems="center"
-              >
-                {/* Search Field */}
-                <TextField
-                  placeholder="Search PO, LN Item Code, Drawing No, MRIR No..."
-                  variant="outlined"
-                  size="small"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" sx={{ color: "#667085" }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchQuery ? (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearchQuery("")}>
-                          <ClearIcon fontSize="small" />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                  }}
-                  sx={{
-                    width: { xs: "100%", sm: 280 },
-                    "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" },
-                  }}
-                />
-
-                {/* Prod. Series Dropdown (Multi-Select with Checkboxes) */}
-                <Autocomplete
-                  multiple
-                  disableCloseOnSelect
-                  renderTags={() => null}
-                  size="small"
-                  options={productionSeriesData}
-                  getOptionLabel={(option: any) => option.productionSeries || option.toString()}
-                  isOptionEqualToValue={(option, value) =>
-                    (option.productionSeries || option) === (value.productionSeries || value)
-                  }
-                  value={selectedProductionSeries}
-                  onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                  renderOption={(props, option, { selected }) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box component="li" key={key} {...optionProps}>
-                        <Checkbox
-                          size="small"
-                          sx={{ mr: 0.75, p: 0.15 }}
-                          checked={selected}
-                        />
-                        {option.productionSeries || option.toString()}
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={selectedProductionSeries.length > 0 ? `Prod. Series · ${selectedProductionSeries.length}` : "Prod. Series"}
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
-                    />
-                  )}
-                  sx={{ minWidth: 150, maxWidth: 220 }}
-                />
-
-                {/* Status Dropdown (Multi-Select with Checkboxes) */}
-                <Autocomplete
-                  multiple
-                  disableCloseOnSelect
-                  renderTags={() => null}
-                  size="small"
-                  options={statusOptions}
-                  getOptionLabel={(option) => option.label}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  value={selectedStatusList}
-                  onChange={(_, newValue) => setSelectedStatusList(newValue)}
-                  renderOption={(props, option, { selected }) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box component="li" key={key} {...optionProps}>
-                        <Checkbox
-                          size="small"
-                          sx={{ mr: 0.75, p: 0.15 }}
-                          checked={selected}
-                        />
-                        {option.label}
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={selectedStatusList.length > 0 ? `Status · ${selectedStatusList.length}` : "Status"}
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
-                    />
-                  )}
-                  sx={{ minWidth: 140, maxWidth: 200 }}
-                />
-
-                {/* Date Range Pickers */}
-                <DatePicker
-                  label="From Date"
-                  value={fromDate}
-                  onChange={(newValue) => setFromDate(newValue)}
-                  slotProps={{
-                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
-                  }}
-                />
-                <DatePicker
-                  label="To Date"
-                  value={toDate}
-                  onChange={(newValue) => setToDate(newValue)}
-                  slotProps={{
-                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
-                  }}
-                />
-
-                <Button
-                  size="small"
-                  variant="text"
-                  disabled={
-                    !searchQuery &&
-                    selectedProductionSeries.length === 0 &&
-                    selectedStatusList.length === 0 &&
-                    !fromDate &&
-                    !toDate
-                  }
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedProductionSeries([]);
-                    setSelectedStatusList([]);
-                    setFromDate(null);
-                    setToDate(null);
-                  }}
-                  sx={{
-                    color: "#667085",
-                    fontWeight: 600,
-                    textTransform: "none",
-                    "&:hover": { color: "#101828", backgroundColor: "transparent" },
-                  }}
-                >
-                  Clear
-                </Button>
-              </Stack>
-            </LocalizationProvider>
-          </Paper>
-
-          {/* Active Filter Chips & Results Count */}
-          <ActiveFilterChips
-            chips={activeChips}
-            onClearAll={() => {
-              setSearchQuery("");
-              setSelectedProductionSeries([]);
-              setSelectedStatusList([]);
-              setFromDate(null);
-              setToDate(null);
-            }}
-            totalResults={totalRowCount}
-          />
-
-          {/* Data Grid Table */}
+          {/* Unified Single Container Card */}
           <Paper
             elevation={0}
             sx={{
               flexGrow: 1,
               minHeight: 0,
               borderRadius: "12px",
-              border: "1px solid #E9EAEB",
+              border: "1px solid #EAECF0",
               backgroundColor: "#ffffff",
               overflow: "hidden",
-              position: "relative",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <DataGrid
-              rows={historyTableRows}
-              columns={autosizedHistoryColumns}
-              loading={isHistoryLoading}
-              rowCount={totalRowCount}
-              paginationMode="server"
-              paginationModel={paginationModel}
-              onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
-              pageSizeOptions={[10, 20, 50, 100]}
-              filterModel={filterModel}
-              onFilterModelChange={(newModel) => setFilterModel(newModel)}
-              disableColumnFilter
-              disableColumnMenu
-              disableColumnSelector
-              density="compact"
-              disableRowSelectionOnClick
-              getRowId={(row) => row.id || row.sr}
+            {/* Top Filter Bar Section */}
+            <Box sx={{ p: 1.5, pb: 1, borderBottom: "1px solid #EAECF0" }}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="nowrap"
+                  alignItems="center"
+                  sx={{
+                    width: "100%",
+                    overflowX: "auto",
+                    py: 0.5,
+                    "&::-webkit-scrollbar": { height: 6 },
+                    "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
+                  }}
+                >
+                  {/* Search Field */}
+                  <TextField
+                    placeholder="Search PO, LN Item Code, Drawing No, MRIR No..."
+                    variant="outlined"
+                    size="small"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon fontSize="small" sx={{ color: "#667085" }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: searchQuery ? (
+                        <InputAdornment position="end">
+                          <IconButton size="small" onClick={() => setSearchQuery("")}>
+                            <ClearIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : null,
+                    }}
+                    sx={{
+                      flex: "1 1 200px",
+                      minWidth: 160,
+                      "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" },
+                    }}
+                  />
+
+                  {/* Prod. Series Dropdown */}
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    renderTags={() => null}
+                    size="small"
+                    options={productionSeriesData}
+                    getOptionLabel={(option: any) => option.productionSeries || option.toString()}
+                    isOptionEqualToValue={(option, value) =>
+                      (option.productionSeries || option) === (value.productionSeries || value)
+                    }
+                    value={selectedProductionSeries}
+                    onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
+                    renderOption={(props, option, { selected }) => {
+                      const { key, ...optionProps } = props;
+                      return (
+                        <Box component="li" key={key} {...optionProps}>
+                          <Checkbox
+                            size="small"
+                            sx={{ mr: 0.75, p: 0.15 }}
+                            checked={selected}
+                          />
+                          {option.productionSeries || option.toString()}
+                        </Box>
+                      );
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder={selectedProductionSeries.length > 0 ? `Prod. Series · ${selectedProductionSeries.length}` : "Prod. Series"}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
+                      />
+                    )}
+                    sx={{ flex: "0 0 130px", minWidth: 110 }}
+                  />
+
+                  {/* Status Dropdown */}
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    renderTags={() => null}
+                    size="small"
+                    options={statusOptions}
+                    getOptionLabel={(option) => option.label}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={selectedStatusList}
+                    onChange={(_, newValue) => setSelectedStatusList(newValue)}
+                    renderOption={(props, option, { selected }) => {
+                      const { key, ...optionProps } = props;
+                      return (
+                        <Box component="li" key={key} {...optionProps}>
+                          <Checkbox
+                            size="small"
+                            sx={{ mr: 0.75, p: 0.15 }}
+                            checked={selected}
+                          />
+                          {option.label}
+                        </Box>
+                      );
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder={selectedStatusList.length > 0 ? `Status · ${selectedStatusList.length}` : "Status"}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
+                      />
+                    )}
+                    sx={{ flex: "0 0 120px", minWidth: 100 }}
+                  />
+
+                  {/* Date Range Pickers */}
+                  <DatePicker
+                    label="From Date"
+                    value={fromDate}
+                    onChange={(newValue) => setFromDate(newValue)}
+                    slotProps={{
+                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                    }}
+                  />
+                  <DatePicker
+                    label="To Date"
+                    value={toDate}
+                    onChange={(newValue) => setToDate(newValue)}
+                    slotProps={{
+                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                    }}
+                  />
+
+                  <Button
+                    size="small"
+                    variant="contained"
+                    sx={{
+                      flex: "0 0 auto",
+                      minWidth: 65,
+                      height: 38,
+                      borderRadius: "8px",
+                      backgroundColor: "primary.main",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      textTransform: "none",
+                      boxShadow: "none",
+                      px: 1.75,
+                      "&:hover": { backgroundColor: "primary.dark" },
+                    }}
+                  >
+                    Apply
+                  </Button>
+
+                  <Button
+                    size="small"
+                    variant="text"
+                    disabled={
+                      !searchQuery &&
+                      selectedProductionSeries.length === 0 &&
+                      selectedStatusList.length === 0 &&
+                      !fromDate &&
+                      !toDate
+                    }
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedProductionSeries([]);
+                      setSelectedStatusList([]);
+                      setFromDate(null);
+                      setToDate(null);
+                    }}
+                    sx={{
+                      flex: "0 0 auto",
+                      minWidth: 55,
+                      height: 38,
+                      color: "#667085",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      textTransform: "none",
+                      px: 1,
+                      "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </Stack>
+              </LocalizationProvider>
+
+              {/* Active Filter Chips & Results Count Bar */}
+              <Box sx={{ mt: 1 }}>
+                <ActiveFilterChips
+                  chips={activeChips}
+                  onClearAll={() => {
+                    setSearchQuery("");
+                    setSelectedProductionSeries([]);
+                    setSelectedStatusList([]);
+                    setFromDate(null);
+                    setToDate(null);
+                  }}
+                  totalResults={totalRowCount}
+                />
+              </Box>
+            </Box>
+
+            {/* Data Grid Table Container */}
+            <Box
               sx={{
-                flex: 1,
-                height: "100%",
-                width: "100%",
-                border: "none",
-                "& .MuiDataGrid-virtualScroller": {
-                  overflowX: "auto !important",
-                  overflowY: "auto !important",
-                },
-                "& ::-webkit-scrollbar": {
-                  height: "12px !important",
-                  width: "10px !important",
-                },
-                "& ::-webkit-scrollbar-track": {
-                  backgroundColor: "#F2F4F7 !important",
-                  borderRadius: "6px !important",
-                },
-                "& ::-webkit-scrollbar-thumb": {
-                  backgroundColor: "#98A2B3 !important",
-                  borderRadius: "6px !important",
-                  border: "2px solid #F2F4F7 !important",
-                  "&:hover": { backgroundColor: "#667085 !important" },
-                },
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#F9FAFB",
-                  color: "#475467",
-                  fontWeight: 700,
-                  fontSize: "0.8rem",
-                  borderBottom: "1px solid #EAECF0",
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 2,
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.85rem",
-                  color: "#344054",
-                  borderBottom: "1px solid #F2F4F7",
-                },
-                "& .MuiDataGrid-cell:focus": { outline: "none !important" },
-                "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
-                "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
+                flexGrow: 1,
+                minHeight: 0,
+                backgroundColor: "#ffffff",
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
               }}
-            />
+            >
+              <DataGrid
+                rows={historyTableRows}
+                columns={autosizedHistoryColumns}
+                loading={isHistoryLoading}
+                rowCount={totalRowCount}
+                paginationMode="server"
+                paginationModel={paginationModel}
+                onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+                pageSizeOptions={[10, 20, 50, 100]}
+                filterModel={filterModel}
+                onFilterModelChange={(newModel) => setFilterModel(newModel)}
+                disableColumnFilter
+                disableColumnMenu
+                disableColumnSelector
+                density="compact"
+                disableRowSelectionOnClick
+                getRowId={(row) => row.id || row.sr}
+                sx={{
+                  flex: 1,
+                  height: "100%",
+                  width: "100%",
+                  border: "none",
+                  "& .MuiDataGrid-virtualScroller": {
+                    overflowX: "auto !important",
+                    overflowY: "auto !important",
+                  },
+                  "& ::-webkit-scrollbar": {
+                    height: "12px !important",
+                    width: "10px !important",
+                  },
+                  "& ::-webkit-scrollbar-track": {
+                    backgroundColor: "#F2F4F7 !important",
+                    borderRadius: "6px !important",
+                  },
+                  "& ::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#98A2B3 !important",
+                    borderRadius: "6px !important",
+                    border: "2px solid #F2F4F7 !important",
+                    "&:hover": { backgroundColor: "#667085 !important" },
+                  },
+                  "& .MuiDataGrid-columnHeaders": {
+                    backgroundColor: "#F9FAFB",
+                    color: "#475467",
+                    fontWeight: 700,
+                    fontSize: "0.8rem",
+                    borderBottom: "1px solid #EAECF0",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2,
+                  },
+                  "& .MuiDataGrid-cell": {
+                    fontSize: "0.85rem",
+                    color: "#344054",
+                    borderBottom: "1px solid #F2F4F7",
+                  },
+                  "& .MuiDataGrid-cell:focus": { outline: "none !important" },
+                  "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
+                  "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
+                }}
+              />
+            </Box>
           </Paper>
         </Box>
       )}

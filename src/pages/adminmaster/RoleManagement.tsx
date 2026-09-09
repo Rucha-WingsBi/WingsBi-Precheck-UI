@@ -2,8 +2,6 @@ import { useState, forwardRef, useImperativeHandle, useRef, useMemo } from "reac
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   CircularProgress,
   Alert,
   Button,
@@ -22,6 +20,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Paper,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
@@ -333,69 +332,57 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
 
   return (
     <>
-      <Card
-        elevation={0}
-        sx={{
-          border: "1px solid",
-          borderColor: "neutral.border",
-          borderRadius: "10px",
-          overflow: "hidden",
-          background: "background.paper",
-        }}
-      >
-        <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-          <Box sx={{ width: "100%" }}>
-            <DataGrid
-              autoHeight
-              rows={rows}
-              columns={columns}
-              initialState={{
-                pagination: {
-                  paginationModel: { pageSize: 10 },
-                },
-                sorting: {
-                  sortModel: [{ field: "srNo", sort: "asc" }],
-                },
-              }}
-              pageSizeOptions={[10, 20, 50]}
-              disableRowSelectionOnClick
-              disableColumnMenu
-              disableColumnFilter
-              disableColumnSelector
-              sx={{
-                border: "none",
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "neutral.hoverBg",
-                  borderBottom: "1px solid",
-                  borderColor: "neutral.border",
-                  color: "text.subtle",
-                  fontWeight: 700,
-                  fontSize: "0.8rem",
-                },
-                "& .MuiDataGrid-columnHeaderTitle": {
-                  fontWeight: 700,
-                  fontSize: "0.8rem",
-                  color: "text.subtle",
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.85rem",
-                  color: "text.secondary",
-                  borderBottom: "1px solid",
-                  borderColor: "neutral.chipBg",
-                },
-                "& .MuiDataGrid-row": {
-                  "&:hover": { backgroundColor: "neutral.hoverBg" },
-                  transition: "background-color 0.2s ease",
-                },
-                "& .MuiDataGrid-cell:focus": { outline: "none" },
-                "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-                "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-                "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-              }}
-            />
-          </Box>
-        </CardContent>
-      </Card>
+      <Box sx={{ width: "100%" }}>
+        <DataGrid
+          autoHeight
+          rows={rows}
+          columns={columns}
+          initialState={{
+            pagination: {
+              paginationModel: { pageSize: 10 },
+            },
+            sorting: {
+              sortModel: [{ field: "srNo", sort: "asc" }],
+            },
+          }}
+          pageSizeOptions={[10, 20, 50]}
+          disableRowSelectionOnClick
+          disableColumnMenu
+          disableColumnFilter
+          disableColumnSelector
+          sx={{
+            border: "none",
+            "& .MuiDataGrid-columnHeaders": {
+              backgroundColor: "#F9FAFB",
+              borderBottom: "1px solid #EAECF0",
+              color: "#475467",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+            },
+            "& .MuiDataGrid-columnHeaderTitle": {
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              color: "#475467",
+            },
+            "& .MuiDataGrid-cell": {
+              fontSize: "0.85rem",
+              color: "#344054",
+              borderBottom: "1px solid #F2F4F7",
+            },
+            "& .MuiDataGrid-row": {
+              "&:hover": { backgroundColor: "#F9FAFB" },
+              transition: "background-color 0.2s ease",
+            },
+            "& .MuiDataGrid-cell:focus": { outline: "none" },
+            "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+            "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
+            "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+            "& .MuiDataGrid-footerContainer": {
+              borderTop: "1px solid #EAECF0",
+            },
+          }}
+        />
+      </Box>
 
       {/* Add Role Dialog */}
       <Dialog open={open && !editingRole} onClose={handleClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
@@ -611,69 +598,57 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
         </Alert>
       )}
 
-      <Card
-        elevation={0}
-        sx={{
-          border: "1px solid",
-          borderColor: "neutral.border",
-          borderRadius: "10px",
-          overflow: "hidden",
-          background: "background.paper",
-        }}
-      >
-        <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-          <Box sx={{ width: "100%" }}>
-            <DataGrid
-              autoHeight
-              rows={activeDepartments}
-              columns={columns}
-              initialState={{
-                pagination: {
-                  paginationModel: { pageSize: 10 },
-                },
-                sorting: {
-                  sortModel: [{ field: "srNo", sort: "asc" }],
-                },
-              }}
-              pageSizeOptions={[10, 20, 50]}
-              disableRowSelectionOnClick
-              disableColumnMenu
-              disableColumnFilter
-              disableColumnSelector
-              sx={{
-                border: "none",
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "neutral.hoverBg",
-                  borderBottom: "1px solid",
-                  borderColor: "neutral.border",
-                  color: "text.subtle",
-                  fontWeight: 700,
-                  fontSize: "0.8rem",
-                },
-                "& .MuiDataGrid-columnHeaderTitle": {
-                  fontWeight: 700,
-                  fontSize: "0.8rem",
-                  color: "text.subtle",
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.85rem",
-                  color: "text.secondary",
-                  borderBottom: "1px solid",
-                  borderColor: "neutral.chipBg",
-                },
-                "& .MuiDataGrid-row": {
-                  "&:hover": { backgroundColor: "neutral.hoverBg" },
-                  transition: "background-color 0.2s ease",
-                },
-                "& .MuiDataGrid-cell:focus": { outline: "none" },
-                "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-                "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-                "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-              }}
-            />
-          </Box>
-        </CardContent>
-      </Card>
+      <Box sx={{ width: "100%" }}>
+        <DataGrid
+          autoHeight
+          rows={activeDepartments}
+          columns={columns}
+          initialState={{
+            pagination: {
+              paginationModel: { pageSize: 10 },
+            },
+            sorting: {
+              sortModel: [{ field: "srNo", sort: "asc" }],
+            },
+          }}
+          pageSizeOptions={[10, 20, 50]}
+          disableRowSelectionOnClick
+          disableColumnMenu
+          disableColumnFilter
+          disableColumnSelector
+          sx={{
+            border: "none",
+            "& .MuiDataGrid-columnHeaders": {
+              backgroundColor: "#F9FAFB",
+              borderBottom: "1px solid #EAECF0",
+              color: "#475467",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+            },
+            "& .MuiDataGrid-columnHeaderTitle": {
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              color: "#475467",
+            },
+            "& .MuiDataGrid-cell": {
+              fontSize: "0.85rem",
+              color: "#344054",
+              borderBottom: "1px solid #F2F4F7",
+            },
+            "& .MuiDataGrid-row": {
+              "&:hover": { backgroundColor: "#F9FAFB" },
+              transition: "background-color 0.2s ease",
+            },
+            "& .MuiDataGrid-cell:focus": { outline: "none" },
+            "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+            "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
+            "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+            "& .MuiDataGrid-footerContainer": {
+              borderTop: "1px solid #EAECF0",
+            },
+          }}
+        />
+      </Box>
 
       <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 600, color: "text.primary" }}>
@@ -753,14 +728,14 @@ export default function RoleManagement() {
   };
 
   return (
-    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
+    <Box sx={{ py: { xs: 1.5, sm: 2 }, px: { xs: 1.5, sm: 2.5 } }}>
       {/* Top Header Bar */}
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", sm: "center" }}
         spacing={2}
-        sx={{ mb: 1 }}
+        sx={{ mb: 1.5 }}
       >
         <Box>
           <Typography
@@ -774,95 +749,85 @@ export default function RoleManagement() {
             Role Management
           </Typography>
         </Box>
-      </Stack>
 
-      {/* Main Container Card */}
-      <Card
-        elevation={0}
-        sx={{
-          mb: 0,
-          border: "1px solid",
-          borderColor: "neutral.border",
-          borderRadius: 3,
-          overflow: "hidden",
-          background: "background.paper",
-        }}
-      >
-        {/* Header Toolbar (Tabs on left, Add Button on right) */}
-        <Box
+        <Button
+          id="btn-add-role-dept"
+          variant="contained"
+          size="small"
+          startIcon={<AddIcon />}
+          onClick={handleOpenAdd}
           sx={{
-            p: 1.5,
-            px: 3,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 2,
-            bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "neutral.border",
+            fontWeight: 600,
+            backgroundColor: "primary.main",
+            "&:hover": { backgroundColor: "primary.dark" },
+            textTransform: "none",
+            borderRadius: 1.5,
+            px: 2.5,
+            py: 0.8,
           }}
         >
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            textColor="primary"
-            indicatorColor="primary"
-            aria-label="role and department tabs"
-            sx={{
-              minHeight: 38,
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 80,
-                minHeight: 38,
-                py: 0,
-                color: "text.muted",
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-            }}
-          >
-            <Tab id="tab-role" label="Role" />
-            <Tab id="tab-department" label="Department" />
-          </Tabs>
+          Add {TAB_LABELS[activeTab]}
+        </Button>
+      </Stack>
 
-          <Button
-            id="btn-add-role-dept"
-            variant="contained"
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={handleOpenAdd}
-            sx={{
+      {/* 2. Tabs Bar */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid #EAECF0",
+          mb: 2,
+        }}
+      >
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          textColor="primary"
+          indicatorColor="primary"
+          aria-label="role and department tabs"
+          sx={{
+            minHeight: 40,
+            "& .MuiTab-root": {
               fontWeight: 600,
-              backgroundColor: "primary.main",
-              "&:hover": { backgroundColor: "primary.dark" },
+              fontSize: "0.875rem",
               textTransform: "none",
-              borderRadius: 1.5,
-              px: 2.5,
-              height: 38,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Add {TAB_LABELS[activeTab]}
-          </Button>
-        </Box>
+              minWidth: 90,
+              py: 0.75,
+              px: 2,
+              minHeight: 40,
+              color: "#475467",
+            },
+            "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "primary.main",
+              height: 3,
+              borderRadius: "3px 3px 0 0",
+            },
+          }}
+        >
+          <Tab id="tab-role" label="Role" />
+          <Tab id="tab-department" label="Department" />
+        </Tabs>
+      </Box>
 
-        {/* Content Area */}
-        <CardContent sx={{ p: { xs: 2, md: 2.5 }, backgroundColor: "background.paper" }}>
-          <TabPanel value={activeTab} index={0}>
-            <RoleTab ref={roleRef} showSnackbar={showSnackbar} />
-          </TabPanel>
-          <TabPanel value={activeTab} index={1}>
-            <DepartmentTab ref={deptRef} showSnackbar={showSnackbar} />
-          </TabPanel>
-        </CardContent>
-      </Card>
+      {/* 3. Main Single Container Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 2,
+        }}
+      >
+        <TabPanel value={activeTab} index={0}>
+          <RoleTab ref={roleRef} showSnackbar={showSnackbar} />
+        </TabPanel>
+        <TabPanel value={activeTab} index={1}>
+          <DepartmentTab ref={deptRef} showSnackbar={showSnackbar} />
+        </TabPanel>
+      </Paper>
 
       {/* Global Snackbar Notification */}
       <Snackbar

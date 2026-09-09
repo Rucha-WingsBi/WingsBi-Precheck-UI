@@ -8,8 +8,6 @@ import {
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   Button,
   Dialog,
   DialogTitle,
@@ -173,68 +171,56 @@ function GenericTable<T extends { id: number }>({
   loading,
 }: GenericTableProps<T>) {
   return (
-    <Card
-      elevation={0}
-      sx={{
-        border: "1px solid",
-        borderColor: "neutral.border",
-        borderRadius: "10px",
-        overflow: "hidden",
-        background: "background.paper",
-      }}
-    >
-      <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-        <Box sx={{ width: "100%" }}>
-          <DataGrid
-            autoHeight
-            rows={rows}
-            columns={columns}
-            loading={loading}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 10 } },
-              sorting: {
-                sortModel: [{ field: "srNo", sort: "asc" }],
-              },
-            }}
-            pageSizeOptions={[10, 20, 50]}
-            disableRowSelectionOnClick
-            disableColumnMenu
-            disableColumnFilter
-            disableColumnSelector
-            sx={{
-              border: "none",
-              "& .MuiDataGrid-columnHeaders": {
-                backgroundColor: "neutral.hoverBg",
-                borderBottom: "1px solid",
-                borderColor: "neutral.border",
-                color: "text.subtle",
-                fontWeight: 700,
-                fontSize: "0.8rem",
-              },
-              "& .MuiDataGrid-columnHeaderTitle": {
-                fontWeight: 700,
-                fontSize: "0.8rem",
-                color: "text.subtle",
-              },
-              "& .MuiDataGrid-cell": {
-                fontSize: "0.85rem",
-                color: "text.secondary",
-                borderBottom: "1px solid",
-                borderColor: "neutral.chipBg",
-              },
-              "& .MuiDataGrid-row": {
-                "&:hover": { backgroundColor: "neutral.hoverBg" },
-                transition: "background-color 0.2s ease",
-              },
-              "& .MuiDataGrid-cell:focus": { outline: "none" },
-              "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-              "& .MuiDataGrid-columnHeader": { focus: { outline: "none" } },
-              "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-            }}
-          />
-        </Box>
-      </CardContent>
-    </Card>
+    <Box sx={{ width: "100%" }}>
+      <DataGrid
+        autoHeight
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        initialState={{
+          pagination: { paginationModel: { pageSize: 10 } },
+          sorting: {
+            sortModel: [{ field: "srNo", sort: "asc" }],
+          },
+        }}
+        pageSizeOptions={[10, 20, 50]}
+        disableRowSelectionOnClick
+        disableColumnMenu
+        disableColumnFilter
+        disableColumnSelector
+        sx={{
+          border: "none",
+          "& .MuiDataGrid-columnHeaders": {
+            backgroundColor: "#F9FAFB",
+            borderBottom: "1px solid #EAECF0",
+            color: "#475467",
+            fontWeight: 700,
+            fontSize: "0.8rem",
+          },
+          "& .MuiDataGrid-columnHeaderTitle": {
+            fontWeight: 700,
+            fontSize: "0.8rem",
+            color: "#475467",
+          },
+          "& .MuiDataGrid-cell": {
+            fontSize: "0.85rem",
+            color: "#344054",
+            borderBottom: "1px solid #F2F4F7",
+          },
+          "& .MuiDataGrid-row": {
+            "&:hover": { backgroundColor: "#F9FAFB" },
+            transition: "background-color 0.2s ease",
+          },
+          "& .MuiDataGrid-cell:focus": { outline: "none" },
+          "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+          "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
+          "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+          "& .MuiDataGrid-footerContainer": {
+            borderTop: "1px solid #EAECF0",
+          },
+        }}
+      />
+    </Box>
   );
 }
 
@@ -1418,7 +1404,7 @@ const SignatureTab = forwardRef<
 const TAB_LABELS = ["Unit", "Stage", "Shape", "Production Series", "Upload Signature"] as const;
 
 // main page
-export default function AddComponents() {
+export default function AddComponents({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [activeTab, setActiveTab] = useState(0);
   const unitRef = useRef<TabHandle>(null);
   const stageRef = useRef<TabHandle>(null);
@@ -1476,97 +1462,146 @@ export default function AddComponents() {
   const activeSignaturesCount = (signatures || []).length;
 
   return (
-    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
-      {/* Top Header Bar */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        spacing={2}
-        sx={{ mb: 1 }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 700,
-              color: "primary.main",
-              fontSize: { xs: "1.25rem", sm: "1.5rem" },
-            }}
-          >
+    <Box sx={{ py: hideHeader ? 0 : { xs: 1.5, sm: 2 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2.5 } }}>
+      {/* 1. Top Header Bar */}
+      {!hideHeader && (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1.5 }}
+        >
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
             Master Data
-          </Typography>
-        </Box>
-      </Stack>
+            </Typography>
+          </Box>
+        </Stack>
+      )}
 
-
-
-
-      {/* Tabs & Content Card */}
-      <Card
-        elevation={0}
+      {/* 2. Tabs Bar (Outside Container) */}
+      <Box
         sx={{
-          mb: 0,
-          border: "1px solid",
-          borderColor: "neutral.border",
-          borderRadius: 3,
-          overflow: "hidden",
-          background: "background.paper",
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid #EAECF0",
+          mb: 2,
         }}
       >
-        {/* Tab bar */}
-        <Box
+        <Tabs
+          value={activeTab}
+          onChange={(_e, newValue) => setActiveTab(newValue)}
+          textColor="primary"
+          indicatorColor="primary"
+          aria-label="master data tabs"
           sx={{
-            borderBottom: "1px solid",
-            borderColor: "neutral.border",
-            px: 3,
-            pt: 1,
-            backgroundColor: "background.paper",
+            minHeight: 40,
+            "& .MuiTab-root": {
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              textTransform: "none",
+              minWidth: 90,
+              py: 0.75,
+              px: 1.5,
+              minHeight: 40,
+              color: "#475467",
+            },
+            "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "primary.main",
+              height: 3,
+              borderRadius: "3px 3px 0 0",
+            },
           }}
         >
-          <Tabs
-            value={activeTab}
-            onChange={(_e, newValue) => setActiveTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
-            aria-label="master data tabs"
-            sx={{
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 100,
-                color: "text.muted",
-                mr: 1,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-            }}
-          >
-            <Tab id="tab-unit" aria-controls="tabpanel-unit" label={`Units   ${activeUnitsCount}`} />
-            <Tab id="tab-stage" aria-controls="tabpanel-stage" label={`Stages   ${activeStagesCount}`} />
-            <Tab id="tab-shape" aria-controls="tabpanel-shape" label={`Shapes   ${activeShapesCount}`} />
-            <Tab id="tab-productionSeries" aria-controls="tabpanel-productionSeries" label={`Production Series   ${activeSeriesCount}`} />
-            <Tab id="tab-Upload Signature" aria-controls="tabpanel-Upload Signature" label={`Signatures   ${activeSignaturesCount}`} />
-          </Tabs>
-        </Box>
+          <Tab
+            id="tab-unit"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Units</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 0 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 0 ? "primary.main" : "#667085" }}>
+                  {activeUnitsCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-stage"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Stages</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 1 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 1 ? "primary.main" : "#667085" }}>
+                  {activeStagesCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-shape"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Shapes</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 2 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 2 ? "primary.main" : "#667085" }}>
+                  {activeShapesCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-productionSeries"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Production Series</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 3 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 3 ? "primary.main" : "#667085" }}>
+                  {activeSeriesCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-Upload Signature"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Signatures</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 4 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 4 ? "primary.main" : "#667085" }}>
+                  {activeSignaturesCount}
+                </Typography>
+              </Box>
+            }
+          />
+        </Tabs>
+      </Box>
 
-        {/* Filter & Toolbar Bar */}
+      {/* 3. Main Single Container Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 2,
+        }}
+      >
+        {/* Inside Container Toolbar: Search on Left, Add Button on Right */}
         <Box
           sx={{
-            p: 2.5,
+            p: 1.5,
+            px: 2,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
             gap: 2,
-            bgcolor: "background.paper",
-            borderBottom: "1px solid",
-            borderColor: "neutral.border",
+            borderBottom: "1px solid #EAECF0",
           }}
         >
           <TextField
@@ -1578,14 +1613,16 @@ export default function AddComponents() {
             sx={{
               width: { xs: "100%", sm: 320 },
               "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                backgroundColor: "background.paper",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                height: 38,
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
               },
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="action" fontSize="small" />
+                  <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
                 </InputAdornment>
               ),
             }}
@@ -1602,17 +1639,18 @@ export default function AddComponents() {
               backgroundColor: "primary.main",
               "&:hover": { backgroundColor: "primary.dark" },
               textTransform: "none",
-              borderRadius: 1.5,
+              borderRadius: "8px",
               px: 2.5,
-              py: 0.8,
               height: 38,
+              boxShadow: "none",
             }}
           >
             {activeTab === 4 ? TAB_LABELS[activeTab] : `Add ${TAB_LABELS[activeTab]}`}
           </Button>
         </Box>
 
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        {/* Tab Panels with Tables */}
+        <Box sx={{ width: "100%" }}>
           <TabPanel value={activeTab} index={0}>
             <UnitTab
               ref={unitRef}
@@ -1649,8 +1687,8 @@ export default function AddComponents() {
               showSnackbar={showSnackbar}
             />
           </TabPanel>
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper>
 
       <Snackbar
         open={snackbar.open}

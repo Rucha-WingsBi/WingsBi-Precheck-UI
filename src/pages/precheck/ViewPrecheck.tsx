@@ -728,433 +728,470 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             }
           />
         </Tabs>
-
-        <Typography
-          variant="body2"
-          sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, pr: 1 }}
-        >
-          {filteredData.length.toLocaleString()} results
-        </Typography>
       </Box>
 
-      {/* 3. Filter Bar */}
+      {/* 3. Unified Single Outer Paper Container */}
       <Paper
         elevation={0}
         sx={{
-          p: 1.25,
-          mb: 1.5,
-          borderRadius: "10px",
-          border: "1px solid #E9EAEB",
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
           backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 2,
         }}
       >
-        {/* ── Precheck Tab Filters ─────────────────────────────────────────── */}
-        {activeTab === "precheck" && (
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            flexWrap="wrap"
-            useFlexGap
-          >
-            {/* Combined Search */}
-            <TextField
-              size="small"
-              placeholder="Search PO No. , Drawing No. , LN Item Code…"
-              value={combinedSearch}
-              onChange={(e) => { setCombinedSearch(e.target.value); setPage(0); }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
-                  </InputAdornment>
-                ),
-              }}
+        {/* Section 1: Filter Bar & Active Chips */}
+        <Box sx={{ p: 1.5, pb: 1, borderBottom: "1px solid #EAECF0" }}>
+          {/* ── Precheck Tab Filters ─────────────────────────────────────────── */}
+          {activeTab === "precheck" && (
+            <Box
               sx={{
-                flex: { xs: "1 1 100%", sm: "1 1 200px" },
-                maxWidth: { sm: 260 },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  height: 38,
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                },
-              }}
-            />
-
-            {/* Production Series */}
-            <Autocomplete
-              multiple
-              disableCloseOnSelect
-              renderTags={() => null}
-              size="small"
-              options={seriesOptions}
-              getOptionLabel={(option) => option.label}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              value={selectedSeriesObjects}
-              onChange={(_, newValue) => {
-                setSelectedProductionSeries(newValue.map((v) => v.id));
-              }}
-              renderOption={(props, option, { selected }) => {
-                const { key, ...optionProps } = props;
-                return (
-                  <Box component="li" key={key} {...optionProps}>
-                    <Checkbox size="small" sx={{ mr: 0.75, p: 0.15 }} checked={selected} />
-                    <Typography variant="body2" sx={{ fontSize: "0.82rem" }}>
-                      {option.label}
-                    </Typography>
-                  </Box>
-                );
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder={
-                    selectedSeriesObjects.length > 0
-                      ? `Series (${selectedSeriesObjects.length})`
-                      : "Production Series"
-                  }
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "8px",
-                      fontSize: "0.82rem",
-                      height: 38,
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                    },
-                  }}
-                />
-              )}
-              sx={{ width: { xs: "100%", sm: 155 } }}
-            />
-
-            {/* Status */}
-            <FormControl size="small" sx={{ width: { xs: "100%", sm: 115 } }}>
-              <Select
-                displayEmpty
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-                sx={{
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  height: 38,
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                }}
-                renderValue={(val) =>
-                  val ? (
-                    <Typography sx={{ fontSize: "0.82rem", color: "#344054" }}>{val}</Typography>
-                  ) : (
-                    <Typography sx={{ fontSize: "0.82rem", color: "#98A2B3" }}>Status</Typography>
-                  )
-                }
-              >
-                <MenuItem value=""><em style={{ fontSize: "0.82rem" }}>All Statuses</em></MenuItem>
-                <MenuItem value="Pending"   sx={{ fontSize: "0.82rem" }}>Pending</MenuItem>
-                <MenuItem value="Partial"   sx={{ fontSize: "0.82rem" }}>Partial</MenuItem>
-                <MenuItem value="Completed" sx={{ fontSize: "0.82rem" }}>Completed</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Date From */}
-            <TextField
-              size="small"
-              type="date"
-              placeholder="From Date"
-              value={dateFrom}
-              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
-              inputProps={{ title: "From Date" }}
-              sx={{
-                width: { xs: "100%", sm: 132 },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  height: 38,
-                  px: 1,
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                },
-              }}
-            />
-
-            {/* Date To */}
-            <TextField
-              size="small"
-              type="date"
-              placeholder="To Date"
-              value={dateTo}
-              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
-              inputProps={{ title: "To Date" }}
-              sx={{
-                width: { xs: "100%", sm: 132 },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  height: 38,
-                  px: 1,
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                },
-              }}
-            />
-
-            {/* Apply Button */}
-            <Button
-              size="small"
-              variant="contained"
-              onClick={handleApplyFilters}
-              sx={{
-                backgroundColor: "primary.main",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "0.82rem",
-                borderRadius: "8px",
-                px: 2,
-                height: 38,
-                textTransform: "none",
-                boxShadow: "none",
-                minWidth: "auto",
-                "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                py: 0.5,
+                "&::-webkit-scrollbar": { height: 6 },
+                "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
               }}
             >
-              Apply
-            </Button>
-
-            {/* Clear Button */}
-            <Button
-              size="small"
-              variant="text"
-              onClick={handleClearAll}
-              sx={{
-                color: "#667085",
-                fontWeight: 600,
-                fontSize: "0.82rem",
-                height: 38,
-                px: 1,
-                minWidth: "auto",
-                textTransform: "none",
-                "&:hover": { color: "#101828", backgroundColor: "transparent" },
-              }}
-            >
-              Clear
-            </Button>
-          </Stack>
-        )}
-
-        {/* ── Consumed Tab Filters  ────────────────────────────── */}
-        {activeTab === "consumed" && (
-          <Stack direction="row" spacing={1.25} flexWrap="wrap" alignItems="center">
-
-            {/* PO Number */}
-            <Autocomplete
-              size="small"
-              options={poNumbers || []}
-              getOptionLabel={(option) =>
-                typeof option === "string" ? option : option.productionOrderNumber || ""
-              }
-              value={selectedPO}
-              onInputChange={(_, value) => setPOSearchText(value)}
-              onChange={(_, newValue) => {
-                if (newValue && typeof newValue !== "string") {
-                  setSelectedPO(newValue);
-                } else {
-                  setSelectedPO(null);
-                }
-                setPage(0);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="PO Number"
-                  placeholder="PO Number"
-                  size="small"
-                  sx={{
-                    "& .MuiInputLabel-root": { fontSize: "0.825rem" },
-                    "& .MuiInputLabel-root.Mui-focused": { color: "#6B288A" },
-                    "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 40 },
-                    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                  }}
-                />
-              )}
-              sx={{ width: 210 }}
-            />
-
-            {/* LN Item Code */}
-            <Autocomplete
-              size="small"
-              options={availableLnItemCodes}
-              value={selectedLnItemCode}
-              onChange={(_, newValue) => { setSelectedLnItemCode(newValue); setPage(0); }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="LN Item Code" size="small" />
-              )}
-              sx={{
-                width: 180,
-                "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 40 },
-              }}
-            />
-
-            {/* Drawing Number */}
-            <Autocomplete
-              size="small"
-              options={allDrawingNumbers}
-              getOptionLabel={(option: any) =>
-                typeof option === "string" ? option : option.drawingNumber || option.lnItemCode || ""
-              }
-              value={selectedDrawing}
-              onChange={(_, value) => { setSelectedDrawing(value); setPage(0); }}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Drawing Number" size="small" />
-              )}
-              sx={{
-                width: 190,
-                "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 40 },
-              }}
-            />
-
-            {/* Production Series */}
-            <Autocomplete
-              multiple
-              disableCloseOnSelect
-              renderTags={() => null}
-              size="small"
-              options={seriesOptions}
-              getOptionLabel={(option) => option.label}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              value={selectedSeriesObjects}
-              onChange={(_, newValue) => setSelectedProductionSeries(newValue.map((v) => v.id))}
-              renderOption={(props, option, { selected }) => {
-                const { key, ...optionProps } = props;
-                return (
-                  <Box component="li" key={key} {...optionProps}>
-                    <Checkbox size="small" sx={{ mr: 0.75, p: 0.15 }} checked={selected} />
-                    <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                      {option.label}
-                    </Typography>
-                  </Box>
-                );
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder={
-                    selectedSeriesObjects.length > 0
-                      ? `Prod Series · ${selectedSeriesObjects.length}`
-                      : "Prod Series"
-                  }
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 40 } }}
-                />
-              )}
-              sx={{ width: 140 }}
-            />
-
-            {/* ID Number */}
-            <TextField
-              placeholder="ID Number..."
-              size="small"
-              variant="outlined"
-              value={idNumber}
-              onChange={(e) => setIdNumber(e.target.value)}
-              sx={{
-                width: 130,
-                "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 40 },
-              }}
-            />
-
-            {/* Apply */}
-            <Button
-              size="small"
-              variant="contained"
-              onClick={handleApplyFilters}
-              sx={{
-                backgroundColor: "primary.main",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                borderRadius: "8px",
-                px: 2.5,
-                height: 40,
-                textTransform: "none",
-                boxShadow: "none",
-                "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
-              }}
-            >
-              Apply
-            </Button>
-
-            {/* Clear */}
-            <Button
-              size="small"
-              variant="text"
-              onClick={handleClearAll}
-              sx={{
-                color: "#667085",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                height: 40,
-                textTransform: "none",
-                "&:hover": { color: "#101828", backgroundColor: "transparent" },
-              }}
-            >
-              Clear
-            </Button>
-          </Stack>
-        )}
-      </Paper>
-
-      {/* 4. Active Filter Chips Row */}
-      {activeChips.length > 0 && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 0.5, mb: 1.5 }}>
-          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-            {activeChips.map((chip) => (
-              <Chip
-                key={chip.id}
-                label={chip.label}
-                onDelete={chip.onRemove}
+              {/* Combined Search */}
+              <TextField
                 size="small"
+                placeholder="Search PO No. , Drawing No. , LN Item Code…"
+                value={combinedSearch}
+                onChange={(e) => { setCombinedSearch(e.target.value); setPage(0); }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
-                  backgroundColor: "#F2F4F7",
-                  color: "#344054",
-                  fontWeight: 600,
-                  fontSize: "0.8rem",
-                  borderRadius: "16px",
-                  border: "1px solid #E9EAEB",
-                  "& .MuiChip-deleteIcon": {
-                    color: "#667085",
-                    fontSize: 14,
-                    "&:hover": { color: "#344054" },
+                  flex: "1 1 200px",
+                  minWidth: 160,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    height: 38,
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
                   },
                 }}
               />
-            ))}
-            <Button
-              variant="text"
-              size="small"
-              onClick={handleClearAll}
+
+              {/* Production Series */}
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                renderTags={() => null}
+                size="small"
+                options={seriesOptions}
+                getOptionLabel={(option) => option.label}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                value={selectedSeriesObjects}
+                onChange={(_, newValue) => {
+                  setSelectedProductionSeries(newValue.map((v) => v.id));
+                }}
+                renderOption={(props, option, { selected }) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <Box component="li" key={key} {...optionProps}>
+                      <Checkbox size="small" sx={{ mr: 0.75, p: 0.15 }} checked={selected} />
+                      <Typography variant="body2" sx={{ fontSize: "0.82rem" }}>
+                        {option.label}
+                      </Typography>
+                    </Box>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={
+                      selectedSeriesObjects.length > 0
+                        ? `Series (${selectedSeriesObjects.length})`
+                        : "Prod Series"
+                    }
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                        fontSize: "0.82rem",
+                        height: 38,
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "0 0 140px", minWidth: 110 }}
+              />
+
+              {/* Status */}
+              <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
+                <Select
+                  displayEmpty
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                  sx={{
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    height: 38,
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                  }}
+                  renderValue={(val) =>
+                    val ? (
+                      <Typography sx={{ fontSize: "0.82rem", color: "#344054" }}>{val}</Typography>
+                    ) : (
+                      <Typography sx={{ fontSize: "0.82rem", color: "#98A2B3" }}>Status</Typography>
+                    )
+                  }
+                >
+                  <MenuItem value=""><em style={{ fontSize: "0.82rem" }}>All Statuses</em></MenuItem>
+                  <MenuItem value="Pending"   sx={{ fontSize: "0.82rem" }}>Pending</MenuItem>
+                  <MenuItem value="Partial"   sx={{ fontSize: "0.82rem" }}>Partial</MenuItem>
+                  <MenuItem value="Completed" sx={{ fontSize: "0.82rem" }}>Completed</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Date From */}
+              <TextField
+                size="small"
+                type="date"
+                placeholder="From Date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                inputProps={{ title: "From Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 145,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    height: 38,
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: 0.75,
+                    px: 1,
+                    fontSize: "0.82rem",
+                  },
+                }}
+              />
+
+              {/* Date To */}
+              <TextField
+                size="small"
+                type="date"
+                placeholder="To Date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                inputProps={{ title: "To Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 145,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    height: 38,
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: 0.75,
+                    px: 1,
+                    fontSize: "0.82rem",
+                  },
+                }}
+              />
+
+              {/* Apply Button */}
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleApplyFilters}
+                sx={{
+                  flex: "0 0 auto",
+                  backgroundColor: "primary.main",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  borderRadius: "8px",
+                  px: 2,
+                  height: 38,
+                  textTransform: "none",
+                  boxShadow: "none",
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                }}
+              >
+                Apply
+              </Button>
+
+              {/* Clear Button */}
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleClearAll}
+                sx={{
+                  flex: "0 0 auto",
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  height: 38,
+                  px: 1,
+                  minWidth: 55,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+          )}
+
+          {/* ── Consumed Tab Filters  ────────────────────────────── */}
+          {activeTab === "consumed" && (
+            <Box
               sx={{
-                color: "primary.main",
-                fontWeight: 600,
-                fontSize: "0.8rem",
-                textTransform: "none",
-                p: 0,
-                minWidth: "auto",
-                "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                py: 0.5,
+                "&::-webkit-scrollbar": { height: 6 },
+                "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
               }}
             >
-              Clear all
-            </Button>
-          </Stack>
-        </Box>
-      )}
+              {/* PO Number */}
+              <Autocomplete
+                size="small"
+                options={poNumbers || []}
+                getOptionLabel={(option) =>
+                  typeof option === "string" ? option : option.productionOrderNumber || ""
+                }
+                value={selectedPO}
+                onInputChange={(_, value) => setPOSearchText(value)}
+                onChange={(_, newValue) => {
+                  if (newValue && typeof newValue !== "string") {
+                    setSelectedPO(newValue);
+                  } else {
+                    setSelectedPO(null);
+                  }
+                  setPage(0);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="PO Number"
+                    placeholder="PO Number"
+                    size="small"
+                    sx={{
+                      "& .MuiInputLabel-root": { fontSize: "0.825rem" },
+                      "& .MuiInputLabel-root.Mui-focused": { color: "#6B288A" },
+                      "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
+                      "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
+                    }}
+                  />
+                )}
+                sx={{ flex: "0 0 170px", minWidth: 140 }}
+              />
 
-      {/* 5. Data Table */}
-      <Paper
-        elevation={0}
-        sx={{
-          width: "100%",
-          borderRadius: "12px",
-          border: "1px solid #E9EAEB",
-          backgroundColor: "#ffffff",
-          overflow: "hidden",
-        }}
-      >
-        <TableContainer sx={{ overflowX: "auto", maxHeight: "calc(100vh - 280px)" }}>
+              {/* LN Item Code */}
+              <Autocomplete
+                size="small"
+                options={availableLnItemCodes}
+                value={selectedLnItemCode}
+                onChange={(_, newValue) => { setSelectedLnItemCode(newValue); setPage(0); }}
+                renderInput={(params) => (
+                  <TextField {...params} placeholder="LN Item Code" size="small" />
+                )}
+                sx={{
+                  flex: "0 0 150px",
+                  minWidth: 120,
+                  "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
+                }}
+              />
+
+              {/* Drawing Number */}
+              <Autocomplete
+                size="small"
+                options={allDrawingNumbers}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" ? option : option.drawingNumber || option.lnItemCode || ""
+                }
+                value={selectedDrawing}
+                onChange={(_, value) => { setSelectedDrawing(value); setPage(0); }}
+                renderInput={(params) => (
+                  <TextField {...params} placeholder="Drawing Number" size="small" />
+                )}
+                sx={{
+                  flex: "0 0 160px",
+                  minWidth: 130,
+                  "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
+                }}
+              />
+
+              {/* Production Series */}
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                renderTags={() => null}
+                size="small"
+                options={seriesOptions}
+                getOptionLabel={(option) => option.label}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                value={selectedSeriesObjects}
+                onChange={(_, newValue) => setSelectedProductionSeries(newValue.map((v) => v.id))}
+                renderOption={(props, option, { selected }) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <Box component="li" key={key} {...optionProps}>
+                      <Checkbox size="small" sx={{ mr: 0.75, p: 0.15 }} checked={selected} />
+                      <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
+                        {option.label}
+                      </Typography>
+                    </Box>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={
+                      selectedSeriesObjects.length > 0
+                        ? `Prod Series · ${selectedSeriesObjects.length}`
+                        : "Prod Series"
+                    }
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 } }}
+                  />
+                )}
+                sx={{ flex: "0 0 130px", minWidth: 110 }}
+              />
+
+              {/* ID Number */}
+              <TextField
+                placeholder="ID Number..."
+                size="small"
+                variant="outlined"
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                sx={{
+                  flex: "0 0 120px",
+                  minWidth: 100,
+                  "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
+                }}
+              />
+
+              {/* Apply */}
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleApplyFilters}
+                sx={{
+                  flex: "0 0 auto",
+                  backgroundColor: "primary.main",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  borderRadius: "8px",
+                  px: 2,
+                  height: 38,
+                  textTransform: "none",
+                  boxShadow: "none",
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                }}
+              >
+                Apply
+              </Button>
+
+              {/* Clear */}
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleClearAll}
+                sx={{
+                  flex: "0 0 auto",
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  height: 38,
+                  minWidth: 55,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+          )}
+
+          {/* Active Filter Chips Bar & Results Counter */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mt: 1,
+              pt: 0.75,
+              borderTop: "1px solid #F2F4F7",
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
+            {activeChips.length > 0 ? (
+              <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                {activeChips.map((chip) => (
+                  <Chip
+                    key={chip.id}
+                    label={chip.label}
+                    onDelete={chip.onRemove}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      border: "1px solid #E9EAEB",
+                      "& .MuiChip-deleteIcon": {
+                        color: "#667085",
+                        fontSize: 14,
+                        "&:hover": { color: "#344054" },
+                      },
+                    }}
+                  />
+                ))}
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={handleClearAll}
+                  sx={{
+                    color: "primary.main",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    p: 0,
+                    minWidth: "auto",
+                    "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                  }}
+                >
+                  Clear all
+                </Button>
+              </Stack>
+            ) : <Box />}
+
+            {/* Results Count Display */}
+            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
+              {filteredData.length.toLocaleString()} {filteredData.length === 1 ? "result" : "results"}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Section 2: Data Table */}
+        <TableContainer sx={{ overflowX: "auto", maxHeight: "calc(100vh - 290px)" }}>
           <Table stickyHeader size="small">
             {/* Table Head */}
             <TableHead>
@@ -1331,70 +1368,70 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
 
-      {/* 6. Footer Pagination */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          py: 1,
-          px: 1,
-          mt: 1,
-        }}
-      >
-        <Stack direction="row" spacing={1.25} alignItems="center">
-          <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-            Rows per page
-          </Typography>
-          <Select
-            size="small"
-            value={rowsPerPage}
-            onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
-            sx={{
-              height: 32,
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              borderRadius: "6px",
-              backgroundColor: "#ffffff",
-              "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-            }}
-          >
-            {[10, 20, 50, 100].map((opt) => (
-              <MenuItem key={opt} value={opt} sx={{ fontSize: "0.85rem" }}>
-                {opt}
-              </MenuItem>
-            ))}
-          </Select>
-        </Stack>
-
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Typography variant="body2" sx={{ color: "#344054", fontSize: "0.85rem", fontWeight: 600 }}>
-            {startRow}–{endRow} of {filteredData.length.toLocaleString()}
-          </Typography>
-
-          <Stack direction="row" spacing={0.5}>
-            <IconButton
+        {/* Section 3: Footer Pagination */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            py: 1,
+            px: 1.5,
+            borderTop: "1px solid #EAECF0",
+          }}
+        >
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+              Rows per page
+            </Typography>
+            <Select
               size="small"
-              disabled={page <= 0}
-              onClick={() => setPage(page - 1)}
-              sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
+              value={rowsPerPage}
+              onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
+              sx={{
+                height: 32,
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                borderRadius: "6px",
+                backgroundColor: "#ffffff",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              }}
             >
-              <ChevronLeftIcon fontSize="small" />
-            </IconButton>
-
-            <IconButton
-              size="small"
-              disabled={page >= maxPage}
-              onClick={() => setPage(page + 1)}
-              sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
-            >
-              <ChevronRightIcon fontSize="small" />
-            </IconButton>
+              {[10, 20, 50, 100].map((opt) => (
+                <MenuItem key={opt} value={opt} sx={{ fontSize: "0.85rem" }}>
+                  {opt}
+                </MenuItem>
+              ))}
+            </Select>
           </Stack>
-        </Stack>
-      </Box>
+
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography variant="body2" sx={{ color: "#344054", fontSize: "0.85rem", fontWeight: 600 }}>
+              {startRow}–{endRow} of {filteredData.length.toLocaleString()}
+            </Typography>
+
+            <Stack direction="row" spacing={0.5}>
+              <IconButton
+                size="small"
+                disabled={page <= 0}
+                onClick={() => setPage(page - 1)}
+                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </IconButton>
+
+              <IconButton
+                size="small"
+                disabled={page >= maxPage}
+                onClick={() => setPage(page + 1)}
+                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+          </Stack>
+        </Box>
+      </Paper>
 
       {/* Detail Dialog */}
       <Dialog
