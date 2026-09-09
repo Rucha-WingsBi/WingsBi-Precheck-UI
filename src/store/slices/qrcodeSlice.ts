@@ -16,7 +16,7 @@ interface QRCodeError {
 interface QRCodeState {
   qrcodeList: ImportedQRCodeItem[];
   consumedInList: any[];
-  barcodeDetails: ImportedBarcodeDetails | null;
+  barcodeDetails: any;
   storedComponents: any[];
   batchItems: ImportedBatchInfo[];
   loading: boolean;
@@ -26,6 +26,7 @@ interface QRCodeState {
   storeInQRCodeDetails: ImportedBarcodeDetails | null;
   serialNumberSummary: SerialNumberSummary[];
   fanManSerialNumbers: string[];
+  totalCount: number;
 }
 
 interface QRCodePayload {
@@ -74,6 +75,7 @@ const initialState: QRCodeState = {
   storeInQRCodeDetails: null,
   serialNumberSummary: [],
   fanManSerialNumbers: [],
+  totalCount: 0,
 };
 
 // Generate QR Code
@@ -220,6 +222,7 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
       searchQuery?: string;
       prodSeries?: string[];
       department?: string[];
+      createdBy?: number;
       fromDate?: string | null;
       toDate?: string | null;
     },
@@ -229,12 +232,17 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
       const pageNumber = payload.pageNumber || 1;
       const pageSize = payload.pageSize || 20;
 
+      const searchQueryVal =
+        typeof payload.searchQuery === "object" && payload.searchQuery !== null
+          ? payload.searchQuery
+          : { searchQuery: payload.searchQuery ? String(payload.searchQuery).trim() : "" };
+
       const body = {
-        searchQuery: payload.searchQuery || "",
-        prodSeries: payload.prodSeries || [],
-        department: payload.department || [],
-        fromDate: payload.fromDate || null,
-        toDate: payload.toDate || null,
+        searchQuery: searchQueryVal,
+        prodSeries: Array.isArray(payload.prodSeries) ? payload.prodSeries : [],
+        createdBy: typeof payload.createdBy === "number" ? payload.createdBy : 0,
+        fromDate: payload.fromDate ? String(payload.fromDate) : null,
+        toDate: payload.toDate ? String(payload.toDate) : null,
       };
 
       const response = await api.post(
@@ -243,9 +251,25 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
       );
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch barcode details",
-      );
+      const serverData = error.response?.data;
+      let errorMsg = "Failed to fetch barcode details";
+
+      if (serverData) {
+        if (serverData.message) {
+          errorMsg = serverData.message;
+        } else if (serverData.errors && typeof serverData.errors === "object") {
+          const firstErrList = Object.values(serverData.errors)[0];
+          if (Array.isArray(firstErrList) && firstErrList.length > 0) {
+            errorMsg = firstErrList[0];
+          } else if (typeof firstErrList === "string") {
+            errorMsg = firstErrList;
+          }
+        } else if (serverData.title) {
+          errorMsg = serverData.title;
+        }
+      }
+
+      return rejectWithValue(errorMsg);
     }
   },
 );
@@ -1161,7 +1185,20 @@ const qrcodeSlice = createSlice({
       })
       .addCase(getBarcodeDetailsWithParameters.fulfilled, (state, action) => {
         state.loading = false;
-        state.barcodeDetails = action.payload;
+        const payload = action.payload as any;
+        if (payload && Array.isArray(payload.data)) {
+          state.barcodeDetails = payload.data;
+          state.totalCount = payload.totalCount ?? payload.totalRecords ?? payload.total ?? payload.data.length;
+        } else if (payload && Array.isArray(payload.items)) {
+          state.barcodeDetails = payload.items;
+          state.totalCount = payload.totalCount ?? payload.totalRecords ?? payload.total ?? payload.items.length;
+        } else if (Array.isArray(payload)) {
+          state.barcodeDetails = payload;
+          state.totalCount = payload.length;
+        } else {
+          state.barcodeDetails = payload;
+          state.totalCount = payload?.totalCount ?? payload?.totalRecords ?? payload?.total ?? 0;
+        }
       })
       .addCase(getBarcodeDetailsWithParameters.rejected, (state, action) => {
         state.loading = false;

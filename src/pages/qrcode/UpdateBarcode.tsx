@@ -83,7 +83,7 @@ const UpdateBarcode: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const { loading } = useSelector((state: RootState) => state.qrcode);
-  const user = useSelector((state: RootState) => state.auth.user);
+  const user = useSelector((state: any) => state.auth?.user);
 
   const initialData = (location.state || {}) as BarcodeDetailsFormData;
   console.log("initialData", initialData);
@@ -494,48 +494,48 @@ const UpdateBarcode: React.FC = () => {
   };
 
   return (
-    <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 }, maxWidth: "100%", mx: "auto" }}>
+    <Box sx={{ py: 1.5, px: { xs: 1.5, sm: 2.5 }, bgcolor: 'background.paper', minHeight: '100vh' }}>
       {/* Header Section */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        spacing={2}
-        sx={{ mb: 1 }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <IconButton
-            onClick={handleBack}
-            sx={{
-              color: "primary.main",
-              p: 0,
-              "&:hover": {
-                backgroundColor: "action.hover",
-              },
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Box>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: "primary.main",
-                fontSize: { xs: "1.25rem", sm: "1.5rem" },
-              }}
-            >
-              {id ? "Update QR Code" : "QR Code Details"}
-            </Typography>
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-              Modify and update barcode details and master mapping properties.
-            </Typography>
-          </Box>
-        </Box>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+        <IconButton
+          size="small"
+          onClick={handleBack}
+          sx={{
+            height: 34,
+            width: 34,
+            borderRadius: '6px',
+            border: '1px solid',
+            borderColor: 'neutral.border',
+            bgcolor: 'background.paper',
+            color: 'primary.main',
+            '&:hover': { bgcolor: 'neutral.hoverBg', borderColor: 'grey.300' },
+          }}
+        >
+          <ArrowBackIcon fontSize="small" />
+        </IconButton>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            color: "primary.main",
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
+          }}
+        >
+          {id ? "Update QR Code" : "QR Code Details"}
+        </Typography>
       </Stack>
 
-      <Card elevation={2}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+      <Card
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid",
+          borderColor: "neutral.border",
+          bgcolor: "background.paper",
+          overflow: "hidden",
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={4}>
@@ -1260,11 +1260,11 @@ const UpdateBarcode: React.FC = () => {
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "center",
-                gap: 2,
-                pt: 2,
+                justifyContent: "flex-end",
+                gap: 1.5,
+                pt: 2.5,
                 borderTop: "1px solid",
-                borderColor: "divider",
+                borderColor: "neutral.border",
               }}
             >
               <Button
@@ -1272,7 +1272,17 @@ const UpdateBarcode: React.FC = () => {
                 variant="outlined"
                 size="small"
                 onClick={handleCancel}
-                sx={{ minWidth: 100 }}
+                sx={{
+                  height: 34,
+                  minWidth: 100,
+                  borderRadius: "6px",
+                  borderColor: "grey.300",
+                  color: "text.secondary",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  "&:hover": { borderColor: "grey.400", bgcolor: "neutral.hoverBg" },
+                }}
               >
                 Cancel
               </Button>
@@ -1282,9 +1292,21 @@ const UpdateBarcode: React.FC = () => {
                 variant="contained"
                 size="small"
                 disabled={loading}
-                sx={{ minWidth: 140 }}
+                startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+                sx={{
+                  height: 34,
+                  minWidth: 120,
+                  borderRadius: "6px",
+                  backgroundColor: "primary.main",
+                  color: "primary.contrastText",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                }}
               >
-                {loading ? "Updating..." : "Update"}
+                {loading ? "Saving..." : "Save"}
               </Button>
             </Box>
           </form>
