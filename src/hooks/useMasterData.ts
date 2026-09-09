@@ -318,13 +318,23 @@ export const useFetchAllDrawingNumbers = (
           },
         });
         const rawData = response.data?.data || response.data?.$values || response.data;
+        let list: any[] = [];
         if (Array.isArray(rawData)) {
-          return rawData;
+          list = [...rawData];
+        } else if (Array.isArray(response.data)) {
+          list = [...response.data];
         }
-        if (Array.isArray(response.data)) {
-          return response.data;
+        const totalRecords =
+          response.data?.totalRecords ??
+          response.data?.totalCount ??
+          response.data?.total;
+
+        if (totalRecords !== undefined) {
+          (list as any).totalRecords = totalRecords;
         }
-        return [];
+        (list as any).pageNumber = pageNumber;
+        (list as any).pageSize = pageSize;
+        return list;
       } catch (err) {
         console.warn("FetchAllDrawingNumbers API call failed, falling back to GetAllDrawingNumber:", err);
         const fallbackResponse = await api.get("/api/Common/GetAllDrawingNumber", {
@@ -334,7 +344,9 @@ export const useFetchAllDrawingNumbers = (
           },
         });
         const fallbackRaw = fallbackResponse.data?.data || fallbackResponse.data?.$values || fallbackResponse.data;
-        return Array.isArray(fallbackRaw) ? fallbackRaw : [];
+        const fallbackList = Array.isArray(fallbackRaw) ? [...fallbackRaw] : [];
+        (fallbackList as any).totalRecords = fallbackList.length;
+        return fallbackList;
       }
     },
     staleTime: 1000 * 60 * 5,

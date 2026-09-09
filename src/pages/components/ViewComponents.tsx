@@ -40,12 +40,12 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DownloadIcon from "@mui/icons-material/Download";
-import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useAllDrawingNumbers, useProductionSeries, useUnits } from "../../hooks/useMasterData";
+import { useFetchAllDrawingNumbers, useProductionSeries, useUnits } from "../../hooks/useMasterData";
+import { useDebounce } from "../../hooks/useDebounce";
 import api from "../../services/api";
 import * as XLSX from "xlsx";
 
@@ -73,12 +73,10 @@ const DrawingNumberRowComponent = ({
   drawingData,
   index,
   onDelete,
-  hiddenColumns,
 }: {
   drawingData: DrawingNumberRow;
   index: number;
   onDelete: (drawing: DrawingNumberRow) => void;
-  hiddenColumns: Record<string, boolean>;
 }) => {
   const [openDetails, setOpenDetails] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -127,8 +125,6 @@ const DrawingNumberRowComponent = ({
     setOpenDetails((prev) => !prev);
   };
 
-  const isColumnHidden = (key: string) => Boolean(hiddenColumns[key]);
-
   return (
     <>
       <TableRow
@@ -138,57 +134,41 @@ const DrawingNumberRowComponent = ({
           "&:hover": { backgroundColor: "grey.50" },
         }}
       >
-        {!isColumnHidden("srNo") && (
-          <TableCell sx={{ textAlign: "center", width: "45px", color: "text.muted", fontSize: "0.8rem" }}>
-            {index + 1}
-          </TableCell>
-        )}
-        {!isColumnHidden("drawingNo") && (
-          <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600 }}>
-            {drawingData?.drawingNumber || "N/A"}
-          </TableCell>
-        )}
-        {!isColumnHidden("lnItemCode") && (
-          <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
-            {drawingData?.lnItemCode || "N/A"}
-          </TableCell>
-        )}
-        {!isColumnHidden("nomenclature") && (
-          <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {drawingData?.nomenclature || "N/A"}
-          </TableCell>
-        )}
-        {!isColumnHidden("type") && (
-          <TableCell sx={{ textAlign: "center" }}>
-            <Chip
-              label={drawingData?.componentType || "N/A"}
-              size="small"
-              sx={{
-                height: 20,
-                fontSize: "0.7rem",
-                fontWeight: 600,
-                backgroundColor: "grey.100",
-                color: "text.secondary",
-                borderRadius: "4px",
-              }}
-            />
-          </TableCell>
-        )}
-        {!isColumnHidden("unit") && (
-          <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
-            {drawingData?.unitName || "N/A"}
-          </TableCell>
-        )}
-        {!isColumnHidden("qtyAssy") && (
-          <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
-            {drawingData?.qty ?? (drawingData?.assemblyNumber || "N/A")}
-          </TableCell>
-        )}
-        {!isColumnHidden("updatedOn") && (
-          <TableCell sx={{ textAlign: "center", color: "text.muted", fontSize: "0.8rem" }}>
-            {formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}
-          </TableCell>
-        )}
+        <TableCell sx={{ textAlign: "center", width: "45px", color: "text.muted", fontSize: "0.8rem" }}>
+          {index + 1}
+        </TableCell>
+        <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600 }}>
+          {drawingData?.drawingNumber || "N/A"}
+        </TableCell>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
+          {drawingData?.lnItemCode || "N/A"}
+        </TableCell>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {drawingData?.nomenclature || "N/A"}
+        </TableCell>
+        <TableCell sx={{ textAlign: "center" }}>
+          <Chip
+            label={drawingData?.componentType || "N/A"}
+            size="small"
+            sx={{
+              height: 20,
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              backgroundColor: "grey.100",
+              color: "text.secondary",
+              borderRadius: "4px",
+            }}
+          />
+        </TableCell>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+          {drawingData?.unitName || "N/A"}
+        </TableCell>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+          {drawingData?.qty ?? (drawingData?.assemblyNumber || "N/A")}
+        </TableCell>
+        <TableCell sx={{ textAlign: "center", color: "text.muted", fontSize: "0.8rem" }}>
+          {formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}
+        </TableCell>
 
         <TableCell sx={{ textAlign: "center", width: "60px" }}>
           <IconButton
@@ -281,8 +261,38 @@ const ComponentTypesList = ["ID", "BATCH", "FIM", "SI"];
 const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
 
-  // Hooks
-  const { data: allDrawingNumbers = [], isLoading, error, refetch } = useAllDrawingNumbers();
+  // Filter state (Initial state BLANK / EMPTY)
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
+  const [selectedSeries, setSelectedSeries] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+
+  // Pagination & sorting state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Reset page when search query or filters change
+  React.useEffect(() => {
+    setPage(0);
+  }, [debouncedSearchQuery, selectedSeries, selectedTypes, selectedUnits]);
+
+  // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage) to FetchAllDrawingNumbers API
+  const singleTypeFilter = selectedTypes.length === 1 ? selectedTypes[0] : "";
+  const {
+    data: drawingNumbersData = [],
+    isLoading,
+    error,
+    refetch,
+  } = useFetchAllDrawingNumbers(
+    debouncedSearchQuery,
+    page + 1,
+    rowsPerPage,
+    singleTypeFilter
+  );
+
   const { data: seriesList = [] } = useProductionSeries();
   const { data: unitsList = [] } = useUnits();
 
@@ -291,50 +301,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     refetch();
   }, [refetch]);
 
-  // Filter state (Initial state BLANK / EMPTY)
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSeries, setSelectedSeries] = useState<string[]>([]);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
-  // Applied filters state
-  const [appliedFilters, setAppliedFilters] = useState<{
-    search: string;
-    series: string[];
-    types: string[];
-    units: string[];
-  }>({
-    search: "",
-    series: [],
-    types: [],
-    units: [],
-  });
-
-  // Pagination & sorting state
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-
-  // Column visibility menu state
-  const [columnAnchorEl, setColumnAnchorEl] = useState<null | HTMLElement>(null);
-  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
-
-  const availableColumns = [
-    { key: "srNo", label: "Sr. No." },
-    { key: "drawingNo", label: "Drawing No." },
-    { key: "lnItemCode", label: "LN Item Code" },
-    { key: "nomenclature", label: "Nomenclature" },
-    { key: "type", label: "Type" },
-    { key: "unit", label: "Unit" },
-    { key: "qtyAssy", label: "Qty/Assy" },
-    { key: "updatedOn", label: "Updated On" },
-  ];
-
-  const hiddenCount = Object.values(hiddenColumns).filter(Boolean).length;
-
-  const toggleColumnVisibility = (key: string) => {
-    setHiddenColumns((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -382,45 +349,23 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     }
   };
 
-  const handleApplyFilters = () => {
-    setAppliedFilters({
-      search: searchQuery,
-      series: selectedSeries,
-      types: selectedTypes,
-      units: selectedUnits,
-    });
-    setPage(0);
-  };
-
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedSeries([]);
     setSelectedTypes([]);
     setSelectedUnits([]);
-    setAppliedFilters({
-      search: "",
-      series: [],
-      types: [],
-      units: [],
-    });
     setPage(0);
   };
 
-  // Filter and search functionality
-  const filteredDrawingNumbers = useMemo(() => {
-    if (!Array.isArray(allDrawingNumbers)) return [];
+  // Filter, sort and pagination functionality
+  const { displayData, totalCount } = useMemo(() => {
+    let rawList: DrawingNumberRow[] = Array.isArray(drawingNumbersData)
+      ? drawingNumbersData
+      : (drawingNumbersData as any)?.data || [];
 
-    let result = allDrawingNumbers.filter((drawing) => {
-      const searchLower = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !searchLower ||
-        drawing?.drawingNumber?.toLowerCase().includes(searchLower) ||
-        drawing?.nomenclature?.toLowerCase().includes(searchLower) ||
-        drawing?.componentType?.toLowerCase().includes(searchLower) ||
-        drawing?.componentCode?.toLowerCase().includes(searchLower) ||
-        drawing?.availableFor?.toLowerCase().includes(searchLower) ||
-        drawing?.lnItemCode?.toLowerCase().includes(searchLower);
+    const serverTotalRecords = (drawingNumbersData as any)?.totalRecords ?? (drawingNumbersData as any)?.totalCount;
 
+    let result = rawList.filter((drawing) => {
       const matchesSeries =
         selectedSeries.length === 0 ||
         (drawing?.productionSeries &&
@@ -442,7 +387,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             (u) => u.toLowerCase() === drawing.unitName?.toLowerCase()
           ));
 
-      return matchesSearch && matchesSeries && matchesType && matchesUnit;
+      return matchesSeries && matchesType && matchesUnit;
     });
 
     // Sorting by modifiedDate / createdDate
@@ -452,21 +397,19 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
       return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
     });
 
-    return result;
-  }, [allDrawingNumbers, searchQuery, selectedSeries, selectedTypes, selectedUnits, sortOrder]);
+    const isServerPaginated = serverTotalRecords !== undefined || (rawList.length <= rowsPerPage && rawList.length > 0);
+    const finalDisplayData = isServerPaginated ? result : result.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+    const finalTotalCount = serverTotalRecords !== undefined ? serverTotalRecords : result.length;
 
-  // Paginated data
-  const paginatedData = useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    return filteredDrawingNumbers.slice(startIndex, startIndex + rowsPerPage);
-  }, [filteredDrawingNumbers, page, rowsPerPage]);
+    return { displayData: finalDisplayData, totalCount: finalTotalCount };
+  }, [drawingNumbersData, selectedSeries, selectedTypes, selectedUnits, sortOrder, page, rowsPerPage]);
 
   const handleExport = () => {
-    if (filteredDrawingNumbers.length === 0) {
+    if (displayData.length === 0) {
       setSnackbar({ open: true, message: "No components to export", severity: "error" });
       return;
     }
-    const exportData = filteredDrawingNumbers.map((row, idx) => ({
+    const exportData = displayData.map((row, idx) => ({
       "Sr No": idx + 1,
       "Drawing Number": row.drawingNumber || "",
       "LN Item Code": row.lnItemCode || "",
@@ -770,209 +713,131 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         </Box>
 
         {/* Active Filter Chips & Counter Bar */}
-        {hasActiveFilters && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 1.5,
-              flexWrap: "wrap",
-              gap: 1,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-              {searchQuery.trim() && (
-                <Chip
-                  label={`Search: "${searchQuery}"`}
-                  onDelete={() => setSearchQuery("")}
-                  size="small"
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    borderRadius: "16px",
-                    border: "1px solid #E9EAEB",
-                    "& .MuiChip-deleteIcon": {
-                      color: "#667085",
-                      fontSize: 14,
-                      "&:hover": { color: "#344054" },
-                    },
-                  }}
-                />
-              )}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 1.5,
+            flexWrap: "wrap",
+            gap: 1,
+            minHeight: 24,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            {hasActiveFilters && (
+              <>
+                {searchQuery.trim() && (
+                  <Chip
+                    label={`Search: "${searchQuery}"`}
+                    onDelete={() => setSearchQuery("")}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      border: "1px solid #E9EAEB",
+                      "& .MuiChip-deleteIcon": {
+                        color: "#667085",
+                        fontSize: 14,
+                        "&:hover": { color: "#344054" },
+                      },
+                    }}
+                  />
+                )}
 
-              {selectedSeries.map((s) => (
-                <Chip
-                  key={`series-${s}`}
-                  label={`Series: ${s}`}
-                  onDelete={() => setSelectedSeries((prev) => prev.filter((x) => x !== s))}
-                  size="small"
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    borderRadius: "16px",
-                    border: "1px solid #E9EAEB",
-                    "& .MuiChip-deleteIcon": {
-                      color: "#667085",
-                      fontSize: 14,
-                      "&:hover": { color: "#344054" },
-                    },
-                  }}
-                />
-              ))}
-
-              {selectedTypes.map((t) => (
-                <Chip
-                  key={`type-${t}`}
-                  label={`Type: ${t}`}
-                  onDelete={() => setSelectedTypes((prev) => prev.filter((x) => x !== t))}
-                  size="small"
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    borderRadius: "16px",
-                    border: "1px solid #E9EAEB",
-                    "& .MuiChip-deleteIcon": {
-                      color: "#667085",
-                      fontSize: 14,
-                      "&:hover": { color: "#344054" },
-                    },
-                  }}
-                />
-              ))}
-
-              {selectedUnits.map((u) => (
-                <Chip
-                  key={`unit-${u}`}
-                  label={`Unit: ${u}`}
-                  onDelete={() => setSelectedUnits((prev) => prev.filter((x) => x !== u))}
-                  size="small"
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    borderRadius: "16px",
-                    border: "1px solid #E9EAEB",
-                    "& .MuiChip-deleteIcon": {
-                      color: "#667085",
-                      fontSize: 14,
-                      "&:hover": { color: "#344054" },
-                    },
-                  }}
-                />
-              ))}
-
-              <Button
-                variant="text"
-                size="small"
-                onClick={handleClearFilters}
-                sx={{
-                  color: "#6B288A",
-                  fontWeight: 600,
-                  fontSize: "0.8rem",
-                  textTransform: "none",
-                  p: 0,
-                  minWidth: "auto",
-                  "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
-                }}
-              >
-                Clear all
-              </Button>
-            </Box>
-
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Typography variant="caption" sx={{ color: "#667085", fontWeight: 600 }}>
-                {filteredDrawingNumbers.length.toLocaleString()} results
-              </Typography>
-
-              <Button
-                size="small"
-                startIcon={<ViewColumnIcon fontSize="small" />}
-                onClick={(e) => setColumnAnchorEl(e.currentTarget)}
-                sx={{ color: "#344054", textTransform: "none", fontWeight: 500, fontSize: "0.75rem", p: 0.5 }}
-              >
-                Columns {hiddenCount > 0 ? `· ${hiddenCount} hidden` : ""}
-              </Button>
-
-              <Menu
-                anchorEl={columnAnchorEl}
-                open={Boolean(columnAnchorEl)}
-                onClose={() => setColumnAnchorEl(null)}
-                transitionDuration={0}
-                PaperProps={{ sx: { p: 0.75, minWidth: 160 } }}
-              >
-                <Typography variant="caption" sx={{ px: 1, py: 0.25, fontWeight: 700, color: "#667085" }}>
-                  Toggle Columns
-                </Typography>
-                {availableColumns.map((col) => (
-                  <MenuItem
-                    key={col.key}
-                    onClick={() => toggleColumnVisibility(col.key)}
-                    sx={{ py: 0.25, px: 1 }}
-                  >
-                    <Checkbox size="small" checked={!hiddenColumns[col.key]} />
-                    <ListItemText primary={col.label} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                  </MenuItem>
+                {selectedSeries.map((s) => (
+                  <Chip
+                    key={`series-${s}`}
+                    label={`Series: ${s}`}
+                    onDelete={() => setSelectedSeries((prev) => prev.filter((x) => x !== s))}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      border: "1px solid #E9EAEB",
+                      "& .MuiChip-deleteIcon": {
+                        color: "#667085",
+                        fontSize: 14,
+                        "&:hover": { color: "#344054" },
+                      },
+                    }}
+                  />
                 ))}
-              </Menu>
-            </Box>
-          </Box>
-        )}
 
-        {/* Counter and Columns button when NO filters are active */}
-        {!appliedFilters.search && appliedFilters.series.length === 0 && appliedFilters.types.length === 0 && appliedFilters.units.length === 0 && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              mb: 1.5,
-              gap: 1.5,
-            }}
-          >
-            <Typography variant="caption" sx={{ color: "#667085", fontWeight: 600 }}>
-              {filteredDrawingNumbers.length.toLocaleString()} results
-            </Typography>
+                {selectedTypes.map((t) => (
+                  <Chip
+                    key={`type-${t}`}
+                    label={`Type: ${t}`}
+                    onDelete={() => setSelectedTypes((prev) => prev.filter((x) => x !== t))}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      border: "1px solid #E9EAEB",
+                      "& .MuiChip-deleteIcon": {
+                        color: "#667085",
+                        fontSize: 14,
+                        "&:hover": { color: "#344054" },
+                      },
+                    }}
+                  />
+                ))}
 
-            <Button
-              size="small"
-              startIcon={<ViewColumnIcon fontSize="small" />}
-              onClick={(e) => setColumnAnchorEl(e.currentTarget)}
-              sx={{ color: "#344054", textTransform: "none", fontWeight: 500, fontSize: "0.75rem", p: 0.5 }}
-            >
-              Columns {hiddenCount > 0 ? `· ${hiddenCount} hidden` : ""}
-            </Button>
+                {selectedUnits.map((u) => (
+                  <Chip
+                    key={`unit-${u}`}
+                    label={`Unit: ${u}`}
+                    onDelete={() => setSelectedUnits((prev) => prev.filter((x) => x !== u))}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      border: "1px solid #E9EAEB",
+                      "& .MuiChip-deleteIcon": {
+                        color: "#667085",
+                        fontSize: 14,
+                        "&:hover": { color: "#344054" },
+                      },
+                    }}
+                  />
+                ))}
 
-            <Menu
-              anchorEl={columnAnchorEl}
-              open={Boolean(columnAnchorEl)}
-              onClose={() => setColumnAnchorEl(null)}
-              transitionDuration={0}
-              PaperProps={{ sx: { p: 0.75, minWidth: 160 } }}
-            >
-              <Typography variant="caption" sx={{ px: 1, py: 0.25, fontWeight: 700, color: "#667085" }}>
-                Toggle Columns
-              </Typography>
-              {availableColumns.map((col) => (
-                <MenuItem
-                  key={col.key}
-                  onClick={() => toggleColumnVisibility(col.key)}
-                  sx={{ py: 0.25, px: 1 }}
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={handleClearFilters}
+                  sx={{
+                    color: "#6B288A",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    p: 0,
+                    minWidth: "auto",
+                    "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                  }}
                 >
-                  <Checkbox size="small" checked={!hiddenColumns[col.key]} />
-                  <ListItemText primary={col.label} primaryTypographyProps={{ fontSize: "0.8rem" }} />
-                </MenuItem>
-              ))}
-            </Menu>
+                  Clear all
+                </Button>
+              </>
+            )}
           </Box>
-        )}
+
+          <Typography variant="caption" sx={{ color: "#667085", fontWeight: 600, ml: "auto" }}>
+            {totalCount.toLocaleString()} results
+          </Typography>
+        </Box>
 
         {/* Table */}
         {isLoading ? (
@@ -990,45 +855,42 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
-                  {!hiddenColumns["srNo"] && <TableCell sx={{ width: "45px", textAlign: "center" }}>Sr. No.</TableCell>}
-                  {!hiddenColumns["drawingNo"] && <TableCell>Drawing No.</TableCell>}
-                  {!hiddenColumns["lnItemCode"] && <TableCell>LN Item Code</TableCell>}
-                  {!hiddenColumns["nomenclature"] && <TableCell>Nomenclature</TableCell>}
-                  {!hiddenColumns["type"] && <TableCell sx={{ textAlign: "center" }}>Type</TableCell>}
-                  {!hiddenColumns["unit"] && <TableCell sx={{ textAlign: "center" }}>Unit</TableCell>}
-                  {!hiddenColumns["qtyAssy"] && <TableCell sx={{ textAlign: "center" }}>Qty/Assy</TableCell>}
-                  {!hiddenColumns["updatedOn"] && (
-                    <TableCell sx={{ textAlign: "center" }}>
-                      <Box
-                        onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                        sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, cursor: "pointer", userSelect: "none" }}
-                      >
-                        Updated On {sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: "0.75rem" }} /> : <ArrowDownwardIcon sx={{ fontSize: "0.75rem" }} />}
-                      </Box>
-                    </TableCell>
-                  )}
+                  <TableCell sx={{ width: "45px", textAlign: "center" }}>Sr. No.</TableCell>
+                  <TableCell>Drawing No.</TableCell>
+                  <TableCell>LN Item Code</TableCell>
+                  <TableCell>Nomenclature</TableCell>
+                  <TableCell sx={{ textAlign: "center" }}>Type</TableCell>
+                  <TableCell sx={{ textAlign: "center" }}>Unit</TableCell>
+                  <TableCell sx={{ textAlign: "center" }}>Qty/Assy</TableCell>
+                  <TableCell sx={{ textAlign: "center" }}>
+                    <Box
+                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                      sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, cursor: "pointer", userSelect: "none" }}
+                    >
+                      Updated On {sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: "0.75rem" }} /> : <ArrowDownwardIcon sx={{ fontSize: "0.75rem" }} />}
+                    </Box>
+                  </TableCell>
                   <TableCell sx={{ textAlign: "center", width: "60px" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedData.length === 0 ? (
+                {displayData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} sx={{ textAlign: "center", py: 4 }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
-                        {appliedFilters.search || appliedFilters.series.length > 0 || appliedFilters.types.length > 0 || appliedFilters.units.length > 0
+                        {hasActiveFilters
                           ? "No components match your filter criteria"
                           : "No components found"}
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedData.map((drawing, index) => (
+                  displayData.map((drawing, index) => (
                     <DrawingNumberRowComponent
                       key={drawing.id}
                       drawingData={drawing}
                       index={page * rowsPerPage + index}
                       onDelete={handleDeleteClick}
-                      hiddenColumns={hiddenColumns}
                     />
                   ))
                 )}
@@ -1071,9 +933,9 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Typography variant="caption" sx={{ color: "#475467", fontWeight: 500 }}>
-              {filteredDrawingNumbers.length === 0
+              {totalCount === 0
                 ? "0 of 0"
-                : `${page * rowsPerPage + 1}–${Math.min((page + 1) * rowsPerPage, filteredDrawingNumbers.length)} of ${filteredDrawingNumbers.length.toLocaleString()}`}
+                : `${page * rowsPerPage + 1}–${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount.toLocaleString()}`}
             </Typography>
 
             <Box sx={{ display: "flex", gap: 0.25 }}>
@@ -1087,7 +949,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
               </IconButton>
               <IconButton
                 size="small"
-                disabled={(page + 1) * rowsPerPage >= filteredDrawingNumbers.length}
+                disabled={(page + 1) * rowsPerPage >= totalCount || displayData.length < rowsPerPage}
                 onClick={() => setPage(page + 1)}
                 sx={{ border: "1px solid #D0D5DD", borderRadius: "4px", p: 0.25 }}
               >
