@@ -32,6 +32,10 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Grid,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -41,6 +45,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CallSplitIcon from '@mui/icons-material/CallSplit';
+import CloseIcon from '@mui/icons-material/Close';
 import { getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
 import { useProductionSeries, useQRUsers } from '../../hooks/useMasterData';
 import { type ProductionOrderMaster } from '../../hooks/usePONumbers';
@@ -53,6 +58,33 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
+
+const ALL_EXPORTABLE_COLUMNS = [
+  { key: "qrCodeNumber", label: "QRCode ID" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "componentType", label: "Component Type" },
+  { key: "consumedInDrawing", label: "Consumed In Drawing" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "batchId", label: "Batch ID" },
+  { key: "qrCodeStatus", label: "Status" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "buildNumber", label: "Build No" },
+  { key: "quantity", label: "Quantity" },
+  { key: "remainingQuantity", label: "Remaining Qty" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "unitName", label: "Unit" },
+  { key: "fan", label: "FAN/MAN No" },
+  { key: "desposition", label: "Disposition" },
+  { key: "users", label: "Username" },
+  { key: "createdDate", label: "Created Date" },
+  { key: "assemblyNumber", label: "Assembly Number" },
+  { key: "remarks", label: "Remarks" },
+];
 
 const formatQuantity = (qty: any) => {
   if (qty === undefined || qty === null || qty === '') return 'N/A';
@@ -698,51 +730,86 @@ const ViewBarcode: React.FC = () => {
     }
   };
 
-  const handleDownload = async () => {
-    if (selectedQRCodes.length === 0) {
+  // Export Dialog states
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+
+  const handleOpenExportDialog = () => {
+    setExportMode("all");
+    setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(colKey)
+        ? prev.filter((k) => k !== colKey)
+        : [...prev, colKey]
+    );
+  };
+
+  const handleToggleSelectAllColumns = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+    } else {
+      setSelectedExportColumns([]);
+    }
+  };
+
+  const handleConfirmExportData = async () => {
+    const activeColumns =
+      exportMode === "all"
+        ? ALL_EXPORTABLE_COLUMNS.map((c) => c.key)
+        : selectedExportColumns;
+
+    if (exportMode === "custom" && activeColumns.length === 0) {
       setSnackbar({
         open: true,
-        message: 'Please select at least one QR code to download',
-        severity: 'error'
+        message: "Please select at least one column to export.",
+        severity: "error",
       });
       return;
     }
 
     try {
-      // Map unique IDs back to QR Code numbers for the API call
-      const qrCodeNumbers = displayedData
-        .filter(item => selectedQRCodes.includes(item.id || item.qrCodeNumber))
-        .map(item => item.qrCodeNumber)
-        .filter(num => num);
+      const prodSeries = selectedProductionSeries
+        .map((s: any) => (typeof s === "string" ? s : s.productionSeries))
+        .filter(Boolean);
 
-      const batchIds = displayedData
-        .filter(item => selectedQRCodes.includes(item.id || item.qrCodeNumber))
-        .map(item => item.batchId)
-        .filter(id => id && id !== 'N/A');
-
-      const result = await dispatch(exportViewQrCode({
-        qrCodeNumber: qrCodeNumbers,
-        batchId: batchIds.length > 0 ? batchIds : undefined,
-      }));
+      const result = await dispatch(
+        exportViewQrCode({
+          qrCodeNumbers: selectedQRCodes,
+          qrCodeStatusId: 0,
+          searchQuery: searchQuery.trim(),
+          department: [],
+          prodSeries,
+          fromDate: fromDate ? fromDate.toISOString() : null,
+          toDate: toDate ? toDate.toISOString() : null,
+          selectedColumns: activeColumns,
+          createdBy: user?.id ? Number(user.id) : 6,
+        })
+      );
 
       if (exportViewQrCode.fulfilled.match(result)) {
+        setExportDialogOpen(false);
         setSnackbar({
           open: true,
-          message: 'QR codes downloaded successfully!',
-          severity: 'success'
+          message: "QR codes exported successfully!",
+          severity: "success",
         });
       } else if (exportViewQrCode.rejected.match(result)) {
         setSnackbar({
           open: true,
-          message: result.payload as string || 'Failed to download QR codes',
-          severity: 'error'
+          message: (result.payload as string) || "Failed to export QR codes",
+          severity: "error",
         });
       }
     } catch (error: any) {
       setSnackbar({
         open: true,
-        message: error.message || 'Failed to download QR codes',
-        severity: 'error'
+        message: error.message || "Failed to export QR codes",
+        severity: "error",
       });
     }
   };
@@ -1048,7 +1115,7 @@ const ViewBarcode: React.FC = () => {
               >
                 Search
               </Button>
-              <Button variant="contained" color="primary" startIcon={<DownloadIcon sx={{ fontSize: 16 }} />} onClick={handleDownload} size="small" disabled={isDownloading || selectedQRCodes.length === 0} sx={{ height: 36, minWidth: 70, px: 1.5 }}>
+              <Button variant="contained" color="primary" startIcon={<DownloadIcon sx={{ fontSize: 16 }} />} onClick={handleOpenExportDialog} size="small" disabled={isDownloading || (displayedData.length === 0 && selectedQRCodes.length === 0)} sx={{ height: 36, minWidth: 70, px: 1.5 }}>
                 {isDownloading ? '...' : 'Download'}
               </Button>
               <Button variant="contained" color="error" startIcon={<ReplayIcon sx={{ fontSize: 16 }} />} onClick={handleReset} size="small" disabled={!isResetEnabled} sx={{ height: 36, minWidth: 60, px: 1.5 }}>
@@ -1213,6 +1280,152 @@ const ViewBarcode: React.FC = () => {
         <Snackbar open={snackbar.open} autoHideDuration={snackbar.severity === 'error' ? null : 4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
           <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
         </Snackbar>
+
+        {/* Export Options Dialog */}
+        <Dialog
+          open={exportDialogOpen}
+          onClose={() => !isDownloading && setExportDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { borderRadius: "16px", p: 1 },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontWeight: 700,
+              color: "#101828",
+              fontSize: "1.1rem",
+              pb: 1,
+            }}
+          >
+            Export QR Codes
+            <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isDownloading}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent dividers sx={{ py: 2 }}>
+            <FormControl component="fieldset" sx={{ width: "100%" }}>
+              <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+                Choose Export Option:
+              </Typography>
+
+              <RadioGroup
+                value={exportMode}
+                onChange={(e) => {
+                  const newMode = e.target.value as "all" | "custom";
+                  setExportMode(newMode);
+                  if (newMode === "custom") {
+                    setSelectedExportColumns([]);
+                  }
+                }}
+                sx={{ mb: 2 }}
+              >
+                <FormControlLabel
+                  value="all"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+                />
+                <FormControlLabel
+                  value="custom"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+                />
+              </RadioGroup>
+
+              {exportMode === "custom" && (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: "12px",
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length}
+                          indeterminate={
+                            selectedExportColumns.length > 0 &&
+                            selectedExportColumns.length < ALL_EXPORTABLE_COLUMNS.length
+                          }
+                          onChange={handleToggleSelectAllColumns}
+                          sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" fontWeight="700">
+                          {selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                        </Typography>
+                      }
+                    />
+                    <Chip
+                      label={`${selectedExportColumns.length} / ${ALL_EXPORTABLE_COLUMNS.length} selected`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderColor: "primary.main", color: "primary.main" }}
+                    />
+                  </Box>
+
+                  <Grid container spacing={1}>
+                    {ALL_EXPORTABLE_COLUMNS.map((col) => (
+                      <Grid item xs={6} sm={4} key={col.key}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedExportColumns.includes(col.key)}
+                              onChange={() => handleToggleColumn(col.key)}
+                              sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                            />
+                          }
+                          label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+            </FormControl>
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              onClick={() => setExportDialogOpen(false)}
+              disabled={isDownloading}
+              sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={isDownloading ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+              onClick={handleConfirmExportData}
+              disabled={isDownloading || (exportMode === "custom" && selectedExportColumns.length === 0)}
+              sx={{
+                minWidth: 110,
+                fontWeight: 600,
+                borderRadius: "8px",
+                textTransform: "none",
+                backgroundColor: "primary.main",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
+            >
+              {isDownloading ? "Exporting..." : "Export"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog open={disableDialogOpen} onClose={() => setDisableDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle sx={{ fontWeight: 600, color: 'error.main' }}>Disable QR Code</DialogTitle>

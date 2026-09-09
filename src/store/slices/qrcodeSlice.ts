@@ -892,76 +892,45 @@ export const exportViewQrCode = createAsyncThunk(
   "qrcode/exportViewQrCode",
   async (
     payload: {
-      qrCodeNumber?: string | string[];
-      batchId?: string[];
-      prodSeriesId?: number;
-      drawingNumberId?: number;
-      productionOrderNumber?: string;
+      qrCodeNumbers?: string[];
       qrCodeStatusId?: number;
+      searchQuery?: string;
+      department?: string[];
+      prodSeries?: string[];
+      fromDate?: string | null;
+      toDate?: string | null;
+      selectedColumns?: string[];
+      createdBy?: number;
     },
-    { rejectWithValue },
+    { rejectWithValue, getState },
   ) => {
     try {
-      // Validate that we have either qrCodeNumber(s) OR both prodSeriesId and drawingNumberId
-      const hasQRCodes =
-        payload.qrCodeNumber &&
-        ((Array.isArray(payload.qrCodeNumber) &&
-          payload.qrCodeNumber.length > 0) ||
-          (!Array.isArray(payload.qrCodeNumber) &&
-            payload.qrCodeNumber.trim() !== ""));
-      const hasBatchIds = payload.batchId && payload.batchId.length > 0;
+      const state = getState() as any;
+      const user = state.auth.user;
+      const userId = payload.createdBy || (user?.id ? Number(user.id) : 6);
 
-      if (!hasQRCodes && !payload.prodSeriesId && !payload.drawingNumberId && !payload.productionOrderNumber && !hasBatchIds) {
-        return rejectWithValue(
-          "Either QR code number(s), Batch ID(s), or Production Series, Drawing Number, or Production Order Number must be provided",
-        );
-      }
+      const body = {
+        qrCodeNumbers: payload.qrCodeNumbers || [],
+        qrCodeStatusId: payload.qrCodeStatusId ?? 0,
+        searchQuery: payload.searchQuery || "",
+        department: payload.department || [],
+        prodSeries: payload.prodSeries || [],
+        fromDate: payload.fromDate || null,
+        toDate: payload.toDate || null,
+        selectedColumns: payload.selectedColumns || [],
+      };
 
-      // Prepare query parameters
-      const queryParams: {
-        QRCodeNumber?: string;
-        QRCodeNumbers?: string | string[];
-        BatchIdNumbers?: string[];
-        ProdSeriesId?: number;
-        DrawingNumberId?: number;
-        ProductionOrderNumber?: string;
-        qrCodeStatusId?: number;
-      } = {};
-
-      // Handle QR codes - if array, join with comma; if single, use as is
-      if (payload.qrCodeNumber) {
-        if (Array.isArray(payload.qrCodeNumber)) {
-          // For multiple QR codes, send as an array
-          queryParams.QRCodeNumbers = payload.qrCodeNumber;
-          // Also set single QRCodeNumber to first one for backward compatibility
-          queryParams.QRCodeNumber = payload.qrCodeNumber[0];
-        } else {
-          queryParams.QRCodeNumber = payload.qrCodeNumber;
-        }
-      }
-      if (payload.batchId && payload.batchId.length > 0) {
-        queryParams.BatchIdNumbers = payload.batchId;
-      }
-      if (payload.prodSeriesId) {
-        queryParams.ProdSeriesId = payload.prodSeriesId;
-      }
-      if (payload.drawingNumberId) {
-        queryParams.DrawingNumberId = payload.drawingNumberId;
-      }
-      if (payload.productionOrderNumber) {
-        queryParams.ProductionOrderNumber = payload.productionOrderNumber;
-      }
-      if (payload.qrCodeStatusId !== undefined) {
-        queryParams.qrCodeStatusId = payload.qrCodeStatusId;
-      }
-
-      const response = await api.post("/api/QRCode/ExportViewQrCode", queryParams, {
-        responseType: "blob",
-        headers: {
-          accept: "*/*",
-          "Content-Type": "application/json",
+      const response = await api.post(
+        `/api/QRCode/ExportViewQrCode?CreatedBy=${userId}`,
+        body,
+        {
+          responseType: "blob",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (response.data && response.data.size > 0) {
         const now = new Date();
@@ -971,7 +940,6 @@ export const exportViewQrCode = createAsyncThunk(
         const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
         const timestamp = `${dateStr}_${timeStr}`;
-        // Create download link for Excel file
         const url = window.URL.createObjectURL(
           new Blob([response.data], {
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -980,9 +948,7 @@ export const exportViewQrCode = createAsyncThunk(
 
         const link = document.createElement("a");
         link.href = url;
-
-        // Fixed filename for View QR Code page download
-        const filename = `QRCode_download_${timestamp}.xls`;
+        const filename = `QRCode_Export_${timestamp}.xlsx`;
 
         link.setAttribute("download", filename);
         document.body.appendChild(link);

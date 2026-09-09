@@ -32,7 +32,7 @@ const StoreIn = lazy(() => import("./pages/precheck/StoreIn"));
 const StoredInComponents = lazy(
   () => import("./pages/precheck/StoredInComponents")
 );
-const MakeOrder = lazy(() => import("./pages/precheck/MakeOrder"));
+
 const ViewConsumedIn = lazy(() => import("./pages/precheck/ViewConsumedIn"));
 const AvailableInStore = lazy(
   () => import("./pages/precheck/AvailableInStore")
@@ -112,7 +112,7 @@ export default function AppRoutes() {
             {/* Precheck Module */}
             <Route path="precheck">
               <Route index element={<Precheck />} />
-              <Route path="make-order" element={<MakeOrder />} />
+            
               <Route path="available-store" element={<AvailableInStore />} />
               <Route path="available-in-store" element={<AvailableInStore />} />
               <Route path="view" element={<ViewPrecheck />} />
