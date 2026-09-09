@@ -51,6 +51,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
 } from "@mui/icons-material";
+import { CustomPagination } from "../../components/CustomPagination";
 
 import {
   viewPrecheckDetails,
@@ -68,6 +69,7 @@ import {
   usePONumbers,
   type ProductionOrderMaster,
 } from "../../hooks/usePONumbers";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 import { useDebounce } from "../../hooks/useDebounce";
 import type { RootState, AppDispatch } from "../../store/store";
 
@@ -393,9 +395,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     }));
   }, [productionSeriesData]);
 
-  const selectedSeriesObjects = seriesOptions.filter((opt) =>
-    selectedProductionSeries.includes(opt.id)
-  );
+
 
   // ── Active Filter Chips ────────────────────────────────────────────────────
   const activeChips = useMemo(() => {
@@ -608,19 +608,19 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           <Button
             variant="outlined"
             size="small"
-            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon />}
+            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
             onClick={handleExport}
             disabled={isDownloading}
             sx={{
-              borderColor: "#D0D5DD",
-              color: "#344054",
-              fontWeight: 600,
-              fontSize: "0.875rem",
-              borderRadius: "8px",
-              px: 2,
-              py: 0.75,
+              height: 34,
+              borderRadius: "6px",
+              borderColor: "grey.300",
+              color: "text.secondary",
               textTransform: "none",
-              "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              backgroundColor: "background.paper",
+              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
             }}
           >
             Export
@@ -629,15 +629,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       )}
 
       {/* 2. Tabs Bar */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid #EAECF0",
-          mb: 2,
-        }}
-      >
+      <Box sx={{ borderBottom: "1px solid #EAECF0", mb: 1.25 }}>
         <Tabs
           value={activeTab}
           onChange={(_, newValue) => {
@@ -647,17 +639,15 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           textColor="primary"
           indicatorColor="primary"
           sx={{
-            minHeight: 40,
+            minHeight: 36,
             "& .MuiTab-root": {
               fontWeight: 600,
-              fontSize: "0.875rem",
+              fontSize: "0.85rem",
               textTransform: "none",
               minWidth: 100,
               py: 0.75,
-              px: 2,
-              minHeight: 40,
             },
-            "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+            "& .MuiTab-root.Mui-selected": { color: "primary.main" },
             "& .MuiTabs-indicator": {
               backgroundColor: "primary.main",
               height: 3,
@@ -665,68 +655,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             },
           }}
         >
-          <Tab
-            value="precheck"
-            label={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: "0.875rem",
-                    fontWeight: activeTab === "precheck" ? 700 : 600,
-                    color: activeTab === "precheck" ? "primary.main" : "#475467",
-                  }}
-                >
-                  Prechecks
-                </Typography>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    px: 0.8,
-                    py: 0.15,
-                    borderRadius: "12px",
-                    backgroundColor: activeTab === "precheck" ? "#F4EBFF" : "#F2F4F7",
-                    color: activeTab === "precheck" ? "primary.main" : "#667085",
-                  }}
-                >
-                  {precheckResults.length.toLocaleString()}
-                </Typography>
-              </Box>
-            }
-          />
-          <Tab
-            value="consumed"
-            label={
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: "0.875rem",
-                    fontWeight: activeTab === "consumed" ? 700 : 600,
-                    color: activeTab === "consumed" ? "primary.main" : "#475467",
-                  }}
-                >
-                  Consumed In
-                </Typography>
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    px: 0.8,
-                    py: 0.15,
-                    borderRadius: "12px",
-                    backgroundColor: activeTab === "consumed" ? "#F4EBFF" : "#F2F4F7",
-                    color: activeTab === "consumed" ? "primary.main" : "#667085",
-                  }}
-                >
-                  {consumedResults.length.toLocaleString()}
-                </Typography>
-              </Box>
-            }
-          />
+          <Tab label="Prechecks" value="precheck" />
+          <Tab label="Consumed In" value="consumed" />
         </Tabs>
       </Box>
 
@@ -742,7 +672,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         }}
       >
         {/* Section 1: Filter Bar & Active Chips */}
-        <Box sx={{ p: 1.5, pb: 1, borderBottom: "1px solid #EAECF0" }}>
+        <Box sx={{ p: 1.25, pb: 0.75, borderBottom: "1px solid #EAECF0" }}>
           {/* ── Precheck Tab Filters ─────────────────────────────────────────── */}
           {activeTab === "precheck" && (
             <Box
@@ -753,7 +683,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 flexWrap: "nowrap",
                 width: "100%",
                 overflowX: "auto",
-                py: 0.5,
+                py: 0.25,
                 "&::-webkit-scrollbar": { height: 6 },
                 "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
               }}
@@ -783,49 +713,14 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 }}
               />
 
-              {/* Production Series */}
-              <Autocomplete
-                multiple
-                disableCloseOnSelect
-                renderTags={() => null}
-                size="small"
+              {/* Production Series MultiSelect */}
+              <MultiSelectFilter
+                label="Prod Series"
+                value={selectedProductionSeries}
                 options={seriesOptions}
-                getOptionLabel={(option) => option.label}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                value={selectedSeriesObjects}
-                onChange={(_, newValue) => {
-                  setSelectedProductionSeries(newValue.map((v) => v.id));
-                }}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <Box component="li" key={key} {...optionProps}>
-                      <Checkbox size="small" sx={{ mr: 0.75, p: 0.15 }} checked={selected} />
-                      <Typography variant="body2" sx={{ fontSize: "0.82rem" }}>
-                        {option.label}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={
-                      selectedSeriesObjects.length > 0
-                        ? `Series (${selectedSeriesObjects.length})`
-                        : "Prod Series"
-                    }
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.82rem",
-                        height: 38,
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                      },
-                    }}
-                  />
-                )}
-                sx={{ flex: "0 0 140px", minWidth: 110 }}
+                onChange={(newValue) => setSelectedProductionSeries(newValue)}
+                flex="0 0 130px"
+                minWidth={110}
               />
 
               {/* Status */}
@@ -960,7 +855,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 flexWrap: "nowrap",
                 width: "100%",
                 overflowX: "auto",
-                py: 0.5,
+                py: 0.25,
                 "&::-webkit-scrollbar": { height: 6 },
                 "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
               }}
@@ -1035,39 +930,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               />
 
               {/* Production Series */}
-              <Autocomplete
-                multiple
-                disableCloseOnSelect
-                renderTags={() => null}
-                size="small"
+              <MultiSelectFilter
+                label="Prod Series"
+                value={selectedProductionSeries}
                 options={seriesOptions}
-                getOptionLabel={(option) => option.label}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                value={selectedSeriesObjects}
-                onChange={(_, newValue) => setSelectedProductionSeries(newValue.map((v) => v.id))}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <Box component="li" key={key} {...optionProps}>
-                      <Checkbox size="small" sx={{ mr: 0.75, p: 0.15 }} checked={selected} />
-                      <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                        {option.label}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={
-                      selectedSeriesObjects.length > 0
-                        ? `Prod Series · ${selectedSeriesObjects.length}`
-                        : "Prod Series"
-                    }
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 } }}
-                  />
-                )}
-                sx={{ flex: "0 0 130px", minWidth: 110 }}
+                onChange={(newValue) => setSelectedProductionSeries(newValue)}
+                flex="0 0 130px"
+                minWidth={110}
               />
 
               {/* ID Number */}
@@ -1134,15 +1003,15 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              mt: 1,
-              pt: 0.75,
-              borderTop: "1px solid #F2F4F7",
+              mt: activeChips.length > 0 ? 0.75 : 0.5,
+              pt: activeChips.length > 0 ? 0.5 : 0,
+              borderTop: activeChips.length > 0 ? "1px solid #F2F4F7" : "none",
               flexWrap: "wrap",
               gap: 1,
             }}
           >
             {activeChips.length > 0 ? (
-              <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center">
                 {activeChips.map((chip) => (
                   <Chip
                     key={chip.id}
@@ -1153,12 +1022,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                       backgroundColor: "#F2F4F7",
                       color: "#344054",
                       fontWeight: 600,
-                      fontSize: "0.8rem",
-                      borderRadius: "16px",
+                      fontSize: "0.775rem",
+                      height: 24,
+                      borderRadius: "14px",
                       border: "1px solid #E9EAEB",
                       "& .MuiChip-deleteIcon": {
                         color: "#667085",
-                        fontSize: 14,
+                        fontSize: 13,
                         "&:hover": { color: "#344054" },
                       },
                     }}
@@ -1171,7 +1041,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   sx={{
                     color: "primary.main",
                     fontWeight: 600,
-                    fontSize: "0.8rem",
+                    fontSize: "0.775rem",
                     textTransform: "none",
                     p: 0,
                     minWidth: "auto",
@@ -1184,7 +1054,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             ) : <Box />}
 
             {/* Results Count Display */}
-            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
+            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500, ml: "auto" }}>
               {filteredData.length.toLocaleString()} {filteredData.length === 1 ? "result" : "results"}
             </Typography>
           </Box>
@@ -1370,67 +1240,17 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         </TableContainer>
 
         {/* Section 3: Footer Pagination */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            py: 1,
-            px: 1.5,
-            borderTop: "1px solid #EAECF0",
+        <CustomPagination
+          page={page}
+          pageSize={rowsPerPage}
+          totalCount={filteredData.length}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setRowsPerPage(newSize);
+            setPage(0);
           }}
-        >
-          <Stack direction="row" spacing={1.25} alignItems="center">
-            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-              Rows per page
-            </Typography>
-            <Select
-              size="small"
-              value={rowsPerPage}
-              onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
-              sx={{
-                height: 32,
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                borderRadius: "6px",
-                backgroundColor: "#ffffff",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              }}
-            >
-              {[10, 20, 50, 100].map((opt) => (
-                <MenuItem key={opt} value={opt} sx={{ fontSize: "0.85rem" }}>
-                  {opt}
-                </MenuItem>
-              ))}
-            </Select>
-          </Stack>
+        />
 
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography variant="body2" sx={{ color: "#344054", fontSize: "0.85rem", fontWeight: 600 }}>
-              {startRow}–{endRow} of {filteredData.length.toLocaleString()}
-            </Typography>
-
-            <Stack direction="row" spacing={0.5}>
-              <IconButton
-                size="small"
-                disabled={page <= 0}
-                onClick={() => setPage(page - 1)}
-                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
-              >
-                <ChevronLeftIcon fontSize="small" />
-              </IconButton>
-
-              <IconButton
-                size="small"
-                disabled={page >= maxPage}
-                onClick={() => setPage(page + 1)}
-                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
-              >
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          </Stack>
-        </Box>
       </Paper>
 
       {/* Detail Dialog */}

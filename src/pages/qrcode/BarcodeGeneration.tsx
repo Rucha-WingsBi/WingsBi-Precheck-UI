@@ -32,7 +32,6 @@ import {
   TableHead,
   TableRow,
   Checkbox,
-  TablePagination,
   Autocomplete,
   FormHelperText,
   InputAdornment,
@@ -43,6 +42,8 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
+import { CustomPagination } from "../../components/CustomPagination";
+
 import {
   QrCode as QrCodeIcon,
   Download as DownloadIcon,
@@ -1933,7 +1934,7 @@ export default function BarcodeGeneration() {
                           <Grid item xs={12} md={4}>
                             <Controller name="material" control={control} render={({ field }) => <TextField {...field} label="Material Specification" fullWidth size="small" />} />
                           </Grid>
-                          </Grid>
+                        </Grid>
                         {/* FIM Row 7: IR Number * | MSN Number * | GFN No */}
                         <Grid container spacing={2} sx={{ mb: 2 }}>
                           <Grid item xs={12} md={4}>
@@ -2945,18 +2946,18 @@ export default function BarcodeGeneration() {
                   </Table>
                 </TableContainer>
 
-                <TablePagination
-                  component="div"
-                  count={displayedQRCodes.length}
+                <CustomPagination
                   page={page}
-                  onPageChange={(_, newPage) => setPage(newPage)}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={(e) => {
-                    setRowsPerPage(parseInt(e.target.value, 10));
+                  pageSize={rowsPerPage}
+                  totalCount={displayedQRCodes.length}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  onPageChange={(newPage) => setPage(newPage)}
+                  onPageSizeChange={(newSize) => {
+                    setRowsPerPage(newSize);
                     setPage(0);
                   }}
-                  rowsPerPageOptions={[5, 10, 25, 50]}
                 />
+
               </CardContent>
             </Card>
           )}

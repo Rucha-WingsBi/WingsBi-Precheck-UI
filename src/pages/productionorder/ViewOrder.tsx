@@ -13,7 +13,6 @@ import {
   TableRow,
   Alert,
   CircularProgress,
-  TablePagination,
   Paper,
   IconButton,
   Stack,
@@ -24,6 +23,8 @@ import {
   Chip,
   Tooltip,
 } from "@mui/material";
+import { CustomPagination } from "../../components/CustomPagination";
+
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
@@ -867,22 +868,18 @@ const ViewOrder: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              component="div"
-              count={qrCodeData.length}
+            <CustomPagination
               page={qrPage}
-              onPageChange={handleQrChangePage}
-              rowsPerPage={qrRowsPerPage}
-              onRowsPerPageChange={handleQrChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              sx={{
-                borderTop: "1px solid #EAECF0",
-                color: "#475467",
-                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-                  fontSize: "0.8rem",
-                },
+              pageSize={qrRowsPerPage}
+              totalCount={qrCodeData.length}
+              pageSizeOptions={[5, 10, 25, 50]}
+              onPageChange={(newPage) => setQrPage(newPage)}
+              onPageSizeChange={(newSize) => {
+                setQrRowsPerPage(newSize);
+                setQrPage(0);
               }}
             />
+
           </Paper>
         </Grid>
       </Grid>

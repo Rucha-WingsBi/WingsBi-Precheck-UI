@@ -888,9 +888,9 @@ const StoreIn: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600 }}>
                   Project Number
                 </TableCell>
-                
+
                 <TableCell sx={{ fontWeight: 600 }}>
-                  Created By 
+                  Created By
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>
                   Created Date
@@ -931,7 +931,7 @@ const StoreIn: React.FC = () => {
                     <TableCell>{row.idNumber}</TableCell>
                     <TableCell>{formatQuantity(row.quantity)}</TableCell>
                     <TableCell>{row.projectNumber}</TableCell>
-                    
+
                     <TableCell>{row.createdByName}</TableCell>
                     <TableCell>
                       {formatDate(row.createdDate)}

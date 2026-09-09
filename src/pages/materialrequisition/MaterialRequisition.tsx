@@ -27,9 +27,11 @@ import {
   Autocomplete,
   Tabs,
   Tab,
-  TablePagination,
   Stack,
+
 } from "@mui/material";
+import { CustomPagination } from "../../components/CustomPagination";
+
 import {
   Save as SaveIcon,
   Close as CloseIcon,
@@ -1210,26 +1212,20 @@ const MaterialRequisition: React.FC = () => {
 
                   {/* Pagination */}
                   {!apiLoading && requestList.length > 0 && (
-                    <TablePagination
-                      rowsPerPageOptions={[5, 10, 25, 50]}
-                      component="div"
-                      count={requestList.length}
-                      rowsPerPage={rowsPerPage}
+                    <CustomPagination
                       page={page}
-                      onPageChange={handleChangePage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                      sx={{
-                        borderTop: "1px solid #e0e0e0",
-                        "& .MuiTablePagination-toolbar": {
-                          minHeight: 40,
-                        },
-                        "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-                          {
-                            fontSize: "0.8rem",
-                          },
+                      pageSize={rowsPerPage}
+                      totalCount={requestList.length}
+                      pageSizeOptions={[5, 10, 25, 50]}
+                      onPageChange={(newPage) => setPage(newPage)}
+                      onPageSizeChange={(newSize) => {
+                        setRowsPerPage(newSize);
+                        setPage(0);
                       }}
+
                     />
                   )}
+
                 </CardContent>
               </Card>
             </Box>

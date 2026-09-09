@@ -16,14 +16,16 @@ import {
   Alert,
   TextField,
   InputAdornment,
-  TablePagination,
   IconButton,
+
   Collapse,
   Autocomplete,
   Tabs,
   Tab,
   Stack,
 } from '@mui/material';
+import { CustomPagination } from '../../components/CustomPagination';
+
 import DownloadIcon from '@mui/icons-material/Download';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SearchIcon from '@mui/icons-material/Search';
@@ -448,257 +450,254 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               View and export components stored on specific dates
             </Typography>
 
-        <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
-          {/* Date Selection and Search Controls */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              mb: 2,
-              flexWrap: 'wrap',
-              flexDirection: { xs: 'column', sm: 'row' },
-              width: '100%'
-            }}
-          >
-            <DatePicker
-              label="Select Store In Date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              slotProps={{
-                field: { clearable: true },
-                textField: {
-                  size: 'small',
-                  sx: { width: { xs: '100%', sm: '200px' } },
-                  InputProps: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <CalendarTodayIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  },
-                }
-              }}
-            />
-
-            <Autocomplete
-              freeSolo
-              size="small"
-              options={drawingOptions}
-              loading={loadingDrawings}
-              getOptionLabel={(option) => {
-                if (typeof option === 'string') return option;
-                return option?.drawingNumber || '';
-              }}
-              value={searchQuery}
-              onInputChange={(_, newValue) => {
-                setSearchQuery(newValue);
-                debouncedFetchDrawings(newValue);
-              }}
-              onChange={(_, newValue) => {
-                const drawingNo = typeof newValue === 'string' ? newValue : (newValue?.drawingNumber || '');
-                setSearchQuery(drawingNo);
-                fetchStoredComponents(selectedDate, drawingNo);
-              }}
-              renderOption={(props, option) => (
-                <li {...props}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5 }}>
-                    <Typography variant="body2" fontWeight={500}>
-                      {option.drawingNumber}
-                    </Typography>
-                    {option.nomenclature && (
-                      <Typography variant="caption" color="text.secondary">
-                        {option.nomenclature} {option.componentType ? `| ${option.componentType}` : ''}
-                      </Typography>
-                    )}
-                  </Box>
-                </li>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Search components..."
-                  onPaste={(e) => {
-                    const pastedText = e.clipboardData.getData('text');
-                    if (pastedText) {
-                      setSearchQuery(pastedText);
-                      fetchStoredComponents(selectedDate, pastedText);
+            <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+              {/* Date Selection and Search Controls */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  mb: 2,
+                  flexWrap: 'wrap',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  width: '100%'
+                }}
+              >
+                <DatePicker
+                  label="Select Store In Date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  slotProps={{
+                    field: { clearable: true },
+                    textField: {
+                      size: 'small',
+                      sx: { width: { xs: '100%', sm: '200px' } },
+                      InputProps: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <CalendarTodayIcon color="action" />
+                          </InputAdornment>
+                        ),
+                      },
                     }
                   }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
+                />
+
+                <Autocomplete
+                  freeSolo
+                  size="small"
+                  options={drawingOptions}
+                  loading={loadingDrawings}
+                  getOptionLabel={(option) => {
+                    if (typeof option === 'string') return option;
+                    return option?.drawingNumber || '';
+                  }}
+                  value={searchQuery}
+                  onInputChange={(_, newValue) => {
+                    setSearchQuery(newValue);
+                    debouncedFetchDrawings(newValue);
+                  }}
+                  onChange={(_, newValue) => {
+                    const drawingNo = typeof newValue === 'string' ? newValue : (newValue?.drawingNumber || '');
+                    setSearchQuery(drawingNo);
+                    fetchStoredComponents(selectedDate, drawingNo);
+                  }}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5 }}>
+                        <Typography variant="body2" fontWeight={500}>
+                          {option.drawingNumber}
+                        </Typography>
+                        {option.nomenclature && (
+                          <Typography variant="caption" color="text.secondary">
+                            {option.nomenclature} {option.componentType ? `| ${option.componentType}` : ''}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search components..."
+                      onPaste={(e) => {
+                        const pastedText = e.clipboardData.getData('text');
+                        if (pastedText) {
+                          setSearchQuery(pastedText);
+                          fetchStoredComponents(selectedDate, pastedText);
+                        }
+                      }}
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon color="action" />
+                          </InputAdornment>
+                        ),
+                        endAdornment: (
+                          <>
+                            {loadingDrawings ? <CircularProgress color="inherit" size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  sx={{
+                    width: { xs: '100%', sm: '250px' },
+                    '& .MuiAutocomplete-inputRoot': {
+                      pr: '30px !important'
+                    }
+                  }}
+                />
+
+                <Button
+                  variant="outlined"
+                  size='small'
+                  color="inherit"
+                  onClick={handleClearFilter}
+                  startIcon={<ClearIcon />}
+                  sx={{ minWidth: '120px', height: '40px' }}
+                >
+                  Clear Filter
+                </Button>
+
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  onClick={handleExport}
+                  disabled={!filteredComponents.length}
+                  startIcon={<DownloadIcon />}
+                  sx={{ minWidth: '120px', height: '40px' }}
+                >
+                  Export Excel
+                </Button>
+              </Box>
+
+              {/* Results Summary */}
+              {(hasValidDate || selectedDrawingNo) && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Showing {filteredComponents.length} stored components for:{" "}
+
+                  <strong>
+                    {hasValidDate && !selectedDrawingNo && (
+                      <>{format(selectedDate, "dd/MM/yyyy")}</>
+                    )}
+
+                    {!hasValidDate && selectedDrawingNo && (
+                      <>{selectedDrawingNo}</>
+                    )}
+
+                    {hasValidDate && selectedDrawingNo && (
                       <>
-                        {loadingDrawings ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.InputProps.endAdornment}
+                        {format(selectedDate, "dd/MM/yyyy")} and {selectedDrawingNo}
                       </>
-                    ),
+                    )}
+                  </strong>
+
+                </Typography>
+              )}
+
+
+              {/* Data Table */}
+              <TableContainer>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        QRCode ID
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        PO Number
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        Project Number
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        Prod Series
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        Drawing Number
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        ID
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        Qty
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        Nomenclature
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
+                        Details
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                          <CircularProgress size={40} />
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                            Loading stored components...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : error ? (
+                      <TableRow>
+                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" color="error">
+                            {error.message || 'An error occurred'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedComponents.length > 0 ? (
+                      paginatedComponents.map((component, index) => (
+                        <Row key={`${component.qrCodeNumber}-${index}`} component={component} />
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No stored components found
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Pagination */}
+              {filteredComponents.length > 0 && (
+                <CustomPagination
+                  page={page}
+                  pageSize={rowsPerPage}
+                  totalCount={filteredComponents.length}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  onPageChange={(newPage) => setPage(newPage)}
+                  onPageSizeChange={(newSize) => {
+                    setRowsPerPage(newSize);
+                    setPage(0);
                   }}
                 />
               )}
-              sx={{
-                width: { xs: '100%', sm: '250px' },
-                '& .MuiAutocomplete-inputRoot': {
-                  pr: '30px !important'
-                }
-              }}
-            />
 
-            <Button
-              variant="outlined"
-              size='small'
-              color="inherit"
-              onClick={handleClearFilter}
-              startIcon={<ClearIcon />}
-              sx={{ minWidth: '120px', height: '40px' }}
+            </Paper>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={snackbar.severity === 'error' ? null : 6000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             >
-              Clear Filter
-            </Button>
-
-            <Button
-              variant="contained"
-              color="success"
-              size="small"
-              onClick={handleExport}
-              disabled={!filteredComponents.length}
-              startIcon={<DownloadIcon />}
-              sx={{ minWidth: '120px', height: '40px' }}
-            >
-              Export Excel
-            </Button>
-          </Box>
-
-          {/* Results Summary */}
-          {(hasValidDate || selectedDrawingNo) && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Showing {filteredComponents.length} stored components for:{" "}
-
-              <strong>
-                {hasValidDate && !selectedDrawingNo && (
-                  <>{format(selectedDate, "dd/MM/yyyy")}</>
-                )}
-
-                {!hasValidDate && selectedDrawingNo && (
-                  <>{selectedDrawingNo}</>
-                )}
-
-                {hasValidDate && selectedDrawingNo && (
-                  <>
-                    {format(selectedDate, "dd/MM/yyyy")} and {selectedDrawingNo}
-                  </>
-                )}
-              </strong>
-
-            </Typography>
-          )}
-
-
-          {/* Data Table */}
-          <TableContainer>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    QRCode ID
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    PO Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Project Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Prod Series
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Drawing Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    ID
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Qty
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Nomenclature
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Details
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <CircularProgress size={40} />
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Loading stored components...
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="error">
-                        {error.message || 'An error occurred'}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedComponents.length > 0 ? (
-                  paginatedComponents.map((component, index) => (
-                    <Row key={`${component.qrCodeNumber}-${index}`} component={component} />
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No stored components found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination */}
-          {filteredComponents.length > 0 && (
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              component="div"
-              count={filteredComponents.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                borderTop: '1px solid #e0e0e0',
-                '& .MuiTablePagination-toolbar': {
-                  minHeight: 40,
-                },
-              }}
-            />
-          )}
-        </Paper>
-
-        {/* Snackbar for notifications */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={snackbar.severity === 'error' ? null : 6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-        </>
+              <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
+          </>
         )}
       </Box>
     </LocalizationProvider>

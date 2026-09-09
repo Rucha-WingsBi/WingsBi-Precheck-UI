@@ -24,10 +24,8 @@ import {
   DialogActions,
   MenuItem,
   Select,
-  FormControl,
   Chip,
   Menu,
-  Checkbox,
   ListItemText,
   ListItemIcon,
   Stack,
@@ -48,6 +46,9 @@ import { useFetchAllDrawingNumbers, useProductionSeries, useUnits } from "../../
 import { useDebounce } from "../../hooks/useDebounce";
 import api from "../../services/api";
 import * as XLSX from "xlsx";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { CustomPagination } from "../../components/CustomPagination";
+
 
 interface DrawingNumberRow {
   parentDrawingNumbers?: string[];
@@ -295,6 +296,15 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
   const { data: seriesList = [] } = useProductionSeries();
   const { data: unitsList = [] } = useUnits();
+
+  const prodSeriesOptions = useMemo(
+    () => seriesList.map((s: any) => s.productionSeries).filter(Boolean),
+    [seriesList]
+  );
+  const unitOptions = useMemo(
+    () => unitsList.map((u: any) => u.unitName).filter(Boolean),
+    [unitsList]
+  );
 
   // Refetch latest component master data whenever page mounts
   React.useEffect(() => {
@@ -576,142 +586,43 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             />
 
             {/* Multi-Select Prod. Series Dropdown */}
-            <FormControl size="small" sx={{ flex: "0 0 140px", minWidth: 120 }}>
-              <Select
-                multiple
-                displayEmpty
-                value={selectedSeries}
-                onChange={(e) => {
-                  const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
-                  setSelectedSeries(val);
-                  setPage(0);
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) {
-                    return <Typography variant="body2" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>Prod. Series</Typography>;
-                  }
-                  return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>{`Prod. Series (${selected.length})`}</Typography>;
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 260,
-                      borderRadius: "8px",
-                      "& .MuiMenuItem-root": {
-                        minHeight: "28px !important",
-                        py: "2px !important",
-                        px: "6px !important",
-                      },
-                    },
-                  },
-                }}
-                sx={{
-                  height: 38,
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                }}
-              >
-                {seriesList.map((s) => (
-                  <MenuItem key={s.id} value={s.productionSeries}>
-                    <Checkbox size="small" checked={selectedSeries.indexOf(s.productionSeries) > -1} sx={{ p: "2px", mr: 0.75 }} />
-                    <ListItemText primary={s.productionSeries} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.82rem" }} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <MultiSelectFilter
+              label="Prod. Series"
+              value={selectedSeries}
+              options={prodSeriesOptions}
+              onChange={(val) => {
+                setSelectedSeries(val);
+                setPage(0);
+              }}
+              flex="0 0 140px"
+              minWidth={120}
+            />
 
             {/* Multi-Select Type Dropdown */}
-            <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
-              <Select
-                multiple
-                displayEmpty
-                value={selectedTypes}
-                onChange={(e) => {
-                  const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
-                  setSelectedTypes(val);
-                  setPage(0);
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) {
-                    return <Typography variant="body2" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>Type</Typography>;
-                  }
-                  return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>{`Type (${selected.length})`}</Typography>;
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 260,
-                      borderRadius: "8px",
-                      "& .MuiMenuItem-root": {
-                        minHeight: "28px !important",
-                        py: "2px !important",
-                        px: "6px !important",
-                      },
-                    },
-                  },
-                }}
-                sx={{
-                  height: 38,
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                }}
-              >
-                {ComponentTypesList.map((t) => (
-                  <MenuItem key={t} value={t}>
-                    <Checkbox size="small" checked={selectedTypes.indexOf(t) > -1} sx={{ p: "2px", mr: 0.75 }} />
-                    <ListItemText primary={t} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.82rem" }} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <MultiSelectFilter
+              label="Type"
+              value={selectedTypes}
+              options={ComponentTypesList}
+              onChange={(val) => {
+                setSelectedTypes(val);
+                setPage(0);
+              }}
+              flex="0 0 120px"
+              minWidth={100}
+            />
 
             {/* Multi-Select Unit Dropdown */}
-            <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
-              <Select
-                multiple
-                displayEmpty
-                value={selectedUnits}
-                onChange={(e) => {
-                  const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
-                  setSelectedUnits(val);
-                  setPage(0);
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) {
-                    return <Typography variant="body2" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>Unit</Typography>;
-                  }
-                  return <Typography variant="body2" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>{`Unit (${selected.length})`}</Typography>;
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 260,
-                      borderRadius: "8px",
-                      "& .MuiMenuItem-root": {
-                        minHeight: "28px !important",
-                        py: "2px !important",
-                        px: "6px !important",
-                      },
-                    },
-                  },
-                }}
-                sx={{
-                  height: 38,
-                  borderRadius: "8px",
-                  fontSize: "0.82rem",
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                }}
-              >
-                {unitsList.map((u) => (
-                  <MenuItem key={u.id} value={u.unitName}>
-                    <Checkbox size="small" checked={selectedUnits.indexOf(u.unitName) > -1} sx={{ p: "2px", mr: 0.75 }} />
-                    <ListItemText primary={u.unitName} sx={{ m: 0 }} primaryTypographyProps={{ fontSize: "0.82rem" }} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <MultiSelectFilter
+              label="Unit"
+              value={selectedUnits}
+              options={unitOptions}
+              onChange={(val) => {
+                setSelectedUnits(val);
+                setPage(0);
+              }}
+              flex="0 0 120px"
+              minWidth={100}
+            />
 
             {/* Apply Button */}
             <Button
@@ -901,13 +812,13 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow sx={{ height: 42 }}>
-                  <TableCell sx={{ width: "55px", textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>#</TableCell>
+                  <TableCell sx={{ width: "55px", textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Sr.No</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Drawing No.</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>LN Item Code</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Nomenclature</TableCell>
                   <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Type</TableCell>
                   <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Unit</TableCell>
-                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Qty/Assy</TableCell>
+                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Qty</TableCell>
                   <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>
                     <Box
                       onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
@@ -946,71 +857,17 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         )}
 
         {/* Section 3: Footer Pagination */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            py: 1,
-            px: 1.5,
-            borderTop: "1px solid #EAECF0",
+        <CustomPagination
+          page={page}
+          pageSize={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setRowsPerPage(newSize);
+            setPage(0);
           }}
-        >
-          <Stack direction="row" spacing={1.25} alignItems="center">
-            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-              Rows per page
-            </Typography>
-            <Select
-              size="small"
-              value={rowsPerPage}
-              onChange={(e) => {
-                setRowsPerPage(Number(e.target.value));
-                setPage(0);
-              }}
-              sx={{
-                height: 32,
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                borderRadius: "6px",
-                backgroundColor: "#ffffff",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              }}
-            >
-              {[10, 20, 50, 100].map((opt) => (
-                <MenuItem key={opt} value={opt} sx={{ fontSize: "0.85rem" }}>
-                  {opt}
-                </MenuItem>
-              ))}
-            </Select>
-          </Stack>
+        />
 
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography variant="body2" sx={{ color: "#344054", fontSize: "0.85rem", fontWeight: 600 }}>
-              {totalCount === 0
-                ? "0 of 0"
-                : `${page * rowsPerPage + 1}–${Math.min((page + 1) * rowsPerPage, totalCount)} of ${totalCount.toLocaleString()}`}
-            </Typography>
-
-            <Stack direction="row" spacing={0.5}>
-              <IconButton
-                size="small"
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
-              >
-                <ChevronLeftIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                disabled={(page + 1) * rowsPerPage >= totalCount || displayData.length < rowsPerPage}
-                onClick={() => setPage(page + 1)}
-                sx={{ border: "1px solid #D0D5DD", borderRadius: "6px", p: 0.5, "&:hover": { backgroundColor: "#F9FAFB" } }}
-              >
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          </Stack>
-        </Box>
       </Paper>
 
       {/* Delete Confirmation Dialog */}

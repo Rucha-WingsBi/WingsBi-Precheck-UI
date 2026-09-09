@@ -16,11 +16,13 @@ import {
   IconButton,
   Chip,
   Collapse,
-  TablePagination,
   CircularProgress,
+
   Tooltip,
   TableSortLabel,
 } from "@mui/material";
+import { CustomPagination } from "../../../components/CustomPagination";
+
 import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
@@ -1041,27 +1043,19 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
 
       {/* Pagination */}
       {filteredResults.length > 0 && (
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          component="div"
-          count={filteredResults.length}
-          rowsPerPage={rowsPerPage}
+        <CustomPagination
           page={page}
-          onPageChange={onChangePage}
-          onRowsPerPageChange={onChangeRowsPerPage}
-          sx={{
-            borderTop: "1px solid #e0e0e0",
-            flexShrink: 0,
-            "& .MuiTablePagination-toolbar": {
-              minHeight: 50,
-            },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-            {
-              fontSize: "0.8rem",
-            },
+          pageSize={rowsPerPage}
+          totalCount={filteredResults.length}
+          pageSizeOptions={[5, 10, 25, 50]}
+          onPageChange={(newPage) => onChangePage(null, newPage)}
+          onPageSizeChange={(newSize) => {
+            const fakeEvent = { target: { value: String(newSize) } } as React.ChangeEvent<HTMLInputElement>;
+            onChangeRowsPerPage(fakeEvent);
           }}
         />
       )}
+
     </Paper>
   );
 };

@@ -30,6 +30,7 @@ import {
   Tooltip,
   CircularProgress,
   Autocomplete,
+  Select,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -45,7 +46,8 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   MoreVert as MoreVertIcon,
-
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -73,6 +75,7 @@ import { UploadDropzone } from "./components/UploadDropzone";
 import { UploadSummaryCard } from "./components/UploadSummaryCard";
 import { HistoryStatCard } from "./components/HistoryStatCard";
 import { ActiveFilterChips, type FilterChipItem } from "./components/ActiveFilterChips";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 
 // --- Interfaces & Constants ---
 
@@ -319,6 +322,115 @@ const RowActionsMenu: React.FC<{
   );
 };
 
+interface CustomPaginationBarProps {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  pageSizeOptions?: number[];
+  onPageChange: (newPage: number) => void;
+  onPageSizeChange: (newPageSize: number) => void;
+  disabled?: boolean;
+}
+
+const CustomPaginationBar: React.FC<CustomPaginationBarProps> = ({
+  page,
+  pageSize,
+  totalCount,
+  pageSizeOptions = [10, 20, 50, 100],
+  onPageChange,
+  onPageSizeChange,
+  disabled = false,
+}) => {
+  const startRow = totalCount > 0 ? page * pageSize + 1 : 0;
+  const endRow = Math.min((page + 1) * pageSize, totalCount);
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        p: 0.75,
+        px: 2,
+        borderTop: "1px solid #EAECF0",
+        backgroundColor: "#ffffff",
+        flexWrap: "wrap",
+        gap: 1,
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.775rem", fontWeight: 500 }}>
+          Rows per page
+        </Typography>
+        <Select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          size="small"
+          disabled={disabled}
+          sx={{
+            height: 26,
+            fontSize: "0.725rem",
+            borderRadius: "6px",
+            "& .MuiSelect-select": { py: 0.15, px: 0.85, pr: "20px !important", fontSize: "0.725rem" },
+            "& .MuiSelect-icon": { fontSize: 16 },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#98A2B3" },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "primary.main" },
+          }}
+        >
+          {pageSizeOptions.map((opt) => (
+            <MenuItem key={opt} value={opt} sx={{ fontSize: "0.725rem" }}>
+              {opt}
+            </MenuItem>
+          ))}
+        </Select>
+      </Stack>
+
+      <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.775rem", fontWeight: 500 }}>
+          {totalCount > 0
+            ? `${startRow.toLocaleString()}–${endRow.toLocaleString()} of ${totalCount.toLocaleString()}`
+            : "0–0 of 0"}
+        </Typography>
+        <Stack direction="row" spacing={0.5}>
+          <IconButton
+            size="small"
+            disabled={page === 0 || disabled}
+            onClick={() => onPageChange(Math.max(0, page - 1))}
+            sx={{
+              width: 26,
+              height: 26,
+              p: 0,
+              color: "#344054",
+              borderRadius: "6px",
+              "&:hover": { backgroundColor: "#F2F4F7" },
+              "&.Mui-disabled": { color: "#D0D5DD" },
+            }}
+          >
+            <ChevronLeftIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            disabled={(page + 1) * pageSize >= totalCount || disabled}
+            onClick={() => onPageChange(page + 1)}
+            sx={{
+              width: 26,
+              height: 26,
+              p: 0,
+              color: "#344054",
+              borderRadius: "6px",
+              "&:hover": { backgroundColor: "#F2F4F7" },
+              "&.Mui-disabled": { color: "#D0D5DD" },
+            }}
+          >
+            <ChevronRightIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+};
+
 const ProductionOrderUpload: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -372,6 +484,11 @@ const ProductionOrderUpload: React.FC = () => {
   const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
   const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
   const { data: productionSeriesData = [] } = useProductionSeries();
+  const prodSeriesOptions = React.useMemo(() => {
+    return (productionSeriesData || [])
+      .map((item: any) => (typeof item === "string" ? item : item.productionSeries))
+      .filter(Boolean);
+  }, [productionSeriesData]);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
@@ -392,6 +509,11 @@ const ProductionOrderUpload: React.FC = () => {
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 20,
+  });
+
+  const [previewPaginationModel, setPreviewPaginationModel] = useState({
+    page: 0,
+    pageSize: 50,
   });
 
   // Handle automatic reload if coming from edit success
@@ -1331,18 +1453,18 @@ const ProductionOrderUpload: React.FC = () => {
             <Button
               variant="outlined"
               size="small"
-              startIcon={<HistoryIcon sx={{ fontSize: 18 }} />}
+              startIcon={<HistoryIcon fontSize="small" />}
               onClick={() => setView("history")}
               sx={{
-                borderColor: "#D0D5DD",
-                color: "#344054",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2,
-                py: 0.75,
+                height: 34,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
                 textTransform: "none",
-                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                backgroundColor: "background.paper",
+                "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
               }}
             >
               Upload history ({totalRowCount})
@@ -1353,17 +1475,17 @@ const ProductionOrderUpload: React.FC = () => {
                 variant="outlined"
                 size="small"
                 onClick={handleOpenExportDialog}
-                startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}
+                startIcon={<DownloadIcon fontSize="small" />}
                 sx={{
-                  borderColor: "#D0D5DD",
-                  color: "#344054",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  borderRadius: "8px",
-                  px: 2,
-                  py: 0.75,
+                  height: 34,
+                  borderRadius: "6px",
+                  borderColor: "grey.300",
+                  color: "text.secondary",
                   textTransform: "none",
-                  "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  backgroundColor: "background.paper",
+                  "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
                 }}
               >
                 Export
@@ -1371,18 +1493,17 @@ const ProductionOrderUpload: React.FC = () => {
               <Button
                 variant="contained"
                 size="small"
-                startIcon={<UploadIcon sx={{ fontSize: 18 }} />}
+                startIcon={<UploadIcon fontSize="small" />}
                 onClick={() => setView("upload")}
                 sx={{
+                  height: 34,
+                  borderRadius: "6px",
                   backgroundColor: "primary.main",
                   color: "#ffffff",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  borderRadius: "8px",
-                  px: 2.5,
-                  py: 0.75,
                   textTransform: "none",
-                  boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
                   "&:hover": { backgroundColor: "primary.dark" },
                 }}
               >
@@ -1459,15 +1580,15 @@ const ProductionOrderUpload: React.FC = () => {
               <DataGrid
                 rows={uploadTableRows}
                 columns={autosizedPreviewColumns}
-                pageSizeOptions={[10, 25, 50]}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 50 } },
-                }}
+                paginationModel={previewPaginationModel}
+                onPaginationModelChange={setPreviewPaginationModel}
+                pageSizeOptions={[10, 25, 50, 100]}
                 density="compact"
                 disableColumnFilter
                 disableColumnMenu
                 disableColumnSelector
                 disableRowSelectionOnClick
+                hideFooter
                 sx={{
                   height: "100%",
                   width: "100%",
@@ -1506,6 +1627,14 @@ const ProductionOrderUpload: React.FC = () => {
                     borderBottom: "1px solid #F2F4F7",
                   },
                 }}
+              />
+              <CustomPaginationBar
+                page={previewPaginationModel.page}
+                pageSize={previewPaginationModel.pageSize}
+                totalCount={uploadTableRows.length}
+                pageSizeOptions={[10, 25, 50, 100]}
+                onPageChange={(newPage) => setPreviewPaginationModel((prev) => ({ ...prev, page: newPage }))}
+                onPageSizeChange={(newPageSize) => setPreviewPaginationModel({ page: 0, pageSize: newPageSize })}
               />
             </Box>
           </Paper>
@@ -1604,73 +1733,23 @@ const ProductionOrderUpload: React.FC = () => {
                   />
 
                   {/* Prod. Series Dropdown */}
-                  <Autocomplete
-                    multiple
-                    disableCloseOnSelect
-                    renderTags={() => null}
-                    size="small"
-                    options={productionSeriesData}
-                    getOptionLabel={(option: any) => option.productionSeries || option.toString()}
-                    isOptionEqualToValue={(option, value) =>
-                      (option.productionSeries || option) === (value.productionSeries || value)
-                    }
+                  <MultiSelectFilter
+                    label="Prod. Series"
                     value={selectedProductionSeries}
-                    onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                    renderOption={(props, option, { selected }) => {
-                      const { key, ...optionProps } = props;
-                      return (
-                        <Box component="li" key={key} {...optionProps}>
-                          <Checkbox
-                            size="small"
-                            sx={{ mr: 0.75, p: 0.15 }}
-                            checked={selected}
-                          />
-                          {option.productionSeries || option.toString()}
-                        </Box>
-                      );
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder={selectedProductionSeries.length > 0 ? `Prod. Series · ${selectedProductionSeries.length}` : "Prod. Series"}
-                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
-                      />
-                    )}
-                    sx={{ flex: "0 0 130px", minWidth: 110 }}
+                    options={prodSeriesOptions}
+                    onChange={(newValue) => setSelectedProductionSeries(newValue)}
+                    flex="0 0 130px"
+                    minWidth={110}
                   />
 
                   {/* Status Dropdown */}
-                  <Autocomplete
-                    multiple
-                    disableCloseOnSelect
-                    renderTags={() => null}
-                    size="small"
-                    options={statusOptions}
-                    getOptionLabel={(option) => option.label}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                  <MultiSelectFilter
+                    label="Status"
                     value={selectedStatusList}
-                    onChange={(_, newValue) => setSelectedStatusList(newValue)}
-                    renderOption={(props, option, { selected }) => {
-                      const { key, ...optionProps } = props;
-                      return (
-                        <Box component="li" key={key} {...optionProps}>
-                          <Checkbox
-                            size="small"
-                            sx={{ mr: 0.75, p: 0.15 }}
-                            checked={selected}
-                          />
-                          {option.label}
-                        </Box>
-                      );
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder={selectedStatusList.length > 0 ? `Status · ${selectedStatusList.length}` : "Status"}
-                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
-                      />
-                    )}
-                    sx={{ flex: "0 0 120px", minWidth: 100 }}
+                    options={statusOptions}
+                    onChange={(newValue) => setSelectedStatusList(newValue)}
+                    flex="0 0 120px"
+                    minWidth={100}
                   />
 
                   {/* Date Range Pickers */}
@@ -1789,6 +1868,7 @@ const ProductionOrderUpload: React.FC = () => {
                 density="compact"
                 disableRowSelectionOnClick
                 getRowId={(row) => row.id || row.sr}
+                hideFooter
                 sx={{
                   flex: 1,
                   height: "100%",
@@ -1831,6 +1911,15 @@ const ProductionOrderUpload: React.FC = () => {
                   "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
                   "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
                 }}
+              />
+              <CustomPaginationBar
+                page={paginationModel.page}
+                pageSize={paginationModel.pageSize}
+                totalCount={totalRowCount}
+                pageSizeOptions={[10, 20, 50, 100]}
+                onPageChange={(newPage) => setPaginationModel((prev) => ({ ...prev, page: newPage }))}
+                onPageSizeChange={(newPageSize) => setPaginationModel({ page: 0, pageSize: newPageSize })}
+                disabled={isHistoryLoading}
               />
             </Box>
           </Paper>

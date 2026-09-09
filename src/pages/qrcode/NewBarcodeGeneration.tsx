@@ -23,8 +23,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Checkbox,
-  TablePagination,
   Paper,
   Stack,
   IconButton,
@@ -38,7 +36,10 @@ import {
   DialogActions,
   Tabs,
   Tab,
+  Checkbox,
 } from "@mui/material";
+import { CustomPagination } from "../../components/CustomPagination";
+
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   QrCode as QrCodeIcon,
@@ -2485,18 +2486,18 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                 </Table>
               </TableContainer>
 
-              <TablePagination
-                component="div"
-                count={qrcodeList.length}
+              <CustomPagination
                 page={page}
-                onPageChange={(_, newPage) => setPage(newPage)}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setRowsPerPage(parseInt(e.target.value, 10));
+                pageSize={rowsPerPage}
+                totalCount={qrcodeList.length}
+                pageSizeOptions={[5, 10, 25, 50]}
+                onPageChange={(newPage) => setPage(newPage)}
+                onPageSizeChange={(newSize) => {
+                  setRowsPerPage(newSize);
                   setPage(0);
                 }}
-                rowsPerPageOptions={[5, 10, 25, 50]}
               />
+
             </CardContent>
           </Card>
         )}

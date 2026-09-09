@@ -15,7 +15,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   Alert,
   FormControl,
   InputLabel,
@@ -26,6 +25,8 @@ import {
   Tab,
   Stack,
 } from "@mui/material";
+import { CustomPagination } from "../../components/CustomPagination";
+
 import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
@@ -472,447 +473,439 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       ) : (
         <>
 
-      {/* Tabs for RM Store & RFG Store */}
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        textColor="primary"
-        indicatorColor="primary"
-        sx={{
-          mb: 2,
-          borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-          "& .MuiTabs-indicator": {
-            backgroundColor: "primary.main",
-            height: 3,
-            borderRadius: 2,
-          },
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 600,
-            fontSize: "1rem",
-            color: "text.secondary",
-            px: 3,
-            py: 1,
-            transition: "all 0.2s ease",
-            "&:hover": {
-              color: "primary.main",
-              backgroundColor: "rgba(168, 0, 90, 0.04)",
-            },
-            "&.Mui-selected": {
-              color: "primary.main",
-            },
-          },
-        }}
-      >
-        <Tab label="RM Store" value={1} />
-        <Tab label="CFG Store" value={2} />
-      </Tabs>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Main Dashboard Layout */}
-      <Grid container spacing={2}>
-        {/* Search Filter Controls Card */}
-        <Grid item xs={12}>
-          <Paper
-            elevation={0}
+          {/* Tabs for RM Store & RFG Store */}
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            textColor="primary"
+            indicatorColor="primary"
             sx={{
-              p: { xs: 1.5, md: 2 },
-              borderRadius: "16px",
-              border: "1px solid rgba(0, 0, 0, 0.08)",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+              mb: 2,
+              borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+                borderRadius: 2,
+              },
+              "& .MuiTab-root": {
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "1rem",
+                color: "text.secondary",
+                px: 3,
+                py: 1,
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  color: "primary.main",
+                  backgroundColor: "rgba(168, 0, 90, 0.04)",
+                },
+                "&.Mui-selected": {
+                  color: "primary.main",
+                },
+              },
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
-              Filter & Search Available QR Codes
-            </Typography>
+            <Tab label="RM Store" value={1} />
+            <Tab label="CFG Store" value={2} />
+          </Tabs>
 
-            <Grid container spacing={2} alignItems="center">
-              {/* Drawing Number Autocomplete */}
-              <Grid item xs={12} sm="auto">
-                <Autocomplete
-                  size="small"
-                  sx={{ width: { xs: "100%", sm: 380 } }}
-                  options={filteredDrawingOptions}
-                  loading={isDrawingsLoading}
-                  getOptionLabel={(option) => option.drawingNumber || ""}
-                  value={selectedDrawing}
-                  onChange={(_, val) => handleDrawingChange(val)}
-                  inputValue={drawingSearchInput}
-                  onInputChange={(_, val) => setDrawingSearchInput(val)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Drawing Number"
-                      placeholder="Type to search drawing..."
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {isDrawingsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                        <Typography variant="body2" fontWeight="500">
-                          {option.drawingNumber}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {option.nomenclature} {option.lnItemCode ? `| LN: ${option.lnItemCode}` : ""}
-                        </Typography>
-                      </Box>
-                    </li>
-                  )}
-                />
-              </Grid>
+          {/* Error Alert */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
 
-              {/* LN Item Code Autocomplete */}
-              <Grid item xs={12} sm="auto">
-                <Autocomplete
-                  size="small"
-                  sx={{ width: { xs: "100%", sm: 300 } }}
-                  options={lnDrawingOptions}
-                  loading={isLnSearchLoading}
-                  getOptionLabel={(option) => {
-                    if (typeof option === "string") return option;
-                    return option.lnItemCode || "";
-                  }}
-                  value={
-                    selectedLnCode
-                      ? lnDrawingOptions.find(
-                        (d) => d.lnItemCode?.toLowerCase() === selectedLnCode.toLowerCase()
-                      ) || {
-                        id: -1,
-                        drawingNumber: "N/A",
-                        lnItemCode: selectedLnCode,
-                        nomenclature: "",
-                        isActive: true,
-                      }
-                      : null
-                  }
-                  onChange={(_, val) => {
-                    handleLnCodeChange(val ? val.lnItemCode : null);
-                  }}
-                  inputValue={lnSearchInput}
-                  onInputChange={(_, val) => setLnSearchInput(val)}
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options.slice(0, 100);
-                    const searchLower = inputValue.toLowerCase();
-                    return options
-                      .filter(
-                        (option: any) =>
-                          option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                          option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                          option.nomenclature?.toLowerCase().includes(searchLower)
-                      )
-                      .slice(0, 100);
-                  }}
-                  isOptionEqualToValue={(option, value) =>
-                    option?.lnItemCode?.toLowerCase() === value?.lnItemCode?.toLowerCase()
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="LN Item Code"
-                      placeholder="Type to search item code..."
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {isLnSearchLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                        <Typography variant="body2" fontWeight="600" color="primary.main">
-                          LN Code: {option.lnItemCode}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Drawing: {option.drawingNumber} {option.nomenclature ? `| ${option.nomenclature}` : ""}
-                        </Typography>
-                      </Box>
-                    </li>
-                  )}
-                />
-              </Grid>
-
-              {/* Production Series Autocomplete */}
-              <Grid item xs={12} sm="auto">
-                <Autocomplete
-                  size="small"
-                  sx={{ width: { xs: "100%", sm: 220 } }}
-                  options={productionSeriesList}
-                  loading={isSeriesLoading}
-                  getOptionLabel={(option) => option.productionSeries || ""}
-                  value={selectedSeries}
-                  onChange={(_, val) => setSelectedSeries(val)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Production Series"
-                      placeholder="Select series..."
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {isSeriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-
-              {/* Action Buttons Row */}
-              <Grid item xs={12} sm="auto" sx={{ display: "flex", gap: 1.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleReset}
-                  startIcon={<RefreshIcon />}
-                  sx={{ textTransform: "none", height: 40, borderRadius: "8px", minWidth: 100 }}
-                >
-                  Reset
-                </Button>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => handleSearch()}
-                  disabled={isSearchLoading || (!selectedDrawing && (!selectedLnCode || selectedLnCode.trim() === "") && !selectedSeries)}
-                  startIcon={isSearchLoading ? <CircularProgress size={18} color="inherit" /> : <SearchIcon />}
-                  sx={{ textTransform: "none", height: 40, borderRadius: "8px", px: 3, minWidth: 120 }}
-                >
-                  Search
-                </Button>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-
-        {searched ? (
-          <>
-            {/* Left Side: BOM Details */}
-            <Grid item xs={12} md={6}>
+          {/* Main Dashboard Layout */}
+          <Grid container spacing={2}>
+            {/* Search Filter Controls Card */}
+            <Grid item xs={12}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 1.5, md: 2 },
                   borderRadius: "16px",
                   border: "1px solid rgba(0, 0, 0, 0.08)",
                   boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
-                  minHeight: "450px",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                  <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
-                      Material available in store
-                    </Typography>
-
-                  </Box>
-
-                </Box>
-
-                <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
-                  <Table size="small" sx={{ width: "100%" }}>
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: "grey.50" }}>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Sr</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">LN Item Code</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Drawing Number</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Unit</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Total Qty</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Total QR Code</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {isSearchLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                            <CircularProgress size={30} />
-                          </TableCell>
-                        </TableRow>
-                      ) : bomItems.length > 0 ? (
-                        paginatedBomItems.map((row, index) => {
-                          const globalIndex = bomPage * bomRowsPerPage + index;
-                          const isSelected = selectedBomRowIndex === globalIndex;
-                          return (
-                            <TableRow
-                              key={globalIndex}
-                              hover
-                              onClick={() => handleBomRowClick(row, globalIndex)}
-                              onDoubleClick={() => handleBomRowDoubleClick(row)}
-                              sx={{
-                                cursor: "pointer",
-                                bgcolor: isSelected ? "action.hover" : "background.paper",
-                                "&:hover": {
-                                  bgcolor: "action.hover",
-                                },
-                              }}
-                            >
-                              <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{globalIndex + 1}</TableCell>
-                              <TableCell sx={{ fontWeight: 500, whiteSpace: "nowrap" }} align="center">
-                                {row.lnitemcode || row.lnItemCode || "N/A"}
-                              </TableCell>
-                              <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.drawingNumber || "N/A"}</TableCell>
-                              <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.unit || row.unitName || "N/A"}</TableCell>
-                              <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.totalQrQuantity}
-                                
-                              </TableCell>
-                              <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.totalQrNumber}
-                                
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
-                            No BOM components found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-
-                {bomItems.length > 0 && (
-                  <TablePagination
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                    component="div"
-                    count={bomItems.length}
-                    rowsPerPage={bomRowsPerPage}
-                    page={bomPage}
-                    onPageChange={(_, newPage) => setBomPage(newPage)}
-                    onRowsPerPageChange={(event) => {
-                      setBomRowsPerPage(parseInt(event.target.value, 10));
-                      setBomPage(0);
-                    }}
-                    sx={{
-                      borderTop: "1px solid rgba(0, 0, 0, 0.08)",
-                    }}
-                  />
-                )}
-              </Paper>
-            </Grid>
-
-            {/* Right Side: Available QR Codes */}
-            <Grid item xs={12} md={6}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  borderRadius: "16px",
-                  border: "1px solid rgba(0, 0, 0, 0.08)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
-                  minHeight: "450px",
-                  display: "flex",
-                  flexDirection: "column",
                 }}
               >
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
-                  Available QR Codes
+                  Filter & Search Available QR Codes
                 </Typography>
 
-                <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
-                  <Table size="small" sx={{ width: "100%" }}>
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: "grey.50" }}>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">QR Code Number</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">ID</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Qty</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Status</TableCell>
-                        <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Location</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {isSearchLoading || isQrLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                            <CircularProgress size={30} />
-                          </TableCell>
-                        </TableRow>
-                      ) : paginatedQrCodes.length > 0 ? (
-                        paginatedQrCodes.map((row, index) => (
-                          <TableRow key={index} hover sx={{ bgcolor: "background.paper" }}>
-                            <TableCell sx={{ fontWeight: 550, whiteSpace: "nowrap" }} align="center">
-                              {row.qrCodeNumber || "N/A"}
-                            </TableCell>
-                            <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.id || "N/A"}</TableCell>
-                            <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{formatQuantity(row.qty)}</TableCell>
-                            <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.status || "N/A"}</TableCell>
-                            <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.location || "N/A"}</TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
-                            {overrideQrCodes === null ? "Double-click a material row to view available QR codes" : "No components found"}
-                          </TableCell>
-                        </TableRow>
+                <Grid container spacing={2} alignItems="center">
+                  {/* Drawing Number Autocomplete */}
+                  <Grid item xs={12} sm="auto">
+                    <Autocomplete
+                      size="small"
+                      sx={{ width: { xs: "100%", sm: 380 } }}
+                      options={filteredDrawingOptions}
+                      loading={isDrawingsLoading}
+                      getOptionLabel={(option) => option.drawingNumber || ""}
+                      value={selectedDrawing}
+                      onChange={(_, val) => handleDrawingChange(val)}
+                      inputValue={drawingSearchInput}
+                      onInputChange={(_, val) => setDrawingSearchInput(val)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Drawing Number"
+                          placeholder="Type to search drawing..."
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {isDrawingsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
                       )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      renderOption={(props, option) => (
+                        <li {...props} key={option.id}>
+                          <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
+                            <Typography variant="body2" fontWeight="500">
+                              {option.drawingNumber}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.nomenclature} {option.lnItemCode ? `| LN: ${option.lnItemCode}` : ""}
+                            </Typography>
+                          </Box>
+                        </li>
+                      )}
+                    />
+                  </Grid>
 
-                {displayQrCodes.length > 0 && (
-                  <TablePagination
-                    rowsPerPageOptions={[5, 10, 25, 50]}
-                    component="div"
-                    count={displayQrCodes.length}
-                    rowsPerPage={qrRowsPerPage}
-                    page={qrPage}
-                    onPageChange={(_, newPage) => setQrPage(newPage)}
-                    onRowsPerPageChange={(event) => {
-                      setQrRowsPerPage(parseInt(event.target.value, 10));
-                      setQrPage(0);
-                    }}
-                    sx={{
-                      borderTop: "1px solid rgba(0, 0, 0, 0.08)",
-                    }}
-                  />
-                )}
+                  {/* LN Item Code Autocomplete */}
+                  <Grid item xs={12} sm="auto">
+                    <Autocomplete
+                      size="small"
+                      sx={{ width: { xs: "100%", sm: 300 } }}
+                      options={lnDrawingOptions}
+                      loading={isLnSearchLoading}
+                      getOptionLabel={(option) => {
+                        if (typeof option === "string") return option;
+                        return option.lnItemCode || "";
+                      }}
+                      value={
+                        selectedLnCode
+                          ? lnDrawingOptions.find(
+                            (d) => d.lnItemCode?.toLowerCase() === selectedLnCode.toLowerCase()
+                          ) || {
+                            id: -1,
+                            drawingNumber: "N/A",
+                            lnItemCode: selectedLnCode,
+                            nomenclature: "",
+                            isActive: true,
+                          }
+                          : null
+                      }
+                      onChange={(_, val) => {
+                        handleLnCodeChange(val ? val.lnItemCode : null);
+                      }}
+                      inputValue={lnSearchInput}
+                      onInputChange={(_, val) => setLnSearchInput(val)}
+                      filterOptions={(options, { inputValue }) => {
+                        if (!inputValue) return options.slice(0, 100);
+                        const searchLower = inputValue.toLowerCase();
+                        return options
+                          .filter(
+                            (option: any) =>
+                              option.lnItemCode?.toLowerCase().includes(searchLower) ||
+                              option.drawingNumber?.toLowerCase().includes(searchLower) ||
+                              option.nomenclature?.toLowerCase().includes(searchLower)
+                          )
+                          .slice(0, 100);
+                      }}
+                      isOptionEqualToValue={(option, value) =>
+                        option?.lnItemCode?.toLowerCase() === value?.lnItemCode?.toLowerCase()
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="LN Item Code"
+                          placeholder="Type to search item code..."
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {isLnSearchLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      renderOption={(props, option) => (
+                        <li {...props} key={option.id}>
+                          <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
+                            <Typography variant="body2" fontWeight="600" color="primary.main">
+                              LN Code: {option.lnItemCode}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Drawing: {option.drawingNumber} {option.nomenclature ? `| ${option.nomenclature}` : ""}
+                            </Typography>
+                          </Box>
+                        </li>
+                      )}
+                    />
+                  </Grid>
+
+                  {/* Production Series Autocomplete */}
+                  <Grid item xs={12} sm="auto">
+                    <Autocomplete
+                      size="small"
+                      sx={{ width: { xs: "100%", sm: 220 } }}
+                      options={productionSeriesList}
+                      loading={isSeriesLoading}
+                      getOptionLabel={(option) => option.productionSeries || ""}
+                      value={selectedSeries}
+                      onChange={(_, val) => setSelectedSeries(val)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Production Series"
+                          placeholder="Select series..."
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {isSeriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  {/* Action Buttons Row */}
+                  <Grid item xs={12} sm="auto" sx={{ display: "flex", gap: 1.5 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleReset}
+                      startIcon={<RefreshIcon />}
+                      sx={{ textTransform: "none", height: 40, borderRadius: "8px", minWidth: 100 }}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => handleSearch()}
+                      disabled={isSearchLoading || (!selectedDrawing && (!selectedLnCode || selectedLnCode.trim() === "") && !selectedSeries)}
+                      startIcon={isSearchLoading ? <CircularProgress size={18} color="inherit" /> : <SearchIcon />}
+                      sx={{ textTransform: "none", height: 40, borderRadius: "8px", px: 3, minWidth: 120 }}
+                    >
+                      Search
+                    </Button>
+                  </Grid>
+                </Grid>
               </Paper>
             </Grid>
-          </>
-        ) : (
-          <Grid item xs={12}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 6,
-                borderRadius: "16px",
-                border: "1px solid rgba(0, 0, 0, 0.08)",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
-                textAlign: "center",
-                color: "text.secondary",
-              }}
-            >
-              Please select Drawing Number/LN Item Code and click Search to display available QR codes.
-            </Paper>
+
+            {searched ? (
+              <>
+                {/* Left Side: BOM Details */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      borderRadius: "16px",
+                      border: "1px solid rgba(0, 0, 0, 0.08)",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                      minHeight: "450px",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                      <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+                          Material available in store
+                        </Typography>
+
+                      </Box>
+
+                    </Box>
+
+                    <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
+                      <Table size="small" sx={{ width: "100%" }}>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "grey.50" }}>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Sr</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">LN Item Code</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Drawing Number</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Unit</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Total Qty</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Total QR Code</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {isSearchLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                <CircularProgress size={30} />
+                              </TableCell>
+                            </TableRow>
+                          ) : bomItems.length > 0 ? (
+                            paginatedBomItems.map((row, index) => {
+                              const globalIndex = bomPage * bomRowsPerPage + index;
+                              const isSelected = selectedBomRowIndex === globalIndex;
+                              return (
+                                <TableRow
+                                  key={globalIndex}
+                                  hover
+                                  onClick={() => handleBomRowClick(row, globalIndex)}
+                                  onDoubleClick={() => handleBomRowDoubleClick(row)}
+                                  sx={{
+                                    cursor: "pointer",
+                                    bgcolor: isSelected ? "action.hover" : "background.paper",
+                                    "&:hover": {
+                                      bgcolor: "action.hover",
+                                    },
+                                  }}
+                                >
+                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{globalIndex + 1}</TableCell>
+                                  <TableCell sx={{ fontWeight: 500, whiteSpace: "nowrap" }} align="center">
+                                    {row.lnitemcode || row.lnItemCode || "N/A"}
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.drawingNumber || "N/A"}</TableCell>
+                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.unit || row.unitName || "N/A"}</TableCell>
+                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.totalQrQuantity}
+
+                                  </TableCell>
+                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.totalQrNumber}
+
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                                No BOM components found.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    {bomItems.length > 0 && (
+                      <CustomPagination
+                        page={bomPage}
+                        pageSize={bomRowsPerPage}
+                        totalCount={bomItems.length}
+                        pageSizeOptions={[5, 10, 25, 50]}
+                        onPageChange={(newPage) => setBomPage(newPage)}
+                        onPageSizeChange={(newSize) => {
+                          setBomRowsPerPage(newSize);
+                          setBomPage(0);
+                        }}
+                      />
+                    )}
+                  </Paper>
+                </Grid>
+
+                {/* Right Side: Available QR Codes */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      borderRadius: "16px",
+                      border: "1px solid rgba(0, 0, 0, 0.08)",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                      minHeight: "450px",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
+                      Available QR Codes
+                    </Typography>
+
+                    <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
+                      <Table size="small" sx={{ width: "100%" }}>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "grey.50" }}>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">QR Code Number</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">ID</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Qty</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Location</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {isSearchLoading || isQrLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                                <CircularProgress size={30} />
+                              </TableCell>
+                            </TableRow>
+                          ) : paginatedQrCodes.length > 0 ? (
+                            paginatedQrCodes.map((row, index) => (
+                              <TableRow key={index} hover sx={{ bgcolor: "background.paper" }}>
+                                <TableCell sx={{ fontWeight: 550, whiteSpace: "nowrap" }} align="center">
+                                  {row.qrCodeNumber || "N/A"}
+                                </TableCell>
+                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.id || "N/A"}</TableCell>
+                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{formatQuantity(row.qty)}</TableCell>
+                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.status || "N/A"}</TableCell>
+                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.location || "N/A"}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                                {overrideQrCodes === null ? "Double-click a material row to view available QR codes" : "No components found"}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    {displayQrCodes.length > 0 && (
+                      <CustomPagination
+                        page={qrPage}
+                        pageSize={qrRowsPerPage}
+                        totalCount={displayQrCodes.length}
+                        pageSizeOptions={[5, 10, 25, 50]}
+                        onPageChange={(newPage) => setQrPage(newPage)}
+                        onPageSizeChange={(newSize) => {
+                          setQrRowsPerPage(newSize);
+                          setQrPage(0);
+                        }}
+                      />
+                    )}
+                  </Paper>
+                </Grid>
+              </>
+            ) : (
+              <Grid item xs={12}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 6,
+                    borderRadius: "16px",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                    textAlign: "center",
+                    color: "text.secondary",
+                  }}
+                >
+                  Please select Drawing Number/LN Item Code and click Search to display available QR codes.
+                </Paper>
+              </Grid>
+            )}
           </Grid>
-        )}
-      </Grid>
-      </>
+        </>
       )}
     </Box>
   );

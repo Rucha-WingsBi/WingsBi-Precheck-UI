@@ -13,10 +13,22 @@ import {
   Chip,
   CircularProgress,
   Backdrop,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Checkbox,
+  FormControl,
+  IconButton,
 } from "@mui/material";
 import {
   FileDownload as DownloadIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
+import * as XLSX from "xlsx";
 import { useForm } from "react-hook-form";
 import type { RootState, AppDispatch } from "../../store/store";
 import {
@@ -31,6 +43,24 @@ import TreeTable from "../../components/TreeTable/TreeTable";
 import ViewBOM from "./ViewBOM";
 import { SopFilterCard } from "./components/SopFilterCard";
 import { NodeDetailsCard } from "./components/NodeDetailsCard";
+
+const ALL_SOP_EXPORT_COLUMNS = [
+  { key: "level", label: "Level" },
+  { key: "findNo", label: "Position No" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "quantity", label: "Qty/Assy" },
+  { key: "unit", label: "Unit" },
+  { key: "componentType", label: "Component Type" },
+  { key: "idNumber", label: "ID No" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "remarks", label: "Remarks" },
+  { key: "assemblyNumber", label: "Assembly No" },
+  { key: "build", label: "Build Number" },
+  { key: "snag_Sheet_No", label: "Snag Sheet Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+];
 
 interface FormData {
   prodSeriesId: number;
@@ -550,6 +580,83 @@ const ViewSOP: React.FC = () => {
     }
   }, [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText]);
 
+  // Export Options Dialog State
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
+    ALL_SOP_EXPORT_COLUMNS.map((c) => c.key)
+  );
+
+  const handleOpenExportDialog = useCallback(() => {
+    if (!assemblyData || assemblyData.length === 0) {
+      setSuccessMessage("No data available to export. Please perform a search first.");
+      return;
+    }
+    setExportMode("all");
+    setSelectedExportColumns(ALL_SOP_EXPORT_COLUMNS.map((c) => c.key));
+    setExportDialogOpen(true);
+  }, [assemblyData]);
+
+  const handleToggleColumn = (colKey: string) => {
+    if (selectedExportColumns.includes(colKey)) {
+      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
+    } else {
+      setSelectedExportColumns([...selectedExportColumns, colKey]);
+    }
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_SOP_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_SOP_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleConfirmExportData = async () => {
+    setExportDialogOpen(false);
+    if (exportMode === "all") {
+      await executeExport();
+    } else {
+      try {
+        if (!treeData || treeData.length === 0) {
+          setSuccessMessage("No records available for export.");
+          return;
+        }
+
+        const formattedData = treeData.map((item: any, idx: number) => {
+          const row: any = { "Sr No": idx + 1 };
+          ALL_SOP_EXPORT_COLUMNS.forEach((col) => {
+            if (selectedExportColumns.includes(col.key)) {
+              let val = item[col.key];
+              if (col.key === "componentType" && !val) {
+                val =
+                  item.componentType ||
+                  item.itemType ||
+                  item.type ||
+                  item.component_Type ||
+                  item.drawingType ||
+                  (item.hasChildren ? "Assembly" : "Manufactured");
+              }
+              row[col.label] = val ?? "-";
+            }
+          });
+          return row;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Assembly_Tree");
+        XLSX.writeFile(workbook, `SOP_Assembly_Tree_${Date.now()}.xlsx`);
+
+        setSuccessMessage("Export downloaded successfully.");
+      } catch (err: any) {
+        console.error("Export error:", err);
+        setSuccessMessage("Failed to download export report.");
+      }
+    }
+  };
+
   const executeReset = useCallback(() => {
     reset({
       prodSeriesId: 0,
@@ -638,25 +745,25 @@ const ViewSOP: React.FC = () => {
           <Button
             variant="outlined"
             size="small"
-            onClick={executeExport}
+            onClick={handleOpenExportDialog}
             disabled={isExporting || !assemblyData || assemblyData.length === 0}
             startIcon={
               isExporting ? (
                 <CircularProgress size={16} color="inherit" />
               ) : (
-                <DownloadIcon sx={{ fontSize: 18 }} />
+                <DownloadIcon fontSize="small" />
               )
             }
             sx={{
-              borderColor: "#D0D5DD",
-              color: "#344054",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              borderRadius: "8px",
-              px: 1.75,
-              py: 0.6,
+              height: 34,
+              borderRadius: "6px",
+              borderColor: "grey.300",
+              color: "text.secondary",
               textTransform: "none",
-              "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              backgroundColor: "background.paper",
+              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
             }}
           >
             Export tree
@@ -729,7 +836,7 @@ const ViewSOP: React.FC = () => {
             executeReset={executeReset}
             isLoading={isLoading}
             isSearchAndResetEnabled={isSearchAndResetEnabled}
-            executeExport={executeExport}
+            executeExport={handleOpenExportDialog}
             isExporting={isExporting}
             hasAssemblyData={assemblyData && assemblyData.length > 0}
           />
@@ -874,6 +981,152 @@ const ViewSOP: React.FC = () => {
       >
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      {/* Export Options Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => !isExporting && setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 700,
+            color: "#101828",
+            fontSize: "1.1rem",
+            pb: 1,
+          }}
+        >
+          Export Assembly Tree
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isExporting}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns(ALL_SOP_EXPORT_COLUMNS.map((c) => c.key));
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === ALL_SOP_EXPORT_COLUMNS.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < ALL_SOP_EXPORT_COLUMNS.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === ALL_SOP_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${ALL_SOP_EXPORT_COLUMNS.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {ALL_SOP_EXPORT_COLUMNS.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isExporting}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+            onClick={handleConfirmExportData}
+            disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

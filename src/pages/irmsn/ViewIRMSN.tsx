@@ -15,7 +15,6 @@ import {
   CircularProgress,
   Button,
   FormControl,
-  Autocomplete,
   Alert,
   Checkbox,
   InputAdornment,
@@ -27,6 +26,14 @@ import {
   Stack,
   Select,
   MenuItem as SelectMenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Grid,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -36,10 +43,15 @@ import {
   Edit as EditIcon,
   FileDownload as DownloadIcon,
   Add as AddIcon,
-  KeyboardArrowDown as ArrowDownIcon,
   Article as ArticleIcon,
   MoreVert as MoreVertIcon,
+  Close as CloseIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
+import { CustomPagination } from "../../components/CustomPagination";
+
+import * as XLSX from "xlsx";
 import {
   fetchViewIrMsn,
   clearTables,
@@ -55,6 +67,22 @@ import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { format, addDays } from "date-fns";
 import api from "../../services/api";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+
+const ALL_IRMSN_EXPORT_COLUMNS = [
+  { key: "displayNumber", label: "IR/MSN No." },
+  { key: "recordType", label: "Type" },
+  { key: "orderNumber", label: "PO Number" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumberIdName", label: "Drawing No." },
+  { key: "idNumberRange", label: "ID Number" },
+  { key: "mrirNumber", label: "MRIR" },
+  { key: "createdDate", label: "Date" },
+  { key: "userName", label: "UserName" },
+  { key: "departmentName", label: "Department" },
+  { key: "stage", label: "Stage" },
+  { key: "buildNumber", label: "Build No" },
+];
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
 const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -86,9 +114,36 @@ const ViewIRMSN: React.FC = () => {
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(20);
 
-  // Export Menu State
+  // Export Menu & Options Dialog State
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [exportReportType, setExportReportType] = useState<"IR" | "MSN" | "BOTH">("BOTH");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+
+  const handleOpenExportDialog = (type: "IR" | "MSN" | "BOTH" = "BOTH") => {
+    setExportReportType(type);
+    setExportMode("all");
+    setSelectedExportColumns(ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key));
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    if (selectedExportColumns.includes(colKey)) {
+      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
+    } else {
+      setSelectedExportColumns([...selectedExportColumns, colKey]);
+    }
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_IRMSN_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
 
   // Row Action Menu State
   const [actionMenuAnchor, setActionMenuAnchor] = useState<{
@@ -104,6 +159,15 @@ const ViewIRMSN: React.FC = () => {
   // TanStack Query Hooks
   const { data: departments = [] } = useDepartments();
   const { data: productionSeries = [] } = useProductionSeries();
+
+  const prodSeriesOptions = useMemo(
+    () => productionSeries.map((p: any) => (typeof p === "string" ? p : p.productionSeries)).filter(Boolean),
+    [productionSeries]
+  );
+  const deptOptions = useMemo(
+    () => departments.map((d: any) => ({ id: d.id, label: d.name })),
+    [departments]
+  );
 
   const isLoadingCommon = !departments.length || !productionSeries.length;
 
@@ -340,6 +404,68 @@ const ViewIRMSN: React.FC = () => {
     }
   };
 
+  const handleConfirmExportData = async () => {
+    setExportDialogOpen(false);
+    if (exportMode === "all") {
+      await executeExport(exportReportType);
+    } else {
+      setIsExporting(true);
+      try {
+        let exportItems = displayList;
+        if (exportReportType !== "BOTH") {
+          exportItems = displayList.filter((item: any) => item.recordType === exportReportType);
+        }
+
+        if (exportItems.length === 0) {
+          setStatusMessage({ type: "info", message: "No records available for export." });
+          return;
+        }
+
+        const formattedData = exportItems.map((item: any, idx: number) => {
+          const row: any = { "Sr No": idx + 1 };
+          ALL_IRMSN_EXPORT_COLUMNS.forEach((col) => {
+            if (selectedExportColumns.includes(col.key)) {
+              let val = item[col.key];
+              if (col.key === "createdDate" && val) {
+                try {
+                  val = new Date(val).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                } catch {
+                  val = item[col.key];
+                }
+              }
+              row[col.label] = val ?? "-";
+            }
+          });
+          return row;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, `${exportReportType}_Report`);
+        XLSX.writeFile(workbook, `${exportReportType}_Report_${Date.now()}.xlsx`);
+
+        setStatusMessage({
+          type: "success",
+          message: "Export downloaded successfully.",
+        });
+      } catch (err: any) {
+        console.error("Export error:", err);
+        setStatusMessage({
+          type: "error",
+          message: "Failed to download export report.",
+        });
+      } finally {
+        setIsExporting(false);
+      }
+    }
+  };
+
   const isFilterApplied = !!(
     drawingOrLnSearch.trim() ||
     selectedDepartments.length > 0 ||
@@ -412,26 +538,25 @@ const ViewIRMSN: React.FC = () => {
             <Button
               variant="outlined"
               size="small"
-              onClick={handleExportClick}
+              onClick={() => handleOpenExportDialog("BOTH")}
               disabled={isExporting || !isFilterApplied}
               startIcon={
                 isExporting ? (
                   <CircularProgress size={16} color="inherit" />
                 ) : (
-                  <DownloadIcon sx={{ fontSize: 18 }} />
+                  <DownloadIcon fontSize="small" />
                 )
               }
-              endIcon={<ArrowDownIcon sx={{ fontSize: 16 }} />}
               sx={{
-                borderColor: "#D0D5DD",
-                color: "#344054",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2,
-                py: 0.75,
+                height: 34,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
                 textTransform: "none",
-                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                backgroundColor: "background.paper",
+                "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
               }}
             >
               Export
@@ -456,7 +581,10 @@ const ViewIRMSN: React.FC = () => {
               }}
             >
               <MenuItem
-                onClick={() => executeExport("IR")}
+                onClick={() => {
+                  handleExportClose();
+                  handleOpenExportDialog("IR");
+                }}
                 sx={{
                   borderRadius: "4px",
                   py: 0.4,
@@ -472,7 +600,10 @@ const ViewIRMSN: React.FC = () => {
                 <ListItemText primary="Export IR Report" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
               </MenuItem>
               <MenuItem
-                onClick={() => executeExport("MSN")}
+                onClick={() => {
+                  handleExportClose();
+                  handleOpenExportDialog("MSN");
+                }}
                 sx={{
                   borderRadius: "4px",
                   py: 0.4,
@@ -493,18 +624,17 @@ const ViewIRMSN: React.FC = () => {
             <Button
               variant="contained"
               size="small"
-              startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+              startIcon={<AddIcon fontSize="small" />}
               onClick={() => navigate("/irmsn/generate")}
               sx={{
+                height: 34,
+                borderRadius: "6px",
                 backgroundColor: "primary.main",
                 color: "#ffffff",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2.5,
-                py: 0.75,
                 textTransform: "none",
-                boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
             >
@@ -589,146 +719,24 @@ const ViewIRMSN: React.FC = () => {
               />
 
               {/* Production Series Filter */}
-              <FormControl
-                sx={{ flex: "0 0 130px", minWidth: 110 }}
-                size="small"
-              >
-                <Autocomplete
-                  multiple
-                  size="small"
-                  options={productionSeries}
-                  disableCloseOnSelect
-                  renderTags={() => null}
-                  getOptionLabel={(option: any) =>
-                    typeof option === "string" ? option : option.productionSeries || ""
-                  }
-                  value={selectedProductionSeries}
-                  loading={isLoadingCommon}
-                  onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  renderOption={(props, option, { selected }) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box
-                        component="li"
-                        key={key}
-                        {...optionProps}
-                        sx={{
-                          py: "4px !important",
-                          px: "8px !important",
-                          minHeight: "28px !important",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        <Checkbox
-                          icon={icon}
-                          checkedIcon={checkedIcon}
-                          sx={{ p: "2px", mr: 0.5 }}
-                          checked={selected}
-                          size="small"
-                        />
-                        <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                          {option.productionSeries}
-                        </Typography>
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={`Prod. Series `}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: "8px",
-                          fontSize: "0.85rem",
-                        },
-                      }}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {isLoadingCommon ? (
-                              <CircularProgress color="inherit" size={16} />
-                            ) : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </FormControl>
+              <MultiSelectFilter
+                label="Prod. Series"
+                value={selectedProductionSeries}
+                options={prodSeriesOptions}
+                onChange={(newValue) => setSelectedProductionSeries(newValue)}
+                flex="0 0 130px"
+                minWidth={110}
+              />
 
               {/* Department / Type Multi-select */}
-              <FormControl
-                sx={{ flex: "0 0 130px", minWidth: 110 }}
-                size="small"
-              >
-                <Autocomplete
-                  multiple
-                  size="small"
-                  options={departments}
-                  disableCloseOnSelect
-                  renderTags={() => null}
-                  getOptionLabel={(option: any) =>
-                    typeof option === "string" ? option : option.name || ""
-                  }
-                  value={selectedDepartments}
-                  loading={isLoadingCommon}
-                  onChange={(_, newValue) => setSelectedDepartments(newValue)}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  renderOption={(props, option, { selected }) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box
-                        component="li"
-                        key={key}
-                        {...optionProps}
-                        sx={{
-                          py: "4px !important",
-                          px: "8px !important",
-                          minHeight: "28px !important",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        <Checkbox
-                          icon={icon}
-                          checkedIcon={checkedIcon}
-                          sx={{ p: "2px", mr: 0.5 }}
-                          checked={selected}
-                          size="small"
-                        />
-                        <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                          {option.name}
-                        </Typography>
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={`Dept Type`}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: "8px",
-                          fontSize: "0.85rem",
-                        },
-                      }}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {isLoadingCommon ? (
-                              <CircularProgress color="inherit" size={16} />
-                            ) : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        ),
-                      }}
-                    />
-                  )}
-                />
-              </FormControl>
+              <MultiSelectFilter
+                label="Dept Type"
+                value={selectedDepartments}
+                options={deptOptions}
+                onChange={(newValue) => setSelectedDepartments(newValue)}
+                flex="0 0 130px"
+                minWidth={110}
+              />
 
               {/* Document Type Selector (All / IR / MSN) */}
               <FormControl size="small" sx={{ flex: "0 0 140px", minWidth: 120 }}>
@@ -1300,98 +1308,22 @@ const ViewIRMSN: React.FC = () => {
           </TableContainer>
 
           {/* Section 3: Pagination Footer */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              p: 1.5,
-              px: 2,
-              borderTop: "1px solid #EAECF0",
-              backgroundColor: "#ffffff",
-              flexWrap: "wrap",
-              gap: 1,
+          <CustomPagination
+            page={page}
+            pageSize={rowsPerPage}
+            totalCount={totalCount}
+            disabled={loading}
+            onPageChange={(newPage) => {
+              setPage(newPage);
+              executeFetch(newPage, rowsPerPage);
             }}
-          >
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem" }}>
-                Rows per page
-              </Typography>
-              <Select
-                value={rowsPerPage}
-                onChange={(e) => {
-                  const newRowsPerPage = Number(e.target.value);
-                  setRowsPerPage(newRowsPerPage);
-                  setPage(0);
-                  executeFetch(0, newRowsPerPage);
-                }}
-                size="small"
-                sx={{
-                  height: 32,
-                  fontSize: "0.85rem",
-                  borderRadius: "6px",
-                  "& .MuiSelect-select": { py: 0.5, px: 1 },
-                }}
-              >
-                <SelectMenuItem value={10}>10</SelectMenuItem>
-                <SelectMenuItem value={20}>20</SelectMenuItem>
-                <SelectMenuItem value={50}>50</SelectMenuItem>
-                <SelectMenuItem value={100}>100</SelectMenuItem>
-              </Select>
-            </Stack>
+            onPageSizeChange={(newRowsPerPage) => {
+              setRowsPerPage(newRowsPerPage);
+              setPage(0);
+              executeFetch(0, newRowsPerPage);
+            }}
+          />
 
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem" }}>
-                {totalCount > 0
-                  ? `${startRow}–${endRow} of ${totalCount}`
-                  : "0–0 of 0"}
-              </Typography>
-              <Stack direction="row" spacing={0.5}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  disabled={page === 0 || loading}
-                  onClick={() => {
-                    const newPage = Math.max(0, page - 1);
-                    setPage(newPage);
-                    executeFetch(newPage, rowsPerPage);
-                  }}
-                  sx={{
-                    minWidth: 32,
-                    width: 32,
-                    height: 32,
-                    p: 0,
-                    borderColor: "#D0D5DD",
-                    color: "#344054",
-                    borderRadius: "6px",
-                  }}
-                >
-                  ‹
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  disabled={(page + 1) * rowsPerPage >= totalCount || loading}
-                  onClick={() => {
-                    const newPage = page + 1;
-                    setPage(newPage);
-                    executeFetch(newPage, rowsPerPage);
-                  }}
-                  sx={{
-                    minWidth: 32,
-                    width: 32,
-                    height: 32,
-                    p: 0,
-                    borderColor: "#D0D5DD",
-                    color: "#344054",
-                    borderRadius: "6px",
-                  }}
-                >
-                  ›
-                </Button>
-              </Stack>
-            </Stack>
-          </Box>
         </Paper>
         {/* Row Action Menu */}
         <Menu
@@ -1449,6 +1381,152 @@ const ViewIRMSN: React.FC = () => {
             />
           </MenuItem>
         </Menu>
+
+        {/* Export Options Dialog */}
+        <Dialog
+          open={exportDialogOpen}
+          onClose={() => !isExporting && setExportDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { borderRadius: "16px", p: 1 },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontWeight: 700,
+              color: "#101828",
+              fontSize: "1.1rem",
+              pb: 1,
+            }}
+          >
+            Export {exportReportType === "BOTH" ? "IR / MSN Reports" : `${exportReportType} Report`}
+            <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isExporting}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent dividers sx={{ py: 2 }}>
+            <FormControl component="fieldset" sx={{ width: "100%" }}>
+              <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+                Choose Export Option:
+              </Typography>
+
+              <RadioGroup
+                value={exportMode}
+                onChange={(e) => {
+                  const newMode = e.target.value as "all" | "custom";
+                  setExportMode(newMode);
+                  if (newMode === "custom") {
+                    setSelectedExportColumns(ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key));
+                  }
+                }}
+                sx={{ mb: 2 }}
+              >
+                <FormControlLabel
+                  value="all"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+                />
+                <FormControlLabel
+                  value="custom"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+                />
+              </RadioGroup>
+
+              {exportMode === "custom" && (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: "12px",
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={selectedExportColumns.length === ALL_IRMSN_EXPORT_COLUMNS.length}
+                          indeterminate={
+                            selectedExportColumns.length > 0 &&
+                            selectedExportColumns.length < ALL_IRMSN_EXPORT_COLUMNS.length
+                          }
+                          onChange={handleToggleSelectAllColumns}
+                          sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" fontWeight="700">
+                          {selectedExportColumns.length === ALL_IRMSN_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                        </Typography>
+                      }
+                    />
+                    <Chip
+                      label={`${selectedExportColumns.length} / ${ALL_IRMSN_EXPORT_COLUMNS.length} selected`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderColor: "primary.main", color: "primary.main" }}
+                    />
+                  </Box>
+
+                  <Grid container spacing={1}>
+                    {ALL_IRMSN_EXPORT_COLUMNS.map((col) => (
+                      <Grid item xs={6} sm={4} key={col.key}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedExportColumns.includes(col.key)}
+                              onChange={() => handleToggleColumn(col.key)}
+                              sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                            />
+                          }
+                          label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+            </FormControl>
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              onClick={() => setExportDialogOpen(false)}
+              disabled={isExporting}
+              sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+              onClick={handleConfirmExportData}
+              disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+              sx={{
+                minWidth: 110,
+                fontWeight: 600,
+                borderRadius: "8px",
+                textTransform: "none",
+                backgroundColor: "primary.main",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
+            >
+              {isExporting ? "Exporting..." : "Export"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );

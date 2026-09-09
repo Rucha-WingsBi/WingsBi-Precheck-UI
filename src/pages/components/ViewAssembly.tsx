@@ -152,9 +152,8 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       setSelectedDrawingOption(newValue);
       if (newValue) {
         const optionLabel = newValue.drawingNumber
-          ? `${newValue.drawingNumber}${
-              newValue.lnItemCode ? ` - ${newValue.lnItemCode}` : ""
-            }`
+          ? `${newValue.drawingNumber}${newValue.lnItemCode ? ` - ${newValue.lnItemCode}` : ""
+          }`
           : "";
         setDrawingInput(optionLabel);
         setLnInput(newValue.lnItemCode || "");
@@ -609,503 +608,502 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       ) : (
         <>
 
-      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
-        <form onSubmit={handleSearch}>
-          <Grid container spacing={2} alignItems="center" sx={{ maxWidth: 950 }}>
-            <Grid item xs={12} sm={6} md={6}>
-              <Autocomplete
-                size="small"
-                value={selectedDrawingOption}
-                onChange={handleDrawingChange}
-                inputValue={drawingInput}
-                onInputChange={handleDrawingInputChange}
-                options={drawingOptions}
-                 getOptionLabel={(option) =>
-                  typeof option === "string"
-                    ? option
-                    : option.drawingNumber
-                      ? `${option.drawingNumber}${
-                          option.lnItemCode ? ` - ${option.lnItemCode}` : ""
-                        }`
-                      : ""
-                }
-                isOptionEqualToValue={(option, value) => option?.id === value?.id}
-                loading={isSearchingOptions}
-                freeSolo
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Assembly Number / LN Item Code"
-                    placeholder="Search assembly number or LN item..."
-                    sx={{
-                      "& .MuiInputBase-root": {
-                        height: 40,
-                        paddingTop: "0px !important",
-                        paddingBottom: "0px !important",
-                      },
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#d1d5db",
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#A8005A",
-                      },
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isSearchingOptions ? (
-                            <CircularProgress color="inherit" size={18} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
+          <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
+            <form onSubmit={handleSearch}>
+              <Grid container spacing={2} alignItems="center" sx={{ maxWidth: 950 }}>
+                <Grid item xs={12} sm={6} md={6}>
+                  <Autocomplete
+                    size="small"
+                    value={selectedDrawingOption}
+                    onChange={handleDrawingChange}
+                    inputValue={drawingInput}
+                    onInputChange={handleDrawingInputChange}
+                    options={drawingOptions}
+                    getOptionLabel={(option) =>
+                      typeof option === "string"
+                        ? option
+                        : option.drawingNumber
+                          ? `${option.drawingNumber}${option.lnItemCode ? ` - ${option.lnItemCode}` : ""
+                          }`
+                          : ""
+                    }
+                    isOptionEqualToValue={(option, value) => option?.id === value?.id}
+                    loading={isSearchingOptions}
+                    freeSolo
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Assembly Number / LN Item Code"
+                        placeholder="Search assembly number or LN item..."
+                        sx={{
+                          "& .MuiInputBase-root": {
+                            height: 40,
+                            paddingTop: "0px !important",
+                            paddingBottom: "0px !important",
+                          },
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "#d1d5db",
+                          },
+                          "&:hover .MuiOutlinedInput-notchedOutline": {
+                            borderColor: "#A8005A",
+                          },
+                        }}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {isSearchingOptions ? (
+                                <CircularProgress color="inherit" size={18} />
+                              ) : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <li {...props} key={option.id || option.drawingNumber}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {option.drawingNumber}
+                          {option.lnItemCode && (
+                            <Box component="span" sx={{ color: "text.secondary", fontWeight: 400, ml: 1 }}>
+                              - {option.lnItemCode}
+                            </Box>
+                          )}
+                        </Typography>
+                      </li>
+                    )}
+                    noOptionsText={
+                      drawingInput.length < 3
+                        ? "Type at least 3 characters"
+                        : "No drawings found"
+                    }
+                    fullWidth
                   />
-                )}
-                renderOption={(props, option) => (
-                  <li {...props} key={option.id || option.drawingNumber}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.drawingNumber}
-                      {option.lnItemCode && (
-                        <Box component="span" sx={{ color: "text.secondary", fontWeight: 400, ml: 1 }}>
-                          - {option.lnItemCode}
-                        </Box>
-                      )}
-                    </Typography>
-                  </li>
-                )}
-                noOptionsText={
-                  drawingInput.length < 3
-                    ? "Type at least 3 characters"
-                    : "No drawings found"
-                }
-                fullWidth
-              />
-            </Grid>
-           
-            <Grid item xs={12} sm={12} md={5} sx={{ display: "flex", gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={handleClear}
-                size="small"
-                sx={{
-                  height: 40,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                  minWidth: "fit-content",
-                  borderColor: "#6b7280",
-                  color: "#6b7280",
-                  fontSize: "0.75rem",
-                  textTransform: "none",
-                  "&:hover": {
-                    borderColor: "#374151",
-                    backgroundColor: "#f9fafb",
-                    color: "#374151",
-                  },
-                }}
-              >
-                Reset
-              </Button>
-              <Button
-                size="small"
-                type="submit"
-                variant="contained"
-                startIcon={<SearchIcon />}
-                disabled={isSearching || (!drawingInput.trim() && !lnInput.trim())}
-                sx={{
-                  height: 40,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                  minWidth: "fit-content",
-                  fontSize: "0.75rem",
-                  textTransform: "none",
-                  backgroundColor: "#2563eb",
-                  "&:hover": { backgroundColor: "#1d4ed8" },
-                  "&:disabled": { backgroundColor: "#94a3b8" },
-                  boxShadow: "0 1px 4px rgba(37, 99, 235, 0.3)",
-                }}
-              >
-                Search
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                disabled={!selectedDrawing}
-                onClick={() => {
-                  setChildDrawingInput("");
-                  setChildLnInput("");
-                  setSelectedChildDwg(null);
-                  setFilteredChildDrawingOptions([]);
+                </Grid>
 
-                  const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
-                  const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
+                <Grid item xs={12} sm={12} md={5} sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={handleClear}
+                    size="small"
+                    sx={{
+                      height: 40,
+                      flexGrow: 1,
+                      whiteSpace: "nowrap",
+                      minWidth: "fit-content",
+                      borderColor: "#6b7280",
+                      color: "#6b7280",
+                      fontSize: "0.75rem",
+                      textTransform: "none",
+                      "&:hover": {
+                        borderColor: "#374151",
+                        backgroundColor: "#f9fafb",
+                        color: "#374151",
+                      },
+                    }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="small"
+                    type="submit"
+                    variant="contained"
+                    startIcon={<SearchIcon />}
+                    disabled={isSearching || (!drawingInput.trim() && !lnInput.trim())}
+                    sx={{
+                      height: 40,
+                      flexGrow: 1,
+                      whiteSpace: "nowrap",
+                      minWidth: "fit-content",
+                      fontSize: "0.75rem",
+                      textTransform: "none",
+                      backgroundColor: "#2563eb",
+                      "&:hover": { backgroundColor: "#1d4ed8" },
+                      "&:disabled": { backgroundColor: "#94a3b8" },
+                      boxShadow: "0 1px 4px rgba(37, 99, 235, 0.3)",
+                    }}
+                  >
+                    Search
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    disabled={!selectedDrawing}
+                    onClick={() => {
+                      setChildDrawingInput("");
+                      setChildLnInput("");
+                      setSelectedChildDwg(null);
+                      setFilteredChildDrawingOptions([]);
 
-                  setParentDrawingInput(parentDwg);
-                  setParentLnInput(parentLn);
-                  setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
-                  setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
+                      const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
+                      const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
 
-                  setFindNo("");
-                  setConsumedProdSeriesId("");
-                  setQuantity(0);
-                  setOpenAddDialog(true);
-                }}
-                sx={{
-                  height: 40,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                  minWidth: "fit-content",
-                  fontSize: "0.75rem",
-                  textTransform: "none",
-                  backgroundColor: "#A8005A",
-                  "&:hover": { backgroundColor: "#920050" },
-                  "&:disabled": { backgroundColor: "#d1a3c0" },
-                  boxShadow: "0 1px 4px rgba(168, 0, 90, 0.3)",
-                }}
-              >
-                Add
-              </Button>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
+                      setParentDrawingInput(parentDwg);
+                      setParentLnInput(parentLn);
+                      setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
+                      setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
 
-      {isSearching && (
-        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-          <CircularProgress color="primary" />
-        </Box>
-      )}
+                      setFindNo("");
+                      setConsumedProdSeriesId("");
+                      setQuantity(0);
+                      setOpenAddDialog(true);
+                    }}
+                    sx={{
+                      height: 40,
+                      flexGrow: 1,
+                      whiteSpace: "nowrap",
+                      minWidth: "fit-content",
+                      fontSize: "0.75rem",
+                      textTransform: "none",
+                      backgroundColor: "#A8005A",
+                      "&:hover": { backgroundColor: "#920050" },
+                      "&:disabled": { backgroundColor: "#d1a3c0" },
+                      boxShadow: "0 1px 4px rgba(168, 0, 90, 0.3)",
+                    }}
+                  >
+                    Add
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </Paper>
 
-      {!isSearching && hasSearched && searchResults.length === 0 && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          No child drawing numbers found matching the specified search criteria.
-        </Alert>
-      )}
-      {/* Parent-Child Display */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={12}>
-          <Paper sx={{ p: 2 }}>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
-                      Drawing Number
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
-                      Nomenclature
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
-                      LN Item Code
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Component Type
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Qty
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Position No
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Assembly No
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Actions
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {parents.length > 0 ? (
-                    parents.map((parent: any, idx: number) => (
-                      <TableRow key={idx} hover>
-                        <TableCell sx={{ fontWeight: "500" }}>{parent.drawingNumber}</TableCell>
-                        <TableCell>{parent.nomenclature}</TableCell>
-                        <TableCell>{parent.lnItemCode}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.componentType}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.qty}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.findNo}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.assemblyNo}</TableCell>
-                        <TableCell sx={{ width: 100, textAlign: "center" }}>
-                          <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
-                            <IconButton
-                              size="small"
-                              sx={{ color: "#A8005A" }}
-                              onClick={() => {
-                                setSelectedDrawing({
-                                  drawingNumber: parent.drawingNumber,
-                                  findNumber: parent.findNo === "N/A" ? "" : parent.findNo,
-                                  qtyPerAssembly: parent.qty === "N/A" ? "" : parent.qty,
-                                  assemblyNo: parent.assemblyNo,
-                                  childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
-                                  assemblyLnItemCode: parent.assemblyLnItemCode || "",
-                                });
-                                setEditingParentDwg(parent.assemblyNo);
-                                setParentDrawingInput(parent.assemblyNo);
-                                setOpenEditDialog(true);
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setSelectedDrawing({
-                                  drawingNumber: parent.drawingNumber,
-                                  childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
-                                  assemblyLnItemCode: parent.assemblyLnItemCode || "",
-                                });
-                                setDeletingParentDwg(parent.assemblyNo);
-                                setOpenDeleteDialog(true);
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
+          {isSearching && (
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+              <CircularProgress color="primary" />
+            </Box>
+          )}
+
+          {!isSearching && hasSearched && searchResults.length === 0 && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              No child drawing numbers found matching the specified search criteria.
+            </Alert>
+          )}
+          {/* Parent-Child Display */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={12}>
+              <Paper sx={{ p: 2 }}>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
+                          Drawing Number
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
+                          Nomenclature
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
+                          LN Item Code
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
+                          Component Type
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
+                          Qty
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
+                          Position No
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
+                          Assembly No
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
+                          Actions
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 3, color: "text.secondary" }}>
-                        No child drawing numbers found matching the specified search criteria.
-                      </TableCell>
-                    </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {parents.length > 0 ? (
+                        parents.map((parent: any, idx: number) => (
+                          <TableRow key={idx} hover>
+                            <TableCell sx={{ fontWeight: "500" }}>{parent.drawingNumber}</TableCell>
+                            <TableCell>{parent.nomenclature}</TableCell>
+                            <TableCell>{parent.lnItemCode}</TableCell>
+                            <TableCell sx={{ textAlign: "center" }}>{parent.componentType}</TableCell>
+                            <TableCell sx={{ textAlign: "center" }}>{parent.qty}</TableCell>
+                            <TableCell sx={{ textAlign: "center" }}>{parent.findNo}</TableCell>
+                            <TableCell sx={{ textAlign: "center" }}>{parent.assemblyNo}</TableCell>
+                            <TableCell sx={{ width: 100, textAlign: "center" }}>
+                              <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
+                                <IconButton
+                                  size="small"
+                                  sx={{ color: "#A8005A" }}
+                                  onClick={() => {
+                                    setSelectedDrawing({
+                                      drawingNumber: parent.drawingNumber,
+                                      findNumber: parent.findNo === "N/A" ? "" : parent.findNo,
+                                      qtyPerAssembly: parent.qty === "N/A" ? "" : parent.qty,
+                                      assemblyNo: parent.assemblyNo,
+                                      childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
+                                      assemblyLnItemCode: parent.assemblyLnItemCode || "",
+                                    });
+                                    setEditingParentDwg(parent.assemblyNo);
+                                    setParentDrawingInput(parent.assemblyNo);
+                                    setOpenEditDialog(true);
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => {
+                                    setSelectedDrawing({
+                                      drawingNumber: parent.drawingNumber,
+                                      childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
+                                      assemblyLnItemCode: parent.assemblyLnItemCode || "",
+                                    });
+                                    setDeletingParentDwg(parent.assemblyNo);
+                                    setOpenDeleteDialog(true);
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                            No child drawing numbers found matching the specified search criteria.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Add Dialog */}
+          <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} fullWidth maxWidth="xs">
+            <DialogTitle sx={{ fontWeight: "bold", color: "#A8005A" }}>Add Parent Assembly Mapping</DialogTitle>
+            <DialogContent dividers>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
+                <Autocomplete
+                  size="small"
+                  options={filteredParentDrawingOptions}
+                  getOptionLabel={(option) => {
+                    if (typeof option === "string") return option;
+                    return option.drawingNumber || "";
+                  }}
+                  isOptionEqualToValue={(option, value) => {
+                    if (!option || !value) return false;
+                    return option.id === value.id || option.drawingNumber === value.drawingNumber;
+                  }}
+                  value={selectedParentDwg}
+                  inputValue={parentDrawingInput}
+                  onInputChange={(_, newInputValue) => {
+                    setParentDrawingInput(newInputValue);
+                    debouncedParentSearch(newInputValue);
+                  }}
+                  onChange={(_, newValue) => {
+                    setSelectedParentDwg(newValue);
+                    if (newValue) {
+                      setParentDrawingInput(newValue.drawingNumber || "");
+                      setParentLnInput(newValue.lnItemCode || "");
+                    } else {
+                      setParentDrawingInput("");
+                      setParentLnInput("");
+                    }
+                  }}
+                  filterOptions={(options) => options}
+                  renderOption={(props, option) => {
+                    const opt = option as any;
+                    const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
+                    return (
+                      <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
+                        <Typography variant="body2" sx={{ fontWeight: "bold", color: "#333", textAlign: "left", width: "100%" }}>
+                          {opt.drawingNumber}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
+                          LN: {lnCode}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Parent Drawing Number"
+                      placeholder="Select parent drawing"
+                      required
+                    />
                   )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Add Dialog */}
-      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: "bold", color: "#A8005A" }}>Add Parent Assembly Mapping</DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
-            <Autocomplete
-              size="small"
-              options={filteredParentDrawingOptions}
-              getOptionLabel={(option) => {
-                if (typeof option === "string") return option;
-                return option.drawingNumber || "";
-              }}
-              isOptionEqualToValue={(option, value) => {
-                if (!option || !value) return false;
-                return option.id === value.id || option.drawingNumber === value.drawingNumber;
-              }}
-              value={selectedParentDwg}
-              inputValue={parentDrawingInput}
-              onInputChange={(_, newInputValue) => {
-                setParentDrawingInput(newInputValue);
-                debouncedParentSearch(newInputValue);
-              }}
-              onChange={(_, newValue) => {
-                setSelectedParentDwg(newValue);
-                if (newValue) {
-                  setParentDrawingInput(newValue.drawingNumber || "");
-                  setParentLnInput(newValue.lnItemCode || "");
-                } else {
-                  setParentDrawingInput("");
-                  setParentLnInput("");
-                }
-              }}
-              filterOptions={(options) => options}
-              renderOption={(props, option) => {
-                const opt = option as any;
-                const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
-                return (
-                  <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "#333", textAlign: "left", width: "100%" }}>
-                      {opt.drawingNumber}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
-                      LN: {lnCode}
-                    </Typography>
-                  </Box>
-                );
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Parent Drawing Number"
-                  placeholder="Select parent drawing"
-                  required
                 />
-              )}
-            />
-            <Autocomplete
-              size="small"
-              options={filteredChildDrawingOptions}
-              getOptionLabel={(option) => {
-                if (typeof option === "string") return option;
-                return option.drawingNumber || "";
-              }}
-              isOptionEqualToValue={(option, value) => {
-                if (!option || !value) return false;
-                return option.id === value.id || option.drawingNumber === value.drawingNumber;
-              }}
-              value={selectedChildDwg}
-              inputValue={childDrawingInput}
-              onInputChange={(_, newInputValue) => {
-                setChildDrawingInput(newInputValue);
-                debouncedChildSearch(newInputValue);
-              }}
-              onChange={(_, newValue) => {
-                setSelectedChildDwg(newValue);
-                if (newValue) {
-                  setChildDrawingInput(newValue.drawingNumber || "");
-                  setChildLnInput(newValue.lnItemCode || "");
-                } else {
-                  setChildDrawingInput("");
-                  setChildLnInput("");
-                }
-              }}
-              filterOptions={(options) => options}
-              renderOption={(props, option) => {
-                const opt = option as any;
-                const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
-                return (
-                  <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "#333", textAlign: "left", width: "100%" }}>
-                      {opt.drawingNumber}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
-                      LN: {lnCode}
-                    </Typography>
-                  </Box>
-                );
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Child Drawing Number"
-                  placeholder="Select child drawing"
-                  required
+                <Autocomplete
+                  size="small"
+                  options={filteredChildDrawingOptions}
+                  getOptionLabel={(option) => {
+                    if (typeof option === "string") return option;
+                    return option.drawingNumber || "";
+                  }}
+                  isOptionEqualToValue={(option, value) => {
+                    if (!option || !value) return false;
+                    return option.id === value.id || option.drawingNumber === value.drawingNumber;
+                  }}
+                  value={selectedChildDwg}
+                  inputValue={childDrawingInput}
+                  onInputChange={(_, newInputValue) => {
+                    setChildDrawingInput(newInputValue);
+                    debouncedChildSearch(newInputValue);
+                  }}
+                  onChange={(_, newValue) => {
+                    setSelectedChildDwg(newValue);
+                    if (newValue) {
+                      setChildDrawingInput(newValue.drawingNumber || "");
+                      setChildLnInput(newValue.lnItemCode || "");
+                    } else {
+                      setChildDrawingInput("");
+                      setChildLnInput("");
+                    }
+                  }}
+                  filterOptions={(options) => options}
+                  renderOption={(props, option) => {
+                    const opt = option as any;
+                    const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
+                    return (
+                      <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
+                        <Typography variant="body2" sx={{ fontWeight: "bold", color: "#333", textAlign: "left", width: "100%" }}>
+                          {opt.drawingNumber}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
+                          LN: {lnCode}
+                        </Typography>
+                      </Box>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Child Drawing Number"
+                      placeholder="Select child drawing"
+                      required
+                    />
+                  )}
                 />
-              )}
-            />
-            <TextField
-              label="Position No"
-              value={findNo}
-              onChange={(e) => setFindNo(e.target.value)}
-              fullWidth
-              size="small"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAddDialog(false)} color="inherit" size="small">
-            Cancel
-          </Button>
-          <Button
-            size="small"
-            onClick={handleAddAssembly}
-            variant="contained"
-            disabled={isSubmitting || !selectedParentDwg || !selectedChildDwg}
-            sx={{ bgcolor: "#A8005A", "&:hover": { bgcolor: "#920050" } }}
-          >
-            {isSubmitting ? <CircularProgress size={24} /> : "Save"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <TextField
+                  label="Position No"
+                  value={findNo}
+                  onChange={(e) => setFindNo(e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenAddDialog(false)} color="inherit" size="small">
+                Cancel
+              </Button>
+              <Button
+                size="small"
+                onClick={handleAddAssembly}
+                variant="contained"
+                disabled={isSubmitting || !selectedParentDwg || !selectedChildDwg}
+                sx={{ bgcolor: "#A8005A", "&:hover": { bgcolor: "#920050" } }}
+              >
+                {isSubmitting ? <CircularProgress size={24} /> : "Save"}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: "bold", color: "#A8005A" }}>Edit Drawing</DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
-            <TextField
-              label=" Drawing Number"
-              value={selectedDrawing?.drawingNumber || ""}
-              disabled
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Position No"
-              value={selectedDrawing?.findNumber || ""}
-              onChange={(e) => setSelectedDrawing({ ...selectedDrawing!, findNumber: e.target.value })}
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Quantity"
-              type="number"
-              inputProps={{ step: "any" }}
-              value={selectedDrawing?.qtyPerAssembly ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedDrawing({
-                  ...selectedDrawing!,
-                  qtyPerAssembly: val
-                });
-              }}
-              fullWidth
-              size="small"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)} color="inherit" size="small">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpdateAssembly}
-            variant="contained"
-            disabled={isSubmitting}
-            sx={{ bgcolor: "#A8005A", "&:hover": { bgcolor: "#920050" } }}
-            size="small"
-          >
-            {isSubmitting ? <CircularProgress size={24} /> : "Update"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          {/* Edit Dialog */}
+          <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth maxWidth="xs">
+            <DialogTitle sx={{ fontWeight: "bold", color: "#A8005A" }}>Edit Drawing</DialogTitle>
+            <DialogContent dividers>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
+                <TextField
+                  label=" Drawing Number"
+                  value={selectedDrawing?.drawingNumber || ""}
+                  disabled
+                  fullWidth
+                  size="small"
+                />
+                <TextField
+                  label="Position No"
+                  value={selectedDrawing?.findNumber || ""}
+                  onChange={(e) => setSelectedDrawing({ ...selectedDrawing!, findNumber: e.target.value })}
+                  fullWidth
+                  size="small"
+                />
+                <TextField
+                  label="Quantity"
+                  type="number"
+                  inputProps={{ step: "any" }}
+                  value={selectedDrawing?.qtyPerAssembly ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedDrawing({
+                      ...selectedDrawing!,
+                      qtyPerAssembly: val
+                    });
+                  }}
+                  fullWidth
+                  size="small"
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenEditDialog(false)} color="inherit" size="small">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateAssembly}
+                variant="contained"
+                disabled={isSubmitting}
+                sx={{ bgcolor: "#A8005A", "&:hover": { bgcolor: "#920050" } }}
+                size="small"
+              >
+                {isSubmitting ? <CircularProgress size={24} /> : "Update"}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: "bold" }}>Delete Parent Assembly Mapping</DialogTitle>
-        <DialogContent dividers>
-          <Typography>
-            Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child drawing <strong>{selectedDrawing?.drawingNumber}</strong>?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)} color="inherit" size="small">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteAssembly}
-            variant="contained"
-            color="error"
-            disabled={isSubmitting}
-            size="small"
-          >
-            {isSubmitting ? <CircularProgress size={24} /> : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} fullWidth maxWidth="xs">
+            <DialogTitle sx={{ fontWeight: "bold" }}>Delete Parent Assembly Mapping</DialogTitle>
+            <DialogContent dividers>
+              <Typography>
+                Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child drawing <strong>{selectedDrawing?.drawingNumber}</strong>?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenDeleteDialog(false)} color="inherit" size="small">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteAssembly}
+                variant="contained"
+                color="error"
+                disabled={isSubmitting}
+                size="small"
+              >
+                {isSubmitting ? <CircularProgress size={24} /> : "Delete"}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
-      {/* Notification Toast */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          {/* Notification Toast */}
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={6000}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
+          >
+            <Alert
+              onClose={() => setSnackbar({ ...snackbar, open: false })}
+              severity={snackbar.severity}
+              sx={{ width: "100%" }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
         </>
       )}
     </Box>

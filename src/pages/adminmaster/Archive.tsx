@@ -16,13 +16,13 @@ import {
   Autocomplete,
   CircularProgress,
   TableSortLabel,
-  TablePagination,
   Card,
   CardContent,
   IconButton,
   Collapse,
   Grid
 } from '@mui/material';
+import { CustomPagination } from '../../components/CustomPagination';
 import {
   Refresh as RefreshIcon,
   ExpandLess as ExpandLessIcon,
@@ -531,16 +531,20 @@ const Archive: React.FC = () => {
 
         {/* Pagination */}
         {filteredData.length > 0 && (
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            component="div"
-            count={filteredData.length}
-            rowsPerPage={rowsPerPage}
+          <CustomPagination
             page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
+            pageSize={rowsPerPage}
+            totalCount={filteredData.length}
+            pageSizeOptions={[5, 10, 25, 50]}
+            onPageChange={(newPage) => setPage(newPage)}
+            onPageSizeChange={(newSize) => {
+              setRowsPerPage(newSize);
+              setPage(0);
+            }}
+
           />
         )}
+
       </Paper>
     </Box>
   );
