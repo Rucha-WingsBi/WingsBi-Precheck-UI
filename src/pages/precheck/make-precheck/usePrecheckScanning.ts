@@ -17,6 +17,7 @@ interface UsePrecheckScanningProps {
   ) => void;
   setBatchWarningOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onExcelUploadSuccess?: () => void;
+  onAutoSubmit?: () => void;
 }
 
 export const usePrecheckScanning = ({
@@ -26,6 +27,7 @@ export const usePrecheckScanning = ({
   showAlertMessage,
   setBatchWarningOpen,
   onExcelUploadSuccess,
+  onAutoSubmit,
 }: UsePrecheckScanningProps) => {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -290,6 +292,9 @@ export const usePrecheckScanning = ({
             "Component details updated successfully.",
             "success"
           );
+          if (onAutoSubmit) {
+            setTimeout(() => onAutoSubmit(), 300);
+          }
         }
       } else {
         // No unprocessed row found
@@ -597,6 +602,9 @@ export const usePrecheckScanning = ({
       const { qrCodeDetails, matchingItem } = pendingBarcodeData;
       updateGridItem(qrCodeDetails, matchingItem, quantity);
       setPendingBarcodeData(null);
+      if (onAutoSubmit) {
+        setTimeout(() => onAutoSubmit(), 300);
+      }
     } else if (selectedQuantityItem) {
       const currentRemQty =
         selectedQuantityItem.remainingQuantity ??
@@ -623,6 +631,9 @@ export const usePrecheckScanning = ({
         })
       );
       setSelectedQuantityItem(null);
+      if (onAutoSubmit) {
+        setTimeout(() => onAutoSubmit(), 300);
+      }
     }
     setQuantityDialogOpen(false);
   };

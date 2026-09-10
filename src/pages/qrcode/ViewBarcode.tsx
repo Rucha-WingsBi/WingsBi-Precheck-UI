@@ -515,7 +515,7 @@ const ViewBarcode: React.FC = () => {
       searchQuery: queryStr.trim(),
       prodSeries: seriesArr,
       department: deptArr,
-      createdBy: 0,
+      createdBy: user?.id ? Number(user.id) : 0,
       fromDate: fromD ? fromD.toISOString() : null,
       toDate: toD ? toD.toISOString() : null,
     };

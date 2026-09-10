@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   TextField,
@@ -6,17 +6,27 @@ import {
   Typography,
   Stack,
   CircularProgress,
+  Paper,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Grid,
 } from "@mui/material";
 import {
-  QrCode as QrCodeIcon,
   QrCodeScanner as QrCodeScannerIcon,
   Send as SendIcon,
   FileDownload as FileDownloadIcon,
-  UploadFile as UploadFileIcon,
   CloudUpload as UploadIcon,
-  Add as AddIcon,
   Cancel as CancelIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  Refresh as RefreshIcon,
+  FilterList as FilterListIcon,
+  Visibility as VisibilityIcon,
+  CropFree as CropFreeIcon,
 } from "@mui/icons-material";
+import type { GridItem } from "./types";
 
 interface PrecheckActionBarProps {
   barcodeText: string;
@@ -33,6 +43,11 @@ interface PrecheckActionBarProps {
   selectedDrawingNumber: string;
   selectedProductionSeries: string;
   idNumber: string;
+  selectedPONumber?: string;
+  selectedLnItemCode?: string;
+
+  searchResults?: GridItem[];
+  filterRemainingOnly?: boolean;
 
   onBarcodeChange: (value: string) => void;
   onBarcodeKeyDown: (e: React.KeyboardEvent) => void;
@@ -41,6 +56,10 @@ interface PrecheckActionBarProps {
   onDownloadTemplate: () => void;
   onMakePrecheck: () => void;
   onSubmitPrecheck: () => void;
+  onToggleFilter?: () => void;
+  onExport?: () => void;
+  onReset?: () => void;
+  onChangeOrder?: () => void;
   onPrevId?: () => void;
   onNextId?: () => void;
   onReject?: () => void;
@@ -64,6 +83,10 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
   selectedDrawingNumber,
   selectedProductionSeries,
   idNumber,
+  selectedPONumber = "",
+  selectedLnItemCode = "",
+  searchResults = [],
+  filterRemainingOnly = false,
   onBarcodeChange,
   onBarcodeKeyDown,
   onOpenScanner,
@@ -71,6 +94,10 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
   onDownloadTemplate,
   onMakePrecheck,
   onSubmitPrecheck,
+  onToggleFilter,
+  onExport,
+  onReset,
+  onChangeOrder,
   onPrevId,
   onNextId,
   onReject,
@@ -79,205 +106,533 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
   onAddBomDrawingClick,
   isSidebarOpen = false,
 }) => {
+  // Menu Anchor State for "More v" dropdown
+  const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
+  const isMoreMenuOpen = Boolean(moreMenuAnchor);
+
+  const handleMoreMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setMoreMenuAnchor(event.currentTarget);
+  };
+
+  const handleMoreMenuClose = () => {
+    setMoreMenuAnchor(null);
+  };
+
+  // Verification Stats Calculation
+  const stats = useMemo(() => {
+    const total = searchResults.length;
+    if (total === 0) {
+      return {
+        total: 0,
+        verified: 0,
+        short: 0,
+        rejected: 0,
+        notScanned: 0,
+        percentVerified: 0,
+      };
+    }
+
+    let verified = 0;
+    let short = 0;
+    let rejected = 0;
+    let notScanned = 0;
+
+    searchResults.forEach((item) => {
+      const isComplete =
+        item.isPrecheckComplete || item.precheckStatus?.toLowerCase() === "verified" || item.precheckStatus?.toLowerCase() === "completed";
+      const isRej = item.isRejected || item.precheckStatus?.toLowerCase() === "rejected";
+      const scannedQty = item.scannedQuantity ?? 0;
+      const totalQty = item.quantity ?? 1;
+
+      if (isRej) {
+        rejected++;
+      } else if (isComplete || scannedQty >= totalQty) {
+        verified++;
+      } else if (scannedQty > 0 && scannedQty < totalQty) {
+        short++;
+      } else {
+        notScanned++;
+      }
+    });
+
+    const percentVerified = Math.round((verified / total) * 100);
+
+    return {
+      total,
+      verified,
+      short,
+      rejected,
+      notScanned,
+      percentVerified,
+    };
+  }, [searchResults]);
+
   return (
-    <>
-      {/* QR Code Scanner Section */}
+    <Box sx={{ width: "100%", mb: 1.5 }}>
+      {/* Top Header Bar */}
       <Box
         sx={{
           display: "flex",
-          alignItems: "center",
-          mb: 0.75,
-          gap: isSidebarOpen ? 0.5 : 0.75,
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 1,
           flexWrap: "wrap",
-          width: "100%",
+          gap: 1,
         }}
       >
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: "bold",
-            fontSize: "0.875rem",
-            minWidth: "auto",
-            width: { xs: "100%", sm: "auto" },
-          }}
-        >
-          Scan Qr:
-        </Typography>
-        <TextField
-          size="small"
-          value={barcodeText}
-          onChange={(e) => onBarcodeChange(e.target.value)}
-          onKeyDown={onBarcodeKeyDown}
-          placeholder="Scan or enter QR code (12 or 15 digits)"
-          inputProps={{
-            maxLength: 15,
-          }}
-          sx={{
-            width: { xs: "100%", sm: isSidebarOpen ? 200 : 220 },
-            flex: { xs: "1 1 100%", sm: "0 1 auto" },
-          }}
-          disabled={!showResults || searchResultsLength === 0}
-          autoFocus={showResults && searchResultsLength > 0}
-        />
-        <Button
-          variant="outlined"
-          color="primary"
-          size="small"
-          onClick={onOpenScanner}
-          disabled={!showResults || searchResultsLength === 0}
-          startIcon={<QrCodeScannerIcon />}
-          sx={{
-            height: 40,
-            minWidth: { xs: "100%", sm: "auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-        >
-          Scan QR
-        </Button>
-
-
-        <Button
-          variant="outlined"
-          color="primary"
-          size="small"
-          onClick={onDownloadTemplate}
-          disabled={downloadTemplateInProgress || uploadInProgress}
-          startIcon={downloadTemplateInProgress ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon />}
-          sx={{
-            height: 40,
-            minWidth: { xs: "100%", sm: "auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-        >
-          {downloadTemplateInProgress ? "Downloading..." : "Download Template"}
-        </Button>
-
-        <Button
-          variant="outlined"
-          color="primary"
-          size="small"
-          onClick={onUploadExcel}
-          disabled={uploadInProgress}
-          startIcon={uploadInProgress ? <CircularProgress size={16} color="inherit" /> : <UploadIcon />}
-          sx={{
-            height: 40,
-            minWidth: { xs: "100%", sm: "auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-        >
-          {uploadInProgress ? "Uploading..." : "Upload Excel"}
-        </Button>
-
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{
-            minWidth: { xs: "100%", sm: isSidebarOpen ? 100 : 110 },
-            height: 40,
-            flex: { xs: "1 1 100%", sm: "0 0 auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-          size="small"
-          onClick={onMakePrecheck}
-          disabled={!isMakePrecheckEnabled}
-          startIcon={<QrCodeIcon />}
-        >
-          View Precheck
-        </Button>
-
-        <Button
-          variant="contained"
-          color="success"
-          sx={{
-            minWidth: { xs: "100%", sm: isSidebarOpen ? 70 : 80 },
-            height: 40,
-            flex: { xs: "1 1 100%", sm: "0 0 auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-          size="small"
-          onClick={onSubmitPrecheck}
-          disabled={!isSubmitEnabled || isLoadingLocal}
-          startIcon={<SendIcon />}
-        >
-          Submit
-        </Button>
-
-        {/* {isAdminOrHead && (
-          <Button
-            variant="contained"
-            color="secondary"
+        {/* Title & Subtitle */}
+        <Box>
+          <Typography
+            variant="h5"
             sx={{
-              minWidth: { xs: 80, sm: isSidebarOpen ? 50 : 60 },
-              height: 40,
-              flex: { xs: "1 1 100%", sm: "0 0 auto" },
-              px: isSidebarOpen ? 1 : 1.5,
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
             }}
-            size="small"
-            onClick={onAddBomDrawingClick}
-            disabled={!isAddEnabled || isLoadingLocal}
-            startIcon={<AddIcon />}
           >
-            Add
-          </Button>
-        )} */}
+            Run Precheck
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            alignItems="center"
+            flexWrap="wrap"
+            sx={{ color: "#6B7280", fontSize: "0.875rem" }}
+          >
+            <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.875rem" }}>
+              PO{" "}
+              <Box component="span" sx={{ color: "#111827", fontWeight: 700 }}>
+                {selectedPONumber || "-"}
+              </Box>{" "}
+              · Drawing{" "}
+              <Box component="span" sx={{ color: "#111827", fontWeight: 700 }}>
+                {selectedDrawingNumber || "-"}
+              </Box>{" "}
+              · LN Item{" "}
+              <Box component="span" sx={{ color: "#111827", fontWeight: 700 }}>
+                {selectedLnItemCode || "-"}
+              </Box>{" "}
+              · Series{" "}
+              <Box component="span" sx={{ color: "#111827", fontWeight: 700 }}>
+                {selectedProductionSeries || "-"}
+              </Box>{" "}
+              · ID No.{" "}
+              <Box component="span" sx={{ color: "#111827", fontWeight: 700 }}>
+                {idNumber || "-"}
+              </Box>
+            </Typography>
 
-        <Button
-          variant="contained"
-          color="error"
-          sx={{
-            minWidth: { xs: "100%", sm: isSidebarOpen ? 75 : 85 },
-            height: 40,
-            flex: { xs: "1 1 100%", sm: "0 0 auto" },
-            px: isSidebarOpen ? 1 : 1.5,
-          }}
-          size="small"
-          onClick={onReject}
-          disabled={!onReject || isLoadingLocal}
-          startIcon={<CancelIcon />}
-        >
-          Reject
-        </Button>
+            {onChangeOrder && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={onChangeOrder}
+                sx={{
+                  color: "#7E22CE",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  p: 0,
+                  ml: 0.5,
+                  minWidth: "auto",
+                  textTransform: "none",
+                  "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                }}
+              >
+                Change order
+              </Button>
+            )}
+          </Stack>
+        </Box>
+
+        {/* Top Right "More v" Action Button */}
+        <Box>
+          <Button
+            variant="outlined"
+            onClick={handleMoreMenuOpen}
+            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: "1.125rem", color: "#374151" }} />}
+            sx={{
+              borderRadius: "8px",
+              borderColor: "#D1D5DB",
+              color: "#111827",
+              backgroundColor: "#FFFFFF",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              height: 38,
+              px: 2,
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+              "&:hover": {
+                borderColor: "#9CA3AF",
+                backgroundColor: "#F9FAFB",
+              },
+            }}
+          >
+            More
+          </Button>
+
+          {/* More Menu Dropdown */}
+          <Menu
+            anchorEl={moreMenuAnchor}
+            open={isMoreMenuOpen}
+            onClose={handleMoreMenuClose}
+            PaperProps={{
+              elevation: 4,
+              sx: {
+                borderRadius: "12px",
+                mt: 1,
+                minWidth: 210,
+                border: "1px solid #E5E7EB",
+              },
+            }}
+          >
+
+
+            {onToggleFilter && (
+              <MenuItem
+                onClick={() => {
+                  handleMoreMenuClose();
+                  onToggleFilter();
+                }}
+                disabled={!isSubmitEnabled}
+              >
+                <ListItemIcon>
+                  <FilterListIcon fontSize="small" sx={{ color: "#2563EB" }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary={filterRemainingOnly ? "Show All Items" : "Remaining Precheck"}
+                />
+              </MenuItem>
+            )}
+
+            {onExport && (
+              <MenuItem
+                onClick={() => {
+                  handleMoreMenuClose();
+                  onExport();
+                }}
+                disabled={!isSubmitEnabled}
+              >
+                <ListItemIcon>
+                  <FileDownloadIcon fontSize="small" sx={{ color: "#059669" }} />
+                </ListItemIcon>
+                <ListItemText primary="Export BOM" />
+              </MenuItem>
+            )}
+
+            <Divider sx={{ my: 0.5 }} />
+
+            <MenuItem
+              onClick={() => {
+                handleMoreMenuClose();
+                onUploadExcel();
+              }}
+              disabled={uploadInProgress}
+            >
+              <ListItemIcon>
+                {uploadInProgress ? (
+                  <CircularProgress size={18} color="primary" />
+                ) : (
+                  <UploadIcon fontSize="small" sx={{ color: "#D97706" }} />
+                )}
+              </ListItemIcon>
+              <ListItemText primary={uploadInProgress ? "Uploading..." : "Upload Excel..."} />
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                handleMoreMenuClose();
+                onDownloadTemplate();
+              }}
+              disabled={downloadTemplateInProgress || uploadInProgress}
+            >
+              <ListItemIcon>
+                {downloadTemplateInProgress ? (
+                  <CircularProgress size={18} color="primary" />
+                ) : (
+                  <FileDownloadIcon fontSize="small" sx={{ color: "#4B5563" }} />
+                )}
+              </ListItemIcon>
+              <ListItemText
+                primary={downloadTemplateInProgress ? "Downloading..." : "Download Template"}
+              />
+            </MenuItem>
+
+            <Divider sx={{ my: 0.5 }} />
+
+            {onReset && (
+              <MenuItem
+                onClick={() => {
+                  handleMoreMenuClose();
+                  onReset();
+                }}
+              >
+                <ListItemIcon>
+                  <RefreshIcon fontSize="small" sx={{ color: "#DC2626" }} />
+                </ListItemIcon>
+                <ListItemText primary="Reset scans" />
+              </MenuItem>
+            )}
+
+            {onReject && (
+              <MenuItem
+                onClick={() => {
+                  handleMoreMenuClose();
+                  onReject();
+                }}
+                disabled={isLoadingLocal}
+              >
+                <ListItemIcon>
+                  <CancelIcon fontSize="small" sx={{ color: "#DC2626" }} />
+                </ListItemIcon>
+                <ListItemText primary="Reject Order" />
+              </MenuItem>
+            )}
+          </Menu>
+        </Box>
       </Box>
 
-      {/* Results Display Header */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        spacing={1}
-        sx={{ width: "100%", mb: 0.5 }}
+      {/* Hero Scanner QR Box & Verification Stats Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 1.5, md: 1.75 },
+          borderRadius: "16px",
+          border: "1px solid #E5E7EB",
+          backgroundColor: "#FFFFFF",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+        }}
       >
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: "bold",
-            fontSize: "0.875rem",
-            overflowWrap: "break-word",
-          }}
-        >
-          <span>BOM Details of </span>
-          <span style={{ color: "#1976d2" }}>
-            {selectedDrawingNumber || ""}
-          </span>
-        </Typography>
+        <Grid container spacing={2} alignItems="center">
+          {/* Left Column: Scan QR Input Box */}
+          <Grid item xs={12} md={7} lg={7.5}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 600, color: "#475467", mb: 0.75, display: "block", fontSize: "0.8125rem" }}
+            >
+              Scan QR
+            </Typography>
 
-        {showResults && (
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: "medium",
-              overflowWrap: "break-word",
-            }}
-          >
-            (
-            Showing results for{" "}
-            {selectedProductionSeries || "A"} /{" "}
-            {selectedDrawingNumber || ""} / {idNumber || ""}
-            )
-          </Typography>
-        )}
-      </Stack>
-    </>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: "100%" }}>
+              {/* Thick Rounded Purple Border Input Box */}
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  borderRadius: "10px",
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  backgroundColor: "#FFFFFF",
+                  px: 1.5,
+                  py: 0.75,
+                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+                }}
+              >
+                <CropFreeIcon sx={{ color: "primary.main", mr: 1.25, fontSize: 22 }} />
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  value={barcodeText}
+                  onChange={(e) => onBarcodeChange(e.target.value)}
+                  onKeyDown={onBarcodeKeyDown}
+                  placeholder="Enter QR code number (12 to 15) digit"
+                  autoFocus
+                  InputProps={{
+                    disableUnderline: true,
+                    sx: {
+                      fontSize: "0.9375rem",
+                      color: "#1E293B",
+                      fontFamily: "monospace, Courier, monospace",
+                      "& input::placeholder": {
+                        color: "#94A3B8",
+                        opacity: 1,
+                      },
+                    },
+                  }}
+                  inputProps={{
+                    maxLength: 15,
+                  }}
+                />
+              </Box>
+
+              {/* Scan QR Button with thick purple border and camera icon */}
+              <Button
+                variant="outlined"
+                onClick={onOpenScanner}
+                startIcon={<QrCodeScannerIcon />}
+                sx={{
+                  height: 48,
+                  px: 2.5,
+                  borderRadius: "10px",
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                  fontWeight: 700,
+                  fontSize: "0.9375rem",
+                  textTransform: "none",
+                  backgroundColor: "#FFFFFF",
+                  whiteSpace: "nowrap",
+                  "&:hover": {
+                    border: "2px solid",
+                    borderColor: "primary.main",
+                    backgroundColor: "action.hover",
+                  },
+                }}
+              >
+                Scan QR
+              </Button>
+            </Stack>
+
+            {/* Sub-text line below scanner input */}
+            {barcodeText && (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ mt: 1.25, fontSize: "0.8125rem", color: "#64748B" }}
+              >
+                <Typography variant="caption" sx={{ color: "#64748B", fontSize: "0.8125rem" }}>
+                  Last scan:{" "}
+                  <Box component="span" sx={{ fontWeight: 700, color: "#1E293B" }}>
+                    {barcodeText}
+                  </Box>
+                </Typography>
+              </Stack>
+            )}
+          </Grid>
+
+          {/* Right Column: Line Verification Progress Box */}
+          <Grid item xs={12} md={5} lg={4.5}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: "12px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+              }}
+            >
+              {/* Header line: Count & Percent */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 700, color: "#111827", fontSize: "0.875rem" }}
+                >
+                  {`${stats.verified} of ${stats.total} lines verified`}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 600, color: "#6B7280", fontSize: "0.8125rem" }}
+                >
+                  {`${stats.percentVerified}%`}
+                </Typography>
+              </Box>
+
+              {/* Segmented Color Progress Bar */}
+              <Box
+                sx={{
+                  height: 8,
+                  width: "100%",
+                  borderRadius: "4px",
+                  backgroundColor: "#E5E7EB",
+                  display: "flex",
+                  overflow: "hidden",
+                  mb: 1.5,
+                }}
+              >
+                {/* Verified Segment (Green) */}
+                <Box
+                  sx={{
+                    width: `${stats.total > 0 ? (stats.verified / stats.total) * 100 : 0}%`,
+                    backgroundColor: "#059669",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+                {/* Short Segment (Amber) */}
+                <Box
+                  sx={{
+                    width: `${stats.total > 0 ? (stats.short / stats.total) * 100 : 0}%`,
+                    backgroundColor: "#D97706",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+                {/* Rejected Segment (Red) */}
+                <Box
+                  sx={{
+                    width: `${stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0}%`,
+                    backgroundColor: "#DC2626",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+                {/* Not Scanned Segment (Gray) */}
+                <Box
+                  sx={{
+                    width: `${stats.total > 0 ? (stats.notScanned / stats.total) * 100 : 0}%`,
+                    backgroundColor: "#9CA3AF",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </Box>
+
+              {/* Legend Badges Row */}
+              <Stack
+                direction="row"
+                spacing={1.25}
+                alignItems="center"
+                justifyContent="space-between"
+                flexWrap="wrap"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box
+                    sx={{ width: 8, height: 8, borderRadius: "1px", backgroundColor: "#059669" }}
+                  />
+                  <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.75rem" }}>
+                    {stats.verified} verified
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box
+                    sx={{ width: 8, height: 8, borderRadius: "1px", backgroundColor: "#D97706" }}
+                  />
+                  <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.75rem" }}>
+                    {stats.short} short
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box
+                    sx={{ width: 8, height: 8, borderRadius: "1px", backgroundColor: "#DC2626" }}
+                  />
+                  <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.75rem" }}>
+                    {stats.rejected} rejected
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box
+                    sx={{ width: 8, height: 8, borderRadius: "1px", backgroundColor: "#9CA3AF" }}
+                  />
+                  <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.75rem" }}>
+                    {stats.notScanned} not scanned
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+    </Box>
   );
 };
 
 export default PrecheckActionBar;
+
+

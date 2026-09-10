@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Box,
   TextField,
@@ -7,10 +7,11 @@ import {
   Autocomplete,
   CircularProgress,
   Typography,
+  Paper,
 } from "@mui/material";
 import {
-  Refresh as RefreshIcon,
-  FileDownload as FileDownloadIcon,
+  Check as CheckIcon,
+  Clear as ClearIcon,
 } from "@mui/icons-material";
 import type { ProductionOrderMaster } from "../../../hooks/usePONumbers";
 
@@ -45,8 +46,11 @@ interface PrecheckFormControlsProps {
   onIdNumberChange: (value: string) => void;
   onIdInputChange: (value: string) => void;
 
-  // Reset
+  // Apply and Clear actions
+  onApply?: () => void;
+  onClear?: () => void;
   onReset: () => void;
+  isApplyEnabled?: boolean;
 
   // Alert callback for validation
   showAlertMessage: (message: string, severity: "success" | "error" | "info" | "warning") => void;
@@ -56,11 +60,11 @@ interface PrecheckFormControlsProps {
   selectedPOStartIdNumber?: number;
   selectedPOQuantity?: number;
 
-  // Remaining Precheck and Export props
-  filterRemainingOnly: boolean;
-  onToggleFilter: () => void;
-  onExport: () => void;
-  isSubmitEnabled: boolean;
+  // Remaining Precheck and Export props (optional)
+  filterRemainingOnly?: boolean;
+  onToggleFilter?: () => void;
+  onExport?: () => void;
+  isSubmitEnabled?: boolean;
   isSidebarOpen?: boolean;
 }
 
@@ -87,7 +91,10 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
   idOptions,
   onIdNumberChange,
   onIdInputChange,
+  onApply,
+  onClear,
   onReset,
+  isApplyEnabled = true,
   showAlertMessage,
   selectedPOEndIdNumber,
   selectedPOStartIdNumber,
@@ -98,28 +105,102 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
   onExport,
   isSidebarOpen = false,
 }) => {
+  // Memoized sliced options for high performance dropdown rendering with current selection included
+  const poOptions = useMemo(() => {
+    const base = Array.isArray(poNumbers) ? poNumbers.slice(0, 100) : [];
+    if (
+      selectedPO &&
+      !base.some(
+        (opt) => opt.productionOrderNumber === selectedPO.productionOrderNumber
+      )
+    ) {
+      return [selectedPO, ...base];
+    }
+    return base;
+  }, [poNumbers, selectedPO]);
+
+  const lnOptions = useMemo(() => {
+    const base = Array.isArray(allDrawingNumbers) ? allDrawingNumbers.slice(0, 150) : [];
+    if (
+      selectedDrawing &&
+      !base.some(
+        (opt) =>
+          (opt.id && selectedDrawing.id && opt.id === selectedDrawing.id) ||
+          (opt.drawingNumber && selectedDrawing.drawingNumber && opt.drawingNumber.trim().toLowerCase() === selectedDrawing.drawingNumber.trim().toLowerCase()) ||
+          (opt.lnItemCode && selectedDrawing.lnItemCode && opt.lnItemCode.trim().toLowerCase() === selectedDrawing.lnItemCode.trim().toLowerCase())
+      )
+    ) {
+      return [selectedDrawing, ...base];
+    }
+    return base;
+  }, [allDrawingNumbers, selectedDrawing]);
+
+  const drawingOptions = useMemo(() => {
+    const base = Array.isArray(drawingNumbersData) ? drawingNumbersData.slice(0, 100) : [];
+    if (
+      selectedDrawing &&
+      !base.some(
+        (opt) =>
+          (opt.id && selectedDrawing.id && opt.id === selectedDrawing.id) ||
+          (opt.drawingNumber && selectedDrawing.drawingNumber && opt.drawingNumber.trim().toLowerCase() === selectedDrawing.drawingNumber.trim().toLowerCase())
+      )
+    ) {
+      return [selectedDrawing, ...base];
+    }
+    return base;
+  }, [drawingNumbersData, selectedDrawing]);
+
+  const prodSeriesOptions = useMemo(() => {
+    const base = Array.isArray(productionSeriesData) ? productionSeriesData.slice(0, 100) : [];
+    if (
+      selectedProductionSeries &&
+      !base.some(
+        (opt) =>
+          (opt.id && selectedProductionSeries.id && opt.id === selectedProductionSeries.id) ||
+          (opt.productionSeries && selectedProductionSeries.productionSeries && String(opt.productionSeries).trim().toLowerCase() === String(selectedProductionSeries.productionSeries).trim().toLowerCase())
+      )
+    ) {
+      return [selectedProductionSeries, ...base];
+    }
+    return base;
+  }, [productionSeriesData, selectedProductionSeries]);
+
+  const slicedIdOptions = useMemo(() => {
+    const base = Array.isArray(idOptions) ? idOptions.slice(0, 200) : [];
+    if (idNumber && !base.includes(idNumber)) {
+      return [idNumber, ...base];
+    }
+    return base;
+  }, [idOptions, idNumber]);
+
   return (
-    <Box
+    <Paper
+      elevation={0}
       sx={{
         display: "flex",
         alignItems: "center",
-        mb: 1,
-        gap: isSidebarOpen ? 1 : 1.5,
-        flexWrap: "wrap",
+        p: 1.5,
+        mb: 1.5,
+        borderRadius: "12px",
+        border: "1px solid #EAECF0",
+        backgroundColor: "#FFFFFF",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        gap: 1.5,
+        flexWrap: { xs: "wrap", lg: "nowrap" },
         width: "100%",
       }}
     >
       {/* PO Number Field */}
       <FormControl
         sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 130 : 180 },
-          flex: { xs: "1 1 100%", sm: isSidebarOpen ? "1 1 150px" : "1 1 180px" },
+          flex: { xs: "1 1 100%", sm: "1 1 160px", lg: 1.2 },
+          minWidth: { xs: "100%", sm: 140 },
         }}
         size="small"
       >
         <Autocomplete
           size="small"
-          options={Array.isArray(poNumbers) ? poNumbers : []}
+          options={poOptions}
           getOptionLabel={(option) => {
             if (typeof option === "string") return option;
             return option.productionOrderNumber || "";
@@ -173,7 +254,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
             );
           }}
           ListboxProps={{
-            style: { maxHeight: "420px" },
+            style: { maxHeight: "300px" },
           }}
           renderInput={(params) => (
             <TextField {...params} label="PO Number" fullWidth size="small" />
@@ -184,14 +265,14 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       {/* LN Item Code Field */}
       <FormControl
         sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 150 : 200 },
-          flex: { xs: "1 1 100%", sm: isSidebarOpen ? "1 1 160px" : "1 1 200px" },
+          flex: { xs: "1 1 100%", sm: "1 1 180px", lg: 1.4 },
+          minWidth: { xs: "100%", sm: 160 },
         }}
         size="small"
       >
         <Autocomplete
           size="small"
-          options={allDrawingNumbers}
+          options={lnOptions}
           groupBy={(option: any) => option.lnItemCode || "No LN Code"}
           getOptionLabel={(option: any) => {
             if (typeof option === "string") return option;
@@ -221,9 +302,17 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
             );
             return filtered.slice(0, 100);
           }}
-          isOptionEqualToValue={(option, value) =>
-            option.id === (value?.id || "")
-          }
+          isOptionEqualToValue={(option, value) => {
+            if (!value) return false;
+            if (option.id && value.id) return option.id === value.id;
+            if (option.drawingNumber && value.drawingNumber) {
+              return option.drawingNumber.trim().toLowerCase() === value.drawingNumber.trim().toLowerCase();
+            }
+            if (option.lnItemCode && value.lnItemCode) {
+              return option.lnItemCode.trim().toLowerCase() === value.lnItemCode.trim().toLowerCase();
+            }
+            return false;
+          }}
           renderOption={(props, option: any) => {
             const { key, ...optionProps } = props;
             return (
@@ -273,6 +362,9 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
               <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
             </li>
           )}
+          ListboxProps={{
+            style: { maxHeight: "300px" },
+          }}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -297,14 +389,14 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       {/* Drawing Number Field */}
       <FormControl
         sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 160 : 220 },
-          flex: { xs: "1 1 100%", sm: isSidebarOpen ? "1 1 180px" : "1 1 220px" },
+          flex: { xs: "1 1 100%", sm: "1 1 180px", lg: 1.4 },
+          minWidth: { xs: "100%", sm: 160 },
         }}
         size="small"
       >
         <Autocomplete
           size="small"
-          options={drawingNumbersData}
+          options={drawingOptions}
           getOptionLabel={(option) =>
             typeof option === "string" ? option : option.drawingNumber || ""
           }
@@ -320,9 +412,17 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           onChange={(_: any, value: any) => {
             onDrawingChange(value);
           }}
-          isOptionEqualToValue={(option, value) =>
-            option.id === (value?.id || "")
-          }
+          isOptionEqualToValue={(option, value) => {
+            if (!value) return false;
+            if (option.id && value.id) return option.id === value.id;
+            if (option.drawingNumber && value.drawingNumber) {
+              return option.drawingNumber.trim().toLowerCase() === value.drawingNumber.trim().toLowerCase();
+            }
+            if (option.lnItemCode && value.lnItemCode) {
+              return option.lnItemCode.trim().toLowerCase() === value.lnItemCode.trim().toLowerCase();
+            }
+            return false;
+          }}
           renderOption={(props: any, option: any) => (
             <li {...props}>
               <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
@@ -335,6 +435,9 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
               </Box>
             </li>
           )}
+          ListboxProps={{
+            style: { maxHeight: "300px" },
+          }}
           renderInput={(params: any) => (
             <TextField
               {...params}
@@ -358,14 +461,14 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       {/* Production Series Field */}
       <FormControl
         sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 100 : 115 },
-          flex: { xs: "1 1 100%", sm: isSidebarOpen ? "0 0 105px" : "0 0 120px" },
+          flex: { xs: "1 1 100%", sm: "1 1 110px", lg: 0.9 },
+          minWidth: { xs: "100%", sm: 95 },
         }}
         size="small"
       >
         <Autocomplete
           size="small"
-          options={productionSeriesData}
+          options={prodSeriesOptions}
           getOptionLabel={(option) => {
             if (typeof option === "string") return option;
             return option.productionSeries || "";
@@ -380,9 +483,14 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           onChange={(_, value) => {
             onProdSeriesChange(value);
           }}
-          isOptionEqualToValue={(option, value) =>
-            option.id === (value?.id || "")
-          }
+          isOptionEqualToValue={(option, value) => {
+            if (!value) return false;
+            if (option.id && value.id) return option.id === value.id;
+            if (option.productionSeries && value.productionSeries) {
+              return String(option.productionSeries).trim().toLowerCase() === String(value.productionSeries).trim().toLowerCase();
+            }
+            return false;
+          }}
           renderOption={(props, option) => (
             <li {...props}>
               <Typography variant="body2">
@@ -390,6 +498,9 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
               </Typography>
             </li>
           )}
+          ListboxProps={{
+            style: { maxHeight: "300px" },
+          }}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -417,8 +528,8 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       {/* ID Number Field */}
       <FormControl
         sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 110 : 125 },
-          flex: { xs: "1 1 100%", sm: isSidebarOpen ? "0 0 115px" : "0 0 130px" },
+          flex: { xs: "1 1 100%", sm: "1 1 120px", lg: 0.9 },
+          minWidth: { xs: "100%", sm: 100 },
         }}
         size="small"
       >
@@ -427,7 +538,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           freeSolo
           disableClearable
           forcePopupIcon={true}
-          options={idOptions}
+          options={slicedIdOptions}
           value={idNumber}
           onChange={(_, newValue) => {
             const val = typeof newValue === "string" ? newValue : (newValue ? String(newValue) : "");
@@ -435,6 +546,9 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           }}
           onInputChange={(_, newInputValue) => {
             onIdInputChange(newInputValue);
+          }}
+          ListboxProps={{
+            style: { maxHeight: "300px" },
           }}
           renderInput={(params) => (
             <TextField
@@ -450,57 +564,45 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
         />
       </FormControl>
 
+      {/* Apply Button */}
       <Button
         variant="contained"
-        color="error"
+        color="primary"
         sx={{
-          minWidth: { xs: "100%", sm: 80 },
           height: 40,
-          flex: { xs: "1 1 100%", sm: "0 0 auto" },
-          px: isSidebarOpen ? 1.5 : 2,
+          minWidth: 90,
+          px: 2,
+          fontWeight: 600,
+          borderRadius: "8px",
+          textTransform: "none",
         }}
         size="small"
-        onClick={onReset}
-        startIcon={<RefreshIcon />}
+        onClick={onApply || onReset}
+        disabled={!isApplyEnabled}
+        startIcon={<CheckIcon />}
       >
-        Reset
+        Apply
       </Button>
 
+      {/* Clear Button */}
       <Button
-        variant={filterRemainingOnly ? "contained" : "outlined"}
-        color="info"
+        variant="outlined"
         sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 140 : 160 },
           height: 40,
-          flex: { xs: "1 1 100%", sm: "0 0 auto" },
-          transition: "all 0.3s ease",
-          px: isSidebarOpen ? 1.5 : 2,
+          minWidth: 90,
+          px: 2,
+          fontWeight: 600,
+          borderRadius: "8px",
+          textTransform: "none",
         }}
         size="small"
-        disabled={!isSubmitEnabled}
-        onClick={onToggleFilter}
+        onClick={onClear || onReset}
+        startIcon={<ClearIcon />}
       >
-        {filterRemainingOnly ? "Show All " : "Remaining Precheck"}
+        Clear
       </Button>
-
-      <Button
-        variant="contained"
-        color="info"
-        sx={{
-          minWidth: { xs: "100%", sm: isSidebarOpen ? 90 : 100 },
-          height: 40,
-          flex: { xs: "1 1 100%", sm: "0 0 auto" },
-          px: isSidebarOpen ? 1.5 : 2,
-        }}
-        size="small"
-        disabled={!isSubmitEnabled}
-        onClick={onExport}
-        startIcon={<FileDownloadIcon />}
-      >
-        Export
-      </Button>
-    </Box>
+    </Paper>
   );
 };
 
-export default PrecheckFormControls;
+export default React.memo(PrecheckFormControls);

@@ -25,7 +25,6 @@ const ForgetPassword = lazy(() => import("./pages/auth/ForgetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 // Lazy-loaded Precheck Pages
-const Precheck = lazy(() => import("./pages/precheck/Precheck"));
 const ViewPrecheck = lazy(() => import("./pages/precheck/ViewPrecheck"));
 const MakePrecheck = lazy(() => import("./pages/precheck/MakePrecheck"));
 const StoreIn = lazy(() => import("./pages/precheck/StoreIn"));
@@ -111,7 +110,7 @@ export default function AppRoutes() {
 
             {/* Precheck Module */}
             <Route path="precheck">
-              <Route index element={<Precheck />} />
+              <Route index element={<MakePrecheck />} />
             
               <Route path="available-store" element={<AvailableInStore />} />
               <Route path="available-in-store" element={<AvailableInStore />} />

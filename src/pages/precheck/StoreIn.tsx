@@ -585,15 +585,20 @@ const StoreIn: React.FC = () => {
     >
       {/* 1. Page Header */}
       <Stack
-        direction="row"
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems="flex-start"
-        sx={{ mb: 2 }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
         <Box>
           <Typography
             variant="h5"
-            sx={{ fontWeight: 700, color: "#101828", fontSize: "1.5rem", lineHeight: 1.2 }}
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
           >
             Store In
           </Typography>
@@ -664,78 +669,80 @@ const StoreIn: React.FC = () => {
             flexWrap: { xs: "wrap", md: "nowrap" },
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              flexGrow: 1,
-              width: "100%",
-            }}
-          >
-            <TextField
-              inputRef={scanInputRef}
-              fullWidth
-              size="small"
-              placeholder="Enter QR code Manually (12 to 15 digit)"
-              value={qrCodeInput}
-              onChange={handleQRCodeScan}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <CropFreeIcon sx={{ color: "#6B288A", fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-                endAdornment: isLoading && (
-                  <InputAdornment position="end">
-                    <CircularProgress size={18} />
-                  </InputAdornment>
-                ),
-              }}
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1, width: "100%" }}>
+            {/* Thick Rounded Purple Border Input Box */}
+            <Box
               sx={{
-                "& .MuiOutlinedInput-root": {
-                  height: 48,
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  fontFamily: "monospace, monospace",
-                  "& fieldset": {
-                    borderColor: "#6B288A",
-                    borderWidth: "1.5px",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "#551F6F",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#6B288A",
-                    boxShadow: "0 0 0 3px rgba(107, 40, 138, 0.12)",
-                  },
-                },
+                flexGrow: 1,
+                display: "flex",
+                alignItems: "center",
+                borderRadius: "10px",
+                border: "2px solid",
+                borderColor: "primary.main",
+                backgroundColor: "#FFFFFF",
+                px: 1.5,
+                py: 0.75,
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
               }}
-            />
+            >
+              <CropFreeIcon sx={{ color: "primary.main", mr: 1.25, fontSize: 22 }} />
+              <TextField
+                inputRef={scanInputRef}
+                fullWidth
+                variant="standard"
+                value={qrCodeInput}
+                onChange={handleQRCodeScan}
+                placeholder="Enter QR code number (12 to 15) digit"
+                InputProps={{
+                  disableUnderline: true,
+                  endAdornment: isLoading && (
+                    <InputAdornment position="end">
+                      <CircularProgress size={18} sx={{ color: "primary.main" }} />
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    fontSize: "0.9375rem",
+                    color: "#1E293B",
+                    fontFamily: "monospace, Courier, monospace",
+                    "& input::placeholder": {
+                      color: "#94A3B8",
+                      opacity: 1,
+                    },
+                  },
+                }}
+                inputProps={{
+                  maxLength: 15,
+                }}
+              />
+            </Box>
 
+            {/* Scan QR Button with thick purple border and camera icon */}
             <Button
               variant="outlined"
               onClick={handleOpenScanner}
               startIcon={<QrCodeScannerIcon />}
               sx={{
                 height: 48,
-                px: 3,
+                px: 2.5,
+                borderRadius: "10px",
+                border: "2px solid",
+                borderColor: "primary.main",
+                color: "primary.main",
+                fontWeight: 700,
+                fontSize: "0.9375rem",
                 textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
+                backgroundColor: "#FFFFFF",
                 whiteSpace: "nowrap",
-                borderColor: "#6B288A",
-                color: "#6B288A",
                 "&:hover": {
-                  borderColor: "#551F6F",
-                  backgroundColor: "#F5EEF8",
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  backgroundColor: "action.hover",
                 },
               }}
             >
               Scan QR
             </Button>
-          </Box>
+          </Stack>
 
           {/* Session Stat Box */}
           <Box
@@ -808,7 +815,7 @@ const StoreIn: React.FC = () => {
         >
           <Typography
             variant="h6"
-            sx={{ fontSize: "0.95rem", fontWeight: 700, color: "#101828" }}
+            sx={{ fontSize: "0.875rem", fontWeight: 600, color: "primary.main" }}
           >
             Scanned this session
           </Typography>
@@ -1024,7 +1031,7 @@ const StoreIn: React.FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
             <Typography
               variant="h6"
-              sx={{ fontSize: "0.95rem", fontWeight: 700, color: "#101828" }}
+              sx={{ fontSize: "0.875rem", fontWeight: 600, color: "primary.main" }}
             >
               Awaiting precheck
             </Typography>

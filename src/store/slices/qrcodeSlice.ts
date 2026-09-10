@@ -233,9 +233,11 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
       const pageSize = payload.pageSize || 20;
 
       const searchQueryVal =
-        typeof payload.searchQuery === "object" && payload.searchQuery !== null
-          ? payload.searchQuery
-          : { searchQuery: payload.searchQuery ? String(payload.searchQuery).trim() : "" };
+        typeof payload.searchQuery === "string"
+          ? payload.searchQuery.trim()
+          : typeof payload.searchQuery === "number"
+          ? String(payload.searchQuery)
+          : "";
 
       const body = {
         searchQuery: searchQueryVal,

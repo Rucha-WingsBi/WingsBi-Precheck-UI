@@ -32,9 +32,10 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   Delete as DeleteIcon,
+  ViewColumn as ViewColumnIcon,
 } from "@mui/icons-material";
 import type { GridItem } from "./types";
-import { formatDate, formatQuantity, getComponentTypeChip } from "./utils";
+import { formatDate, formatQuantity, getComponentTypeChip, getStatusBadgeChip } from "./utils";
 
 interface PrecheckTableProps {
   paginatedResults: GridItem[];
@@ -94,42 +95,73 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
   const isEditDeleteEnabled = user?.role?.toLowerCase() === "admin" || user?.role?.toLowerCase() === "head";
   return (
     <Paper
+      elevation={0}
       sx={{
         mt: 0.5,
-        mb: 0.5,
-        p: 0.5,
-        boxShadow: 2,
+        mb: 1,
+        borderRadius: "16px",
+        border: "1px solid #EAECF0",
+        backgroundColor: "#FFFFFF",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
         width: "100%",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
       }}
     >
+      {/* BOM Lines Header Bar */}
+      <Box
+        sx={{
+          px: 2,
+          py: 1,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderBottom: "1px solid #EAECF0",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 700, fontSize: "1.0625rem", color: "#101828" }}
+          >
+            BOM lines
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "#667085", fontSize: "0.875rem", fontWeight: 500 }}
+          >
+            {searchResults.length > 0 ? `${searchResults.length} lines` : ""} 
+          </Typography>
+        </Box>
+      </Box>
+
       <TableContainer
         sx={{
           overflow: "auto",
           width: "100%",
-          maxHeight: "calc(100vh - 270px)",
+          minHeight: searchResults.length > 0 ? 200 : 80,
+          maxHeight: "calc(100vh - 360px)",
         }}
       >
         <Table
           stickyHeader
           sx={{
-            minWidth: 1000,
-            "& .MuiTableCell-alignCenter": {
-              "& .MuiTableSortLabel-root": {
-                justifyContent: "center",
-                "& .MuiTableSortLabel-icon": {
-                  marginRight: "-18px !important",
-                  marginLeft: "4px !important",
-                },
-              },
+            width: "100%",
+            "& .MuiTableCell-head": {
+              backgroundColor: "#F9FAFB",
+              color: "#475467",
+              fontWeight: 600,
+              fontSize: "0.8125rem",
+              borderBottom: "1px solid #EAECF0",
+              py: 1.25,
             },
           }}
           size="small"
         >
           <TableHead>
-            <TableRow sx={{ backgroundColor: "#f5f5f5", height: 38 }}>
+            <TableRow sx={{ backgroundColor: "#F9FAFB" }}>
               <TableCell
                 align="center"
                 sx={{
@@ -146,7 +178,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                   direction={orderBy === "sr" ? order : "asc"}
                   onClick={() => onRequestSort("sr")}
                 >
-                  SR
+                  Sr.No
                 </TableSortLabel>
               </TableCell>
               <TableCell
@@ -370,8 +402,8 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                 align="center"
                 sx={{
                   fontWeight: "bold",
-                  backgroundColor: "#f5f5f5",
-                  py: 0.3,
+                  backgroundColor: "#F9FAFB",
+                  py: 0.8,
                   px: 0.8,
                   fontSize: "0.85rem",
                   minWidth: 80,
@@ -1032,7 +1064,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                   align="center"
                   sx={{ height: 350, color: "text.secondary" }}
                 >
-                  Enter search criteria and click "Make Precheck" to see BOM
+                  Enter search criteria and  to see BOM
                   details
                 </TableCell>
               </TableRow>
@@ -1042,7 +1074,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
       </TableContainer>
 
       {/* Pagination */}
-      {filteredResults.length > 0 && (
+      {(filteredResults.length > 0 || searchResults.length > 0) && (
         <CustomPagination
           page={page}
           pageSize={rowsPerPage}
@@ -1060,4 +1092,4 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
   );
 };
 
-export default PrecheckTable;
+export default React.memo(PrecheckTable);
