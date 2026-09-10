@@ -542,8 +542,8 @@ const ViewBarcode: React.FC = () => {
       searchQuery: queryStr.trim(),
       prodSeries: seriesArr,
       createdBy: numericCreatedBy,
-      fromDate: fromD ? fromD.toISOString() : null,
-      toDate: toD ? toD.toISOString() : null,
+      fromDate: fromD ? format(fromD, "yyyy-MM-dd") : null,
+      toDate: toD ? format(toD, "yyyy-MM-dd") : null,
     };
   };
 
@@ -552,8 +552,8 @@ const ViewBarcode: React.FC = () => {
     selectedProductionSeries,
     selectedStatus,
     selectedGeneratedBy,
-    fromDate: fromDate ? fromDate.toISOString() : null,
-    toDate: toDate ? toDate.toISOString() : null,
+    fromDate: fromDate ? format(fromDate, "yyyy-MM-dd") : null,
+    toDate: toDate ? format(toDate, "yyyy-MM-dd") : null,
     lastSearchParams,
   }), [
     searchQuery,
@@ -868,34 +868,18 @@ const ViewBarcode: React.FC = () => {
 
   const handleProductionSeriesChange = (newSeries: string[]) => {
     setSelectedProductionSeries(newSeries);
-    setPage(0);
-    const params = buildApiParams(searchQuery, newSeries, selectedGeneratedBy, fromDate, toDate, 1, rowsPerPage);
-    setLastSearchParams(params);
-    dispatch(getBarcodeDetailsWithParameters(params));
   };
 
   const handleGeneratedByChange = (newGenBy: (number | string)[]) => {
     setSelectedGeneratedBy(newGenBy);
-    setPage(0);
-    const params = buildApiParams(searchQuery, selectedProductionSeries, newGenBy, fromDate, toDate, 1, rowsPerPage);
-    setLastSearchParams(params);
-    dispatch(getBarcodeDetailsWithParameters(params));
   };
 
   const handleFromDateChange = (newFromDate: Date | null) => {
     setFromDate(newFromDate);
-    setPage(0);
-    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, newFromDate, toDate, 1, rowsPerPage);
-    setLastSearchParams(params);
-    dispatch(getBarcodeDetailsWithParameters(params));
   };
 
   const handleToDateChange = (newToDate: Date | null) => {
     setToDate(newToDate);
-    setPage(0);
-    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, newToDate, 1, rowsPerPage);
-    setLastSearchParams(params);
-    dispatch(getBarcodeDetailsWithParameters(params));
   };
 
   const handleCloseSnackbar = () => {
@@ -1041,8 +1025,8 @@ const ViewBarcode: React.FC = () => {
           searchQuery: searchQuery.trim(),
           generatedBy: numericGenBy,
           prodSeries: selectedProductionSeries,
-          fromDate: fromDate ? fromDate.toISOString() : null,
-          toDate: toDate ? toDate.toISOString() : null,
+          fromDate: fromDate ? format(fromDate, "yyyy-MM-dd") : null,
+          toDate: toDate ? format(toDate, "yyyy-MM-dd") : null,
           selectedColumns: activeColumns,
           createdBy: user?.id ? Number(user.id) : 6,
         })

@@ -17,11 +17,17 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
-
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Snackbar,
   debounce,
   IconButton,
   Stack,
 } from "@mui/material";
+import api from "../../services/api";
 
 import { Save as SaveIcon, Refresh as RefreshIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -84,6 +90,16 @@ export default function InsertMappings() {
   const { data: drawingNumbers = [], isLoading: loadingDrawings } =
     useFetchAllDrawingNumbers(searchQuery, 1, 50);
   const user = useSelector((state: RootState) => state.auth.user);
+
+  // Add to production orders dialog state
+  const [precheckDialogOpen, setPrecheckDialogOpen] = useState(false);
+  const [precheckLoading, setPrecheckLoading] = useState(false);
+  const [savedFormData, setSavedFormData] = useState<InsertMappingsFormData | null>(null);
+  const [precheckSnackbar, setPrecheckSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Local state
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingNumber | null>(
@@ -397,10 +413,16 @@ export default function InsertMappings() {
           : "Drawing mappings saved successfully!"
       );
 
-      // Delay navigation back
-      setTimeout(() => {
-        navigate("/components");
-      }, 1500);
+      if (!isEditMode) {
+        // In add mode, show the precheck dialog instead of navigating immediately
+        setSavedFormData(data);
+        setPrecheckDialogOpen(true);
+      } else {
+        // In edit mode, navigate back after delay
+        setTimeout(() => {
+          navigate("/components");
+        }, 1500);
+      }
     } catch (error: any) {
       console.error("Error saving/updating drawing mappings:", error);
     }
@@ -1215,6 +1237,112 @@ export default function InsertMappings() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Add to Production Orders Confirmation Dialog */}
+      <Dialog
+        open={precheckDialogOpen}
+        onClose={() => {}}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            p: 1,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            color: 'primary.main',
+            fontSize: '1.15rem',
+            pb: 0.5,
+          }}
+        >
+          Add to Existing Production Orders?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary', fontSize: '0.9rem', mt: 0.5 }}>
+            Do you want to add this component to all existing production orders?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setPrecheckDialogOpen(false);
+              setSavedFormData(null);
+              setTimeout(() => {
+                navigate("/components");
+              }, 500);
+            }}
+            variant="outlined"
+            size="small"
+            disabled={precheckLoading}
+            sx={{
+              minWidth: 80,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            No
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!savedFormData) return;
+              setPrecheckLoading(true);
+              try {
+                const res = await api.post('/api/Precheck/addPrecheckComponent', {
+                  assemblyLnItemCode: savedFormData.assemblyItemCode || '',
+                  childLnItemCode: savedFormData.lnItemCode || '',
+                  componentType: savedFormData.componentType || '',
+                  userInput: true,
+                });
+                const msg = res.data?.message || 'Component added to production orders successfully!';
+                setPrecheckSnackbar({ open: true, message: msg, severity: 'success' });
+              } catch (err: any) {
+                const errMsg = err.response?.data?.message || err.message || 'Failed to add component to production orders.';
+                setPrecheckSnackbar({ open: true, message: errMsg, severity: 'error' });
+              } finally {
+                setPrecheckLoading(false);
+                setPrecheckDialogOpen(false);
+                setSavedFormData(null);
+                setTimeout(() => {
+                  navigate("/components");
+                }, 1500);
+              }
+            }}
+            variant="contained"
+            size="small"
+            disabled={precheckLoading}
+            sx={{
+              minWidth: 80,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            {precheckLoading ? <CircularProgress size={18} color="inherit" /> : 'Yes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Precheck Snackbar */}
+      <Snackbar
+        open={precheckSnackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setPrecheckSnackbar({ ...precheckSnackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setPrecheckSnackbar({ ...precheckSnackbar, open: false })}
+          severity={precheckSnackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {precheckSnackbar.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 }

@@ -276,9 +276,22 @@ const ViewIRMSN: React.FC = () => {
       }
 
       dispatch(fetchViewIrMsn(lastSearchParams));
+    } else if (!lastSearchParams && !hasRestored.current) {
+      hasRestored.current = true;
+      const initialPayload = {
+        pageNumber: 1,
+        pageSize: 20,
+        searchQuery: "",
+        productionSeries: [],
+        departmentTypeId: [],
+        fromDate: null,
+        toDate: null,
+        documentType: [],
+      };
+      dispatch(setSearchParams(initialPayload));
+      dispatch(fetchViewIrMsn(initialPayload));
     }
   }, [departments, productionSeries, lastSearchParams, dispatch]);
-
   const handleReset = () => {
     setDrawingOrLnSearch("");
     setSelectedDepartments([]);

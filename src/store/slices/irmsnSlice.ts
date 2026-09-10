@@ -348,6 +348,8 @@ const irmsnSlice = createSlice({
       .addCase(fetchViewIrMsn.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.irmsnList = [];
+        state.totalCount = 0;
       })
       // Generate IRMSN
       .addCase(generateIRMSN.pending, (state) => {
