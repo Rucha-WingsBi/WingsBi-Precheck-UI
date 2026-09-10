@@ -297,22 +297,6 @@ export default function EditIRMSN() {
     }
   };
 
-  const readOnlyStyle = {
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "grey.50",
-      borderRadius: "6px",
-      fontSize: "0.8rem",
-      height: 34,
-    },
-  };
-
-  const inputStyle = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: "6px",
-      fontSize: "0.8rem",
-      height: 34,
-    },
-  };
 
   return (
     <Box
@@ -392,7 +376,6 @@ export default function EditIRMSN() {
                 fullWidth
                 disabled
                 size="small"
-                sx={readOnlyStyle}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
@@ -406,7 +389,6 @@ export default function EditIRMSN() {
                     disabled
                     fullWidth
                     size="small"
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -439,7 +421,7 @@ export default function EditIRMSN() {
                   }
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Drawing Number" fullWidth sx={inputStyle} />
+                  <TextField {...params} label="Drawing Number" fullWidth />
                 )}
               />
             </Grid>
@@ -454,7 +436,6 @@ export default function EditIRMSN() {
                     fullWidth
                     size="small"
                     disabled
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -473,7 +454,6 @@ export default function EditIRMSN() {
                     size="small"
                     disabled
                     InputLabelProps={{ shrink: true }}
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -490,7 +470,6 @@ export default function EditIRMSN() {
                     size="small"
                     disabled
                     InputLabelProps={{ shrink: true }}
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -532,7 +511,7 @@ export default function EditIRMSN() {
                   }
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="PO Number" fullWidth sx={inputStyle} />
+                  <TextField {...params} label="PO Number" fullWidth />
                 )}
               />
             </Grid>
@@ -553,7 +532,6 @@ export default function EditIRMSN() {
                     size="small"
                     error={!!errors.quantity}
                     helperText={errors.quantity?.message}
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -586,7 +564,6 @@ export default function EditIRMSN() {
                         error={!!error}
                         helperText={error?.message}
                         inputRef={field.ref}
-                        sx={inputStyle}
                       />
                     )}
                   />
@@ -605,7 +582,6 @@ export default function EditIRMSN() {
                     label="ID Number Range"
                     fullWidth
                     size="small"
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -620,7 +596,6 @@ export default function EditIRMSN() {
                     label="Operation Number"
                     fullWidth
                     size="small"
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -639,7 +614,6 @@ export default function EditIRMSN() {
                     size="small"
                     multiline
                     rows={1}
-                    sx={inputStyle}
                   />
                 )}
               />

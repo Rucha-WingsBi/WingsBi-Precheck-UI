@@ -34,7 +34,6 @@ import {
   RadioGroup,
   FormControlLabel,
   Grid,
-  Select,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -50,7 +49,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 import { getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
-import { useProductionSeries, useDepartments } from '../../hooks/useMasterData';
+import { useProductionSeries, useUsers } from '../../hooks/useMasterData';
 import { useDebounce } from '../../hooks/useDebounce';
 import { type RootState } from '../../store/store';
 import { useDispatch, useSelector } from "react-redux";
@@ -60,6 +59,7 @@ import { CustomPagination } from '../../components/CustomPagination';
 
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format } from 'date-fns';
 import { MultiSelectFilter } from '../../components/MultiSelectFilter';
 
 const ALL_EXPORTABLE_COLUMNS = [
@@ -469,7 +469,7 @@ const ViewBarcode: React.FC = () => {
   // Multiselect Filter States
   const [selectedProductionSeries, setSelectedProductionSeries] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
+  const [selectedGeneratedBy, setSelectedGeneratedBy] = useState<(number | string)[]>([]);
 
   const [selectedQRCodes, setSelectedQRCodes] = useState<string[]>([]);
   const [fromDate, setFromDate] = useState<Date | null>(null);
@@ -480,7 +480,7 @@ const ViewBarcode: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const { data: productionSeriesData = [] } = useProductionSeries();
-  const { data: departmentsData = [] } = useDepartments();
+  const { data: usersData = [] } = useUsers();
 
   const prodSeriesOptions = React.useMemo(() => {
     if (!productionSeriesData) return [];
@@ -489,12 +489,18 @@ const ViewBarcode: React.FC = () => {
       .filter(Boolean);
   }, [productionSeriesData]);
 
-  const departmentOptions = React.useMemo(() => {
-    if (!departmentsData) return [];
-    return departmentsData
-      .map((item: any) => (typeof item === 'string' ? item : (item.name || item.departmentName || item.department)))
-      .filter(Boolean);
-  }, [departmentsData]);
+  const userOptions = React.useMemo(() => {
+    const rawUsers = Array.isArray(usersData) ? usersData : (usersData as any)?.data || (usersData as any)?.items || [];
+    return rawUsers.map((u: any) => {
+      const numId = Number(u.id ?? u.createdBy ?? u.user_id ?? u.idUser);
+      const idVal = !isNaN(numId) && numId > 0 ? numId : (u.id ?? u.userId ?? u.userName);
+      const labelVal = u.userName || (u as any).name || u.users || String(idVal);
+      return {
+        id: idVal,
+        label: labelVal,
+      };
+    });
+  }, [usersData]);
 
   // Scanner lock
   const isProcessing = React.useRef(false);
@@ -503,19 +509,39 @@ const ViewBarcode: React.FC = () => {
   const buildApiParams = (
     queryStr: string = searchQuery,
     seriesArr: string[] = selectedProductionSeries,
-    deptArr: string[] = selectedDepartment,
+    genByArr: (number | string)[] = selectedGeneratedBy,
     fromD: Date | null = fromDate,
     toD: Date | null = toDate,
     pNum: number = 1,
     pSize: number = 20
   ) => {
+    const rawUsers = Array.isArray(usersData) ? usersData : (usersData as any)?.data || (usersData as any)?.items || [];
+
+    const numericCreatedBy = genByArr
+      .map((val) => {
+        const num = Number(val);
+        if (!isNaN(num) && num > 0) return num;
+        const matched = rawUsers.find(
+          (u: any) =>
+            (u.userName && String(u.userName).toLowerCase() === String(val).toLowerCase()) ||
+            (u.name && String(u.name).toLowerCase() === String(val).toLowerCase()) ||
+            (u.users && String(u.users).toLowerCase() === String(val).toLowerCase()) ||
+            (u.userId && String(u.userId).toLowerCase() === String(val).toLowerCase())
+        );
+        if (matched) {
+          const foundId = Number(matched.id ?? matched.createdBy ?? matched.user_id ?? matched.idUser ?? matched.userId);
+          if (!isNaN(foundId) && foundId > 0) return foundId;
+        }
+        return null;
+      })
+      .filter((id): id is number => id !== null && id > 0);
+
     return {
       pageNumber: pNum,
       pageSize: pSize,
       searchQuery: queryStr.trim(),
       prodSeries: seriesArr,
-      department: deptArr,
-      createdBy: user?.id ? Number(user.id) : 0,
+      createdBy: numericCreatedBy,
       fromDate: fromD ? fromD.toISOString() : null,
       toDate: toD ? toD.toISOString() : null,
     };
@@ -525,7 +551,7 @@ const ViewBarcode: React.FC = () => {
     searchQuery,
     selectedProductionSeries,
     selectedStatus,
-    selectedDepartment,
+    selectedGeneratedBy,
     fromDate: fromDate ? fromDate.toISOString() : null,
     toDate: toDate ? toDate.toISOString() : null,
     lastSearchParams,
@@ -533,7 +559,7 @@ const ViewBarcode: React.FC = () => {
     searchQuery,
     selectedProductionSeries,
     selectedStatus,
-    selectedDepartment,
+    selectedGeneratedBy,
     fromDate,
     toDate,
     lastSearchParams,
@@ -550,7 +576,7 @@ const ViewBarcode: React.FC = () => {
       if (returnFilters.searchQuery !== undefined) setSearchQuery(returnFilters.searchQuery);
       if (returnFilters.selectedProductionSeries !== undefined) setSelectedProductionSeries(returnFilters.selectedProductionSeries);
       if (returnFilters.selectedStatus !== undefined) setSelectedStatus(returnFilters.selectedStatus);
-      if (returnFilters.selectedDepartment !== undefined) setSelectedDepartment(returnFilters.selectedDepartment);
+      if (returnFilters.selectedGeneratedBy !== undefined) setSelectedGeneratedBy(returnFilters.selectedGeneratedBy);
       if (returnFilters.fromDate) setFromDate(new Date(returnFilters.fromDate));
       if (returnFilters.toDate) setToDate(new Date(returnFilters.toDate));
       if (returnFilters.lastSearchParams !== undefined) setLastSearchParams(returnFilters.lastSearchParams);
@@ -562,10 +588,10 @@ const ViewBarcode: React.FC = () => {
       } else {
         const queryStr = returnFilters.searchQuery || "";
         const seriesArr = returnFilters.selectedProductionSeries || [];
-        const deptArr = returnFilters.selectedDepartment || [];
+        const genByArr = returnFilters.selectedGeneratedBy || [];
         const fromD = returnFilters.fromDate ? new Date(returnFilters.fromDate) : null;
         const toD = returnFilters.toDate ? new Date(returnFilters.toDate) : null;
-        const params = buildApiParams(queryStr, seriesArr, deptArr, fromD, toD, 20);
+        const params = buildApiParams(queryStr, seriesArr, genByArr, fromD, toD, 1, 20);
         dispatch(getBarcodeDetailsWithParameters(params));
       }
     } else {
@@ -683,16 +709,46 @@ const ViewBarcode: React.FC = () => {
       });
     }
 
-    // Department filter
-    if (selectedDepartment.length > 0) {
+    // Generated by filter
+    if (selectedGeneratedBy.length > 0) {
       list = list.filter((item: any) => {
-        const dept = item.department || item.desposition || '';
-        return selectedDepartment.some((d) => d.toLowerCase() === dept.toLowerCase());
+        const itemUserId = item.createdBy || item.userId || item.createdById || item.usersId;
+        const itemUserName = (item.users || item.userName || item.createdBy || "").toString().toLowerCase();
+
+        return selectedGeneratedBy.some((selectedVal) => {
+          if (itemUserId && String(itemUserId) === String(selectedVal)) {
+            return true;
+          }
+          const matchedUser = usersData.find((u: any) => String(u.id) === String(selectedVal));
+          if (matchedUser) {
+            const name = (matchedUser.userName || (matchedUser as any).name || "").toString().toLowerCase();
+            if (name && itemUserName.includes(name)) return true;
+          }
+          return false;
+        });
+      });
+    }
+
+    // Date range filter (From Date & To Date)
+    if (fromDate || toDate) {
+      list = list.filter((item: any) => {
+        if (!item.createdDate) return false;
+        const itemTime = new Date(item.createdDate).getTime();
+        if (isNaN(itemTime)) return false;
+        if (fromDate) {
+          const fromTime = new Date(fromDate).setHours(0, 0, 0, 0);
+          if (itemTime < fromTime) return false;
+        }
+        if (toDate) {
+          const toTime = new Date(toDate).setHours(23, 59, 59, 999);
+          if (itemTime > toTime) return false;
+        }
+        return true;
       });
     }
 
     return list;
-  }, [sortedBarcodeDetails, searchQuery, selectedProductionSeries, selectedStatus, selectedDepartment]);
+  }, [sortedBarcodeDetails, searchQuery, selectedProductionSeries, selectedStatus, selectedGeneratedBy, usersData, fromDate, toDate]);
 
   useEffect(() => {
     setDisplayedData(filteredBarcodeDetails);
@@ -806,7 +862,39 @@ const ViewBarcode: React.FC = () => {
       scannerTimeoutRef.current = null;
     }
     setPage(0);
-    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedDepartment, fromDate, toDate, 1, rowsPerPage);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, toDate, 1, rowsPerPage);
+    setLastSearchParams(params);
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const handleProductionSeriesChange = (newSeries: string[]) => {
+    setSelectedProductionSeries(newSeries);
+    setPage(0);
+    const params = buildApiParams(searchQuery, newSeries, selectedGeneratedBy, fromDate, toDate, 1, rowsPerPage);
+    setLastSearchParams(params);
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const handleGeneratedByChange = (newGenBy: (number | string)[]) => {
+    setSelectedGeneratedBy(newGenBy);
+    setPage(0);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, newGenBy, fromDate, toDate, 1, rowsPerPage);
+    setLastSearchParams(params);
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const handleFromDateChange = (newFromDate: Date | null) => {
+    setFromDate(newFromDate);
+    setPage(0);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, newFromDate, toDate, 1, rowsPerPage);
+    setLastSearchParams(params);
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const handleToDateChange = (newToDate: Date | null) => {
+    setToDate(newToDate);
+    setPage(0);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, newToDate, 1, rowsPerPage);
     setLastSearchParams(params);
     dispatch(getBarcodeDetailsWithParameters(params));
   };
@@ -862,7 +950,7 @@ const ViewBarcode: React.FC = () => {
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedDepartment, fromDate, toDate, newPage + 1, rowsPerPage);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, toDate, newPage + 1, rowsPerPage);
     setLastSearchParams(params);
     dispatch(getBarcodeDetailsWithParameters(params));
   };
@@ -870,7 +958,7 @@ const ViewBarcode: React.FC = () => {
   const handleRowsPerPageChange = (newRowsPerPage: number) => {
     setRowsPerPage(newRowsPerPage);
     setPage(0);
-    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedDepartment, fromDate, toDate, 1, newRowsPerPage);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, toDate, 1, newRowsPerPage);
     setLastSearchParams(params);
     dispatch(getBarcodeDetailsWithParameters(params));
   };
@@ -943,12 +1031,16 @@ const ViewBarcode: React.FC = () => {
     }
 
     try {
+      const numericGenBy = selectedGeneratedBy
+        .map((id) => Number(id))
+        .filter((id) => !isNaN(id) && id > 0);
+
       const result = await dispatch(
         exportViewQrCode({
           qrCodeNumbers: selectedQRCodes,
           qrCodeStatusId: 0,
           searchQuery: searchQuery.trim(),
-          department: selectedDepartment,
+          generatedBy: numericGenBy,
           prodSeries: selectedProductionSeries,
           fromDate: fromDate ? fromDate.toISOString() : null,
           toDate: toDate ? toDate.toISOString() : null,
@@ -984,19 +1076,21 @@ const ViewBarcode: React.FC = () => {
     setSearchQuery('');
     setSelectedProductionSeries([]);
     setSelectedStatus([]);
-    setSelectedDepartment([]);
+    setSelectedGeneratedBy([]);
     setFromDate(null);
     setToDate(null);
     setSelectedQRCodes([]);
-    setLastSearchParams(null);
-    dispatch(clearBarcodeDetails());
-    dispatch(clearError());
     setPage(0);
     isProcessing.current = false;
     if (scannerTimeoutRef.current) {
       clearTimeout(scannerTimeoutRef.current);
       scannerTimeoutRef.current = null;
     }
+    const initialParams = buildApiParams('', [], [], null, null, 1, rowsPerPage);
+    setLastSearchParams(initialParams);
+    dispatch(clearBarcodeDetails());
+    dispatch(clearError());
+    dispatch(getBarcodeDetailsWithParameters(initialParams));
   };
 
   const handleReset = () => {
@@ -1014,7 +1108,7 @@ const ViewBarcode: React.FC = () => {
     }
     const trimmed = debouncedSearchQuery.trim();
     if (trimmed.length >= 3 || trimmed.length === 0) {
-      const params = buildApiParams(trimmed, selectedProductionSeries, selectedDepartment, fromDate, toDate);
+      const params = buildApiParams(trimmed, selectedProductionSeries, selectedGeneratedBy, fromDate, toDate);
       setLastSearchParams(params);
       dispatch(getBarcodeDetailsWithParameters(params));
     }
@@ -1057,13 +1151,18 @@ const ViewBarcode: React.FC = () => {
     searchQuery.trim() ||
     selectedProductionSeries.length > 0 ||
     selectedStatus.length > 0 ||
-    selectedDepartment.length > 0 ||
+    selectedGeneratedBy.length > 0 ||
     fromDate ||
     toDate ||
     sortedBarcodeDetails.length > 0
   );
 
-  const hasActiveChips = selectedProductionSeries.length > 0 || selectedStatus.length > 0 || selectedDepartment.length > 0;
+  const hasActiveChips =
+    selectedProductionSeries.length > 0 ||
+    selectedStatus.length > 0 ||
+    selectedGeneratedBy.length > 0 ||
+    !!fromDate ||
+    !!toDate;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -1200,7 +1299,7 @@ const ViewBarcode: React.FC = () => {
                           onClick={() => {
                             setSearchQuery('');
                             if (error) dispatch(clearError());
-                            const params = buildApiParams('', selectedProductionSeries, selectedDepartment, fromDate, toDate);
+                            const params = buildApiParams('', selectedProductionSeries, selectedGeneratedBy, fromDate, toDate);
                             setLastSearchParams(params);
                             dispatch(getBarcodeDetailsWithParameters(params));
                           }}
@@ -1217,12 +1316,6 @@ const ViewBarcode: React.FC = () => {
                   flex: "1 1 200px",
                   minWidth: 160,
                   position: 'relative',
-                  '& .MuiOutlinedInput-root': {
-                    height: 34,
-                    borderRadius: '6px',
-                    bgcolor: '#fff',
-                    fontSize: '0.8rem',
-                  },
                 }}
               />
 
@@ -1231,7 +1324,7 @@ const ViewBarcode: React.FC = () => {
                 label="Prod. Series"
                 value={selectedProductionSeries}
                 options={prodSeriesOptions}
-                onChange={setSelectedProductionSeries}
+                onChange={handleProductionSeriesChange}
                 minWidth={110}
                 flex="0 0 140px"
               />
@@ -1246,32 +1339,41 @@ const ViewBarcode: React.FC = () => {
                 flex="0 0 120px"
               />
 
-              {/* Multiselect Department Dropdown */}
+              {/* Multiselect Generated By Dropdown */}
               <MultiSelectFilter
-                label="Department"
-                value={selectedDepartment}
-                options={departmentOptions}
-                onChange={setSelectedDepartment}
-                minWidth={110}
-                flex="0 0 130px"
+                label="Generated By"
+                value={selectedGeneratedBy}
+                options={userOptions}
+                onChange={handleGeneratedByChange}
+                minWidth={130}
+                flex="0 0 150px"
               />
 
-              {/* Date Picker */}
+              {/* Date Pickers */}
               <DatePicker
+                label="From Date"
                 value={fromDate}
-                onChange={(newValue) => setFromDate(newValue)}
+                onChange={handleFromDateChange}
                 slotProps={{
                   textField: {
                     size: 'small',
-                    placeholder: 'Created On · any date',
                     sx: {
-                      flex: "0 0 160px",
-                      minWidth: 140,
-                      '& .MuiOutlinedInput-root': {
-                        height: 34,
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                      },
+                      flex: "0 0 130px",
+                      minWidth: 115,
+                    },
+                  },
+                }}
+              />
+              <DatePicker
+                label="To Date"
+                value={toDate}
+                onChange={handleToDateChange}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    sx: {
+                      flex: "0 0 130px",
+                      minWidth: 115,
                     },
                   },
                 }}
@@ -1346,7 +1448,7 @@ const ViewBarcode: React.FC = () => {
                     onDelete={() => {
                       setSearchQuery('');
                       if (error) dispatch(clearError());
-                      const params = buildApiParams('', selectedProductionSeries, selectedDepartment, fromDate, toDate);
+                      const params = buildApiParams('', selectedProductionSeries, selectedGeneratedBy, fromDate, toDate);
                       setLastSearchParams(params);
                       dispatch(getBarcodeDetailsWithParameters(params));
                     }}
@@ -1412,12 +1514,50 @@ const ViewBarcode: React.FC = () => {
                   />
                 ))}
 
-                {selectedDepartment.map((d) => (
+                {selectedGeneratedBy.map((userId) => {
+                  const matchedUser = usersData.find((u: any) => String(u.id) === String(userId));
+                  const userLabel = matchedUser ? (matchedUser.userName || (matchedUser as any).name || String(userId)) : String(userId);
+                  return (
+                    <Chip
+                      key={`genBy-${userId}`}
+                      label={`Generated By: ${userLabel}`}
+                      size="small"
+                      onDelete={() => {
+                        const nextUsers = selectedGeneratedBy.filter((id) => String(id) !== String(userId));
+                        setSelectedGeneratedBy(nextUsers);
+                        const params = buildApiParams(searchQuery, selectedProductionSeries, nextUsers, fromDate, toDate, 1, rowsPerPage);
+                        setLastSearchParams(params);
+                        dispatch(getBarcodeDetailsWithParameters(params));
+                      }}
+                      sx={{
+                        borderRadius: '16px',
+                        bgcolor: '#f2f4f7',
+                        color: '#344054',
+                        border: '1px solid #e4e7ec',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        height: '26px',
+                        '& .MuiChip-deleteIcon': {
+                          fontSize: '14px',
+                          color: '#667085',
+                          '&:hover': { color: '#101828' },
+                        },
+                      }}
+                    />
+                  );
+                })}
+
+                {fromDate && (
                   <Chip
-                    key={`dept-${d}`}
-                    label={`Dept: ${d}`}
+                    key="from-date"
+                    label={`From: ${format(fromDate, 'dd/MM/yyyy')}`}
                     size="small"
-                    onDelete={() => setSelectedDepartment(selectedDepartment.filter((v) => v !== d))}
+                    onDelete={() => {
+                      setFromDate(null);
+                      const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, null, toDate);
+                      setLastSearchParams(params);
+                      dispatch(getBarcodeDetailsWithParameters(params));
+                    }}
                     sx={{
                       borderRadius: '16px',
                       bgcolor: '#f2f4f7',
@@ -1433,7 +1573,34 @@ const ViewBarcode: React.FC = () => {
                       },
                     }}
                   />
-                ))}
+                )}
+                {toDate && (
+                  <Chip
+                    key="to-date"
+                    label={`To: ${format(toDate, 'dd/MM/yyyy')}`}
+                    size="small"
+                    onDelete={() => {
+                      setToDate(null);
+                      const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, null);
+                      setLastSearchParams(params);
+                      dispatch(getBarcodeDetailsWithParameters(params));
+                    }}
+                    sx={{
+                      borderRadius: '16px',
+                      bgcolor: '#f2f4f7',
+                      color: '#344054',
+                      border: '1px solid #e4e7ec',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      height: '26px',
+                      '& .MuiChip-deleteIcon': {
+                        fontSize: '14px',
+                        color: '#667085',
+                        '&:hover': { color: '#101828' },
+                      },
+                    }}
+                  />
+                )}
 
                 {(searchQuery.trim() || hasActiveChips) && (
                   <Button
@@ -1442,7 +1609,12 @@ const ViewBarcode: React.FC = () => {
                       setSearchQuery('');
                       setSelectedProductionSeries([]);
                       setSelectedStatus([]);
-                      setSelectedDepartment([]);
+                      setSelectedGeneratedBy([]);
+                      setFromDate(null);
+                      setToDate(null);
+                      setLastSearchParams(null);
+                      const params = buildApiParams('', [], [], null, null);
+                      dispatch(getBarcodeDetailsWithParameters(params));
                     }}
                     sx={{
                       color: 'primary.main',

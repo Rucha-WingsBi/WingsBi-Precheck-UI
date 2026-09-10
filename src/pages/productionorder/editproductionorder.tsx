@@ -116,7 +116,7 @@ export default function EditProductionOrder() {
         const response = await api.post("/api/ProductionOrder/GetAll", {});
         const allOrders = response.data?.data || (Array.isArray(response.data) ? response.data : []);
         const currentOrder = allOrders.find((po: any) => po.id === Number(id));
-        
+
         if (currentOrder) {
           const mappedData: EditProductionOrderFormData = {
             ...currentOrder,
@@ -142,7 +142,7 @@ export default function EditProductionOrder() {
         console.error("Failed to fetch production order details:", err);
       }
     };
-    
+
     fetchData();
   }, [id, reset]);
 
@@ -301,7 +301,6 @@ export default function EditProductionOrder() {
                     size="small"
                     disabled
                     sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                       "& .MuiInputBase-input.Mui-disabled": { WebkitTextFillColor: "#344054", fontWeight: 600 },
                     }}
                   />
@@ -320,7 +319,6 @@ export default function EditProductionOrder() {
                     size="small"
                     InputProps={{ readOnly: true }}
                     sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                       "& .MuiInputBase-input": { color: "#344054", fontWeight: 600 },
                     }}
                   />
@@ -339,7 +337,6 @@ export default function EditProductionOrder() {
                     size="small"
                     InputProps={{ readOnly: true }}
                     sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                       "& .MuiInputBase-input": { color: "#344054" },
                     }}
                   />
@@ -358,7 +355,6 @@ export default function EditProductionOrder() {
                     label="Project Code"
                     fullWidth
                     size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -373,7 +369,6 @@ export default function EditProductionOrder() {
                     label="Project Description"
                     fullWidth
                     size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -386,7 +381,6 @@ export default function EditProductionOrder() {
                 value={selectedProductionSeries?.productionSeries || ""}
                 InputProps={{ readOnly: true }}
                 sx={{
-                  "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                   "& .MuiInputBase-input": { color: "#344054", fontWeight: 600 },
                 }}
               />
@@ -404,7 +398,6 @@ export default function EditProductionOrder() {
                     type="number"
                     fullWidth
                     size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -423,7 +416,6 @@ export default function EditProductionOrder() {
                     size="small"
                     error={!!errors.quantity}
                     helperText={errors.quantity?.message}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -439,7 +431,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -457,7 +448,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -473,7 +463,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -489,7 +478,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />

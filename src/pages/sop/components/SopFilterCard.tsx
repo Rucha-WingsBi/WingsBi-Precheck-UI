@@ -158,18 +158,6 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                       {...params}
                       label="Prod. Series *"
                       placeholder="Select series..."
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: "8px",
-                          fontSize: "0.85rem",
-                          backgroundColor: "#ffffff",
-                        },
-                        "& .MuiInputLabel-root": {
-                          fontSize: "0.85rem",
-                          backgroundColor: "#ffffff",
-                          px: 0.5,
-                        },
-                      }}
                     />
                   )}
                 />
@@ -204,18 +192,6 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                 {...params}
                 label="Assembly No / LItem Code *"
                 placeholder="Type 3+ chars (e.g. CK310)..."
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.85rem",
-                    backgroundColor: "#ffffff",
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontSize: "0.85rem",
-                    backgroundColor: "#ffffff",
-                    px: 0.5,
-                  },
-                }}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -286,18 +262,6 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                 placeholder="ID number..."
                 fullWidth
                 size="small"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.85rem",
-                    backgroundColor: "#ffffff",
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontSize: "0.85rem",
-                    backgroundColor: "#ffffff",
-                    px: 0.5,
-                  },
-                }}
               />
             )}
           />
@@ -315,7 +279,7 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
               sx={{
                 height: 38,
                 px: 2,
-                borderRadius: "8px",
+                borderRadius: "6px",
                 backgroundColor: "primary.main",
                 fontWeight: 600,
                 fontSize: "0.85rem",

@@ -570,10 +570,8 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                 minWidth: 200,
                 "& .MuiOutlinedInput-root": {
                   height: 38,
-                  borderRadius: "8px",
                   fontSize: "0.82rem",
                   backgroundColor: "background.paper",
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
                 },
               }}
               InputProps={{
@@ -635,7 +633,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                 color: "#fff",
                 fontWeight: 600,
                 fontSize: "0.82rem",
-                borderRadius: "8px",
+                borderRadius: "6px",
                 px: 2,
                 height: 38,
                 textTransform: "none",

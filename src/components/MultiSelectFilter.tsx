@@ -100,10 +100,8 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
         }}
         sx={{
           height,
-          borderRadius: "8px",
           fontSize: "0.82rem",
           backgroundColor: "background.paper",
-          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
         }}
       >
         {options.map((opt) => {

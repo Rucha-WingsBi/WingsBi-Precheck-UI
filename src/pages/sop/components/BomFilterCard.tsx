@@ -86,18 +86,6 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
                 {...params}
                 label="Assembly Number / LN Item Code"
                 placeholder="Type 3+ chars to search Assembly Number or LN item code..."
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.85rem",
-                    backgroundColor: "#ffffff",
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontSize: "0.85rem",
-                    backgroundColor: "#ffffff",
-                    px: 0.5,
-                  },
-                }}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -178,7 +166,7 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
               sx={{
                 height: 38,
                 px: 2,
-                borderRadius: "8px",
+                borderRadius: "6px",
                 backgroundColor: "primary.main",
                 fontWeight: 600,
                 fontSize: "0.85rem",
@@ -204,7 +192,7 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
               sx={{
                 height: 38,
                 px: 2,
-                borderRadius: "8px",
+                borderRadius: "6px",
                 borderColor: "#D0D5DD",
                 color: "#344054",
                 fontWeight: 600,

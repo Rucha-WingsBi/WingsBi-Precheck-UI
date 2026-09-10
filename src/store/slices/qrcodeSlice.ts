@@ -221,8 +221,8 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
       pageSize?: number;
       searchQuery?: string;
       prodSeries?: string[];
-      department?: string[];
-      createdBy?: number;
+      createdBy?: number[] | number;
+      generatedBy?: number[];
       fromDate?: string | null;
       toDate?: string | null;
     },
@@ -236,13 +236,21 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
         typeof payload.searchQuery === "string"
           ? payload.searchQuery.trim()
           : typeof payload.searchQuery === "number"
-          ? String(payload.searchQuery)
-          : "";
+            ? String(payload.searchQuery)
+            : "";
+
+      const createdByArr = Array.isArray(payload.createdBy)
+        ? payload.createdBy.map((id) => Number(id)).filter((n) => !isNaN(n) && n > 0)
+        : Array.isArray(payload.generatedBy)
+          ? payload.generatedBy.map((id) => Number(id)).filter((n) => !isNaN(n) && n > 0)
+          : typeof payload.createdBy === "number" && payload.createdBy > 0
+            ? [payload.createdBy]
+            : [];
 
       const body = {
         searchQuery: searchQueryVal,
         prodSeries: Array.isArray(payload.prodSeries) ? payload.prodSeries : [],
-        createdBy: typeof payload.createdBy === "number" ? payload.createdBy : 0,
+        createdBy: createdByArr,
         fromDate: payload.fromDate ? String(payload.fromDate) : null,
         toDate: payload.toDate ? String(payload.toDate) : null,
       };
@@ -921,7 +929,7 @@ export const exportViewQrCode = createAsyncThunk(
       qrCodeNumbers?: string[];
       qrCodeStatusId?: number;
       searchQuery?: string;
-      department?: string[];
+      generatedBy?: number[];
       prodSeries?: string[];
       fromDate?: string | null;
       toDate?: string | null;
@@ -939,7 +947,9 @@ export const exportViewQrCode = createAsyncThunk(
         qrCodeNumbers: payload.qrCodeNumbers || [],
         qrCodeStatusId: payload.qrCodeStatusId ?? 0,
         searchQuery: payload.searchQuery || "",
-        department: payload.department || [],
+        generatedBy: Array.isArray(payload.generatedBy)
+          ? payload.generatedBy.map((id) => Number(id)).filter((n) => !isNaN(n))
+          : [],
         prodSeries: payload.prodSeries || [],
         fromDate: payload.fromDate || null,
         toDate: payload.toDate || null,

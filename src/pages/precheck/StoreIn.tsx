@@ -1081,7 +1081,6 @@ const StoreIn: React.FC = () => {
                 flex: "1 1 240px",
                 minWidth: 180,
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
                   fontSize: "0.825rem",
                   height: 38,
                 },
@@ -1105,7 +1104,7 @@ const StoreIn: React.FC = () => {
                   setSelectedStatus(e.target.value);
                   setPage(0);
                 }}
-                sx={{ borderRadius: "8px", fontSize: "0.825rem", height: 38 }}
+                sx={{ fontSize: "0.825rem", height: 38 }}
                 renderValue={(val) =>
                   val ? (
                     <Typography sx={{ fontSize: "0.825rem", color: "#344054" }}>
@@ -1144,7 +1143,6 @@ const StoreIn: React.FC = () => {
                       minWidth: 130,
                       "& .MuiOutlinedInput-root": {
                         height: 38,
-                        borderRadius: "8px",
                         fontSize: "0.825rem",
                         backgroundColor: "#ffffff",
                       },
@@ -1175,7 +1173,7 @@ const StoreIn: React.FC = () => {
                 color: "#ffffff",
                 fontWeight: 600,
                 fontSize: "0.825rem",
-                borderRadius: "8px",
+                borderRadius: "6px",
                 px: 2.5,
                 height: 38,
                 textTransform: "none",

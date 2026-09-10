@@ -30,7 +30,7 @@ import {
 import type { RootState, AppDispatch } from "../../store/store";
 import type { DrawingNumber, FormData as BaseFormData } from "../../types";
 import {
- 
+
   useAllDrawingNumbers,
 } from "../../hooks/useMasterData";
 import {
@@ -119,7 +119,7 @@ export default function GenerateIRMSN() {
 
   const { data: allDrawingNumbers = [], isLoading: isDrawingsLoading } =
     useAllDrawingNumbers();
- 
+
   const [formMode, setFormMode] = useState<
     "ManufacturingItem" | "PurchaseItem"
   >("ManufacturingItem");
@@ -401,24 +401,24 @@ export default function GenerateIRMSN() {
       const userEnhancedData =
         formMode === "PurchaseItem"
           ? {
-              ...basePayload,
-              isStandard: true,
-              purchaseOrderNumber: data.purchaseOrderNumber || "",
-              drawingNumberId: selectedDrawing?.id || undefined,
-              nomenclatureId: selectedDrawing?.nomenclatureId || undefined,
-              componentTypeId: selectedDrawing?.componentTypeId || undefined,
-              itemDescription: data.itemDescription || "",
-              lnItemCode: data.lnItemCode || "",
-            }
+            ...basePayload,
+            isStandard: true,
+            purchaseOrderNumber: data.purchaseOrderNumber || "",
+            drawingNumberId: selectedDrawing?.id || undefined,
+            nomenclatureId: selectedDrawing?.nomenclatureId || undefined,
+            componentTypeId: selectedDrawing?.componentTypeId || undefined,
+            itemDescription: data.itemDescription || "",
+            lnItemCode: data.lnItemCode || "",
+          }
           : {
-              ...basePayload,
-              isStandard: false,
-              productionOrderNumber: data.poNumber || "",
-              drawingNumberId: selectedDrawing?.id || undefined,
-              nomenclatureId: selectedDrawing?.nomenclatureId || undefined,
-              componentTypeId: selectedDrawing?.componentTypeId || undefined,
-              lnItemCode: data.lnItemCode || "",
-            };
+            ...basePayload,
+            isStandard: false,
+            productionOrderNumber: data.poNumber || "",
+            drawingNumberId: selectedDrawing?.id || undefined,
+            nomenclatureId: selectedDrawing?.nomenclatureId || undefined,
+            componentTypeId: selectedDrawing?.componentTypeId || undefined,
+            lnItemCode: data.lnItemCode || "",
+          };
 
       const result = await dispatch(generateIRMSN(userEnhancedData)).unwrap();
 
@@ -534,7 +534,7 @@ export default function GenerateIRMSN() {
     if (
       selectedPO &&
       selectedPO.productionOrderNumber?.toLowerCase() ===
-        trimmedInput.toLowerCase()
+      trimmedInput.toLowerCase()
     ) {
       return;
     }
@@ -597,17 +597,17 @@ export default function GenerateIRMSN() {
   const requiredFields =
     formMode === "ManufacturingItem"
       ? [
-          !!documentType,
-          !!watchedPoNumber,
-          !!watchedIdRange,
-          !!watchedStage,
-        ]
+        !!documentType,
+        !!watchedPoNumber,
+        !!watchedIdRange,
+        !!watchedStage,
+      ]
       : [
-          !!documentType,
-          !!watch("drawingNumber"),
-          !!watchedIdRange,
-          !!watchedStage,
-        ];
+        !!documentType,
+        !!watch("drawingNumber"),
+        !!watchedIdRange,
+        !!watchedStage,
+      ];
   const remainingRequired = requiredFields.filter((f) => !f).length;
 
   const readOnlyInputStyle = {
@@ -698,8 +698,8 @@ export default function GenerateIRMSN() {
               {getValues("department") || currentAuthUser?.department || "SQC"}
             </Typography>
           </Typography>
-          
-          
+
+
           <Typography variant="body2" sx={{ color: "#667085" }}>
             Date{" "}
             <Typography component="span" variant="body2" sx={{ color: "#101828", fontWeight: 700 }}>
@@ -708,7 +708,7 @@ export default function GenerateIRMSN() {
           </Typography>
         </Stack>
 
-        
+
       </Paper>
 
       {/* Error Banner */}
@@ -1577,7 +1577,7 @@ export default function GenerateIRMSN() {
                     size="small"
                     multiline
                     rows={2}
-                   
+
                     sx={standardInputStyle}
                   />
                 )}

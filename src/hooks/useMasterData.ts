@@ -369,22 +369,11 @@ export const useAllDrawingNumbers = () => {
   return useQuery<DrawingNumber[]>({
     queryKey: ["allDrawingNumbers"],
     queryFn: async () => {
-      try {
-        const response = await api.get("/api/Common/FetchAllDrawingNumbers");
-        const rawData = response.data?.data || response.data?.$values || response.data;
-        if (Array.isArray(rawData) && rawData.length > 0) {
-          return rawData;
-        }
-      } catch (err) {
-        console.warn("FetchAllDrawingNumbers endpoint failed, trying GetAllDrawingNumber fallback:", err);
-      }
-
-      // Fallback to GetAllDrawingNumber if FetchAllDrawingNumbers is not available or empty
-      const fallbackResponse = await api.get("/api/Common/GetAllDrawingNumber", {
+      const response = await api.get("/api/Common/GetAllDrawingNumber", {
         params: { ComponentType: "", search: "" },
       });
-      const fallbackRaw = fallbackResponse.data?.data || fallbackResponse.data?.$values || fallbackResponse.data;
-      return Array.isArray(fallbackRaw) ? fallbackRaw : [];
+      const rawData = response.data?.data || response.data?.$values || response.data;
+      return Array.isArray(rawData) ? rawData : Array.isArray(response.data) ? response.data : [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes cache for instant navigation
   });
@@ -422,7 +411,7 @@ export const useIRNumbers = (
 
       // Find all NA-like entries
       const allNAEntries = rawData.filter((item: any) => isAnyNA(item.irNumber));
-      
+
       // Prefer longer variants or the first one found
       const apiNAEntry = allNAEntries.find((item: any) => {
         const n = item.irNumber?.trim().toUpperCase();
@@ -484,7 +473,7 @@ export const useIRNumbers = (
       }
 
       // Filter by search text
-      if (searchText && searchText.length >= 3) {
+      if (searchText && searchText.trim() !== "") {
         const searchLower = searchText.toLowerCase();
         filteredData = filteredData.filter(
           (item: any) =>
@@ -545,7 +534,7 @@ export const useMSNNumbers = (
 
       // Find all NA-like entries
       const allNAEntries = rawData.filter((item: any) => isAnyNA(item.msnNumber));
-      
+
       // Prefer longer variants or the first one found
       const apiNAEntry = allNAEntries.find((item: any) => {
         const n = item.msnNumber?.trim().toUpperCase();
@@ -607,7 +596,7 @@ export const useMSNNumbers = (
       }
 
       // Filter by search text
-      if (searchText && searchText.length >= 3) {
+      if (searchText && searchText.trim() !== "") {
         const searchLower = searchText.toLowerCase();
         filteredData = filteredData.filter(
           (item: any) =>

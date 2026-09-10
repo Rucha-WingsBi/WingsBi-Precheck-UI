@@ -388,34 +388,115 @@ let theme = createTheme({
         },
       },
     },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: '6px',
+          backgroundColor: '#FFFFFF',
+          fontSize: '0.875rem',
+          '& fieldset': {
+            borderColor: '#D1D5DB',
+          },
+          '&:hover fieldset': {
+            borderColor: '#9CA3AF',
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: '#6B288A',
+            borderWidth: '1.5px',
+          },
+          '&.Mui-disabled': {
+            backgroundColor: '#F9FAFB',
+          },
+          '& input': {
+            backgroundColor: 'transparent !important',
+          },
+          '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus, & input:-webkit-autofill:active': {
+            WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
+            WebkitTextFillColor: '#101828 !important',
+            transition: 'background-color 5000s ease-in-out 0s',
+          },
+        },
+        notchedOutline: {
+          borderColor: '#D1D5DB',
+        },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.875rem',
+          color: '#374151',
+          '&.Mui-focused': {
+            color: '#6B288A',
+          },
+        },
+      },
+    },
     MuiTextField: {
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
+            borderRadius: '6px',
+            backgroundColor: '#FFFFFF',
             fontSize: '0.875rem',
-            '@media (min-width:600px)': {
-              fontSize: '1rem',
+            '& fieldset': {
+              borderColor: '#D1D5DB',
             },
-            '@media (min-width:1920px)': {
-              fontSize: '1.125rem',
-              borderRadius: 10,
+            '&:hover fieldset': {
+              borderColor: '#9CA3AF',
             },
-            '@media (min-width:2560px)': {
-              fontSize: '1.5rem',
-              borderRadius: 12,
+            '&.Mui-focused fieldset': {
+              borderColor: '#6B288A',
+              borderWidth: '1.5px',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: '#F9FAFB',
+            },
+            '& input': {
+              backgroundColor: 'transparent !important',
+            },
+            '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus, & input:-webkit-autofill:active': {
+              WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
+              WebkitTextFillColor: '#101828 !important',
+              transition: 'background-color 5000s ease-in-out 0s',
             },
           },
           '& .MuiInputLabel-root': {
             fontSize: '0.875rem',
-            '@media (min-width:600px)': {
-              fontSize: '1rem',
+            color: '#374151',
+            '&.Mui-focused': {
+              color: '#6B288A',
             },
-            '@media (min-width:1920px)': {
-              fontSize: '1.125rem',
+          },
+        },
+      },
+    },
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '6px',
+            backgroundColor: '#FFFFFF',
+            fontSize: '0.875rem',
+            '& fieldset': {
+              borderColor: '#D1D5DB',
             },
-            '@media (min-width:2560px)': {
-              fontSize: '1.5rem',
+            '&:hover fieldset': {
+              borderColor: '#9CA3AF',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#6B288A',
+              borderWidth: '1.5px',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: '#F9FAFB',
+            },
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: '0.875rem',
+            color: '#374151',
+            '&.Mui-focused': {
+              color: '#6B288A',
             },
           },
         },

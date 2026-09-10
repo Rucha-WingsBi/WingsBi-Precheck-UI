@@ -704,12 +704,6 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "1 1 200px",
                   minWidth: 160,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    height: 38,
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                  },
                 }}
               />
 
@@ -730,10 +724,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
                   sx={{
-                    borderRadius: "8px",
                     fontSize: "0.82rem",
                     height: 38,
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
                   }}
                   renderValue={(val) =>
                     val ? (
@@ -761,12 +753,6 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 148px",
                   minWidth: 145,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    height: 38,
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                  },
                   "& .MuiOutlinedInput-input": {
                     py: 0.75,
                     px: 1,
@@ -786,12 +772,6 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 148px",
                   minWidth: 145,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.82rem",
-                    height: 38,
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                  },
                   "& .MuiOutlinedInput-input": {
                     py: 0.75,
                     px: 1,
@@ -811,7 +791,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   color: "#fff",
                   fontWeight: 600,
                   fontSize: "0.82rem",
-                  borderRadius: "8px",
+                  borderRadius: "6px",
                   px: 2,
                   height: 38,
                   textTransform: "none",
@@ -883,12 +863,6 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     label="PO Number"
                     placeholder="PO Number"
                     size="small"
-                    sx={{
-                      "& .MuiInputLabel-root": { fontSize: "0.825rem" },
-                      "& .MuiInputLabel-root.Mui-focused": { color: "#6B288A" },
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
-                      "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6B288A" },
-                    }}
                   />
                 )}
                 sx={{ flex: "0 0 170px", minWidth: 140 }}
@@ -906,7 +880,6 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 150px",
                   minWidth: 120,
-                  "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
                 }}
               />
 
@@ -925,7 +898,6 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 160px",
                   minWidth: 130,
-                  "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
                 }}
               />
 

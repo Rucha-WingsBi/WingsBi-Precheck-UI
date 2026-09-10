@@ -1728,7 +1728,6 @@ const ProductionOrderUpload: React.FC = () => {
                     sx={{
                       flex: "1 1 200px",
                       minWidth: 160,
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" },
                     }}
                   />
 
@@ -1758,7 +1757,7 @@ const ProductionOrderUpload: React.FC = () => {
                     value={fromDate}
                     onChange={(newValue) => setFromDate(newValue)}
                     slotProps={{
-                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115 } },
                     }}
                   />
                   <DatePicker
@@ -1766,7 +1765,7 @@ const ProductionOrderUpload: React.FC = () => {
                     value={toDate}
                     onChange={(newValue) => setToDate(newValue)}
                     slotProps={{
-                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115 } },
                     }}
                   />
 

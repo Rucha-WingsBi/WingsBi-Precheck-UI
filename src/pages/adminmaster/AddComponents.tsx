@@ -1291,12 +1291,12 @@ const SignatureTab = forwardRef<
                           (u.departmentName || "").toLowerCase().includes(q)
                         );
                       }).length === 0 && (
-                      <MenuItem disabled>
-                        <Typography variant="body2" color="text.secondary">
-                          No users found
-                        </Typography>
-                      </MenuItem>
-                    )}
+                        <MenuItem disabled>
+                          <Typography variant="body2" color="text.secondary">
+                            No users found
+                          </Typography>
+                        </MenuItem>
+                      )}
                   </Paper>
                 </Popper>
               </Box>
@@ -1481,7 +1481,7 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
                 fontSize: { xs: "1.25rem", sm: "1.5rem" },
               }}
             >
-            Master Data
+              Master Data
             </Typography>
           </Box>
         </Stack>

@@ -165,7 +165,7 @@ const ViewIRMSN: React.FC = () => {
     [productionSeries]
   );
   const deptOptions = useMemo(
-    () => departments.map((d: any) => ({ id: d.id, label: d.name })),
+    () => departments.map((d: any) => ({ id: d.id, label: d.name || d.departmentName || d.label })),
     [departments]
   );
 
@@ -211,7 +211,7 @@ const ViewIRMSN: React.FC = () => {
           .map((ps: any) => (typeof ps === "string" ? ps : ps.productionSeries))
           .filter(Boolean),
         departmentTypeId: deptsVal
-          .map((d: any) => d.id)
+          .map((d: any) => (typeof d === "object" && d !== null ? d.id : d))
           .filter(Boolean),
         fromDate: fromDVal ? format(fromDVal, "yyyy-MM-dd") : null,
         toDate: toDVal ? format(toDVal, "yyyy-MM-dd") : null,
@@ -229,12 +229,7 @@ const ViewIRMSN: React.FC = () => {
             resPayload?.totalRecords ??
             (Array.isArray(resPayload) ? resPayload.length : resPayload?.data?.length || 0);
 
-          if (count > 0) {
-            setStatusMessage({
-              type: "success",
-              message: `Data loaded successfully. Loaded ${count} records.`,
-            });
-          } else {
+          if (count === 0) {
             setStatusMessage({
               type: "info",
               message: "No records found for the selected criteria.",
@@ -353,7 +348,8 @@ const ViewIRMSN: React.FC = () => {
       }
       if (selectedDepartments.length > 0) {
         params.DepartmentTypeId = selectedDepartments
-          .map((d: any) => d.id)
+          .map((d: any) => (typeof d === "object" && d !== null ? d.id : d))
+          .filter(Boolean)
           .join(",");
       }
       if (drawingOrLnSearch.trim()) {
@@ -686,10 +682,6 @@ const ViewIRMSN: React.FC = () => {
                 sx={{
                   flex: "1 1 200px",
                   minWidth: 160,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                    fontSize: "0.85rem",
-                  },
                 }}
                 placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
                 value={drawingOrLnSearch}
@@ -769,7 +761,6 @@ const ViewIRMSN: React.FC = () => {
                     ) : null
                   }
                   sx={{
-                    borderRadius: "8px",
                     fontSize: "0.85rem",
                     height: 38,
                   }}
@@ -790,16 +781,6 @@ const ViewIRMSN: React.FC = () => {
                     sx: {
                       flex: "0 0 130px",
                       minWidth: 115,
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                        backgroundColor: "#ffffff",
-                      },
-                      "& .MuiInputLabel-root": {
-                        fontSize: "0.85rem",
-                        backgroundColor: "#ffffff",
-                        px: 0.5,
-                      },
                     },
                   },
                 }}
@@ -814,16 +795,6 @@ const ViewIRMSN: React.FC = () => {
                     sx: {
                       flex: "0 0 130px",
                       minWidth: 115,
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                        backgroundColor: "#ffffff",
-                      },
-                      "& .MuiInputLabel-root": {
-                        fontSize: "0.85rem",
-                        backgroundColor: "#ffffff",
-                        px: 0.5,
-                      },
                     },
                   },
                 }}
@@ -893,6 +864,32 @@ const ViewIRMSN: React.FC = () => {
             >
               {/* Active Chips */}
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
+                {drawingOrLnSearch.trim() && (
+                  <Chip
+                    key="chip-search"
+                    label={`Search: "${drawingOrLnSearch.trim()}"`}
+                    size="small"
+                    onDelete={() => {
+                      setDrawingOrLnSearch("");
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { search: "" });
+                    }}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
                 {selectedProductionSeries.map((item: any) => {
                   const label = typeof item === "string" ? item : item.productionSeries;
                   return (
@@ -901,76 +898,164 @@ const ViewIRMSN: React.FC = () => {
                       label={`Series: ${label}`}
                       size="small"
                       onDelete={() => {
-                        setSelectedProductionSeries((prev) =>
-                          prev.filter((s: any) => (s.id || s) !== (item.id || item))
+                        const nextSeries = selectedProductionSeries.filter(
+                          (s: any) => (s.id || s) !== (item.id || item)
                         );
+                        setSelectedProductionSeries(nextSeries);
+                        setPage(0);
+                        executeFetch(0, rowsPerPage, { series: nextSeries });
                       }}
                       sx={{
                         backgroundColor: "#F2F4F7",
                         color: "#344054",
+                        border: "1px solid #E4E7EC",
                         fontWeight: 600,
-                        fontSize: "0.75rem",
-                        borderRadius: "6px",
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        height: "26px",
+                        "& .MuiChip-deleteIcon": {
+                          fontSize: "14px",
+                          color: "#667085",
+                          "&:hover": { color: "#101828" },
+                        },
                       }}
                     />
                   );
                 })}
                 {selectedDepartments.map((item: any) => {
-                  const label = typeof item === "string" ? item : item.name;
+                  let label = "";
+                  let itemId = item;
+                  if (typeof item === "object" && item !== null) {
+                    label = item.label || item.name || item.departmentName || "";
+                    itemId = item.id;
+                  } else {
+                    itemId = item;
+                    const deptObj: any = departments.find((d: any) => String(d.id) === String(item));
+                    label = deptObj ? (deptObj.name || deptObj.departmentName || deptObj.label) : String(item);
+                  }
                   return (
                     <Chip
-                      key={`dept-${item.id || label}`}
+                      key={`dept-${itemId}`}
                       label={`Dept: ${label}`}
                       size="small"
                       onDelete={() => {
-                        setSelectedDepartments((prev) =>
-                          prev.filter((d: any) => (d.id || d) !== (item.id || item))
-                        );
+                        const nextDepts = selectedDepartments.filter((d: any) => {
+                          const dId = typeof d === "object" && d !== null ? d.id : d;
+                          return String(dId) !== String(itemId);
+                        });
+                        setSelectedDepartments(nextDepts);
+                        setPage(0);
+                        executeFetch(0, rowsPerPage, { depts: nextDepts });
                       }}
                       sx={{
                         backgroundColor: "#F2F4F7",
                         color: "#344054",
+                        border: "1px solid #E4E7EC",
                         fontWeight: 600,
-                        fontSize: "0.75rem",
-                        borderRadius: "6px",
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        height: "26px",
+                        "& .MuiChip-deleteIcon": {
+                          fontSize: "14px",
+                          color: "#667085",
+                          "&:hover": { color: "#101828" },
+                        },
                       }}
                     />
                   );
                 })}
                 {typeFilter !== "All" && (
                   <Chip
+                    key="type-filter"
                     label={`Type: ${typeFilter}`}
                     size="small"
-                    onDelete={() => setTypeFilter("All")}
+                    onDelete={() => {
+                      setTypeFilter("All");
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { type: "All" });
+                    }}
                     sx={{
                       backgroundColor: "#F2F4F7",
                       color: "#344054",
+                      border: "1px solid #E4E7EC",
                       fontWeight: 600,
-                      fontSize: "0.75rem",
-                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
                     }}
                   />
                 )}
-                {(selectedDepartments.length > 0 ||
-                  selectedProductionSeries.length > 0 ||
-                  typeFilter !== "All") && (
-                  <Button
+                {fromDate && (
+                  <Chip
+                    key="from-date"
+                    label={`From: ${format(fromDate, "dd/MM/yyyy")}`}
                     size="small"
-                    color="error"
-                    variant="text"
-                    onClick={() => {
-                      setSelectedDepartments([]);
-                      setSelectedProductionSeries([]);
-                      setTypeFilter("All");
+                    onDelete={() => {
+                      setFromDate(null);
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { fDate: null });
                     }}
                     sx={{
-                      fontSize: "0.75rem",
-                      py: 0,
-                      px: 1,
-                      height: "24px",
-                      minWidth: "auto",
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
                       fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
+                {toDate && (
+                  <Chip
+                    key="to-date"
+                    label={`To: ${format(toDate, "dd/MM/yyyy")}`}
+                    size="small"
+                    onDelete={() => {
+                      setToDate(null);
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { tDate: null });
+                    }}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
+                {isFilterApplied && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={handleReset}
+                    sx={{
+                      color: "primary.main",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
                       textTransform: "none",
+                      p: 0,
+                      height: "26px",
+                      minWidth: "auto",
+                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
                     }}
                   >
                     Clear all
