@@ -752,7 +752,6 @@ const ViewBarcode: React.FC = () => {
 
   useEffect(() => {
     setDisplayedData(filteredBarcodeDetails);
-    setPage(0);
   }, [filteredBarcodeDetails]);
 
   const showBatchIdColumn = React.useMemo(() => {
