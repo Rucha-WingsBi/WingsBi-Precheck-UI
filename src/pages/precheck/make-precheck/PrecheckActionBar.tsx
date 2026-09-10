@@ -60,6 +60,7 @@ interface PrecheckActionBarProps {
   onExport?: () => void;
   onReset?: () => void;
   onChangeOrder?: () => void;
+  onChangeIdNumber?: () => void;
   onPrevId?: () => void;
   onNextId?: () => void;
   onReject?: () => void;
@@ -98,6 +99,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
   onExport,
   onReset,
   onChangeOrder,
+  onChangeIdNumber,
   onPrevId,
   onNextId,
   onReject,
@@ -221,6 +223,26 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                 {idNumber || "-"}
               </Box>
             </Typography>
+
+            {onChangeIdNumber && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={onChangeIdNumber}
+                sx={{
+                  color: "#7E22CE",
+                  fontWeight: 600,
+                  fontSize: "0.875rem",
+                  p: 0,
+                  ml: 0.5,
+                  minWidth: "auto",
+                  textTransform: "none",
+                  "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                }}
+              >
+                Change ID number
+              </Button>
+            )}
 
             {onChangeOrder && (
               <Button

@@ -277,8 +277,8 @@ const MakePrecheck: React.FC = () => {
     user,
     showAlertMessage,
     setBatchWarningOpen,
-    onAutoSubmit: () => {
-      handleSubmitPrecheck();
+    onAutoSubmit: (updatedItems?: GridItem[]) => {
+      handleSubmitPrecheck(updatedItems);
     },
     onExcelUploadSuccess: () => {
       // Reload current grid if we have loaded data
@@ -741,11 +741,13 @@ const MakePrecheck: React.FC = () => {
     return true;
   };
 
-  const handleSubmitPrecheck = async () => {
+  const handleSubmitPrecheck = async (itemsList?: GridItem[]) => {
     try {
       setIsLoadingLocal(true);
 
-      const componentsToSubmit = searchResults
+      const targetList = (itemsList && itemsList.length > 0) ? itemsList : searchResults;
+
+      const componentsToSubmit = targetList
         .filter((item) => item.isUpdated && !item.isSubmitted && item.qrCode)
         .map((item) => ({
           ConsumedDrawingNo: `${selectedProductionSeries?.productionSeries}/${selectedDrawing?.drawingNumber}/${idNumber}`,
@@ -1690,6 +1692,7 @@ const MakePrecheck: React.FC = () => {
         onToggleFilter={() => setFilterRemainingOnly(!filterRemainingOnly)}
         onExport={handleExport}
         onReset={handleReset}
+        onChangeIdNumber={() => setShowFormControls(!showFormControls)}
         onChangeOrder={() => setShowFormControls(!showFormControls)}
         onBarcodeChange={handleBarcodeChange}
         onBarcodeKeyDown={handleBarcodeKeyDown}

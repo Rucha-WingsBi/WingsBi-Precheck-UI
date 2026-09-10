@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -7,7 +7,6 @@ import {
   Grid,
   Button,
   TextField,
-  Autocomplete,
   CircularProgress,
   Table,
   TableBody,
@@ -16,27 +15,79 @@ import {
   TableHead,
   TableRow,
   Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  IconButton,
   Tabs,
   Tab,
   Stack,
+  InputAdornment,
+  Chip,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
+import { EmptyState } from "../../components/EmptyState";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 
 import {
   Search as SearchIcon,
-  Refresh as RefreshIcon,
-  Launch as LaunchIcon,
 } from "@mui/icons-material";
 import api from "../../services/api";
-import { useAllDrawingNumbers, useLnItemCodeSearch, useProductionSeries } from "../../hooks/useMasterData";
-import { type DrawingNumber, type ProductionSeries } from "../../types";
+import { useProductionSeries } from "../../hooks/useMasterData";
+import { useDebounce } from "../../hooks/useDebounce";
 
 const StoredInComponents = React.lazy(() => import("./StoredInComponents"));
+
+// Helper function to render status badge in QR table
+const renderQrStatusBadge = (statusStr: string | undefined) => {
+  const status = (statusStr || "N/A").toLowerCase();
+  let bg = "#f4f5f7";
+  let color = "#344054";
+  let borderColor = "#d0d5dd";
+
+  if (status.includes("available") || status.includes("ready") || status.includes("complete")) {
+    bg = "#ecfdf5";
+    color = "#047857";
+    borderColor = "#a7f3d0";
+  } else if (status.includes("pending") || status.includes("hold")) {
+    bg = "#fffbeb";
+    color = "#d97706";
+    borderColor = "#fde68a";
+  } else if (status.includes("used") || status.includes("consumed")) {
+    bg = "#eff6ff";
+    color = "#2563eb";
+    borderColor = "#bfdbfe";
+  } else if (status.includes("reject") || status.includes("scrap")) {
+    bg = "#fef2f2";
+    color = "#b91c1c";
+    borderColor = "#fecaca";
+  }
+
+  return (
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 0.75,
+        px: 1.25,
+        py: 0.25,
+        borderRadius: "12px",
+        bgcolor: bg,
+        color: color,
+        border: `1px solid ${borderColor}`,
+        fontWeight: 600,
+        fontSize: "0.75rem",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Box
+        sx={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          bgcolor: color,
+        }}
+      />
+      {statusStr || "N/A"}
+    </Box>
+  );
+};
 
 const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
@@ -48,14 +99,20 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   // Tab state: 1 = RM Store, 2 = RFG Store
   const [activeTab, setActiveTab] = useState<number>(1);
 
-  // Query master data
-  const { data: allDrawingNumbers = [], isLoading: isDrawingsLoading } = useAllDrawingNumbers();
-  const { data: productionSeriesList = [], isLoading: isSeriesLoading } = useProductionSeries();
+  // Production Series hook for filter
+  const { data: productionSeriesList = [] } = useProductionSeries();
+  const seriesOptions = useMemo(() => {
+    return productionSeriesList.map((s: any) => ({
+      id: s.id || s.productionSeries,
+      label: s.productionSeries || String(s),
+    }));
+  }, [productionSeriesList]);
 
   // Search filter states
-  const [selectedDrawing, setSelectedDrawing] = useState<DrawingNumber | null>(null);
-  const [selectedLnCode, setSelectedLnCode] = useState<string | null>(null);
-  const [selectedSeries, setSelectedSeries] = useState<ProductionSeries | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSeries, setSelectedSeries] = useState<(string | number)[]>([]);
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string[]>([]);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
   // Pagination states for BOM Items table
   const [bomPage, setBomPage] = useState(0);
@@ -71,110 +128,38 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-    // Reset search filter states
-    setSelectedDrawing(null);
-    setSelectedLnCode(null);
-    setSelectedSeries(null);
-    setDrawingSearchInput("");
-    setLnSearchInput("");
+    setSearchQuery("");
+    setSelectedSeries([]);
+    setSelectedDocumentType([]);
+    setSelectedUnits([]);
     setBomPage(0);
     setQrPage(0);
     setOverrideQrCodes(null);
   };
 
-  // Autocomplete input value states (for debouncing API searches if needed)
-  const [drawingSearchInput, setDrawingSearchInput] = useState("");
-  const [lnSearchInput, setLnSearchInput] = useState("");
-  const [debouncedLnSearch, setDebouncedLnSearch] = useState("");
+  // Active Filter Chips
+  const activeChips = useMemo(() => {
+    const chips: Array<{ id: string; label: string; onRemove: () => void }> = [];
 
-  // Debounce LN search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedLnSearch(lnSearchInput);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [lnSearchInput]);
-
-  const { data: searchedLnCodes = [], isLoading: isLnSearchLoading } = useLnItemCodeSearch(debouncedLnSearch);
-
-  // Combine local and server-queried LN Item Codes with associated drawings
-  const lnDrawingOptions = useMemo(() => {
-    const map = new Map<string, any>();
-
-    // First populate from local allDrawingNumbers
-    allDrawingNumbers.forEach((d: any) => {
-      if (d.lnItemCode && d.lnItemCode.trim() !== "") {
-        const key = d.lnItemCode.trim().toLowerCase();
-        if (!map.has(key)) {
-          map.set(key, d);
-        }
-      }
+    if (searchQuery.trim()) {
+      chips.push({
+        id: "searchQuery",
+        label: `Search: "${searchQuery.trim()}"`,
+        onRemove: () => setSearchQuery(""),
+      });
+    }
+    selectedSeries.forEach((ser) => {
+      const match = seriesOptions.find((s) => String(s.id) === String(ser) || s.label === String(ser));
+      const labelStr = match ? match.label : String(ser);
+      chips.push({
+        id: `series_${ser}`,
+        label: `Series: ${labelStr}`,
+        onRemove: () => setSelectedSeries((prev) => prev.filter((s) => s !== ser)),
+      });
     });
 
-    // Then populate from searchedLnCodes if they aren't already present
-    searchedLnCodes.forEach((code: string) => {
-      if (code && code.trim() !== "") {
-        const key = code.trim().toLowerCase();
-        if (!map.has(key)) {
-          map.set(key, {
-            id: -Math.random(),
-            drawingNumber: "N/A",
-            lnItemCode: code,
-            nomenclature: "Searched Item Code",
-          });
-        }
-      }
-    });
-
-    return Array.from(map.values());
-  }, [allDrawingNumbers, searchedLnCodes]);
-
-  // Locally filtered drawings for smoother typing performance
-  const filteredDrawingOptions = useMemo(() => {
-    if (!drawingSearchInput) return allDrawingNumbers.slice(0, 100);
-    const searchLower = drawingSearchInput.toLowerCase();
-    return allDrawingNumbers
-      .filter(
-        (d: any) =>
-          d.drawingNumber?.toLowerCase().includes(searchLower) ||
-          d.lnItemCode?.toLowerCase().includes(searchLower) ||
-          d.nomenclature?.toLowerCase().includes(searchLower)
-      )
-      .slice(0, 100);
-  }, [allDrawingNumbers, drawingSearchInput]);
-
-  // Autofill Logic
-  const handleDrawingChange = (val: DrawingNumber | null) => {
-    setSelectedDrawing(val);
-    if (val) {
-      // Autofill corresponding LN Item Code
-      if (val.lnItemCode) {
-        setSelectedLnCode(val.lnItemCode);
-      }
-      // Autofill corresponding Production Series
-      if (val.availableSeriesId && val.availableSeriesId.length > 0) {
-        const matchedSeries = productionSeriesList.find(
-          (s) => s.id === val.availableSeriesId[0]
-        );
-        if (matchedSeries) {
-          setSelectedSeries(matchedSeries);
-        }
-      }
-    }
-  };
-
-  const handleLnCodeChange = (val: string | null) => {
-    setSelectedLnCode(val);
-    if (val) {
-      // Autofill corresponding Drawing Number by looking up options
-      const matchedDrawing = allDrawingNumbers.find(
-        (d: any) => d.lnItemCode?.toLowerCase() === val.toLowerCase()
-      );
-      if (matchedDrawing) {
-        setSelectedDrawing(matchedDrawing);
-      }
-    }
-  };
+    return chips;
+  }, [searchQuery, selectedSeries, seriesOptions]);
 
   // API Call and Result states
   const [masterData, setMasterData] = useState<any | null>(null);
@@ -185,8 +170,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
-
-
 
   const qrCodes = useMemo(() => {
     if (selectedBomRowIndex === null || bomItems.length === 0) {
@@ -228,15 +211,13 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   }
 
   const handleSearch = async (
-    overrideDrawing?: DrawingNumber | null,
-    overrideLnCode?: string | null,
+    overrideQuery?: string,
     overrideQrType?: number,
-    overrideSeries?: ProductionSeries | null
+    overrideSeries?: (string | number)[]
   ) => {
-    const drawing = overrideDrawing !== undefined ? overrideDrawing : selectedDrawing;
-    const lnCode = overrideLnCode !== undefined ? overrideLnCode : selectedLnCode;
+    const queryStr = overrideQuery !== undefined ? overrideQuery : searchQuery;
     const qrType = overrideQrType !== undefined ? overrideQrType : activeTab;
-    const series = overrideSeries !== undefined ? overrideSeries : selectedSeries;
+    const seriesList = overrideSeries !== undefined ? overrideSeries : selectedSeries;
 
     setError(null);
     setBomPage(0);
@@ -248,13 +229,22 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     setResults([]);
 
     try {
+      const seriesArr = seriesList.map(String);
+      const searchPayload = {
+        searchQuery: queryStr?.trim() || "",
+        drawingNumber: queryStr?.trim() || "",
+        lnItemCode: queryStr?.trim() || "",
+        productionSeries: seriesArr,
+        prodSeries: seriesArr,
+        documentType: selectedDocumentType,
+        unit: selectedUnits,
+        prodSeriesId: seriesArr.length > 0 ? seriesArr.join(",") : null,
+        prodSeriesIds: seriesArr.length > 0 ? seriesArr.join(",") : null,
+        QrType: qrType,
+      };
+
       const response = await api.get("/api/QRCode/GetAvailableQr", {
-        params: {
-          lnItemCode: lnCode || "",
-          drawingNumber: drawing?.drawingNumber || "",
-          prodSeriesId: series?.id || null,
-          QrType: qrType,
-        }
+        params: searchPayload,
       });
 
       const data = response.data;
@@ -263,7 +253,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         : (data && Array.isArray(data.qrCodes) ? data.qrCodes : null);
 
       if (qrCodesList) {
-        // Set flat array of QR codes
         setResults(qrCodesList);
         setMasterData(null);
 
@@ -321,22 +310,38 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     }
   };
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+  const isInitialSearchRef = useRef(true);
+
+  // Auto-trigger API call when 3+ characters typed in search bar, or when search is cleared
+  useEffect(() => {
+    if (isInitialSearchRef.current) {
+      isInitialSearchRef.current = false;
+      return;
+    }
+    const trimmed = debouncedSearchQuery.trim();
+    if (trimmed.length >= 3 || (trimmed.length === 0 && searched)) {
+      handleSearch(trimmed);
+    }
+  }, [debouncedSearchQuery]);
+
+  const isDropdownFilterSelected = selectedSeries.length > 0 || selectedDocumentType.length > 0 || selectedUnits.length > 0;
+
   // Automatically search when tab changes or component mounts
   useEffect(() => {
-    handleSearch(selectedDrawing, selectedLnCode, activeTab);
+    handleSearch(searchQuery, activeTab, selectedSeries);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const handleReset = () => {
-    setSelectedDrawing(null);
-    setSelectedLnCode(null);
-    setSelectedSeries(null);
-    setDrawingSearchInput("");
-    setLnSearchInput("");
+    setSearchQuery("");
+    setSelectedSeries([]);
+    setSelectedDocumentType([]);
+    setSelectedUnits([]);
     setError(null);
     setBomPage(0);
     setQrPage(0);
-    handleSearch(null, null, activeTab, null);
+    handleSearch("", activeTab, []);
   };
 
   const handleBomRowClick = (bomItem: any, index: number) => {
@@ -348,17 +353,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   };
 
   const handleBomRowDoubleClick = async (bomItem: any) => {
-    const matchedDrawing = allDrawingNumbers.find(
-      (d: any) => d.drawingNumber?.toLowerCase() === (bomItem.drawingNumber || "").toLowerCase()
-    );
-
-    const drawingNumberId = matchedDrawing?.id || bomItem.drawingnumberId || bomItem.drawingNumberId || bomItem.drawingId || bomItem.id || 0;
-
-    // Try to infer series if not set
-    let activeSeriesId = selectedSeries?.id;
-    if (!activeSeriesId && matchedDrawing?.availableSeriesId && matchedDrawing.availableSeriesId.length > 0) {
-      activeSeriesId = matchedDrawing.availableSeriesId[0];
-    }
+    const drawingNumberId = bomItem.drawingnumberId || bomItem.drawingNumberId || bomItem.drawingId || bomItem.id || 0;
+    let activeSeriesId = selectedSeries.length > 0 ? selectedSeries[0] : 0;
 
     setIsQrLoading(true);
     setError(null);
@@ -408,12 +404,10 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     <Box
       sx={{
         flexGrow: 1,
-        py: hideHeader ? 0 : { xs: 1, sm: 1.25 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2 },
-        animation: "fadeIn 0.5s ease-out",
-        "@keyframes fadeIn": {
-          from: { opacity: 0, transform: "translateY(10px)" },
-          to: { opacity: 1, transform: "translateY(0)" },
-        },
+        py: hideHeader ? 0 : 1,
+        px: hideHeader ? 0 : { xs: 1, sm: 2 },
+        bgcolor: "#fcfcfd",
+        minHeight: hideHeader ? "auto" : "100vh",
       }}
     >
       {!hideHeader && (
@@ -421,7 +415,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", sm: "center" }}
-          spacing={2}
+          spacing={1.5}
           sx={{ mb: 1 }}
         >
           <Box>
@@ -430,12 +424,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
               sx={{
                 fontWeight: 700,
                 color: "primary.main",
-                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                fontSize: { xs: "1.15rem", sm: "1.35rem" },
               }}
             >
               {storeTab === "available" ? "Available In Store" : "Stored In Components"}
             </Typography>
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.25, fontSize: "0.8rem" }}>
               View and filter available components and QR codes in store.
             </Typography>
           </Box>
@@ -446,11 +440,15 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
             textColor="primary"
             indicatorColor="primary"
             sx={{
+              minHeight: 36,
               "& .MuiTab-root": {
                 fontWeight: 600,
-                fontSize: "0.875rem",
+                fontSize: "0.85rem",
                 textTransform: "none",
-                minWidth: 140,
+                minWidth: 120,
+                minHeight: 36,
+                py: 0.5,
+                px: 1.5,
               },
               "& .MuiTab-root.Mui-selected": { color: "primary.main" },
               "& .MuiTabs-indicator": {
@@ -472,33 +470,30 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         </React.Suspense>
       ) : (
         <>
-
-          {/* Tabs for RM Store & RFG Store */}
+          {/* Tabs for RM Store & CFG Store */}
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
             textColor="primary"
             indicatorColor="primary"
             sx={{
-              mb: 2,
-              borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+              mb: 1,
+              minHeight: 32,
+              borderBottom: "1px solid #eaecf0",
               "& .MuiTabs-indicator": {
                 backgroundColor: "primary.main",
                 height: 3,
-                borderRadius: 2,
+                borderRadius: "3px 3px 0 0",
               },
               "& .MuiTab-root": {
                 textTransform: "none",
                 fontWeight: 600,
-                fontSize: "1rem",
-                color: "text.secondary",
-                px: 3,
-                py: 1,
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  color: "primary.main",
-                  backgroundColor: "rgba(168, 0, 90, 0.04)",
-                },
+                fontSize: "0.825rem",
+                color: "#667085",
+                px: 2,
+                py: 0.5,
+                minWidth: 90,
+                minHeight: 32,
                 "&.Mui-selected": {
                   color: "primary.main",
                 },
@@ -511,199 +506,167 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
 
           {/* Error Alert */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ mb: 1, py: 0.25, borderRadius: "6px" }} onClose={() => setError(null)}>
               {error}
             </Alert>
           )}
 
           {/* Main Dashboard Layout */}
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
             {/* Search Filter Controls Card */}
             <Grid item xs={12}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: { xs: 1.5, md: 2 },
-                  borderRadius: "16px",
-                  border: "1px solid rgba(0, 0, 0, 0.08)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                  p: 1.25,
+                  borderRadius: "12px",
+                  border: "1px solid #eaecf0",
+                  backgroundColor: "#ffffff",
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
+                <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, color: "#101828", fontSize: "0.88rem" }}>
                   Filter & Search Available QR Codes
                 </Typography>
 
-                <Grid container spacing={2} alignItems="center">
-                  {/* Drawing Number Autocomplete */}
-                  <Grid item xs={12} sm="auto">
-                    <Autocomplete
-                      size="small"
-                      sx={{ width: { xs: "100%", sm: 380 } }}
-                      options={filteredDrawingOptions}
-                      loading={isDrawingsLoading}
-                      getOptionLabel={(option) => option.drawingNumber || ""}
-                      value={selectedDrawing}
-                      onChange={(_, val) => handleDrawingChange(val)}
-                      inputValue={drawingSearchInput}
-                      onInputChange={(_, val) => setDrawingSearchInput(val)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Drawing Number"
-                          placeholder="Type to search drawing..."
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {isDrawingsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                      renderOption={(props, option) => (
-                        <li {...props} key={option.id}>
-                          <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                            <Typography variant="body2" fontWeight="500">
-                              {option.drawingNumber}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {option.nomenclature} {option.lnItemCode ? `| LN: ${option.lnItemCode}` : ""}
-                            </Typography>
-                          </Box>
-                        </li>
-                      )}
-                    />
-                  </Grid>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.25,
+                    flexWrap: "nowrap",
+                    width: "100%",
+                    overflowX: "auto",
+                    overflowY: "hidden",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    py: 0.25,
+                    "&::-webkit-scrollbar": { display: "none" },
+                  }}
+                >
+                  {/* Combined Search Bar */}
+                  <TextField
+                    size="small"
+                    placeholder="Search Drawing Number, LN Item Code..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      flex: "1 1 250px",
+                      minWidth: 200,
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                      },
+                    }}
+                  />
 
-                  {/* LN Item Code Autocomplete */}
-                  <Grid item xs={12} sm="auto">
-                    <Autocomplete
-                      size="small"
-                      sx={{ width: { xs: "100%", sm: 300 } }}
-                      options={lnDrawingOptions}
-                      loading={isLnSearchLoading}
-                      getOptionLabel={(option) => {
-                        if (typeof option === "string") return option;
-                        return option.lnItemCode || "";
-                      }}
-                      value={
-                        selectedLnCode
-                          ? lnDrawingOptions.find(
-                            (d) => d.lnItemCode?.toLowerCase() === selectedLnCode.toLowerCase()
-                          ) || {
-                            id: -1,
-                            drawingNumber: "N/A",
-                            lnItemCode: selectedLnCode,
-                            nomenclature: "",
-                            isActive: true,
-                          }
-                          : null
-                      }
-                      onChange={(_, val) => {
-                        handleLnCodeChange(val ? val.lnItemCode : null);
-                      }}
-                      inputValue={lnSearchInput}
-                      onInputChange={(_, val) => setLnSearchInput(val)}
-                      filterOptions={(options, { inputValue }) => {
-                        if (!inputValue) return options.slice(0, 100);
-                        const searchLower = inputValue.toLowerCase();
-                        return options
-                          .filter(
-                            (option: any) =>
-                              option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                              option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                              option.nomenclature?.toLowerCase().includes(searchLower)
-                          )
-                          .slice(0, 100);
-                      }}
-                      isOptionEqualToValue={(option, value) =>
-                        option?.lnItemCode?.toLowerCase() === value?.lnItemCode?.toLowerCase()
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="LN Item Code"
-                          placeholder="Type to search item code..."
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {isLnSearchLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                      renderOption={(props, option) => (
-                        <li {...props} key={option.id}>
-                          <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                            <Typography variant="body2" fontWeight="600" color="primary.main">
-                              LN Code: {option.lnItemCode}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Drawing: {option.drawingNumber} {option.nomenclature ? `| ${option.nomenclature}` : ""}
-                            </Typography>
-                          </Box>
-                        </li>
-                      )}
-                    />
-                  </Grid>
+                  {/* Production Series MultiSelect Dropdown */}
+                  <MultiSelectFilter
+                    label="Prod. Series"
+                    value={selectedSeries}
+                    options={seriesOptions}
+                    onChange={(newValue) => setSelectedSeries(newValue)}
+                    flex="0 0 160px"
+                    minWidth={130}
+                  />
 
-                  {/* Production Series Autocomplete */}
-                  <Grid item xs={12} sm="auto">
-                    <Autocomplete
-                      size="small"
-                      sx={{ width: { xs: "100%", sm: 220 } }}
-                      options={productionSeriesList}
-                      loading={isSeriesLoading}
-                      getOptionLabel={(option) => option.productionSeries || ""}
-                      value={selectedSeries}
-                      onChange={(_, val) => setSelectedSeries(val)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Production Series"
-                          placeholder="Select series..."
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {isSeriesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
+                  {/* Apply Button */}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => handleSearch()}
+                    disabled={!isDropdownFilterSelected || isSearchLoading}
+                    sx={{
+                      flex: "0 0 auto",
+                      backgroundColor: "primary.main",
+                      color: "#fff",
+                      fontWeight: 600,
+                      fontSize: "0.82rem",
+                      borderRadius: "6px",
+                      px: 2,
+                      height: 38,
+                      textTransform: "none",
+                      boxShadow: "none",
+                      minWidth: 65,
+                      "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                    }}
+                  >
+                    {isSearchLoading ? <CircularProgress size={16} color="inherit" /> : "Apply"}
+                  </Button>
 
-                  {/* Action Buttons Row */}
-                  <Grid item xs={12} sm="auto" sx={{ display: "flex", gap: 1.5 }}>
+                  {/* Clear Button */}
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={handleReset}
+                    sx={{
+                      flex: "0 0 auto",
+                      color: "#667085",
+                      fontWeight: 600,
+                      fontSize: "0.82rem",
+                      height: 38,
+                      px: 1,
+                      minWidth: 55,
+                      textTransform: "none",
+                      "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </Box>
+
+                {/* Active Chips Bar */}
+                {activeChips.length > 0 && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      mt: 1,
+                      pt: 0.75,
+                      borderTop: "1px solid #F2F4F7",
+                      flexWrap: "wrap",
+                      gap: 0.75,
+                    }}
+                  >
+                    {activeChips.map((chip) => (
+                      <Chip
+                        key={chip.id}
+                        label={chip.label}
+                        onDelete={chip.onRemove}
+                        size="small"
+                        sx={{
+                          backgroundColor: "#F2F4F7",
+                          color: "#344054",
+                          fontWeight: 600,
+                          fontSize: "0.775rem",
+                          height: 24,
+                          borderRadius: "14px",
+                          border: "1px solid #E9EAEB",
+                        }}
+                      />
+                    ))}
                     <Button
-                      variant="outlined"
+                      variant="text"
                       size="small"
                       onClick={handleReset}
-                      startIcon={<RefreshIcon />}
-                      sx={{ textTransform: "none", height: 40, borderRadius: "8px", minWidth: 100 }}
+                      sx={{
+                        color: "#6B288A",
+                        fontWeight: 600,
+                        fontSize: "0.775rem",
+                        textTransform: "none",
+                        p: 0,
+                      }}
                     >
-                      Reset
+                      Clear all
                     </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleSearch()}
-                      disabled={isSearchLoading || (!selectedDrawing && (!selectedLnCode || selectedLnCode.trim() === "") && !selectedSeries)}
-                      startIcon={isSearchLoading ? <CircularProgress size={18} color="inherit" /> : <SearchIcon />}
-                      sx={{ textTransform: "none", height: 40, borderRadius: "8px", px: 3, minWidth: 120 }}
-                    >
-                      Search
-                    </Button>
-                  </Grid>
-                </Grid>
+                  </Box>
+                )}
               </Paper>
             </Grid>
 
@@ -714,42 +677,41 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 3,
-                      borderRadius: "16px",
-                      border: "1px solid rgba(0, 0, 0, 0.08)",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                      borderRadius: "12px",
+                      border: "1px solid #eaecf0",
+                      backgroundColor: "#ffffff",
+                      overflow: "hidden",
                       minHeight: "450px",
                       display: "flex",
                       flexDirection: "column",
                     }}
                   >
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                      <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
-                          Material available in store
-                        </Typography>
-
-                      </Box>
-
+                    <Box sx={{ p: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem", fontWeight: 600 }}>
+                        Material available in store
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+                        {bomItems.length} {bomItems.length === 1 ? "item" : "items"}
+                      </Typography>
                     </Box>
 
                     <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
-                      <Table size="small" sx={{ width: "100%" }}>
+                      <Table stickyHeader size="small" sx={{ width: "100%" }}>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "grey.50" }}>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Sr</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">LN Item Code</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Drawing Number</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Unit</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Total Qty</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Total QR Code</TableCell>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Sr</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">LN Item Code</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Drawing Number</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total Qty</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Code</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {isSearchLoading ? (
                             <TableRow>
-                              <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                                <CircularProgress size={30} />
+                              <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                                <CircularProgress size={28} color="primary" />
                               </TableCell>
                             </TableRow>
                           ) : bomItems.length > 0 ? (
@@ -764,33 +726,33 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   onDoubleClick={() => handleBomRowDoubleClick(row)}
                                   sx={{
                                     cursor: "pointer",
-                                    bgcolor: isSelected ? "action.hover" : "background.paper",
+                                    height: 40,
+                                    backgroundColor: isSelected ? "rgba(107, 40, 138, 0.06)" : "inherit",
                                     "&:hover": {
-                                      bgcolor: "action.hover",
+                                      backgroundColor: "#f9fafb",
+                                    },
+                                    "& td": {
+                                      borderBottom: "1px solid #F2F4F7",
+                                      fontSize: "0.85rem",
+                                      color: "#344054",
+                                      py: 0.75,
+                                      px: 1.5,
                                     },
                                   }}
                                 >
-                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{globalIndex + 1}</TableCell>
-                                  <TableCell sx={{ fontWeight: 500, whiteSpace: "nowrap" }} align="center">
+                                  <TableCell align="center">{globalIndex + 1}</TableCell>
+                                  <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
                                     {row.lnitemcode || row.lnItemCode || "N/A"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.drawingNumber || "N/A"}</TableCell>
-                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.unit || row.unitName || "N/A"}</TableCell>
-                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.totalQrQuantity}
-
-                                  </TableCell>
-                                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.totalQrNumber}
-
-                                  </TableCell>
+                                  <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
+                                  <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
+                                  <TableCell align="center">{row.totalQrQuantity}</TableCell>
+                                  <TableCell align="center">{row.totalQrNumber}</TableCell>
                                 </TableRow>
                               );
                             })
                           ) : (
-                            <TableRow>
-                              <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
-                                No BOM components found.
-                              </TableCell>
-                            </TableRow>
+                            <EmptyState colSpan={6} />
                           )}
                         </TableBody>
                       </Table>
@@ -817,55 +779,77 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                   <Paper
                     elevation={0}
                     sx={{
-                      p: 3,
-                      borderRadius: "16px",
-                      border: "1px solid rgba(0, 0, 0, 0.08)",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                      borderRadius: "12px",
+                      border: "1px solid #eaecf0",
+                      backgroundColor: "#ffffff",
+                      overflow: "hidden",
                       minHeight: "450px",
                       display: "flex",
                       flexDirection: "column",
                     }}
                   >
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}>
-                      Available QR Codes
-                    </Typography>
+                    <Box sx={{ p: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem", fontWeight: 600 }}>
+                        Available QR Codes
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+                        {displayQrCodes.length} {displayQrCodes.length === 1 ? "QR code" : "QR codes"}
+                      </Typography>
+                    </Box>
 
                     <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
-                      <Table size="small" sx={{ width: "100%" }}>
+                      <Table stickyHeader size="small" sx={{ width: "100%" }}>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "grey.50" }}>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">QR Code Number</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">ID</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Qty</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600, py: 1.5, whiteSpace: "nowrap" }} align="center">Location</TableCell>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">QR Code Number</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">ID</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Qty</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Location</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {isSearchLoading || isQrLoading ? (
                             <TableRow>
-                              <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                                <CircularProgress size={30} />
+                              <TableCell colSpan={5} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                                <CircularProgress size={28} color="primary" />
                               </TableCell>
                             </TableRow>
                           ) : paginatedQrCodes.length > 0 ? (
                             paginatedQrCodes.map((row, index) => (
-                              <TableRow key={index} hover sx={{ bgcolor: "background.paper" }}>
-                                <TableCell sx={{ fontWeight: 550, whiteSpace: "nowrap" }} align="center">
+                              <TableRow
+                                key={index}
+                                hover
+                                sx={{
+                                  height: 40,
+                                  "&:hover": { backgroundColor: "#F9FAFB" },
+                                  "& td": {
+                                    borderBottom: "1px solid #F2F4F7",
+                                    fontSize: "0.85rem",
+                                    color: "#344054",
+                                    py: 0.75,
+                                    px: 1.5,
+                                  },
+                                }}
+                              >
+                                <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
                                   {row.qrCodeNumber || "N/A"}
                                 </TableCell>
-                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.id || "N/A"}</TableCell>
-                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{formatQuantity(row.qty)}</TableCell>
-                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.status || "N/A"}</TableCell>
-                                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.location || "N/A"}</TableCell>
+                                <TableCell align="center">{row.id || "N/A"}</TableCell>
+                                <TableCell align="center">{formatQuantity(row.qty)}</TableCell>
+                                <TableCell align="center">{renderQrStatusBadge(row.status)}</TableCell>
+                                <TableCell align="center">{row.location || "N/A"}</TableCell>
                               </TableRow>
                             ))
                           ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} align="center" sx={{ py: 6, color: "text.secondary" }}>
-                                {overrideQrCodes === null ? "Double-click a material row to view available QR codes" : "No components found"}
-                              </TableCell>
-                            </TableRow>
+                            <EmptyState
+                              colSpan={5}
+                              title={
+                                overrideQrCodes === null
+                                  ? "Double-click a material row to view available QR codes"
+                                  : undefined
+                              }
+                            />
                           )}
                         </TableBody>
                       </Table>
@@ -893,14 +877,15 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                   elevation={0}
                   sx={{
                     p: 6,
-                    borderRadius: "16px",
-                    border: "1px solid rgba(0, 0, 0, 0.08)",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+                    borderRadius: "12px",
+                    border: "1px solid #eaecf0",
+                    backgroundColor: "#ffffff",
                     textAlign: "center",
-                    color: "text.secondary",
+                    color: "#667085",
+                    fontSize: "0.9rem",
                   }}
                 >
-                  Please select Drawing Number/LN Item Code and click Search to display available QR codes.
+                  Please enter search criteria and click Search to display available QR codes.
                 </Paper>
               </Grid>
             )}

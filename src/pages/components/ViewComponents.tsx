@@ -48,6 +48,7 @@ import api from "../../services/api";
 import * as XLSX from "xlsx";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 import { CustomPagination } from "../../components/CustomPagination";
+import { EmptyState } from "../../components/EmptyState";
 
 
 interface DrawingNumberRow {
@@ -270,18 +271,22 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
+  const [appliedSeries, setAppliedSeries] = useState<string[]>([]);
+  const [appliedTypes, setAppliedTypes] = useState<string[]>([]);
+  const [appliedUnits, setAppliedUnits] = useState<string[]>([]);
+
   // Pagination & sorting state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Reset page when search query or filters change
+  // Reset page when search query changes
   React.useEffect(() => {
     setPage(0);
-  }, [debouncedSearchQuery, selectedSeries, selectedTypes, selectedUnits]);
+  }, [debouncedSearchQuery]);
 
   // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage) to FetchAllDrawingNumbers API
-  const singleTypeFilter = selectedTypes.length === 1 ? selectedTypes[0] : "";
+  const singleTypeFilter = appliedTypes.length === 1 ? appliedTypes[0] : "";
   const {
     data: drawingNumbersData = [],
     isLoading,
@@ -359,13 +364,25 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     }
   };
 
+  const handleApplyFilters = () => {
+    setAppliedSeries(selectedSeries);
+    setAppliedTypes(selectedTypes);
+    setAppliedUnits(selectedUnits);
+    setPage(0);
+  };
+
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedSeries([]);
     setSelectedTypes([]);
     setSelectedUnits([]);
+    setAppliedSeries([]);
+    setAppliedTypes([]);
+    setAppliedUnits([]);
     setPage(0);
   };
+
+  const isDropdownFilterSelected = selectedSeries.length > 0 || selectedTypes.length > 0 || selectedUnits.length > 0;
 
   // Filter, sort and pagination functionality
   const { displayData, totalCount } = useMemo(() => {
@@ -377,23 +394,23 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
     let result = rawList.filter((drawing) => {
       const matchesSeries =
-        selectedSeries.length === 0 ||
+        appliedSeries.length === 0 ||
         (drawing?.productionSeries &&
-          selectedSeries.some(
+          appliedSeries.some(
             (s) => s.toLowerCase() === drawing.productionSeries?.toLowerCase()
           ));
 
       const matchesType =
-        selectedTypes.length === 0 ||
+        appliedTypes.length === 0 ||
         (drawing?.componentType &&
-          selectedTypes.some(
+          appliedTypes.some(
             (t) => t.toLowerCase() === drawing.componentType?.toLowerCase()
           ));
 
       const matchesUnit =
-        selectedUnits.length === 0 ||
+        appliedUnits.length === 0 ||
         (drawing?.unitName &&
-          selectedUnits.some(
+          appliedUnits.some(
             (u) => u.toLowerCase() === drawing.unitName?.toLowerCase()
           ));
 
@@ -412,7 +429,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     const finalTotalCount = serverTotalRecords !== undefined ? serverTotalRecords : result.length;
 
     return { displayData: finalDisplayData, totalCount: finalTotalCount };
-  }, [drawingNumbersData, selectedSeries, selectedTypes, selectedUnits, sortOrder, page, rowsPerPage]);
+  }, [drawingNumbersData, appliedSeries, appliedTypes, appliedUnits, sortOrder, page, rowsPerPage]);
 
   const handleExport = () => {
     if (displayData.length === 0) {
@@ -626,7 +643,8 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             <Button
               size="small"
               variant="contained"
-              onClick={() => setPage(0)}
+              onClick={handleApplyFilters}
+              disabled={!isDropdownFilterSelected || isLoading}
               sx={{
                 flex: "0 0 auto",
                 backgroundColor: "primary.main",
@@ -830,15 +848,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
               </TableHead>
               <TableBody>
                 {displayData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} sx={{ textAlign: "center", py: 5 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.85rem" }}>
-                        {hasActiveFilters
-                          ? "No components match your filter criteria"
-                          : "No components found"}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
+                  <EmptyState colSpan={9} />
                 ) : (
                   displayData.map((drawing, index) => (
                     <DrawingNumberRowComponent

@@ -15,6 +15,7 @@ import {
   CircularProgress,
   Button,
   FormControl,
+  InputLabel,
   Alert,
   Checkbox,
   InputAdornment,
@@ -46,12 +47,9 @@ import {
   Article as ArticleIcon,
   MoreVert as MoreVertIcon,
   Close as CloseIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { CustomPagination } from "../../components/CustomPagination";
 
-import * as XLSX from "xlsx";
 import {
   fetchViewIrMsn,
   clearTables,
@@ -65,9 +63,10 @@ import type { RootState, AppDispatch } from "../../store/store";
 import { useNavigate } from "react-router-dom";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import api from "../../services/api";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { EmptyState } from "../../components/EmptyState";
 
 const ALL_IRMSN_EXPORT_COLUMNS = [
   { key: "displayNumber", label: "IR/MSN No." },
@@ -83,9 +82,6 @@ const ALL_IRMSN_EXPORT_COLUMNS = [
   { key: "stage", label: "Stage" },
   { key: "buildNumber", label: "Build No" },
 ];
-
-const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
-const checkedIcon = <CheckBoxIcon fontSize="small" />;
 
 const ViewIRMSN: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -168,8 +164,6 @@ const ViewIRMSN: React.FC = () => {
     () => departments.map((d: any) => ({ id: d.id, label: d.name || d.departmentName || d.label })),
     [departments]
   );
-
-  const isLoadingCommon = !departments.length || !productionSeries.length;
 
   useEffect(() => {
     if (statusMessage.type) {
@@ -301,8 +295,14 @@ const ViewIRMSN: React.FC = () => {
     setToDate(null);
     setPage(0);
 
-    dispatch(clearTables());
-    dispatch(setSearchParams(null));
+    executeFetch(0, rowsPerPage, {
+      search: "",
+      series: [],
+      depts: [],
+      type: "All",
+      fDate: null,
+      tDate: null,
+    });
   };
 
   const handleSearch = () => {
@@ -339,149 +339,91 @@ const ViewIRMSN: React.FC = () => {
     };
   }, [drawingOrLnSearch]);
 
-  // Export handler connecting to ExportIR and ExportMSN APIs
-  const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setExportMenuAnchor(event.currentTarget);
-  };
-
   const handleExportClose = () => {
     setExportMenuAnchor(null);
   };
 
-  const executeExport = async (type: "IR" | "MSN" | "BOTH") => {
-    handleExportClose();
+  const handleConfirmExportData = async () => {
+    setExportDialogOpen(false);
     setIsExporting(true);
 
     try {
-      const params: any = {};
-      if (selectedProductionSeries.length > 0) {
-        params.Productionseries = selectedProductionSeries
-          .map((ps: any) => ps.productionSeries)
-          .join(",");
-      }
-      if (selectedDepartments.length > 0) {
-        params.DepartmentTypeId = selectedDepartments
-          .map((d: any) => (typeof d === "object" && d !== null ? d.id : d))
-          .filter(Boolean)
-          .join(",");
-      }
-      if (drawingOrLnSearch.trim()) {
-        params.DrawingNumber = drawingOrLnSearch.trim();
-        params.LnItemCode = drawingOrLnSearch.trim();
-      }
-      if (fromDate) {
-        params.FromDate = format(fromDate, "yyyy-MM-dd");
-      }
-      if (toDate) {
-        params.ToDate = format(toDate, "yyyy-MM-dd");
-      }
+      let docTypes: string[] = [];
+      if (exportReportType === "IR") docTypes = ["IR"];
+      else if (exportReportType === "MSN") docTypes = ["MSN"];
+      else if (typeFilter === "IR") docTypes = ["IR"];
+      else if (typeFilter === "MSN") docTypes = ["MSN"];
+      else docTypes = ["IR", "MSN"];
 
-      const downloadBlob = async (endpoint: string, defaultFilename: string) => {
-        const response = await api.get(endpoint, {
-          params,
-          responseType: "blob",
-        });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+      const payload = {
+        searchQuery: drawingOrLnSearch.trim(),
+        productionSeries: selectedProductionSeries
+          .map((ps: any) => (typeof ps === "object" ? ps.productionSeries || ps.name || String(ps) : String(ps)))
+          .filter(Boolean),
+        departmentTypeId: selectedDepartments
+          .map((d: any) => (typeof d === "object" && d !== null ? Number(d.id || d.departmentTypeId || d) : Number(d)))
+          .filter((id: number) => !isNaN(id) && id > 0),
+        fromDate: fromDate ? fromDate.toISOString() : null,
+        toDate: toDate ? toDate.toISOString() : null,
+        documentType: docTypes,
+        selectedColumns: exportMode === "custom" ? selectedExportColumns : ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key),
+      };
+
+      const response = await api.post("/api/reports/ExportIrMsn", payload, {
+        responseType: "blob",
+        headers: {
+          accept: "*/*",
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data && response.data.size > 0) {
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+        const filename = `IR_MSN_Report_${timestamp}.xlsx`;
+
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          })
+        );
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", `${defaultFilename}_${Date.now()}.xlsx`);
+        link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         link.remove();
         window.URL.revokeObjectURL(url);
-      };
 
-      if (type === "IR" || type === "BOTH") {
-        await downloadBlob("/api/reports/ExportIR", "IR_Report");
+        setStatusMessage({
+          type: "success",
+          message: "Export downloaded successfully.",
+        });
+      } else {
+        throw new Error("No content received from export API");
       }
-      if (type === "MSN" || type === "BOTH") {
-        await downloadBlob("/api/reports/ExportMSN", "MSN_Report");
-      }
-
-      setStatusMessage({
-        type: "success",
-        message: "Export downloaded successfully.",
-      });
     } catch (err: any) {
-      console.error("Export failed:", err);
+      console.error("Export error:", err);
       setStatusMessage({
         type: "error",
-        message: err.response?.data?.message || "Failed to download export report.",
+        message: err.response?.data?.message || err.message || "Failed to download export report.",
       });
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleConfirmExportData = async () => {
-    setExportDialogOpen(false);
-    if (exportMode === "all") {
-      await executeExport(exportReportType);
-    } else {
-      setIsExporting(true);
-      try {
-        let exportItems = displayList;
-        if (exportReportType !== "BOTH") {
-          exportItems = displayList.filter((item: any) => item.recordType === exportReportType);
-        }
-
-        if (exportItems.length === 0) {
-          setStatusMessage({ type: "info", message: "No records available for export." });
-          return;
-        }
-
-        const formattedData = exportItems.map((item: any, idx: number) => {
-          const row: any = { "Sr No": idx + 1 };
-          ALL_IRMSN_EXPORT_COLUMNS.forEach((col) => {
-            if (selectedExportColumns.includes(col.key)) {
-              let val = item[col.key];
-              if (col.key === "createdDate" && val) {
-                try {
-                  val = new Date(val).toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-                } catch {
-                  val = item[col.key];
-                }
-              }
-              row[col.label] = val ?? "-";
-            }
-          });
-          return row;
-        });
-
-        const worksheet = XLSX.utils.json_to_sheet(formattedData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, `${exportReportType}_Report`);
-        XLSX.writeFile(workbook, `${exportReportType}_Report_${Date.now()}.xlsx`);
-
-        setStatusMessage({
-          type: "success",
-          message: "Export downloaded successfully.",
-        });
-      } catch (err: any) {
-        console.error("Export error:", err);
-        setStatusMessage({
-          type: "error",
-          message: "Failed to download export report.",
-        });
-      } finally {
-        setIsExporting(false);
-      }
-    }
-  };
-
-  const isFilterApplied = !!(
-    drawingOrLnSearch.trim() ||
+  const isDropdownFilterSelected = !!(
     selectedDepartments.length > 0 ||
     selectedProductionSeries.length > 0 ||
     fromDate ||
     toDate ||
-    typeFilter !== "All"
+    (typeFilter && typeFilter !== "All")
+  );
+
+  const isFilterApplied = !!(
+    drawingOrLnSearch.trim() ||
+    isDropdownFilterSelected
   );
 
   const isResetEnabled = !!(
@@ -504,8 +446,6 @@ const ViewIRMSN: React.FC = () => {
   }, [drawingOrLnSearch, selectedDepartments, selectedProductionSeries, typeFilter, fromDate, toDate]);
 
   const totalCount = reduxTotalCount || displayList.length;
-  const startRow = totalCount > 0 ? page * rowsPerPage + 1 : 0;
-  const endRow = Math.min((page + 1) * rowsPerPage, totalCount);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -684,7 +624,8 @@ const ViewIRMSN: React.FC = () => {
                 alignItems: "center",
                 width: "100%",
                 overflowX: "auto",
-                py: 0.5,
+                pt: 1.25,
+                pb: 0.5,
                 "&::-webkit-scrollbar": { height: 6 },
                 "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
               }}
@@ -743,43 +684,67 @@ const ViewIRMSN: React.FC = () => {
                 minWidth={110}
               />
 
-              {/* Document Type Selector (All / IR / MSN) */}
-              <FormControl size="small" sx={{ flex: "0 0 140px", minWidth: 120 }}>
+              {/* Document Type Selector (IR / MSN) */}
+              <FormControl size="small" sx={{ flex: "0 0 150px", minWidth: 130 }}>
+                <InputLabel
+                  id="doc-type-label"
+                  shrink
+                  sx={{
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    fontSize: "0.82rem",
+                    color: "#667085",
+                    transform: "translate(10px, -7px) scale(0.75)",
+                    transformOrigin: "top left",
+                    "&.Mui-focused": {
+                      color: "primary.main",
+                    },
+                  }}
+                >
+                  Document Type
+                </InputLabel>
                 <Select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
+                  labelId="doc-type-label"
+                  label="Document Type"
+                  value={typeFilter === "All" ? "" : typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value || "All")}
                   displayEmpty
                   renderValue={(selected) => {
                     if (!selected || selected === "All") {
-                      return (
-                        <Box component="span" sx={{ color: "text.secondary" }}>
-                          Document Type
-                        </Box>
-                      );
+                      return null;
                     }
-                    return selected;
+                    return (
+                      <Box component="span" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>
+                        {selected}
+                      </Box>
+                    );
                   }}
                   endAdornment={
-                    typeFilter !== "All" ? (
+                    typeFilter !== "All" && typeFilter !== "" ? (
                       <IconButton
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
                           setTypeFilter("All");
                         }}
-                        sx={{ mr: 1, p: 0.25, color: "text.secondary" }}
+                        sx={{ mr: 1, p: 0.25, color: "#667085" }}
                       >
                         <ClearIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     ) : null
                   }
                   sx={{
-                    fontSize: "0.85rem",
+                    fontSize: "0.82rem",
                     height: 38,
+                    borderRadius: "8px",
                   }}
                 >
-                  <SelectMenuItem value="IR">IR</SelectMenuItem>
-                  <SelectMenuItem value="MSN">MSN</SelectMenuItem>
+                  <SelectMenuItem value="IR" sx={{ fontSize: "0.82rem" }}>
+                    IR
+                  </SelectMenuItem>
+                  <SelectMenuItem value="MSN" sx={{ fontSize: "0.82rem" }}>
+                    MSN
+                  </SelectMenuItem>
                 </Select>
               </FormControl>
 
@@ -791,9 +756,32 @@ const ViewIRMSN: React.FC = () => {
                 slotProps={{
                   textField: {
                     size: "small",
+                    InputLabelProps: {
+                      shrink: true,
+                      sx: {
+                        bgcolor: "#ffffff",
+                        px: 0.5,
+                        fontSize: "0.82rem",
+                        color: "#667085",
+                        transform: "translate(10px, -7px) scale(0.75)",
+                        transformOrigin: "top left",
+                        "&.Mui-focused": {
+                          color: "primary.main",
+                        },
+                      },
+                    },
                     sx: {
-                      flex: "0 0 130px",
-                      minWidth: 115,
+                      flex: "0 0 140px",
+                      minWidth: 120,
+                      "& .MuiOutlinedInput-root": {
+                        height: 38,
+                        borderRadius: "8px",
+                      },
+                      "& .MuiOutlinedInput-input": {
+                        py: "8px",
+                        px: 1.25,
+                        fontSize: "0.82rem",
+                      },
                     },
                   },
                 }}
@@ -805,9 +793,32 @@ const ViewIRMSN: React.FC = () => {
                 slotProps={{
                   textField: {
                     size: "small",
+                    InputLabelProps: {
+                      shrink: true,
+                      sx: {
+                        bgcolor: "#ffffff",
+                        px: 0.5,
+                        fontSize: "0.82rem",
+                        color: "#667085",
+                        transform: "translate(10px, -7px) scale(0.75)",
+                        transformOrigin: "top left",
+                        "&.Mui-focused": {
+                          color: "primary.main",
+                        },
+                      },
+                    },
                     sx: {
-                      flex: "0 0 130px",
-                      minWidth: 115,
+                      flex: "0 0 140px",
+                      minWidth: 120,
+                      "& .MuiOutlinedInput-root": {
+                        height: 38,
+                        borderRadius: "8px",
+                      },
+                      "& .MuiOutlinedInput-input": {
+                        py: "8px",
+                        px: 1.25,
+                        fontSize: "0.82rem",
+                      },
                     },
                   },
                 }}
@@ -818,13 +829,7 @@ const ViewIRMSN: React.FC = () => {
                 variant="contained"
                 size="small"
                 onClick={handleSearch}
-                disabled={
-                  (!(fromDate && toDate) &&
-                    selectedProductionSeries.length === 0 &&
-                    !drawingOrLnSearch.trim() &&
-                    selectedDepartments.length === 0) ||
-                  loading
-                }
+                disabled={!isDropdownFilterSelected || loading}
                 sx={{
                   flex: "0 0 auto",
                   minWidth: 65,
@@ -837,6 +842,10 @@ const ViewIRMSN: React.FC = () => {
                   boxShadow: "none",
                   px: 1.75,
                   "&:hover": { backgroundColor: "primary.dark" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#F2F4F7",
+                    color: "#98A2B3",
+                  },
                 }}
               >
                 Apply
@@ -1358,12 +1367,12 @@ const ViewIRMSN: React.FC = () => {
                       <TableCell align="center">
                         {item.createdDate
                           ? new Date(item.createdDate).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
                           : "-"}
                       </TableCell>
                       <TableCell align="left">{item.userName || "-"}</TableCell>
@@ -1393,13 +1402,7 @@ const ViewIRMSN: React.FC = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={14} align="center" sx={{ py: 6, borderBottom: "none" }}>
-                      <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
-                        No records found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
+                  <EmptyState colSpan={14} />
                 )}
               </TableBody>
             </Table>

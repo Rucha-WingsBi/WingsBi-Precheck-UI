@@ -613,27 +613,20 @@ export default function GenerateIRMSN() {
   const readOnlyInputStyle = {
     "& .MuiOutlinedInput-root": {
       backgroundColor: "#F9FAFB",
-      borderRadius: "8px",
-      fontSize: "0.875rem",
     },
     "& .MuiInputLabel-root": {
       backgroundColor: "#ffffff",
       px: 0.5,
-      borderRadius: "4px",
-      lineHeight: 1.1,
+    },
+    "& .MuiInputBase-input": {
+      color: "#344054",
     },
   };
 
   const standardInputStyle = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: "8px",
-      fontSize: "0.875rem",
-    },
     "& .MuiInputLabel-root": {
       backgroundColor: "#ffffff",
       px: 0.5,
-      borderRadius: "4px",
-      lineHeight: 1.1,
     },
   };
 

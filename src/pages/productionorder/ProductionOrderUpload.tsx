@@ -76,6 +76,7 @@ import { UploadSummaryCard } from "./components/UploadSummaryCard";
 import { HistoryStatCard } from "./components/HistoryStatCard";
 import { ActiveFilterChips, type FilterChipItem } from "./components/ActiveFilterChips";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { EmptyState } from "../../components/EmptyState";
 
 // --- Interfaces & Constants ---
 
@@ -322,6 +323,11 @@ const RowActionsMenu: React.FC<{
   );
 };
 
+const CustomNoRowsOverlay: React.FC<{ isLoading?: boolean }> = ({ isLoading }) => {
+  if (isLoading) return null;
+  return <EmptyState />;
+};
+
 interface CustomPaginationBarProps {
   page: number;
   pageSize: number;
@@ -477,12 +483,20 @@ const ProductionOrderUpload: React.FC = () => {
     }
   };
 
-  // Filter states
-  const [fromDate, setFromDate] = useState<Date | null>(null);
-  const [toDate, setToDate] = useState<Date | null>(null);
+  // Filter states: Draft (for dropdowns & dates before clicking Apply)
+  const [draftFromDate, setDraftFromDate] = useState<Date | null>(null);
+  const [draftToDate, setDraftToDate] = useState<Date | null>(null);
+  const [draftProductionSeries, setDraftProductionSeries] = useState<any[]>([]);
+  const [draftStatusList, setDraftStatusList] = useState<any[]>([]);
+
+  // Filter states: Applied (actively used for API calls & chips)
+  const [appliedFromDate, setAppliedFromDate] = useState<Date | null>(null);
+  const [appliedToDate, setAppliedToDate] = useState<Date | null>(null);
+  const [appliedProductionSeries, setAppliedProductionSeries] = useState<any[]>([]);
+  const [appliedStatusList, setAppliedStatusList] = useState<any[]>([]);
+
+  // Search Query state (triggers API call directly)
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
-  const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
   const { data: productionSeriesData = [] } = useProductionSeries();
   const prodSeriesOptions = React.useMemo(() => {
     return (productionSeriesData || [])
@@ -527,15 +541,15 @@ const ProductionOrderUpload: React.FC = () => {
     }
   }, [location.state, location.pathname, navigate, queryClient]);
 
-  // Reset pagination page to 0 when filters change
+  // Reset pagination page to 0 when applied filters change
   React.useEffect(() => {
     setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   }, [
-    fromDate,
-    toDate,
+    appliedFromDate,
+    appliedToDate,
     debouncedSearchQuery,
-    selectedProductionSeries,
-    selectedStatusList,
+    appliedProductionSeries,
+    appliedStatusList,
   ]);
 
   const handleCloseSnackbar = () => {
@@ -553,18 +567,19 @@ const ProductionOrderUpload: React.FC = () => {
   const buildPayload = () => {
     const payload: any = {
       searchQuery: debouncedSearchQuery?.trim() || "",
-      productionSeries: selectedProductionSeries.map((s: any) =>
+      productionSeries: appliedProductionSeries.map((s: any) =>
         (s.productionSeries || s).toString()
       ),
-      precheckStatus: selectedStatusList.map((s: any) =>
-        (typeof s === "number" ? s : s.id).toString()
-      ),
+      precheckStatus: appliedStatusList.map((s: any) => {
+        if (typeof s === "object") return s.id.toString();
+        return s.toString();
+      }),
     };
 
-    if (fromDate && toDate) {
+    if (appliedFromDate && appliedToDate) {
       payload.dateFilterType = "range";
-      payload.fromDate = format(fromDate, "yyyy-MM-dd");
-      payload.toDate = format(toDate, "yyyy-MM-dd");
+      payload.fromDate = format(appliedFromDate, "yyyy-MM-dd");
+      payload.toDate = format(appliedToDate, "yyyy-MM-dd");
     }
 
     return payload;
@@ -578,11 +593,11 @@ const ProductionOrderUpload: React.FC = () => {
   } = useQuery<PaginatedResponse<ProductionOrder>>({
     queryKey: [
       "productionOrders",
-      fromDate,
-      toDate,
+      appliedFromDate,
+      appliedToDate,
       debouncedSearchQuery,
-      selectedProductionSeries,
-      selectedStatusList,
+      appliedProductionSeries,
+      appliedStatusList,
       paginationModel.page,
       paginationModel.pageSize,
     ],
@@ -617,11 +632,11 @@ const ProductionOrderUpload: React.FC = () => {
   const { data: statusCounts } = useQuery<StatusCount>({
     queryKey: [
       "productionOrderCounts",
-      fromDate,
-      toDate,
+      appliedFromDate,
+      appliedToDate,
       debouncedSearchQuery,
-      selectedProductionSeries,
-      selectedStatusList,
+      appliedProductionSeries,
+      appliedStatusList,
     ],
     queryFn: async () => {
       const payload = buildPayload();
@@ -642,17 +657,17 @@ const ProductionOrderUpload: React.FC = () => {
   // Client-side filtering fallback
   const filteredRows = React.useMemo(() => {
     let rows = productionOrders || [];
-    if (selectedProductionSeries.length > 0) {
-      const seriesNames = selectedProductionSeries.map((s: any) =>
+    if (appliedProductionSeries.length > 0) {
+      const seriesNames = appliedProductionSeries.map((s: any) =>
         (s.productionSeries || s).toString().toLowerCase()
       );
       rows = rows.filter(
         (row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase())
       );
     }
-    if (selectedStatusList.length > 0) {
-      const statusIds = selectedStatusList.map((s: any) =>
-        typeof s === "number" ? s : s.id
+    if (appliedStatusList.length > 0) {
+      const statusIds = appliedStatusList.map((s: any) =>
+        typeof s === "number" ? Number(s) : Number(s.id)
       );
       rows = rows.filter(
         (row) => row.precheckStatus !== undefined && statusIds.includes(row.precheckStatus)
@@ -672,7 +687,7 @@ const ProductionOrderUpload: React.FC = () => {
         (row.precheckStatus === 2 && "partial".includes(term)) ||
         (row.precheckStatus === 3 && "completed".includes(term))
     );
-  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries, selectedStatusList]);
+  }, [productionOrders, debouncedSearchQuery, appliedProductionSeries, appliedStatusList]);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -1347,6 +1362,61 @@ const ProductionOrderUpload: React.FC = () => {
     return getAutosizedColumns(historyColumns, historyTableRows);
   }, [historyColumns, historyTableRows]);
 
+  // State helpers for Apply and Clear buttons
+  const hasSelectedDropdownFilters = React.useMemo(() => {
+    return (
+      draftProductionSeries.length > 0 ||
+      draftStatusList.length > 0 ||
+      draftFromDate !== null ||
+      draftToDate !== null
+    );
+  }, [draftProductionSeries, draftStatusList, draftFromDate, draftToDate]);
+
+  const hasAnyFilterActive = React.useMemo(() => {
+    return (
+      searchQuery.trim() !== "" ||
+      draftProductionSeries.length > 0 ||
+      draftStatusList.length > 0 ||
+      draftFromDate !== null ||
+      draftToDate !== null ||
+      appliedProductionSeries.length > 0 ||
+      appliedStatusList.length > 0 ||
+      appliedFromDate !== null ||
+      appliedToDate !== null
+    );
+  }, [
+    searchQuery,
+    draftProductionSeries,
+    draftStatusList,
+    draftFromDate,
+    draftToDate,
+    appliedProductionSeries,
+    appliedStatusList,
+    appliedFromDate,
+    appliedToDate,
+  ]);
+
+  const handleApplyFilters = () => {
+    setAppliedProductionSeries(draftProductionSeries);
+    setAppliedStatusList(draftStatusList);
+    setAppliedFromDate(draftFromDate);
+    setAppliedToDate(draftToDate);
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setDraftProductionSeries([]);
+    setDraftStatusList([]);
+    setDraftFromDate(null);
+    setDraftToDate(null);
+    setAppliedProductionSeries([]);
+    setAppliedStatusList([]);
+    setAppliedFromDate(null);
+    setAppliedToDate(null);
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
   // Construct active filter chips
   const activeChips: FilterChipItem[] = React.useMemo(() => {
     const list: FilterChipItem[] = [];
@@ -1354,50 +1424,64 @@ const ProductionOrderUpload: React.FC = () => {
     if (searchQuery.trim()) {
       list.push({
         id: "search",
-        label: `PO / Search: "${searchQuery.trim()}"`,
+        label: `Search: "${searchQuery.trim()}"`,
         onRemove: () => setSearchQuery(""),
       });
     }
 
-    selectedStatusList.forEach((st: any) => {
-      const label = typeof st === "string" ? st : st.label || st.id;
+    appliedStatusList.forEach((st: any) => {
+      const stVal = typeof st === "object" ? st.id : st;
+      const matchOpt = statusOptions.find(
+        (opt) => opt.id === Number(stVal) || opt.label.toLowerCase() === String(st).toLowerCase()
+      );
+      const label = matchOpt ? matchOpt.label : (typeof st === "object" ? st.label || st.id : st);
       list.push({
-        id: `status_${typeof st === "object" ? st.id : st}`,
-        label: `Status: ${label}`,
-        onRemove: () =>
-          setSelectedStatusList((prev) =>
-            prev.filter((item) => (typeof item === "object" ? item.id : item) !== (typeof st === "object" ? st.id : st))
-          ),
+        id: `status_${stVal}`,
+        label: `Status: ${label || "All"}`,
+        onRemove: () => {
+          const updated = appliedStatusList.filter((item: any) => {
+            const itemVal = typeof item === "object" ? item.id : item;
+            return itemVal !== stVal && itemVal !== Number(stVal);
+          });
+          setAppliedStatusList(updated);
+          setDraftStatusList(updated);
+        },
       });
     });
 
-    selectedProductionSeries.forEach((ser: any) => {
+    appliedProductionSeries.forEach((ser: any) => {
       const val = typeof ser === "object" ? ser.productionSeries || ser.id : ser;
       list.push({
         id: `series_${val}`,
         label: `Series: ${val}`,
-        onRemove: () =>
-          setSelectedProductionSeries((prev) =>
-            prev.filter((item) => (typeof item === "object" ? item.productionSeries || item.id : item) !== val)
-          ),
+        onRemove: () => {
+          const updated = appliedProductionSeries.filter((item: any) => {
+            const itemVal = typeof item === "object" ? item.productionSeries || item.id : item;
+            return itemVal !== val;
+          });
+          setAppliedProductionSeries(updated);
+          setDraftProductionSeries(updated);
+        },
       });
     });
 
-    if (fromDate || toDate) {
-      const fromStr = fromDate ? format(fromDate, "dd/MM/yyyy") : "...";
-      const toStr = toDate ? format(toDate, "dd/MM/yyyy") : "...";
+    if (appliedFromDate || appliedToDate) {
+      const fromStr = appliedFromDate ? format(appliedFromDate, "dd/MM/yyyy") : "...";
+      const toStr = appliedToDate ? format(appliedToDate, "dd/MM/yyyy") : "...";
       list.push({
         id: "dateRange",
         label: `Created On: ${fromStr} – ${toStr}`,
         onRemove: () => {
-          setFromDate(null);
-          setToDate(null);
+          setAppliedFromDate(null);
+          setAppliedToDate(null);
+          setDraftFromDate(null);
+          setDraftToDate(null);
         },
       });
     }
 
     return list;
-  }, [searchQuery, selectedStatusList, selectedProductionSeries, fromDate, toDate]);
+  }, [searchQuery, appliedStatusList, appliedProductionSeries, appliedFromDate, appliedToDate]);
 
   const totalOrdersCount = counts.totalCount || totalRowCount;
   const pendingCount = counts.pendingCount || 0;
@@ -1589,6 +1673,7 @@ const ProductionOrderUpload: React.FC = () => {
                 disableColumnSelector
                 disableRowSelectionOnClick
                 hideFooter
+                slots={{ noRowsOverlay: CustomNoRowsOverlay }}
                 sx={{
                   height: "100%",
                   width: "100%",
@@ -1699,14 +1784,15 @@ const ProductionOrderUpload: React.FC = () => {
                   sx={{
                     width: "100%",
                     overflowX: "auto",
-                    py: 0.5,
+                    pt: 1.25,
+                    pb: 0.5,
                     "&::-webkit-scrollbar": { height: 6 },
                     "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
                   }}
                 >
                   {/* Search Field */}
                   <TextField
-                    placeholder="Search PO, LN Item Code, Drawing No, MRIR No..."
+                    placeholder="Search PO, LN Item Code, Drawing No..."
                     variant="outlined"
                     size="small"
                     value={searchQuery}
@@ -1734,9 +1820,9 @@ const ProductionOrderUpload: React.FC = () => {
                   {/* Prod. Series Dropdown */}
                   <MultiSelectFilter
                     label="Prod. Series"
-                    value={selectedProductionSeries}
+                    value={draftProductionSeries}
                     options={prodSeriesOptions}
-                    onChange={(newValue) => setSelectedProductionSeries(newValue)}
+                    onChange={(newValue) => setDraftProductionSeries(newValue)}
                     flex="0 0 130px"
                     minWidth={110}
                   />
@@ -1744,9 +1830,9 @@ const ProductionOrderUpload: React.FC = () => {
                   {/* Status Dropdown */}
                   <MultiSelectFilter
                     label="Status"
-                    value={selectedStatusList}
+                    value={draftStatusList}
                     options={statusOptions}
-                    onChange={(newValue) => setSelectedStatusList(newValue)}
+                    onChange={(newValue) => setDraftStatusList(newValue)}
                     flex="0 0 120px"
                     minWidth={100}
                   />
@@ -1754,24 +1840,84 @@ const ProductionOrderUpload: React.FC = () => {
                   {/* Date Range Pickers */}
                   <DatePicker
                     label="From Date"
-                    value={fromDate}
-                    onChange={(newValue) => setFromDate(newValue)}
+                    value={draftFromDate}
+                    onChange={(newValue) => setDraftFromDate(newValue)}
                     slotProps={{
-                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115 } },
+                      textField: {
+                        size: "small",
+                        InputLabelProps: {
+                          shrink: true,
+                          sx: {
+                            bgcolor: "#ffffff",
+                            px: 0.5,
+                            fontSize: "0.82rem",
+                            color: "#667085",
+                            transform: "translate(10px, -7px) scale(0.75)",
+                            transformOrigin: "top left",
+                            "&.Mui-focused": {
+                              color: "primary.main",
+                            },
+                          },
+                        },
+                        sx: {
+                          flex: "0 0 140px",
+                          minWidth: 120,
+                          "& .MuiOutlinedInput-root": {
+                            height: 38,
+                            borderRadius: "8px",
+                          },
+                          "& .MuiOutlinedInput-input": {
+                            py: "8px",
+                            px: 1.25,
+                            fontSize: "0.82rem",
+                          },
+                        },
+                      },
                     }}
                   />
                   <DatePicker
                     label="To Date"
-                    value={toDate}
-                    onChange={(newValue) => setToDate(newValue)}
+                    value={draftToDate}
+                    onChange={(newValue) => setDraftToDate(newValue)}
                     slotProps={{
-                      textField: { size: "small", sx: { flex: "0 0 130px", minWidth: 115 } },
+                      textField: {
+                        size: "small",
+                        InputLabelProps: {
+                          shrink: true,
+                          sx: {
+                            bgcolor: "#ffffff",
+                            px: 0.5,
+                            fontSize: "0.82rem",
+                            color: "#667085",
+                            transform: "translate(10px, -7px) scale(0.75)",
+                            transformOrigin: "top left",
+                            "&.Mui-focused": {
+                              color: "primary.main",
+                            },
+                          },
+                        },
+                        sx: {
+                          flex: "0 0 140px",
+                          minWidth: 120,
+                          "& .MuiOutlinedInput-root": {
+                            height: 38,
+                            borderRadius: "8px",
+                          },
+                          "& .MuiOutlinedInput-input": {
+                            py: "8px",
+                            px: 1.25,
+                            fontSize: "0.82rem",
+                          },
+                        },
+                      },
                     }}
                   />
 
                   <Button
                     size="small"
                     variant="contained"
+                    disabled={!hasSelectedDropdownFilters}
+                    onClick={handleApplyFilters}
                     sx={{
                       flex: "0 0 auto",
                       minWidth: 65,
@@ -1784,6 +1930,10 @@ const ProductionOrderUpload: React.FC = () => {
                       boxShadow: "none",
                       px: 1.75,
                       "&:hover": { backgroundColor: "primary.dark" },
+                      "&.Mui-disabled": {
+                        backgroundColor: "#F2F4F7",
+                        color: "#98A2B3",
+                      },
                     }}
                   >
                     Apply
@@ -1792,20 +1942,8 @@ const ProductionOrderUpload: React.FC = () => {
                   <Button
                     size="small"
                     variant="text"
-                    disabled={
-                      !searchQuery &&
-                      selectedProductionSeries.length === 0 &&
-                      selectedStatusList.length === 0 &&
-                      !fromDate &&
-                      !toDate
-                    }
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSelectedProductionSeries([]);
-                      setSelectedStatusList([]);
-                      setFromDate(null);
-                      setToDate(null);
-                    }}
+                    disabled={!hasAnyFilterActive}
+                    onClick={handleClearFilters}
                     sx={{
                       flex: "0 0 auto",
                       minWidth: 55,
@@ -1816,6 +1954,9 @@ const ProductionOrderUpload: React.FC = () => {
                       textTransform: "none",
                       px: 1,
                       "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
+                      "&.Mui-disabled": {
+                        color: "#D0D5DD",
+                      },
                     }}
                   >
                     Clear
@@ -1827,13 +1968,7 @@ const ProductionOrderUpload: React.FC = () => {
               <Box sx={{ mt: 1 }}>
                 <ActiveFilterChips
                   chips={activeChips}
-                  onClearAll={() => {
-                    setSearchQuery("");
-                    setSelectedProductionSeries([]);
-                    setSelectedStatusList([]);
-                    setFromDate(null);
-                    setToDate(null);
-                  }}
+                  onClearAll={handleClearFilters}
                   totalResults={totalRowCount}
                 />
               </Box>
@@ -1868,6 +2003,8 @@ const ProductionOrderUpload: React.FC = () => {
                 disableRowSelectionOnClick
                 getRowId={(row) => row.id || row.sr}
                 hideFooter
+                slots={{ noRowsOverlay: CustomNoRowsOverlay }}
+                slotProps={{ noRowsOverlay: { isLoading: isHistoryLoading } as any }}
                 sx={{
                   flex: 1,
                   height: "100%",

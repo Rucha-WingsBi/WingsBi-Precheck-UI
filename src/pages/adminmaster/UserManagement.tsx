@@ -49,6 +49,7 @@ import {
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { UserRole, User } from "../../types";
+import { EmptyState } from "../../components/EmptyState";
 
 function UserActionMenu({
   row,
@@ -723,6 +724,9 @@ export default function UserManagement() {
             rows={displayedUsers}
             columns={mainTab === 0 ? userColumns : pendingColumns}
             loading={mainTab === 0 ? isUsersLoading : isPendingUsersLoading}
+            slots={{
+              noRowsOverlay: () => <EmptyState />,
+            }}
             initialState={{
               pagination: {
                 paginationModel: { pageSize: 10 },

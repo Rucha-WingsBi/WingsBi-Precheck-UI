@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -17,12 +17,15 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-
   Collapse,
   Autocomplete,
   Tabs,
   Tab,
   Stack,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import { CustomPagination } from '../../components/CustomPagination';
 
@@ -32,6 +35,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -90,86 +94,188 @@ interface StoredComponent {
   lnItemCode: string;
 }
 
-const Row = ({ component }: { component: StoredComponent }) => {
+const Row = ({ component, sr }: { component: StoredComponent; sr: number }) => {
   const [open, setOpen] = useState(false);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const isMenuOpen = Boolean(menuAnchorEl);
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'N/A';
+  const handleOpenMenu = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setMenuAnchorEl(e.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+  };
+
+  const handleToggleDetails = () => {
+    handleCloseMenu();
+    setOpen((prev) => !prev);
+  };
+
+  // Status badge renderer
+  const renderStatusBadge = (statusStr: string | undefined) => {
+    const status = (statusStr || 'N/A').toLowerCase();
+    let bg = '#f4f5f7';
+    let color = '#344054';
+    let borderColor = '#d0d5dd';
+
+    if (status.includes('ready') || status.includes('complete') || status.includes('available')) {
+      bg = '#ecfdf5';
+      color = '#047857';
+      borderColor = '#a7f3d0';
+    } else if (status.includes('pending') || status.includes('hold')) {
+      bg = '#fffbeb';
+      color = '#d97706';
+      borderColor = '#fde68a';
+    } else if (status.includes('consumed') || status.includes('used')) {
+      bg = '#eff6ff';
+      color = '#2563eb';
+      borderColor = '#bfdbfe';
     }
+
+    return (
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.75,
+          px: 1.25,
+          py: 0.25,
+          borderRadius: '12px',
+          bgcolor: bg,
+          color: color,
+          border: `1px solid ${borderColor}`,
+          fontWeight: 600,
+          fontSize: '0.75rem',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <Box
+          sx={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            bgcolor: color,
+          }}
+        />
+        {statusStr || 'N/A'}
+      </Box>
+    );
   };
 
   return (
     <>
-      <TableRow hover sx={{ '& > *': { borderBottom: 'unset' } }}>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.qrCodeNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.productionOrderNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.projectNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.productionSeries || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.drawingNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.idNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.quantity || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.nomenclature || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1 }}>
+      <TableRow
+        hover
+        sx={{
+          height: 40,
+          '&:hover': { backgroundColor: 'grey.50' },
+          '& td': {
+            borderBottom: '1px solid',
+            borderColor: 'grey.100',
+            fontSize: '0.8rem',
+            color: '#344054',
+            py: 0.75,
+            px: 1.5,
+            whiteSpace: 'nowrap',
+          },
+        }}
+      >
+        <TableCell sx={{ textAlign: 'center', width: '45px', color: 'text.muted', fontSize: '0.8rem' }}>{sr}</TableCell>
+        <TableCell sx={{ textAlign: 'center', fontWeight: 600, color: '#101828' }}>{component?.qrCodeNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.productionOrderNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.projectNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.productionSeries || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.drawingNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.idNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.quantity || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.nomenclature || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center', width: '60px' }}>
           <IconButton
-            aria-label="expand row"
             size="small"
-            onClick={() => setOpen(!open)}
+            onClick={handleOpenMenu}
+            sx={{
+              color: 'text.muted',
+              p: 0.5,
+              '&:hover': { backgroundColor: 'grey.100', color: 'text.primary' },
+            }}
           >
-            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            <MoreVertIcon fontSize="small" />
           </IconButton>
+
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={isMenuOpen}
+            onClose={handleCloseMenu}
+            transitionDuration={0}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            PaperProps={{
+              elevation: 3,
+              sx: { minWidth: 110, borderRadius: '6px', py: 0.25 },
+            }}
+          >
+            <MenuItem onClick={handleToggleDetails} sx={{ py: 0.35, px: 1, minHeight: 28 }}>
+              <ListItemIcon sx={{ minWidth: 20, '& .MuiSvgIcon-root': { fontSize: 15 } }}>
+                {open ? <KeyboardArrowUpIcon color="primary" /> : <KeyboardArrowDownIcon />}
+              </ListItemIcon>
+              <ListItemText
+                primary={open ? 'Hide Details' : 'View Details'}
+                primaryTypographyProps={{ fontSize: '0.725rem', fontWeight: 500 }}
+              />
+            </MenuItem>
+          </Menu>
         </TableCell>
       </TableRow>
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={10}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1 }}>
-              <Table size="small">
+            <Box
+              sx={{
+                margin: 1,
+                p: 1.5,
+                backgroundColor: 'grey.50',
+                borderRadius: '6px',
+                border: '1px solid',
+                borderColor: 'grey.200',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 700,
+                  color: 'primary.main',
+                  display: 'block',
+                  mb: 0.75,
+                  fontSize: '0.8rem',
+                }}
+              >
+                Additional Details
+              </Typography>
+              <Table size="small" sx={{ width: '100%' }}>
                 <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Consumed in Drawing</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>IR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>MSN Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>MRIR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Disposition</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Username</TableCell>
+                  <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Consumed in Drawing</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>IR Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>MSN Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>MRIR Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Disposition</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Username</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   <TableRow>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.consumedInDrawing || '-'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>
-                      <Box
-                        sx={{
-                          bgcolor: component?.qrCodeStatus === 'readyforconsumption' ? '#e8f5e8' : '#fff3cd',
-                          color: component?.qrCodeStatus === 'readyforconsumption' ? '#2e7d32' : '#856404',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          display: 'inline-block',
-                        }}
-                      >
-                        {component?.qrCodeStatus || 'N/A'}
-                      </Box>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.consumedInDrawing || '-'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', py: 0.5 }}>
+                      {renderStatusBadge(component?.qrCodeStatus)}
                     </TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.irNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.msnNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.mrirNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.desposition || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.users || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.irNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.msnNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.mrirNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.desposition || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.users || 'N/A'}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -185,7 +291,6 @@ const AvailableInStore = React.lazy(() => import("./AvailableInStore"));
 
 const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
   const location = useLocation();
   const [storeTab, setStoreTab] = useState<"available" | "stored">(
     hideHeader ? "stored" : (location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available")
@@ -322,81 +427,50 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     fetchStoredComponents(newDate);
   };
 
-  const handleSearch = () => {
-    if (selectedDate || searchQuery) {
-      fetchStoredComponents(selectedDate);
-    } else {
-      setSnackbar({
-        open: true,
-        message: 'Please select a date or enter a drawing number first',
-        severity: 'warning'
-      });
-    }
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const handleClearFilter = () => {
     setSelectedDate(null);
     setSearchQuery('');
     setSelectedDrawingNo('');
-    setPage(0);
     dispatch(clearStoredComponents());
   };
 
-  const handleExport = () => {
-    const hasValidDate = selectedDate instanceof Date && !isNaN(selectedDate.getTime());
-    if (!hasValidDate && !searchQuery) {
+  const handleExport = async () => {
+    try {
+      const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
+      await dispatch(
+        exportStoredComponents({
+          storeInDate: dateStr,
+          drawingNumber: searchQuery || selectedDrawingNo || null,
+        })
+      ).unwrap();
       setSnackbar({
         open: true,
-        message: 'Please select a date or enter a drawing number first',
-        severity: 'error'
+        message: 'Components exported successfully!',
+        severity: 'success',
       });
-      return;
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: typeof err === 'string' ? err : err?.message || 'Failed to export components',
+        severity: 'error',
+      });
     }
-
-    const formattedDate = hasValidDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-    dispatch(exportStoredComponents({ storeInDate: formattedDate, drawingNumber: searchQuery }))
-      .unwrap()
-      .then((result) => {
-        if (result.success) {
-          setSnackbar({
-            open: true,
-            message: result.message,
-            severity: 'success'
-          });
-        }
-      })
-      .catch((error) => {
-        setSnackbar({
-          open: true,
-          message: error.message || 'Failed to export components',
-          severity: 'error'
-        });
-      });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ py: hideHeader ? 0 : { xs: 1, sm: 1.25 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2 } }}>
+      <Box sx={{ py: hideHeader ? 0 : 1.5, px: hideHeader ? 0 : { xs: 1.5, sm: 2.5 }, bgcolor: "#fcfcfd", minHeight: hideHeader ? "auto" : "100vh" }}>
         {!hideHeader && (
           <Stack
             direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
             alignItems={{ xs: "flex-start", sm: "center" }}
             spacing={2}
-            sx={{ mb: 1 }}
+            sx={{ mb: 2 }}
           >
             <Box>
               <Typography
@@ -409,7 +483,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               >
                 {storeTab === "available" ? "Available In Store" : "Stored In Components"}
               </Typography>
-              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5, fontSize: "0.85rem" }}>
                 View and filter stored components in the system.
               </Typography>
             </Box>
@@ -446,21 +520,21 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
           </React.Suspense>
         ) : (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
-              View and export components stored on specific dates
-            </Typography>
-
-            <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
+            <Paper elevation={0} sx={{ p: 2, borderRadius: "12px", border: "1px solid #eaecf0", backgroundColor: "#ffffff", mb: 2 }}>
               {/* Date Selection and Search Controls */}
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 2,
-                  mb: 2,
-                  flexWrap: 'wrap',
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  width: '100%'
+                  gap: 1.5,
+                  flexWrap: 'nowrap',
+                  width: '100%',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  py: 0.25,
+                  '&::-webkit-scrollbar': { display: 'none' },
                 }}
               >
                 <DatePicker
@@ -475,7 +549,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                       InputProps: {
                         startAdornment: (
                           <InputAdornment position="start">
-                            <CalendarTodayIcon color="action" />
+                            <CalendarTodayIcon fontSize="small" sx={{ color: '#667085' }} />
                           </InputAdornment>
                         ),
                       },
@@ -505,11 +579,11 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                   renderOption={(props, option) => (
                     <li {...props}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5 }}>
-                        <Typography variant="body2" fontWeight={500}>
+                        <Typography variant="body2" fontWeight={600} color="#101828">
                           {option.drawingNumber}
                         </Typography>
                         {option.nomenclature && (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="#667085">
                             {option.nomenclature} {option.componentType ? `| ${option.componentType}` : ''}
                           </Typography>
                         )}
@@ -531,12 +605,12 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                         ...params.InputProps,
                         startAdornment: (
                           <InputAdornment position="start">
-                            <SearchIcon color="action" />
+                            <SearchIcon fontSize="small" sx={{ color: '#667085' }} />
                           </InputAdornment>
                         ),
                         endAdornment: (
                           <>
-                            {loadingDrawings ? <CircularProgress color="inherit" size={20} /> : null}
+                            {loadingDrawings ? <CircularProgress color="inherit" size={18} /> : null}
                             {params.InputProps.endAdornment}
                           </>
                         ),
@@ -554,114 +628,148 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                 <Button
                   variant="outlined"
                   size='small'
-                  color="inherit"
                   onClick={handleClearFilter}
-                  startIcon={<ClearIcon />}
-                  sx={{ minWidth: '120px', height: '40px' }}
+                  startIcon={<ClearIcon fontSize="small" />}
+                  sx={{
+                    height: 36,
+                    borderRadius: "6px",
+                    borderColor: "#d0d5dd",
+                    color: "#344054",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    "&:hover": { borderColor: "#98a2b3", bgcolor: "#f9fafb" },
+                  }}
                 >
                   Clear Filter
                 </Button>
 
                 <Button
                   variant="contained"
-                  color="success"
+                  color="primary"
                   size="small"
                   onClick={handleExport}
                   disabled={!filteredComponents.length}
-                  startIcon={<DownloadIcon />}
-                  sx={{ minWidth: '120px', height: '40px' }}
+                  startIcon={<DownloadIcon fontSize="small" />}
+                  sx={{
+                    height: 36,
+                    borderRadius: "6px",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  }}
                 >
                   Export Excel
                 </Button>
               </Box>
+            </Paper>
 
-              {/* Results Summary */}
-              {(hasValidDate || selectedDrawingNo) && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Showing {filteredComponents.length} stored components for:{" "}
-
+            {/* Results Count Display & Summary Bar */}
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1, px: 0.5 }}>
+              {(hasValidDate || selectedDrawingNo) ? (
+                <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}>
+                  Showing {filteredComponents.length.toLocaleString()} stored components for:{" "}
                   <strong>
-                    {hasValidDate && !selectedDrawingNo && (
-                      <>{format(selectedDate, "dd/MM/yyyy")}</>
-                    )}
-
-                    {!hasValidDate && selectedDrawingNo && (
-                      <>{selectedDrawingNo}</>
-                    )}
-
-                    {hasValidDate && selectedDrawingNo && (
-                      <>
-                        {format(selectedDate, "dd/MM/yyyy")} and {selectedDrawingNo}
-                      </>
-                    )}
+                    {hasValidDate && !selectedDrawingNo && format(selectedDate, "dd/MM/yyyy")}
+                    {!hasValidDate && selectedDrawingNo && selectedDrawingNo}
+                    {hasValidDate && selectedDrawingNo && `${format(selectedDate, "dd/MM/yyyy")} and ${selectedDrawingNo}`}
                   </strong>
-
                 </Typography>
-              )}
+              ) : <Box />}
+              <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500, ml: "auto" }}>
+                {filteredComponents.length.toLocaleString()} {filteredComponents.length === 1 ? "result" : "results"}
+              </Typography>
+            </Box>
 
-
-              {/* Data Table */}
-              <TableContainer>
+            {/* Data Table Paper Container */}
+            <Paper elevation={0} sx={{ borderRadius: "12px", border: "1px solid #eaecf0", backgroundColor: "#ffffff", boxShadow: "0px 1px 3px rgba(16, 24, 40, 0.05)", overflow: "hidden", mb: 2 }}>
+              <TableContainer sx={{ overflowX: "auto", maxHeight: "calc(100vh - 290px)" }}>
                 <Table stickyHeader size="small">
                   <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        QRCode ID
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        PO Number
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        Project Number
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        Prod Series
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        Drawing Number
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        ID
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        Qty
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        Nomenclature
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                        Details
-                      </TableCell>
+                    <TableRow sx={{ backgroundColor: 'grey.50', height: 42 }}>
+                      {[
+                        "Sr.No",
+                        "QRCode ID",
+                        "PO Number",
+                        "Project Number",
+                        "Prod Series",
+                        "Drawing Number",
+                        "ID",
+                        "Qty",
+                        "Nomenclature",
+                        "Actions",
+                      ].map((header) => (
+                        <TableCell
+                          key={header}
+                          sx={{
+                            fontWeight: 600,
+                            color: "text.primary",
+                            fontSize: "0.8rem",
+                            borderBottom: "1px solid",
+                            borderColor: "grey.200",
+                            py: 1,
+                            px: 1.5,
+                            textAlign: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {header}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                          <CircularProgress size={40} />
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                        <TableCell colSpan={10} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <CircularProgress size={32} color="primary" />
+                          <Typography variant="body2" sx={{ color: "#667085", mt: 1.5, fontWeight: 500 }}>
                             Loading stored components...
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ) : error ? (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                          <Typography variant="body2" color="error">
+                        <TableCell colSpan={10} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <Typography variant="body2" color="error" fontWeight={600}>
                             {error.message || 'An error occurred'}
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ) : paginatedComponents.length > 0 ? (
                       paginatedComponents.map((component, index) => (
-                        <Row key={`${component.qrCodeNumber}-${index}`} component={component} />
+                        <Row
+                          key={`${component.qrCodeNumber}-${index}`}
+                          component={component}
+                          sr={page * rowsPerPage + index + 1}
+                        />
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            No stored components found
-                          </Typography>
+                        <TableCell colSpan={10} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <Box sx={{ textAlign: "center", py: 2 }}>
+                            <Box
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: "50%",
+                                backgroundColor: "#F4EBFF",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mb: 1.5,
+                              }}
+                            >
+                              <SearchIcon sx={{ color: "primary.main", fontSize: 24 }} />
+                            </Box>
+                            <Typography variant="subtitle1" fontWeight={700} color="#101828">
+                              No stored components found
+                            </Typography>
+                            <Typography variant="body2" color="#667085" sx={{ mt: 0.5 }}>
+                              Try selecting a different date or search query.
+                            </Typography>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     )}
@@ -683,7 +791,6 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                   }}
                 />
               )}
-
             </Paper>
 
             {/* Snackbar for notifications */}
@@ -693,7 +800,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               onClose={handleCloseSnackbar}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             >
-              <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+              <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%', borderRadius: "8px" }}>
                 {snackbar.message}
               </Alert>
             </Snackbar>

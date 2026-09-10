@@ -11,15 +11,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Card,
-  CardContent,
+  Paper,
   Alert,
   CircularProgress,
   Drawer,
   IconButton,
   Chip,
-  ToggleButton,
-  ToggleButtonGroup,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -28,6 +25,7 @@ import {
   Tabs,
   Tab,
   Stack,
+  InputAdornment,
 
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
@@ -41,6 +39,7 @@ import {
   SwapHoriz as SwapHorizIcon,
   Add as AddIcon,
   Cancel as CancelIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
@@ -137,18 +136,63 @@ const mapApiRecordToListItem = (
   };
 };
 
-// Helper function to get chip color based on status
-const getStatusColor = (
-  status: string | undefined,
-): "default" | "primary" | "success" | "warning" | "error" => {
-  if (!status) return "default";
-  const statusLower = status.toLowerCase();
-  if (statusLower === "completed" || statusLower === "complete")
-    return "success";
-  if (statusLower.includes("pending")) return "warning";
-  if (statusLower === "rejected" || statusLower === "reject") return "error";
-  if (statusLower === "approved" || statusLower === "approve") return "primary";
-  return "default";
+// Helper function to render premium status badge
+const renderStatusBadge = (statusStr: string | undefined) => {
+  const status = (statusStr || "N/A").toLowerCase();
+  let bg = "#f4f5f7";
+  let color = "#344054";
+  let borderColor = "#d0d5dd";
+
+  if (status.includes("completed") || status.includes("complete")) {
+    bg = "#ecfdf5";
+    color = "#047857";
+    borderColor = "#a7f3d0";
+  } else if (status.includes("pending-planner") || status.includes("planner")) {
+    bg = "#fffbeb";
+    color = "#d97706";
+    borderColor = "#fde68a";
+  } else if (status.includes("pending-store") || status.includes("store")) {
+    bg = "#eff6ff";
+    color = "#2563eb";
+    borderColor = "#bfdbfe";
+  } else if (status.includes("rejected") || status.includes("reject") || status.includes("cancel")) {
+    bg = "#fef2f2";
+    color = "#b91c1c";
+    borderColor = "#fecaca";
+  } else if (status.includes("approved") || status.includes("approve")) {
+    bg = "#ecfdf5";
+    color = "#047857";
+    borderColor = "#a7f3d0";
+  }
+
+  return (
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 0.75,
+        px: 1.25,
+        py: 0.25,
+        borderRadius: "12px",
+        bgcolor: bg,
+        color: color,
+        border: `1px solid ${borderColor}`,
+        fontWeight: 600,
+        fontSize: "0.75rem",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Box
+        sx={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          bgcolor: color,
+        }}
+      />
+      {statusStr || "N/A"}
+    </Box>
+  );
 };
 
 // Status filter options
@@ -433,10 +477,7 @@ const MaterialRequisition: React.FC = () => {
   // Load dropdown data for create form (no longer needed as we use hooks)
 
   // Handle filter change
-  const handleFilterChange = (
-    _: React.MouseEvent<HTMLElement>,
-    newFilter: string | null,
-  ) => {
+  const handleFilterChange = (newFilter: string | null) => {
     setSelectedFilter(newFilter);
     setPage(0);
     dispatch(setStatusFilter(newFilter));
@@ -834,736 +875,779 @@ const MaterialRequisition: React.FC = () => {
   return (
     <Box
       sx={{
-        py: { xs: 1, sm: 1.25 },
-        px: { xs: 1.5, sm: 2 },
-        height: "100vh",
+        py: 1,
+        px: { xs: 1, sm: 2 },
+        bgcolor: "#fcfcfd",
+        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* Page Title */}
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        spacing={2}
-        sx={{ mb: 1 }}
-      >
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 700,
-              color: "primary.main",
-              fontSize: { xs: "1.25rem", sm: "1.5rem" },
-            }}
-          >
-            Project Material Request Form
-          </Typography>
-        </Box>
-      </Stack>
-
-      {/* Tabs & Actions Bar */}
+      {/* Page Header */}
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: 1,
-          borderColor: "divider",
-          mb: 2,
+          justifyContent: "space-between",
+          width: "100%",
+          mb: 1,
         }}
       >
-        <Tabs
-          value={activeTab}
-          onChange={(_e, newValue) => setActiveTab(newValue)}
-          textColor="primary"
-          indicatorColor="primary"
-          aria-label="material requisition tabs"
+        <Typography
+          variant="h5"
           sx={{
-            "& .MuiTab-root": {
-              fontWeight: 600,
-              fontSize: "0.875rem",
-              textTransform: "none",
-              minWidth: 100,
-            },
-            "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-            "& .MuiTabs-indicator": {
-              backgroundColor: "primary.main",
-              height: 3,
-              borderRadius: "3px 3px 0 0",
-            },
+            fontWeight: 700,
+            color: "primary.main",
+            fontSize: { xs: "1.15rem", sm: "1.35rem" },
           }}
         >
-          <Tab id="tab-material-request" aria-controls="tabpanel-material-request" label="Material Request" />
-          <Tab id="tab-swap-components" aria-controls="tabpanel-swap-components" label="Swap Components" />
-        </Tabs>
+          Material Requisition
+        </Typography>
 
-        {/* Action Button at the right corner of tabs */}
-        <Box sx={{ pb: 0.5 }}>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={
+              isDownloading ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : (
+                <DownloadIcon fontSize="small" />
+              )
+            }
+            onClick={handleDownloadData}
+            disabled={isDownloading || apiLoading}
+            sx={{
+              height: 32,
+              borderRadius: "6px",
+              borderColor: "grey.300",
+              color: "text.secondary",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.78rem",
+              backgroundColor: "background.paper",
+              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
+            }}
+          >
+            {isDownloading ? "Downloading..." : "Download"}
+          </Button>
+
           {activeTab === 0 && (
             <Button
               variant="contained"
-              color="primary"
               size="small"
-              startIcon={<AddIcon />}
+              startIcon={<AddIcon fontSize="small" />}
               onClick={() => setCreateDialogOpen(true)}
-              sx={{ textTransform: "none", borderRadius: 1.5 }}
+              sx={{
+                height: 32,
+                borderRadius: "6px",
+                backgroundColor: "primary.main",
+                color: "#ffffff",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.78rem",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
             >
-              Add New Requisition
+              New Requisition
             </Button>
           )}
           {activeTab === 1 && (
             <Button
               variant="contained"
-              color="primary"
               size="small"
-              startIcon={<SwapHorizIcon />}
+              startIcon={<SwapHorizIcon fontSize="small" />}
               onClick={() => setSwapDialogOpen(true)}
-              sx={{ textTransform: "none", borderRadius: 1.5 }}
+              sx={{
+                height: 32,
+                borderRadius: "6px",
+                backgroundColor: "primary.main",
+                color: "#ffffff",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.78rem",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
             >
               Swap Component
             </Button>
           )}
-        </Box>
+        </Stack>
       </Box>
 
-      {/* Tab 1: Material Request */}
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <Alert
+          severity="success"
+          sx={{ mb: 1, py: 0.25, borderRadius: "6px" }}
+          onClose={() => setSuccessMessage("")}
+        >
+          {successMessage}
+        </Alert>
+      )}
+      {errorMessage && (
+        <Alert
+          severity="error"
+          sx={{ mb: 1, py: 0.25, borderRadius: "6px" }}
+          onClose={() => setErrorMessage("")}
+        >
+          {errorMessage}
+        </Alert>
+      )}
+
+      {/* Tabs Bar */}
+      <Tabs
+        value={activeTab}
+        onChange={(_e, newValue) => setActiveTab(newValue)}
+        textColor="primary"
+        indicatorColor="primary"
+        aria-label="material requisition tabs"
+        sx={{
+          mb: 1,
+          minHeight: 36,
+          "& .MuiTab-root": {
+            fontWeight: 600,
+            fontSize: "0.85rem",
+            textTransform: "none",
+            minWidth: 90,
+            minHeight: 36,
+            py: 0.5,
+            px: 1.5,
+          },
+          "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+          "& .MuiTabs-indicator": {
+            backgroundColor: "primary.main",
+            height: 3,
+            borderRadius: "3px 3px 0 0",
+          },
+        }}
+      >
+        <Tab id="tab-material-request" aria-controls="tabpanel-material-request" label="Material Request" />
+        <Tab id="tab-swap-components" aria-controls="tabpanel-swap-components" label="Swap Components" />
+      </Tabs>
+
+      {/* ═══════════ Tab 1: Material Request ═══════════ */}
       <TabPanel value={activeTab} index={0}>
-        <Box sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 70px)" }}>
-          {/* Success/Error Messages */}
-          {successMessage && (
-            <Alert
-              severity="success"
-              sx={{ mb: 2 }}
-              onClose={() => setSuccessMessage("")}
-            >
-              {successMessage}
-            </Alert>
-          )}
-
-          {errorMessage && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              onClose={() => setErrorMessage("")}
-            >
-              {errorMessage}
-            </Alert>
-          )}
-
-          {/* Main Content - Table on Left */}
-          <Box sx={{ flex: 1, overflow: "hidden", display: "flex" }}>
-            {/* Left Side - Table */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: "12px",
+            border: "1px solid #eaecf0",
+            backgroundColor: "#ffffff",
+            overflow: "hidden",
+            mb: 1,
+          }}
+        >
+          {/* Filter Bar */}
+          <Box sx={{ p: 1, pb: 0.75, borderBottom: "1px solid #eaecf0" }}>
             <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                py: 0.25,
+                "&::-webkit-scrollbar": { height: 4 },
+                "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 2 },
+              }}
+            >
+              {/* Status Filter Chips */}
+              {[
+                { label: "All", value: STATUS_FILTERS.ALL },
+                { label: "Pending - Planner", value: STATUS_FILTERS.PENDING_PLANNER },
+                { label: "Pending - Store", value: STATUS_FILTERS.PENDING_STORE },
+                { label: "Completed", value: STATUS_FILTERS.COMPLETED },
+              ].map((filter) => {
+                const isActive = (selectedFilter || "") === filter.value;
+                return (
+                  <Chip
+                    key={filter.value}
+                    label={filter.label}
+                    size="small"
+                    onClick={() => handleFilterChange(filter.value || null)}
+                    sx={{
+                      borderRadius: "14px",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      height: "26px",
+                      cursor: "pointer",
+                      border: isActive ? "1.5px solid" : "1px solid #e4e7ec",
+                      borderColor: isActive ? "primary.main" : "#e4e7ec",
+                      bgcolor: isActive ? "rgba(107, 40, 138, 0.08)" : "#f9fafb",
+                      color: isActive ? "primary.main" : "#667085",
+                      "&:hover": {
+                        bgcolor: isActive ? "rgba(107, 40, 138, 0.12)" : "#f2f4f7",
+                      },
+                    }}
+                  />
+                );
+              })}
+
+              <Box sx={{ flex: 1 }} />
+
+              {/* Refresh Button */}
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<RefreshIcon sx={{ fontSize: "16px !important" }} />}
+                onClick={handleRefresh}
+                disabled={apiLoading}
+                sx={{
+                  flex: "0 0 auto",
+                  height: 26,
+                  borderRadius: "6px",
+                  borderColor: "grey.300",
+                  color: "text.secondary",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                  px: 1.25,
+                  "&:hover": { borderColor: "grey.400", bgcolor: "grey.50" },
+                }}
+              >
+                Refresh
+              </Button>
+            </Box>
+
+            {/* Results Count Row */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mt: 0.5,
+                pt: 0.5,
+                borderTop: "1px solid #f2f4f7",
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ color: "#475467", fontSize: "0.8rem", fontWeight: 600 }}
+              >
+                {getTableHeader()}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
+              >
+                {requestList.length} {requestList.length === 1 ? "result" : "results"}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Table */}
+          <TableContainer sx={{ maxHeight: "calc(100vh - 270px)", overflow: "auto" }}>
+            {apiLoading ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  py: 6,
+                }}
+              >
+                <CircularProgress size={28} color="primary" />
+                <Typography variant="body2" sx={{ color: "#667085", mt: 1, fontSize: "0.8rem" }}>
+                  Loading material requests...
+                </Typography>
+              </Box>
+            ) : (
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    {[
+                      { label: "Request ID", width: 120 },
+                      { label: "PO Number", width: 130 },
+                      { label: "Drawing Number", width: 140 },
+                      { label: "LN Item Code", width: 120 },
+                      { label: "Quantity", width: 80 },
+                      { label: "Item Description", width: 180 },
+                      { label: "Status", width: 140 },
+                      { label: "Action", width: 90 },
+                    ].map((col) => (
+                      <TableCell
+                        key={col.label}
+                        align="left"
+                        sx={{
+                          fontWeight: 700,
+                          backgroundColor: "#F9FAFB !important",
+                          color: "#475467",
+                          fontSize: "0.78rem",
+                          borderBottom: "1px solid #EAECF0",
+                          py: 0.6,
+                          px: 1,
+                          minWidth: col.width,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {col.label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paginatedRequestList.map((item) => {
+                    const isPendingPlanner =
+                      item.status?.toLowerCase() === "pending-planner";
+                    return (
+                      <TableRow
+                        key={item.id}
+                        hover={isPendingPlanner}
+                        onClick={() => handleRowClick(item)}
+                        sx={{
+                          cursor: isPendingPlanner ? "pointer" : "default",
+                          height: 34,
+                          backgroundColor:
+                            selectedRow === item.id
+                              ? "rgba(107, 40, 138, 0.06)"
+                              : "inherit",
+                          "&:hover": isPendingPlanner
+                            ? {
+                                backgroundColor: "#f9fafb",
+                              }
+                            : {},
+                          "& td": {
+                            borderBottom: "1px solid #F2F4F7",
+                            fontSize: "0.8rem",
+                            color: "#344054",
+                            py: 0.4,
+                            px: 1,
+                          },
+                        }}
+                      >
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 600, color: "#101828", fontSize: "0.8rem" }}
+                          >
+                            {item.requestId}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{item.poNumber || "N/A"}</TableCell>
+                        <TableCell>{item.drawingNumber || "N/A"}</TableCell>
+                        <TableCell>{item.materialCode}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.itemDescription}</TableCell>
+                        <TableCell>{renderStatusBadge(item.status)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="text"
+                            color="error"
+                            size="small"
+                            startIcon={<CancelIcon sx={{ fontSize: "13px !important" }} />}
+                            disabled={
+                              !item.status ||
+                              item.status.toLowerCase() === "completed" ||
+                              item.status.toLowerCase() === "complete"
+                            }
+                            onClick={(e) => handleCancelClick(e, item)}
+                            sx={{
+                              textTransform: "none",
+                              borderRadius: "4px",
+                              minWidth: "auto",
+                              height: 24,
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              lineHeight: 1,
+                              px: 0.75,
+                              color: "#b91c1c",
+                              "&:hover": { bgcolor: "#fef2f2" },
+                              "&.Mui-disabled": { color: "#d0d5dd" },
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {requestList.length === 0 && !apiLoading && (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4, borderBottom: "none" }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                          No data available
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </TableContainer>
+
+          {/* Pagination */}
+          {!apiLoading && requestList.length > 0 && (
+            <CustomPagination
+              page={page}
+              pageSize={rowsPerPage}
+              totalCount={requestList.length}
+              pageSizeOptions={[5, 10, 25, 50]}
+              onPageChange={(newPage) => setPage(newPage)}
+              onPageSizeChange={(newSize) => {
+                setRowsPerPage(newSize);
+                setPage(0);
+              }}
+            />
+          )}
+        </Paper>
+
+        {/* Right Side Drawer - Form */}
+        <Drawer
+          anchor="right"
+          open={drawerOpen}
+          onClose={handleDrawerClose}
+          PaperProps={{
+            sx: {
+              width: { xs: "100%", sm: 500, md: 600 },
+              padding: 0,
+              maxHeight: "calc(100vh - 64px)",
+              height: "calc(100vh - 64px)",
+              marginTop: "64px",
+              display: "flex",
+              flexDirection: "column",
+              borderLeft: "1px solid #eaecf0",
+            },
+          }}
+        >
+          <Box
+            sx={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {/* Drawer Header */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                p: 2,
+                borderBottom: "1px solid #eaecf0",
+                flexShrink: 0,
+                bgcolor: "#f9fafb",
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: "primary.main",
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                }}
+              >
+                Material Request Form
+              </Typography>
+              <IconButton
+                onClick={handleDrawerClose}
+                size="small"
+                sx={{ color: "#667085", "&:hover": { color: "#101828" } }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {/* Drawer Content - Form */}
+            <Box
+              component="form"
+              onSubmit={handleSubmit(onSubmit)}
               sx={{
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
+                p: 2,
               }}
             >
-              <Card
-                elevation={2}
-                sx={{ height: "100%", display: "flex", flexDirection: "column" }}
-              >
-                <CardContent
-                  sx={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Header with Title */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 2,
-                    }}
-                  >
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color: "primary.main",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {getTableHeader()}
-                    </Typography>
-                  </Box>
-
-                  {/* Status Filter Tabs & Action Buttons */}
-                  <Box
-                    sx={{
-                      mb: 2,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: 2,
-                    }}
-                  >
-                    <ToggleButtonGroup
-                      value={selectedFilter || ""}
-                      exclusive
-                      onChange={handleFilterChange}
-                      size="small"
-                      sx={{ flexWrap: "wrap" }}
-                    >
-                      <ToggleButton value={STATUS_FILTERS.ALL}>All</ToggleButton>
-
-                      <ToggleButton value={STATUS_FILTERS.PENDING_PLANNER}>
-                        Pending - Planner
-                      </ToggleButton>
-
-                      <ToggleButton value={STATUS_FILTERS.PENDING_STORE}>
-                        Pending - Store
-                      </ToggleButton>
-
-                      <ToggleButton value={STATUS_FILTERS.COMPLETED}>
-                        Completed
-                      </ToggleButton>
-                    </ToggleButtonGroup>
-
-                    {/* Action Buttons at the right side of the filterbar */}
-                    <Box sx={{ display: "flex", gap: 1.5 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<RefreshIcon />}
-                        onClick={handleRefresh}
-                        disabled={apiLoading}
-                        sx={{ textTransform: "none", borderRadius: 1.5 }}
-                      >
-                        Refresh
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={
-                          isDownloading ? (
-                            <CircularProgress size={16} />
-                          ) : (
-                            <DownloadIcon />
-                          )
-                        }
-                        onClick={handleDownloadData}
-                        disabled={isDownloading || apiLoading}
-                        sx={{ textTransform: "none", borderRadius: 1.5 }}
-                      >
-                        Download
-                      </Button>
-                    </Box>
-                  </Box>
-
-                  {/* Table */}
-                  <TableContainer sx={{ flex: 1, overflow: "auto" }}>
-                    {apiLoading ? (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          height: "100%",
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    ) : (
-                      <Table stickyHeader size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              Request ID
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              PO Number
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              Drawing Number
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              LN Item Code
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              Quantity
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              Item Description
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              Status
-                            </TableCell>
-                            <TableCell
-                              align="center"
-                              sx={{ fontWeight: 600, bgcolor: "grey.100" }}
-                            >
-                              Action
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {paginatedRequestList.map((item) => {
-                            const isPendingPlanner =
-                              item.status?.toLowerCase() === "pending-planner";
-                            return (
-                              <TableRow
-                                key={item.id}
-                                hover={isPendingPlanner}
-                                onClick={() => handleRowClick(item)}
-                                sx={{
-                                  cursor: isPendingPlanner
-                                    ? "pointer"
-                                    : "default",
-                                  backgroundColor:
-                                    selectedRow === item.id
-                                      ? "rgba(168, 0, 90, 0.1)"
-                                      : "inherit",
-                                  "&:hover": isPendingPlanner
-                                    ? {
-                                        backgroundColor:
-                                          selectedRow === item.id
-                                            ? "rgba(168, 0, 90, 0.15)"
-                                            : "rgba(0, 0, 0, 0.04)",
-                                      }
-                                    : {},
-                                }}
-                              >
-                              <TableCell align="center">{item.requestId}</TableCell>
-                              <TableCell align="center">{item.poNumber || "N/A"}</TableCell>
-                              <TableCell align="center">{item.drawingNumber || "N/A"}</TableCell>
-                              <TableCell align="center">{item.materialCode}</TableCell>
-                              <TableCell align="center">{item.quantity}</TableCell>
-                              <TableCell align="center">{item.itemDescription}</TableCell>
-
-                              <TableCell align="center">
-                                <Chip
-                                  label={item.status || "N/A"}
-                                  color={getStatusColor(item.status)}
-                                  size="small"
-                                  sx={{ minWidth: 80 }}
-                                />
-                              </TableCell>
-                              <TableCell align="center">
-                                <Button
-                                  variant="outlined"
-                                  color="error"
-                                  size="small"
-                                  startIcon={<CancelIcon fontSize="small" />}
-                                  disabled={
-                                    !item.status ||
-                                    item.status.toLowerCase() === "completed" ||
-                                    item.status.toLowerCase() === "complete"
-                                  }
-                                  onClick={(e) => handleCancelClick(e, item)}
-                                  sx={{
-                                    textTransform: "none",
-                                    borderRadius: "16px",
-                                    minWidth: 80,
-                                    height: 24,
-                                    fontSize: "0.8125rem",
-                                    lineHeight: 1,
-                                    px: 1.5,
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
-                              </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          {requestList.length === 0 && !apiLoading && (
-                            <TableRow>
-                              <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  No data available
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </TableContainer>
-
-                  {/* Pagination */}
-                  {!apiLoading && requestList.length > 0 && (
-                    <CustomPagination
-                      page={page}
-                      pageSize={rowsPerPage}
-                      totalCount={requestList.length}
-                      pageSizeOptions={[5, 10, 25, 50]}
-                      onPageChange={(newPage) => setPage(newPage)}
-                      onPageSizeChange={(newSize) => {
-                        setRowsPerPage(newSize);
-                        setPage(0);
-                      }}
-
+              <Box sx={{ flex: 1, overflow: "auto", pr: 1, pt: 1 }}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12}>
+                    <Controller
+                      name="requestNo"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Request No."
+                          variant="outlined"
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      )}
                     />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="rejectedComponentId"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Rejected Part ID Number"
+                          variant="outlined"
+                          InputLabelProps={{ shrink: true }}
+                          disabled
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="item"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Item"
+                          variant="outlined"
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="lnItemCode"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="LN item code"
+                          variant="outlined"
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="quantityRequired"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Quantity Required (nos.)"
+                          variant="outlined"
+                          type="number"
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Controller
+                      name="poNumber"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="PO Number"
+                          variant="outlined"
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="project"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Project"
+                          variant="outlined"
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="requiredForAssly"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Required for Assly"
+                          variant="outlined"
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Controller
+                      name="reasonForRejection"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          label="Reason for Rejection / Remarks"
+                          variant="outlined"
+                          multiline
+                          rows={2}
+                          disabled={!isStore}
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  {/* Store-specific fields */}
+                  {isStore && (
+                    <>
+                      <Grid item xs={12}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            mt: 1,
+                            mb: 0.5,
+                            color: "primary.main",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Store Details
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <Controller
+                          name="outPONo"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              fullWidth
+                              size="small"
+                              label="Out PO No."
+                              variant="outlined"
+                            />
+                          )}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <Controller
+                          name="minDate"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              fullWidth
+                              size="small"
+                              label="MIN Date"
+                              variant="outlined"
+                              type="date"
+                              InputLabelProps={{ shrink: true }}
+                            />
+                          )}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <Controller
+                          name="status"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              fullWidth
+                              size="small"
+                              label="Status"
+                              variant="outlined"
+                              disabled
+                              value={field.value || ""}
+                            />
+                          )}
+                        />
+                      </Grid>
+                    </>
                   )}
+                </Grid>
+              </Box>
 
-                </CardContent>
-              </Card>
-            </Box>
-
-            {/* Right Side Drawer - Form */}
-            <Drawer
-              anchor="right"
-              open={drawerOpen}
-              onClose={handleDrawerClose}
-              PaperProps={{
-                sx: {
-                  width: { xs: "100%", sm: 500, md: 600 },
-                  padding: 0,
-                  maxHeight: "calc(100vh - 64px)",
-                  height: "calc(100vh - 64px)",
-                  marginTop: "64px",
-                  display: "flex",
-                  flexDirection: "column",
-                },
-              }}
-            >
+              {/* Action Buttons */}
               <Box
                 sx={{
-                  height: "100%",
                   display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
+                  gap: 1,
+                  mt: 2,
+                  pt: 2,
+                  borderTop: "1px solid #eaecf0",
+                  flexShrink: 0,
                 }}
               >
-                {/* Drawer Header */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    p: 2,
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: "primary.main",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Material Request Form
-                  </Typography>
-                  <IconButton onClick={handleDrawerClose} size="small">
-                    <ChevronRightIcon />
-                  </IconButton>
-                </Box>
-
-                {/* Drawer Content - Form */}
-                <Box
-                  component="form"
-                  onSubmit={handleSubmit(onSubmit)}
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  startIcon={
+                    apiLoading ? (
+                      <CircularProgress size={16} />
+                    ) : (
+                      <SaveIcon fontSize="small" />
+                    )
+                  }
+                  disabled={apiLoading || !isStore}
                   sx={{
                     flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                    p: 2,
+                    borderRadius: "6px",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    height: 36,
                   }}
                 >
-                  <Box sx={{ flex: 1, overflow: "auto", pr: 1, pt: 1 }}>
-                    <Grid container spacing={1.5}>
-                      <Grid item xs={12}>
-                        <Controller
-                          name="requestNo"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Request No."
-                              variant="outlined"
-                              InputLabelProps={{ shrink: true }}
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="rejectedComponentId"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Rejected Part ID Number"
-                              variant="outlined"
-                              InputLabelProps={{ shrink: true }}
-                              disabled
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="item"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Item"
-                              variant="outlined"
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="lnItemCode"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="LN item code"
-                              variant="outlined"
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="quantityRequired"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Quantity Required (nos.)"
-                              variant="outlined"
-                              type="number"
-                            />
-                          )}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Controller
-                          name="poNumber"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="PO Number"
-                              variant="outlined"
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="project"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Project"
-                              variant="outlined"
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="requiredForAssly"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Required for Assly"
-                              variant="outlined"
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12}>
-                        <Controller
-                          name="reasonForRejection"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              size="small"
-                              label="Reason for Rejection / Remarks"
-                              variant="outlined"
-                              multiline
-                              rows={2}
-                              disabled={!isStore}
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      {/* Store-specific fields */}
-                      {isStore && (
-                        <>
-                          <Grid item xs={12}>
-                            <Typography
-                              variant="subtitle2"
-                              sx={{
-                                mt: 1,
-                                mb: 0.5,
-                                color: "primary.main",
-                                fontWeight: 600,
-                              }}
-                            >
-                              Store Details
-                            </Typography>
-                          </Grid>
-
-                          <Grid item xs={12}>
-                            <Controller
-                              name="outPONo"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  fullWidth
-                                  size="small"
-                                  label="Out PO No."
-                                  variant="outlined"
-                                />
-                              )}
-                            />
-                          </Grid>
-
-                          <Grid item xs={12}>
-                            <Controller
-                              name="minDate"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  fullWidth
-                                  size="small"
-                                  label="MIN Date"
-                                  variant="outlined"
-                                  type="date"
-                                  InputLabelProps={{ shrink: true }}
-                                />
-                              )}
-                            />
-                          </Grid>
-
-                          <Grid item xs={12}>
-                            <Controller
-                              name="status"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  fullWidth
-                                  size="small"
-                                  label="Status"
-                                  variant="outlined"
-                                  disabled
-                                  value={field.value || ""}
-                                />
-                              )}
-                            />
-                          </Grid>
-                        </>
-                      )}
-                    </Grid>
-                  </Box>
-
-                  {/* Action Buttons */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 1,
-                      mt: 2,
-                      pt: 2,
-                      borderTop: "1px solid",
-                      borderColor: "divider",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      size="small"
-                      startIcon={
-                        apiLoading ? (
-                          <CircularProgress size={16} />
-                        ) : (
-                          <SaveIcon fontSize="small" />
-                        )
-                      }
-                      disabled={apiLoading || !isStore}
-                      sx={{ flex: 1 }}
-                    >
-                      Submit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<CloseIcon fontSize="small" />}
-                      onClick={handleClose}
-                      sx={{ flex: 1 }}
-                    >
-                      Close
-                    </Button>
-                  </Box>
-                </Box>
+                  Submit
+                </Button>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<CloseIcon fontSize="small" />}
+                  onClick={handleClose}
+                  sx={{
+                    flex: 1,
+                    borderRadius: "6px",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    height: 36,
+                    borderColor: "#d0d5dd",
+                    color: "#344054",
+                    "&:hover": { borderColor: "#98a2b3", bgcolor: "#f9fafb" },
+                  }}
+                >
+                  Close
+                </Button>
               </Box>
-            </Drawer>
+            </Box>
           </Box>
-        </Box>
+        </Drawer>
 
         {/* Cancel Confirmation Dialog */}
         <Dialog
@@ -1571,25 +1655,26 @@ const MaterialRequisition: React.FC = () => {
           onClose={handleCancelDialogClose}
           maxWidth="xs"
           fullWidth
+          PaperProps={{ sx: { borderRadius: "12px" } }}
         >
-          <DialogTitle sx={{ fontWeight: 600, color: "error.main" }}>
+          <DialogTitle sx={{ fontWeight: 700, color: "error.main", fontSize: "1rem" }}>
             Cancel Material Request
           </DialogTitle>
           <DialogContent>
             {cancelErrorMessage && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert severity="error" sx={{ mb: 2, borderRadius: "8px" }}>
                 {cancelErrorMessage}
               </Alert>
             )}
-            <Typography variant="body1">
+            <Typography variant="body2" color="text.secondary">
               Are you sure you want to cancel this material request?
             </Typography>
             {cancelTargetItem && (
-              <Box sx={{ mt: 2, p: 1.5, bgcolor: "grey.50", borderRadius: 1 }}>
-                <Typography variant="body2" color="text.secondary">
+              <Box sx={{ mt: 2, p: 1.5, bgcolor: "#f9fafb", borderRadius: "8px", border: "1px solid #eaecf0" }}>
+                <Typography variant="body2" sx={{ color: "#344054", mb: 0.5 }}>
                   <strong>Request ID:</strong> {cancelTargetItem.requestId}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: "#344054" }}>
                   <strong>Status:</strong> {cancelTargetItem.status}
                 </Typography>
               </Box>
@@ -1614,7 +1699,7 @@ const MaterialRequisition: React.FC = () => {
               variant="outlined"
               size="small"
               disabled={cancelLoading}
-              sx={{ textTransform: "none" }}
+              sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600, borderColor: "#d0d5dd", color: "#344054" }}
             >
               No
             </Button>
@@ -1629,142 +1714,146 @@ const MaterialRequisition: React.FC = () => {
                   <CircularProgress size={16} color="inherit" />
                 ) : null
               }
-              sx={{ textTransform: "none" }}
+              sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600 }}
             >
-              Yes
+              Yes, Cancel
             </Button>
           </DialogActions>
         </Dialog>
       </TabPanel>
 
-      {/* Tab 2: Swap Components */}
+      {/* ═══════════ Tab 2: Swap Components ═══════════ */}
       <TabPanel value={activeTab} index={1}>
-        <Box sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 70px)" }}>
-          <Card
-            elevation={2}
-            sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: "12px",
+            border: "1px solid #eaecf0",
+            backgroundColor: "#ffffff",
+            overflow: "hidden",
+            mb: 1,
+          }}
+        >
+          {/* Header */}
+          <Box
+            sx={{
+              p: 1,
+              px: 1.5,
+              borderBottom: "1px solid #eaecf0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
           >
-            <CardContent
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-              }}
+            <Typography
+              variant="body2"
+              sx={{ color: "#475467", fontSize: "0.8rem", fontWeight: 600 }}
             >
-              {/* Header with Title */}
+              Swap Component Records
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
+            >
+              {swapHistory.length} {swapHistory.length === 1 ? "record" : "records"}
+            </Typography>
+          </Box>
+
+          {/* Table */}
+          <TableContainer sx={{ maxHeight: "calc(100vh - 250px)", overflow: "auto" }}>
+            {swapHistoryLoading ? (
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  flexDirection: "column",
+                  justifyContent: "center",
                   alignItems: "center",
-                  mb: 2,
+                  py: 6,
                 }}
               >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: "primary.main",
-                    fontWeight: 600,
-                  }}
-                >
-                  Swap Component Records
+                <CircularProgress size={28} color="primary" />
+                <Typography variant="body2" sx={{ color: "#667085", mt: 1, fontSize: "0.8rem" }}>
+                  Loading swap records...
                 </Typography>
               </Box>
-
-              {/* Table */}
-              <TableContainer sx={{ flex: 1, overflow: "auto" }}>
-                {swapHistoryLoading ? (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      height: "100%",
-                    }}
-                  >
-                    <CircularProgress />
-                  </Box>
-                ) : (
-                  <Table stickyHeader size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          Sr. No.
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          From PO Number
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          From ID Number
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          To PO Number
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          To ID Number
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          Drawing Number
-                        </TableCell>
-
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          Created By
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600, bgcolor: "grey.100" }}>
-                          Created Date
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {swapHistory.map((item, index) => (
-                        <TableRow key={item.id || index} hover>
-                          <TableCell>
-                            {index + 1}
-                          </TableCell>
-                          <TableCell>
-                            {item.swappedFromPONumber || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {item.fromSwappedIdNumber || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {item.swappedToPONumber || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {item.toSwappedIdNumber || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {item.swappedDrawingNumber || "N/A"}
-                          </TableCell>
-
-                          <TableCell>
-                            {(() => {
-                              const u = users.find((user: any) => user.id === Number(item.createdBy));
-                              return u ? u.userName : item.createdBy || "N/A";
-                            })()}
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(item.createdDate)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {swapHistory.length === 0 && !swapHistoryLoading && (
-                        <TableRow>
-                          <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No swap records available
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Box>
+            ) : (
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    {[
+                      "Sr. No.",
+                      "From PO Number",
+                      "From ID Number",
+                      "To PO Number",
+                      "To ID Number",
+                      "Drawing Number",
+                      "Created By",
+                      "Created Date",
+                    ].map((label) => (
+                      <TableCell
+                        key={label}
+                        sx={{
+                          fontWeight: 700,
+                          backgroundColor: "#F9FAFB !important",
+                          color: "#475467",
+                          fontSize: "0.78rem",
+                          borderBottom: "1px solid #EAECF0",
+                          py: 0.6,
+                          px: 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {swapHistory.map((item, index) => (
+                    <TableRow
+                      key={item.id || index}
+                      hover
+                      sx={{
+                        height: 34,
+                        "&:hover": { backgroundColor: "#F9FAFB" },
+                        "& td": {
+                          borderBottom: "1px solid #F2F4F7",
+                          fontSize: "0.8rem",
+                          color: "#344054",
+                          py: 0.4,
+                          px: 1,
+                        },
+                      }}
+                    >
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{item.swappedFromPONumber || "N/A"}</TableCell>
+                      <TableCell>{item.fromSwappedIdNumber || "N/A"}</TableCell>
+                      <TableCell>{item.swappedToPONumber || "N/A"}</TableCell>
+                      <TableCell>{item.toSwappedIdNumber || "N/A"}</TableCell>
+                      <TableCell>{item.swappedDrawingNumber || "N/A"}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const u = users.find((user: any) => user.id === Number(item.createdBy));
+                          return u ? u.userName : item.createdBy || "N/A";
+                        })()}
+                      </TableCell>
+                      <TableCell>{formatDate(item.createdDate)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {swapHistory.length === 0 && !swapHistoryLoading && (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 4, borderBottom: "none" }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No swap records available
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </TableContainer>
+        </Paper>
       </TabPanel>
 
       {/* Swap Component Dialog */}
@@ -1791,19 +1880,23 @@ const MaterialRequisition: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: "12px" } }}
       >
         <DialogTitle
           sx={{
             color: "primary.main",
-            fontWeight: 600,
+            fontWeight: 700,
+            fontSize: "1rem",
+            pb: 0.5,
           }}
         >
           Swap Component
           <Typography
             variant="body2"
             sx={{
-
-              fontWeight: 200,
+              fontWeight: 400,
+              color: "#667085",
+              fontSize: "0.8rem",
             }}
           >
             (Component Swapping Allowed Only for Component Type ID)
@@ -1816,7 +1909,7 @@ const MaterialRequisition: React.FC = () => {
             {swapSuccessMessage && (
               <Alert
                 severity="success"
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, borderRadius: "8px" }}
                 onClose={() => setSwapSuccessMessage("")}
               >
                 {swapSuccessMessage}
@@ -1826,7 +1919,7 @@ const MaterialRequisition: React.FC = () => {
             {swapErrorMessage && (
               <Alert
                 severity="error"
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, borderRadius: "8px" }}
                 onClose={() => setSwapErrorMessage("")}
               >
                 {swapErrorMessage}
@@ -2051,13 +2144,11 @@ const MaterialRequisition: React.FC = () => {
                   }
                 />
               </Grid>
-
-
             </Grid>
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, borderTop: "1px solid #eaecf0" }}>
           <Button
             variant="outlined"
             size="small"
@@ -2081,6 +2172,7 @@ const MaterialRequisition: React.FC = () => {
               setSwapSuccessMessage("");
             }}
             disabled={swapLoading}
+            sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600, borderColor: "#d0d5dd", color: "#344054" }}
           >
             Cancel
           </Button>
@@ -2092,6 +2184,7 @@ const MaterialRequisition: React.FC = () => {
             onClick={handleSwapSubmit}
             disabled={swapLoading}
             startIcon={swapLoading ? <CircularProgress size={16} /> : null}
+            sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600 }}
           >
             Submit
           </Button>
@@ -2103,7 +2196,6 @@ const MaterialRequisition: React.FC = () => {
         open={createDialogOpen}
         onClose={() => {
           setCreateDialogOpen(false);
-          // Reset form when closing
           setNewRequisition({
             rejectedDrawingNumberId: 0,
             prodSeriesId: 0,
@@ -2125,8 +2217,9 @@ const MaterialRequisition: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: "12px" } }}
       >
-        <DialogTitle sx={{ color: "primary.main", fontWeight: 600 }}>
+        <DialogTitle sx={{ color: "primary.main", fontWeight: 700, fontSize: "1rem" }}>
           Add New Material Requisition
         </DialogTitle>
         <DialogContent>
@@ -2134,7 +2227,7 @@ const MaterialRequisition: React.FC = () => {
             {createSuccessMessage && (
               <Alert
                 severity="success"
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, borderRadius: "8px" }}
                 onClose={() => setCreateSuccessMessage("")}
               >
                 {createSuccessMessage}
@@ -2144,7 +2237,7 @@ const MaterialRequisition: React.FC = () => {
             {createErrorMessage && (
               <Alert
                 severity="error"
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, borderRadius: "8px" }}
                 onClose={() => setCreateErrorMessage("")}
               >
                 {createErrorMessage}
@@ -2162,7 +2255,6 @@ const MaterialRequisition: React.FC = () => {
                   loading={drawingLoading}
                   value={selectedDrawing}
                   onInputChange={(_, value, reason) => {
-                    // Only update search text when user is typing, not when selecting
                     if (reason === "input") {
                       setDrawingSearchText(value);
                     }
@@ -2173,11 +2265,9 @@ const MaterialRequisition: React.FC = () => {
                       rejectedDrawingNumberId: value?.id || 0,
                       nomenclature: value?.nomenclature || "",
                     }));
-                    // Clear search text after selection to prevent refetch
                     setDrawingSearchText("");
                   }}
                   onClose={() => {
-                    // Clear search text when closing to reset
                     setDrawingSearchText("");
                   }}
                   isOptionEqualToValue={(option, value) =>
@@ -2249,23 +2339,17 @@ const MaterialRequisition: React.FC = () => {
                         ...prev,
                         productionOrderNumber:
                           newValue.productionOrderNumber || "",
-                        // Auto-populate Item Code
                         lnitemcode: newValue.lnItemCode || "",
-                        // Auto-populate Assembly Drawing ID
                         assemblyDrawingNumberId: newValue.drawingNumberId || 0,
                       }));
 
-                      // Auto-select Assembly Drawing Object for Autocomplete
                       if (newValue.drawingNumberId && newValue.drawingNumber) {
-                        // Create a synthetic object to populate the Autocomplete value immediately
-                        // This avoids waiting for the search API to find the record
                         const syntheticDrawing: DrawingNumber = {
                           id: newValue.drawingNumberId,
                           drawingNumber: newValue.drawingNumber,
                           lnItemCode: newValue.lnItemCode || null,
                           nomenclature: newValue.nomenclature || "",
                           componentType: newValue.componentType || "",
-                          // Required fields by type but not strictly needed for display
                           componentCode: null,
                           availableSeries: [],
                           availableSeriesId: [],
@@ -2278,7 +2362,6 @@ const MaterialRequisition: React.FC = () => {
                         setSelectedAssemblyDrawingObject(null);
                       }
 
-                      // Auto-select Production Series
                       if (newValue.prodSeriesId && newValue.productionSeries) {
                         const matchingSeries = productionSeriesData.find(
                           (ps) => ps.id === newValue.prodSeriesId,
@@ -2289,7 +2372,6 @@ const MaterialRequisition: React.FC = () => {
                             prodSeriesId: matchingSeries.id,
                           }));
                         } else {
-                          // If not found in the list, still set the ID
                           setNewRequisition((prev) => ({
                             ...prev,
                             prodSeriesId: newValue.prodSeriesId || 0,
@@ -2301,8 +2383,6 @@ const MaterialRequisition: React.FC = () => {
                       setNewRequisition((prev) => ({
                         ...prev,
                         productionOrderNumber: "",
-                        //prodSeriesId: 0,
-                        //lnitemcode: "",
                       }));
                     }
                   }}
@@ -2382,7 +2462,6 @@ const MaterialRequisition: React.FC = () => {
                     setNewRequisition((prev) => ({
                       ...prev,
                       assemblyDrawingNumberId: value?.id || 0,
-                      // Optionally sync item code when drawing changes, if desired
                       lnitemcode: value?.lnItemCode || prev.lnitemcode || "",
                     }));
                   }}
@@ -2437,7 +2516,6 @@ const MaterialRequisition: React.FC = () => {
                       idNumber: e.target.value,
                     }));
                   }}
-
                 />
               </Grid>
 
@@ -2479,8 +2557,13 @@ const MaterialRequisition: React.FC = () => {
             </Grid>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setCreateDialogOpen(false)} variant="outlined" size="small">
+        <DialogActions sx={{ p: 2, borderTop: "1px solid #eaecf0" }}>
+          <Button
+            onClick={() => setCreateDialogOpen(false)}
+            variant="outlined"
+            size="small"
+            sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600, borderColor: "#d0d5dd", color: "#344054" }}
+          >
             Cancel
           </Button>
           <Button
@@ -2490,8 +2573,9 @@ const MaterialRequisition: React.FC = () => {
             color="primary"
             disabled={apiLoading}
             startIcon={
-              apiLoading ? <CircularProgress size={16} /> : <SaveIcon />
+              apiLoading ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />
             }
+            sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600 }}
           >
             Create
           </Button>

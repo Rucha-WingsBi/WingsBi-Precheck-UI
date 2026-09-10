@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { Html5Qrcode } from "html5-qrcode";
-import * as XLSX from "xlsx";
 import type { AppDispatch } from "../../../store/store";
 import { getBarcodeDetails } from "../../../store/slices/qrcodeSlice";
 import { makePrecheckFromExcel, downloadBulkPrecheckTemplate } from "../../../store/slices/precheckSlice";
@@ -17,7 +16,7 @@ interface UsePrecheckScanningProps {
   ) => void;
   setBatchWarningOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onExcelUploadSuccess?: () => void;
-  onAutoSubmit?: () => void;
+  onAutoSubmit?: (updatedResults?: GridItem[]) => void;
 }
 
 export const usePrecheckScanning = ({
@@ -79,76 +78,77 @@ export const usePrecheckScanning = ({
     matchingItem: any,
     quantity: number,
     serverRemQty?: number
-  ) => {
+  ): GridItem[] => {
     // Get username from Redux auth state (which comes from JWT token)
     const currentUsername = user?.username || "Current User";
 
-    setSearchResults((prevResults) => {
-      const updatedResults = [...prevResults];
-      const item = { ...updatedResults[matchingItem.index] };
-
-      // Update the item with all fields from QR code details
-      item.qrCode = qrCodeDetails.qrCodeNumber;
-      item.isPrecheckComplete = false;
-      item.isUpdated = true;
-      if (item.componentType?.toUpperCase() === "BATCH" || item.componentType?.toUpperCase() === "FIM") {
-        item.isSubmitted = false;
-      }
-      item.ir = qrCodeDetails.irNumber;
-      item.msn = qrCodeDetails.msnNumber;
-      item.idNumber = qrCodeDetails.idNumber;
-
-      // Subtract scanned quantity from remainingQuantity or use server value
-      const currentRemQty = item.remainingQuantity ?? item.quantity ?? 0;
-      const newRemQty =
-        serverRemQty !== undefined
-          ? serverRemQty
-          : Math.max(0, currentRemQty - quantity);
-
-      // Track the quantity being scanned/assigned
-      item.scannedQuantity = quantity;
-
-      // Update remainingQuantity, but preserve original BOM quantity
-      item.remainingQuantity = newRemQty;
-
-      // If remainingQuantity === 0, set isPrecheckComplete = true
-      if (newRemQty === 0) {
-        item.isPrecheckComplete = true;
-      }
-
-      item.componentType = qrCodeDetails.componentType;
-      item.mrirNumber = qrCodeDetails.mrirNumber;
-      item.remarks = qrCodeDetails.remark;
-      item.username = currentUsername;
-      item.modifiedDate = new Date().toISOString();
-      item.productionOrderNumber =
-        qrCodeDetails.productionOrderNumber ||
-        qrCodeDetails.poNumber ||
-        qrCodeDetails.productionOrder ||
-        item.productionOrderNumber ||
-        "NA";
-      item.projectNumber = qrCodeDetails.projectNumber || "NA";
-      item.disposition = qrCodeDetails.desposition || "NA";
-      item.unit = qrCodeDetails.unit || item.unit || "1";
-
-      console.log("Updated Grid Item:", item);
-      updatedResults[matchingItem.index] = item;
-
-      // Show success message with scan time
-      const scanTime = formatDate(new Date().toISOString());
-      showAlertMessage(`QR Code scanned successfully at ${scanTime}!`, "success");
-
-      // Check if all items are processed
-      const unprocessedItems = updatedResults.filter(
-        (x) => !x.isPrecheckComplete && !x.isUpdated
-      );
-
-      if (unprocessedItems.length === 0) {
-        showAlertMessage("All components have been pre-checked!", "info");
-      }
-
+    const updatedResults = [...searchResults];
+    if (!matchingItem || matchingItem.index < 0 || matchingItem.index >= updatedResults.length) {
       return updatedResults;
-    });
+    }
+
+    const item = { ...updatedResults[matchingItem.index] };
+
+    // Update the item with all fields from QR code details
+    item.qrCode = qrCodeDetails.qrCodeNumber;
+    item.isPrecheckComplete = false;
+    item.isUpdated = true;
+    item.isSubmitted = false;
+    item.ir = qrCodeDetails.irNumber;
+    item.msn = qrCodeDetails.msnNumber;
+    item.idNumber = qrCodeDetails.idNumber;
+
+    // Subtract scanned quantity from remainingQuantity or use server value
+    const currentRemQty = item.remainingQuantity ?? item.quantity ?? 0;
+    const newRemQty =
+      serverRemQty !== undefined
+        ? serverRemQty
+        : Math.max(0, currentRemQty - quantity);
+
+    // Track the quantity being scanned/assigned
+    item.scannedQuantity = quantity;
+
+    // Update remainingQuantity, but preserve original BOM quantity
+    item.remainingQuantity = newRemQty;
+
+    // If remainingQuantity === 0, set isPrecheckComplete = true
+    if (newRemQty === 0) {
+      item.isPrecheckComplete = true;
+    }
+
+    item.componentType = qrCodeDetails.componentType;
+    item.mrirNumber = qrCodeDetails.mrirNumber;
+    item.remarks = qrCodeDetails.remark;
+    item.username = currentUsername;
+    item.modifiedDate = new Date().toISOString();
+    item.productionOrderNumber =
+      qrCodeDetails.productionOrderNumber ||
+      qrCodeDetails.poNumber ||
+      qrCodeDetails.productionOrder ||
+      item.productionOrderNumber ||
+      "NA";
+    item.projectNumber = qrCodeDetails.projectNumber || "NA";
+    item.disposition = qrCodeDetails.desposition || "NA";
+    item.unit = qrCodeDetails.unit || item.unit || "1";
+
+    console.log("Updated Grid Item:", item);
+    updatedResults[matchingItem.index] = item;
+
+    // Show success message with scan time
+    const scanTime = formatDate(new Date().toISOString());
+    showAlertMessage(`QR Code scanned successfully at ${scanTime}!`, "success");
+
+    // Check if all items are processed
+    const unprocessedItems = updatedResults.filter(
+      (x) => !x.isPrecheckComplete && !x.isUpdated
+    );
+
+    if (unprocessedItems.length === 0) {
+      showAlertMessage("All components have been pre-checked!", "info");
+    }
+
+    setSearchResults(updatedResults);
+    return updatedResults;
   };
 
   const processBarcodeAsync = async (barcode: string) => {
@@ -283,7 +283,7 @@ export const usePrecheckScanning = ({
           setQuantityDialogOpen(true);
         } else {
           // For ID type, use the quantity from qrCodeDetails
-          updateGridItem(
+          const updatedResults = updateGridItem(
             qrCodeDetails,
             matchingItem,
             qrCodeDetails.quantity || 0
@@ -293,7 +293,7 @@ export const usePrecheckScanning = ({
             "success"
           );
           if (onAutoSubmit) {
-            setTimeout(() => onAutoSubmit(), 300);
+            setTimeout(() => onAutoSubmit(updatedResults), 300);
           }
         }
       } else {
@@ -600,10 +600,10 @@ export const usePrecheckScanning = ({
   const handleQuantityConfirm = (quantity: number) => {
     if (pendingBarcodeData) {
       const { qrCodeDetails, matchingItem } = pendingBarcodeData;
-      updateGridItem(qrCodeDetails, matchingItem, quantity);
+      const updatedResults = updateGridItem(qrCodeDetails, matchingItem, quantity);
       setPendingBarcodeData(null);
       if (onAutoSubmit) {
-        setTimeout(() => onAutoSubmit(), 300);
+        setTimeout(() => onAutoSubmit(updatedResults), 300);
       }
     } else if (selectedQuantityItem) {
       const currentRemQty =
@@ -612,27 +612,26 @@ export const usePrecheckScanning = ({
         0;
       const newRemQty = Math.max(0, currentRemQty - quantity);
 
-      setSearchResults((prev) =>
-        prev.map((item) => {
+      let updatedResults: GridItem[] = [];
+      setSearchResults((prev) => {
+        updatedResults = prev.map((item) => {
           if (item === selectedQuantityItem) {
             return {
               ...item,
               remainingQuantity: newRemQty,
               scannedQuantity: quantity,
               isUpdated: true,
-              isSubmitted:
-                (item.componentType?.toUpperCase() === "BATCH" || item.componentType?.toUpperCase() === "FIM")
-                  ? false
-                  : item.isSubmitted,
+              isSubmitted: false,
               isPrecheckComplete: newRemQty === 0,
             };
           }
           return item;
-        })
-      );
+        });
+        return updatedResults;
+      });
       setSelectedQuantityItem(null);
       if (onAutoSubmit) {
-        setTimeout(() => onAutoSubmit(), 300);
+        setTimeout(() => onAutoSubmit(updatedResults), 300);
       }
     }
     setQuantityDialogOpen(false);

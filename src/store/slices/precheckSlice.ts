@@ -108,6 +108,37 @@ export const viewPrecheckDetails = createAsyncThunk(
   },
 );
 
+export const viewPrecheckByParameters = createAsyncThunk(
+  "precheck/viewPrecheckByParameters",
+  async (request: any, { rejectWithValue }) => {
+    try {
+      const pageNumber = request?.pageNumber ?? 1;
+      const pageSize = request?.pageSize ?? 20;
+      const body = {
+        searchQuery: request?.searchQuery ?? "",
+        prodSeries: Array.isArray(request?.prodSeries)
+          ? request.prodSeries
+          : request?.prodSeries
+            ? [request.prodSeries]
+            : [],
+        status: request?.status ?? "",
+        fromDate: request?.fromDate ?? null,
+        toDate: request?.toDate ?? null,
+      };
+      const response = await api.post(
+        `/api/Precheck/ViewPrechekByParameters?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        body
+      );
+      console.log("Response view precheck by parameters:", response);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to view precheck details by parameters",
+      );
+    }
+  },
+);
+
 export const getPrecheckStatus = createAsyncThunk(
   "precheck/getPrecheckStatus",
   async (request: any, { rejectWithValue }) => {
@@ -391,21 +422,37 @@ export const getStoreInData = createAsyncThunk(
   "precheck/getStoreInData",
   async (
     payload: {
-      qrCode: string;
-      fromDate?: string;
-      toDate?: string;
+      qrCode?: string;
+      fromDate?: string | null;
+      toDate?: string | null;
+      searchQuery?: string;
+      drawingNumber?: string;
+      prodSeries?: string[];
+      status?: string;
+      pageNumber?: number;
+      pageSize?: number;
     },
     { rejectWithValue }
   ) => {
     try {
+      const pageNumber = payload?.pageNumber ?? 1;
+      const pageSize = payload?.pageSize ?? 20;
+      const body = {
+        qrCode: payload?.qrCode ?? "",
+        fromDate: payload?.fromDate ?? null,
+        toDate: payload?.toDate ?? null,
+        searchQuery: payload?.searchQuery ?? "",
+        drawingNumber: payload?.drawingNumber ?? "",
+        prodSeries: Array.isArray(payload?.prodSeries)
+          ? payload.prodSeries
+          : payload?.prodSeries
+            ? [payload.prodSeries]
+            : [],
+        status: payload?.status ?? "",
+      };
       const response = await api.post(
-        `/api/Precheck/GetStoreAvailablComponents`,
-        {
-
-          qrCode: payload.qrCode,
-          fromDate: payload.fromDate,
-          toDate: payload.toDate,
-        }
+        `/api/Precheck/GetStoreAvailablComponents?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        body
       );
       if (!response.data) {
         return rejectWithValue("No store-in data found");
@@ -413,7 +460,7 @@ export const getStoreInData = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(
-        "Error fetching store-in data: " + (error.message || error),
+        "Error fetching store-in data: " + (error.response?.data?.message || error.message || error),
       );
     }
   },
@@ -960,6 +1007,19 @@ const precheckSlice = createSlice({
         state.error = null;
       })
       .addCase(removePrecheckDetails.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // View Precheck By Parameters
+      .addCase(viewPrecheckByParameters.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(viewPrecheckByParameters.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.precheckDetails = action.payload;
+      })
+      .addCase(viewPrecheckByParameters.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

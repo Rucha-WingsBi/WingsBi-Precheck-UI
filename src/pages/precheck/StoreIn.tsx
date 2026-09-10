@@ -57,6 +57,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { CustomPagination } from "../../components/CustomPagination";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { EmptyState } from "../../components/EmptyState";
 
 interface QRCodeDetailsResponse {
   qrCodeNumber: string;
@@ -144,7 +145,10 @@ const StoreIn: React.FC = () => {
 
   // Pagination State for Awaiting Precheck
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const isDropdownFilterSelected = selectedSeries.length > 0 || !!selectedStatus || !!fromDate || !!toDate || !!filterDate;
+  const hasAnyFilter = searchTerm.trim().length > 0 || isDropdownFilterSelected;
 
   // Filtered Store In List
   const filteredStoreInList = useMemo(() => {
@@ -458,8 +462,9 @@ const StoreIn: React.FC = () => {
   useEffect(() => {
     if (!activeQrCode) return;
 
-    const reqFromDate = fromDate ? format(fromDate, "yyyy-MM-dd") : undefined;
-    const reqToDate = toDate ? format(toDate, "yyyy-MM-dd") : undefined;
+    const reqFromDate = fromDate ? format(fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : undefined;
+    const reqToDate = toDate ? format(toDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : undefined;
+    const seriesArray = selectedSeries.map((s) => String(s));
 
     setIsLoading(true);
     dispatch(
@@ -467,14 +472,22 @@ const StoreIn: React.FC = () => {
         qrCode: activeQrCode,
         fromDate: reqFromDate,
         toDate: reqToDate,
+        searchQuery: searchTerm.trim(),
+        prodSeries: seriesArray,
+        status: selectedStatus,
+        pageNumber: page + 1,
+        pageSize: rowsPerPage,
       })
     )
       .unwrap()
       .then((storeInResult) => {
-        if (storeInResult && storeInResult.length > 0) {
-          setStoreInList(storeInResult);
+        const rawList = Array.isArray(storeInResult)
+          ? storeInResult
+          : storeInResult?.data || storeInResult?.items || [];
+        if (rawList && rawList.length > 0) {
+          setStoreInList(rawList);
           setAlertMessage({
-            message: `QR Code ${activeQrCode} processed successfully. ${storeInResult.length} awaiting pending precheck record(s) found.`,
+            message: `QR Code ${activeQrCode} processed successfully. ${rawList.length} awaiting pending precheck record(s) found.`,
             type: "success",
           });
         } else {
@@ -995,11 +1008,7 @@ const StoreIn: React.FC = () => {
                   </React.Fragment>
                 ))
               ) : (
-                <TableRow sx={{ height: 48 }}>
-                  <TableCell colSpan={9} align="center" sx={{ color: "#667085", fontSize: "0.85rem" }}>
-                    No QR code scanned
-                  </TableCell>
-                </TableRow>
+                <EmptyState colSpan={9} title="Apply filter to see results" />
               )}
             </TableBody>
           </Table>
@@ -1168,6 +1177,7 @@ const StoreIn: React.FC = () => {
               size="small"
               variant="contained"
               onClick={() => setPage(0)}
+              disabled={!isDropdownFilterSelected || isLoading}
               sx={{
                 backgroundColor: "#6B288A",
                 color: "#ffffff",
@@ -1374,13 +1384,10 @@ const StoreIn: React.FC = () => {
                   </TableRow>
                 ))
               ) : (
-                <TableRow sx={{ height: 56 }}>
-                  <TableCell colSpan={11} align="center">
-                    <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem" }}>
-                      No store-in records found
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+                <EmptyState
+                  colSpan={11}
+                  title={hasAnyFilter || storeInList.length > 0 ? "No Matching Records found" : "Apply filter to see results"}
+                />
               )}
             </TableBody>
           </Table>
