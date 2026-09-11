@@ -836,7 +836,8 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                     key={idx}
                     hover
                     sx={{
-                      "& > *": { borderBottom: "1px solid", borderColor: "grey.100", py: 1, px: 1.5 },
+                      height: 28,
+                      "& > *": { borderBottom: "1px solid", borderColor: "grey.100", py: 0.15, px: 0.75 },
                       "&:hover": { backgroundColor: "grey.50" },
                     }}
                   >

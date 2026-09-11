@@ -476,8 +476,12 @@ export default function InsertMappings() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {fromView && (
               <IconButton
-                onClick={() => navigate("/components")}
-                sx={{ color: "primary.main", p: 0 }}
+                onClick={() => navigate(-1)}
+                sx={{
+                  color: "primary.main",
+                  p: 0.5,
+                  "&:hover": { backgroundColor: "grey.100" },
+                }}
               >
                 <ArrowBackIcon />
               </IconButton>

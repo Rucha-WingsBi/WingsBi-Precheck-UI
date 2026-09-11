@@ -293,6 +293,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
             anchorEl={moreMenuAnchor}
             open={isMoreMenuOpen}
             onClose={handleMoreMenuClose}
+            transitionDuration={0}
             PaperProps={{
               elevation: 4,
               sx: {

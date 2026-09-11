@@ -318,35 +318,42 @@ export const useFetchAllDrawingNumbers = (
       unit,
     ],
     queryFn: async () => {
-      const payload = {
-        componentType: componentType || "",
-        search: searchQuery || "",
-        prodSeries: Array.isArray(prodSeries) ? prodSeries : (prodSeries ? [prodSeries] : []),
-        unit: Array.isArray(unit) ? unit : (unit ? [unit] : []),
-      };
+      try {
+        const payload = {
+          componentType: componentType || "",
+          search: searchQuery || "",
+          prodSeries: Array.isArray(prodSeries) ? prodSeries : (prodSeries ? [prodSeries] : []),
+          unit: Array.isArray(unit) ? unit : (unit ? [unit] : []),
+        };
 
-      const response = await api.post(
-        `/api/Common/FetchAllDrawingNumbers?pageNumber=${pageNumber}&pageSize=${pageSize}`,
-        payload
-      );
-      const rawData = response.data?.data || response.data?.$values || response.data;
-      let list: any[] = [];
-      if (Array.isArray(rawData)) {
-        list = [...rawData];
-      } else if (Array.isArray(response.data)) {
-        list = [...response.data];
-      }
-      const totalRecords =
-        response.data?.totalRecords ??
-        response.data?.totalCount ??
-        response.data?.total;
+        const response = await api.post(
+          `/api/Common/FetchAllDrawingNumbers?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+          payload
+        );
+        const rawData = response.data?.data || response.data?.$values || response.data;
+        let list: any[] = [];
+        if (Array.isArray(rawData)) {
+          list = [...rawData];
+        } else if (Array.isArray(response.data)) {
+          list = [...response.data];
+        }
+        const totalRecords =
+          response.data?.totalRecords ??
+          response.data?.totalCount ??
+          response.data?.total;
 
-      if (totalRecords !== undefined) {
-        (list as any).totalRecords = totalRecords;
+        if (totalRecords !== undefined) {
+          (list as any).totalRecords = totalRecords;
+        }
+        (list as any).pageNumber = pageNumber;
+        (list as any).pageSize = pageSize;
+        return list;
+      } catch (err) {
+        console.error("FetchAllDrawingNumbers API call failed:", err);
+        const emptyList: any[] = [];
+        (emptyList as any).totalRecords = 0;
+        return emptyList;
       }
-      (list as any).pageNumber = pageNumber;
-      (list as any).pageSize = pageSize;
-      return list;
     },
     staleTime: 1000 * 60 * 5,
   });

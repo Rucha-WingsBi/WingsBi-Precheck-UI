@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -27,6 +28,7 @@ import {
 import {
   FileDownload as DownloadIcon,
   Close as CloseIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import * as XLSX from "xlsx";
 import { useForm } from "react-hook-form";
@@ -69,6 +71,7 @@ interface FormData {
 }
 
 const ViewSOP: React.FC = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const [activeTab, setActiveTab] = useState<"sop" | "bom">("sop");
 

@@ -132,7 +132,8 @@ const DrawingNumberRowComponent = ({
       <TableRow
         hover
         sx={{
-          "& > *": { borderBottom: "1px solid", borderColor: "grey.100", py: 0.75, px: 1 },
+          height: 28,
+          "& > *": { borderBottom: "1px solid", borderColor: "grey.100", py: 0.15, px: 0.75 },
           "&:hover": { backgroundColor: "grey.50" },
         }}
       >
@@ -437,18 +438,15 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     XLSX.writeFile(workbook, `Components_Export_${Date.now()}.xlsx`);
   };
 
-  if (error) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          Error loading drawing numbers: {error instanceof Error ? error.message : "An error occurred"}
-        </Alert>
-        <Button variant="contained" size="small" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </Box>
-    );
-  }
+  React.useEffect(() => {
+    if (error) {
+      setSnackbar({
+        open: true,
+        message: error instanceof Error ? error.message : "Failed to fetch components",
+        severity: "error",
+      });
+    }
+  }, [error]);
 
   const hasActiveFilters = Boolean(
     searchQuery.trim() || selectedSeries.length > 0 || selectedTypes.length > 0 || selectedUnits.length > 0

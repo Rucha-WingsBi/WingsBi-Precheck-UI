@@ -341,6 +341,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
             <Button
               variant="contained"
               size="small"
+              disabled={!bomData || bomData.length === 0}
               startIcon={<EditIcon sx={{ fontSize: "0.95rem" }} />}
               onClick={() => {
                 const activeDwg =
@@ -369,6 +370,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
                 fontSize: "0.8rem",
                 boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
                 "&:hover": { backgroundColor: "primary.dark" },
+                "&:disabled": { backgroundColor: "grey.300", color: "grey.500" },
               }}
             >
               Edit BOM

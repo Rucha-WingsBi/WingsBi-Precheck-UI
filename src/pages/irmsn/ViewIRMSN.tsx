@@ -514,6 +514,7 @@ const ViewIRMSN: React.FC = () => {
               anchorEl={exportMenuAnchor}
               open={Boolean(exportMenuAnchor)}
               onClose={handleExportClose}
+              transitionDuration={0}
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               PaperProps={{
@@ -1315,14 +1316,14 @@ const ViewIRMSN: React.FC = () => {
                       key={`${item.recordType}-${item.id}`}
                       hover
                       sx={{
-                        height: 40,
+                        height: 28,
                         "&:hover": { backgroundColor: "#F9FAFB" },
                         "& td": {
                           borderBottom: "1px solid #F2F4F7",
-                          fontSize: "0.85rem",
+                          fontSize: "0.775rem",
                           color: "#344054",
-                          py: 0.75,
-                          px: 1.5,
+                          py: 0.15,
+                          px: 0.75,
                         },
                       }}
                     >

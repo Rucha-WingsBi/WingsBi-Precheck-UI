@@ -468,15 +468,13 @@ const ViewOrder: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <IconButton
             onClick={() => navigate(-1)}
-            size="small"
             sx={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #D0D5DD",
-              color: "#344054",
-              "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+              color: "primary.main",
+              p: 0.5,
+              "&:hover": { backgroundColor: "grey.100" },
             }}
           >
-            <ArrowBackIcon fontSize="small" />
+            <ArrowBackIcon />
           </IconButton>
           <Box>
             <Typography

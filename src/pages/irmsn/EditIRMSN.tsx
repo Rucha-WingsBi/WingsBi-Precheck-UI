@@ -320,16 +320,13 @@ export default function EditIRMSN() {
       >
         <IconButton
           onClick={() => navigate(-1)}
-          size="small"
           sx={{
-            backgroundColor: "background.paper",
-            border: "1px solid",
-            borderColor: "grey.300",
-            color: "text.secondary",
-            "&:hover": { backgroundColor: "grey.50", borderColor: "grey.400" },
+            color: "primary.main",
+            p: 0.5,
+            "&:hover": { backgroundColor: "grey.100" },
           }}
         >
-          <ArrowBackIcon fontSize="small" />
+          <ArrowBackIcon />
         </IconButton>
         <Typography
           variant="h5"

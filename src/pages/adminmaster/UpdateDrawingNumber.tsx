@@ -371,8 +371,12 @@ export default function UpdateDrawingNumber() {
       {/* Back button and title */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>
         <IconButton
-          onClick={() => navigate("/components/assembly")}
-          sx={{ color: "#A8005A" }}
+          onClick={() => navigate(-1)}
+          sx={{
+            color: "primary.main",
+            p: 0.5,
+            "&:hover": { backgroundColor: "grey.100" },
+          }}
         >
           <ArrowBackIcon />
         </IconButton>

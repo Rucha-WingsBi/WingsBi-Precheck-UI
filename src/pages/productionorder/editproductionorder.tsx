@@ -243,20 +243,14 @@ export default function EditProductionOrder() {
       {/* Header Section */}
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
         <IconButton
-          size="small"
           onClick={handleBack}
           sx={{
-            height: 34,
-            width: 34,
-            borderRadius: '6px',
-            border: '1px solid',
-            borderColor: 'neutral.border',
-            bgcolor: 'background.paper',
-            color: 'primary.main',
-            '&:hover': { bgcolor: 'neutral.hoverBg', borderColor: 'grey.300' },
+            color: "primary.main",
+            p: 0.5,
+            "&:hover": { backgroundColor: "grey.100" },
           }}
         >
-          <ArrowBackIcon fontSize="small" />
+          <ArrowBackIcon />
         </IconButton>
         <Typography
           variant="h5"
