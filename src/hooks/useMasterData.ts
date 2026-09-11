@@ -303,51 +303,50 @@ export const useFetchAllDrawingNumbers = (
   searchQuery = "",
   pageNumber = 1,
   pageSize = 20,
-  componentType = ""
+  componentType = "",
+  prodSeries: string[] = [],
+  unit: string[] = []
 ) => {
   return useQuery<DrawingNumber[]>({
-    queryKey: ["fetchAllDrawingNumbers", searchQuery, pageNumber, pageSize, componentType],
+    queryKey: [
+      "fetchAllDrawingNumbers",
+      searchQuery,
+      pageNumber,
+      pageSize,
+      componentType,
+      prodSeries,
+      unit,
+    ],
     queryFn: async () => {
-      try {
-        const response = await api.get("/api/Common/FetchAllDrawingNumbers", {
-          params: {
-            searchQuery,
-            pageNumber,
-            pageSize,
-            ...(componentType ? { ComponentType: componentType } : {}),
-          },
-        });
-        const rawData = response.data?.data || response.data?.$values || response.data;
-        let list: any[] = [];
-        if (Array.isArray(rawData)) {
-          list = [...rawData];
-        } else if (Array.isArray(response.data)) {
-          list = [...response.data];
-        }
-        const totalRecords =
-          response.data?.totalRecords ??
-          response.data?.totalCount ??
-          response.data?.total;
+      const payload = {
+        componentType: componentType || "",
+        search: searchQuery || "",
+        prodSeries: Array.isArray(prodSeries) ? prodSeries : (prodSeries ? [prodSeries] : []),
+        unit: Array.isArray(unit) ? unit : (unit ? [unit] : []),
+      };
 
-        if (totalRecords !== undefined) {
-          (list as any).totalRecords = totalRecords;
-        }
-        (list as any).pageNumber = pageNumber;
-        (list as any).pageSize = pageSize;
-        return list;
-      } catch (err) {
-        console.warn("FetchAllDrawingNumbers API call failed, falling back to GetAllDrawingNumber:", err);
-        const fallbackResponse = await api.get("/api/Common/GetAllDrawingNumber", {
-          params: {
-            ComponentType: componentType,
-            search: searchQuery,
-          },
-        });
-        const fallbackRaw = fallbackResponse.data?.data || fallbackResponse.data?.$values || fallbackResponse.data;
-        const fallbackList = Array.isArray(fallbackRaw) ? [...fallbackRaw] : [];
-        (fallbackList as any).totalRecords = fallbackList.length;
-        return fallbackList;
+      const response = await api.post(
+        `/api/Common/FetchAllDrawingNumbers?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        payload
+      );
+      const rawData = response.data?.data || response.data?.$values || response.data;
+      let list: any[] = [];
+      if (Array.isArray(rawData)) {
+        list = [...rawData];
+      } else if (Array.isArray(response.data)) {
+        list = [...response.data];
       }
+      const totalRecords =
+        response.data?.totalRecords ??
+        response.data?.totalCount ??
+        response.data?.total;
+
+      if (totalRecords !== undefined) {
+        (list as any).totalRecords = totalRecords;
+      }
+      (list as any).pageNumber = pageNumber;
+      (list as any).pageSize = pageSize;
+      return list;
     },
     staleTime: 1000 * 60 * 5,
   });

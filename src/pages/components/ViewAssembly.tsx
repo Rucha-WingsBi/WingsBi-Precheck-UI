@@ -383,6 +383,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     setSelectedDrawing(null);
     setHasSearched(false);
     sessionStorage.removeItem("viewAssembly_searchState");
+    navigate(".", { replace: true, state: {} });
   };
 
   // Helper to call backend APIs
@@ -683,6 +684,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
 
             <Grid item xs={12} sm={12} md={5} sx={{ display: "flex", gap: 1 }}>
               <Button
+                type="button"
                 variant="outlined"
                 startIcon={<RefreshIcon />}
                 onClick={handleClear}
@@ -731,6 +733,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 Search
               </Button>
               <Button
+                type="button"
                 variant="contained"
                 size="small"
                 startIcon={<AddIcon />}

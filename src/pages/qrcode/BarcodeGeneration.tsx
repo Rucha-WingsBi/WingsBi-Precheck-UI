@@ -53,6 +53,7 @@ import {
   Warning as WarningIcon,
   Edit as EditIcon,
   Add as AddIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -3421,17 +3422,19 @@ export default function BarcodeGeneration() {
                   ? `${requiredFieldsRemainingCount} required field${requiredFieldsRemainingCount > 1 ? "s" : ""} remaining`
                   : "All required fields filled"}
               </Typography>
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack direction="row" spacing={1.5} alignItems="center">
                 <Button
                   type="button"
                   variant="text"
+                  size="small"
                   onClick={handleReset}
+                  startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
                   sx={{
-                    color: "#6B7280",
+                    color: "#667085",
                     fontWeight: 600,
-                    textTransform: "none",
                     fontSize: "0.875rem",
-                    "&:hover": { backgroundColor: "#F3F4F6" },
+                    textTransform: "none",
+                    "&:hover": { backgroundColor: "#F2F4F7" },
                   }}
                 >
                   Reset
@@ -3439,22 +3442,26 @@ export default function BarcodeGeneration() {
                 <Button
                   type="submit"
                   variant="contained"
+                  size="small"
                   disabled={loading}
-                  startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <QrCodeIcon />}
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <QrCodeIcon sx={{ fontSize: 18 }} />
+                    )
+                  }
                   sx={{
                     backgroundColor: "primary.main",
-                    color: "#FFFFFF",
+                    color: "#ffffff",
                     fontWeight: 600,
-                    textTransform: "none",
-                    borderRadius: "6px",
-                    px: 3,
-                    py: 1,
                     fontSize: "0.875rem",
-                    boxShadow: "none",
-                    "&:hover": {
-                      backgroundColor: "primary.dark",
-                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                    },
+                    borderRadius: "8px",
+                    px: 2.5,
+                    py: 0.75,
+                    textTransform: "none",
+                    boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
                   }}
                 >
                   {loading ? "Generating..." : "Generate QR Code"}

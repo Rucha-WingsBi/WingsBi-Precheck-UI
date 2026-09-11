@@ -285,8 +285,8 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     setPage(0);
   }, [debouncedSearchQuery]);
 
-  // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage) to FetchAllDrawingNumbers API
-  const singleTypeFilter = appliedTypes.length === 1 ? appliedTypes[0] : "";
+  // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage), componentType, prodSeries, and unit filters to FetchAllDrawingNumbers API
+  const componentTypeFilter = appliedTypes.length > 0 ? appliedTypes.join(",") : "";
   const {
     data: drawingNumbersData = [],
     isLoading,
@@ -296,7 +296,9 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     debouncedSearchQuery,
     page + 1,
     rowsPerPage,
-    singleTypeFilter
+    componentTypeFilter,
+    appliedSeries,
+    appliedUnits
   );
 
   const { data: seriesList = [] } = useProductionSeries();
@@ -384,7 +386,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
   const isDropdownFilterSelected = selectedSeries.length > 0 || selectedTypes.length > 0 || selectedUnits.length > 0;
 
-  // Filter, sort and pagination functionality
+  // Sort and pagination functionality
   const { displayData, totalCount } = useMemo(() => {
     let rawList: DrawingNumberRow[] = Array.isArray(drawingNumbersData)
       ? drawingNumbersData
@@ -392,30 +394,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
     const serverTotalRecords = (drawingNumbersData as any)?.totalRecords ?? (drawingNumbersData as any)?.totalCount;
 
-    let result = rawList.filter((drawing) => {
-      const matchesSeries =
-        appliedSeries.length === 0 ||
-        (drawing?.productionSeries &&
-          appliedSeries.some(
-            (s) => s.toLowerCase() === drawing.productionSeries?.toLowerCase()
-          ));
-
-      const matchesType =
-        appliedTypes.length === 0 ||
-        (drawing?.componentType &&
-          appliedTypes.some(
-            (t) => t.toLowerCase() === drawing.componentType?.toLowerCase()
-          ));
-
-      const matchesUnit =
-        appliedUnits.length === 0 ||
-        (drawing?.unitName &&
-          appliedUnits.some(
-            (u) => u.toLowerCase() === drawing.unitName?.toLowerCase()
-          ));
-
-      return matchesSeries && matchesType && matchesUnit;
-    });
+    let result = [...rawList];
 
     // Sorting by modifiedDate / createdDate
     result.sort((a, b) => {
@@ -429,7 +408,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     const finalTotalCount = serverTotalRecords !== undefined ? serverTotalRecords : result.length;
 
     return { displayData: finalDisplayData, totalCount: finalTotalCount };
-  }, [drawingNumbersData, appliedSeries, appliedTypes, appliedUnits, sortOrder, page, rowsPerPage]);
+  }, [drawingNumbersData, sortOrder, page, rowsPerPage]);
 
   const handleExport = () => {
     if (displayData.length === 0) {

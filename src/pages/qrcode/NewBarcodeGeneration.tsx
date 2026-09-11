@@ -2251,8 +2251,9 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
               <Box
                 sx={{
                   display: "flex",
-                  justifyContent: "center",
-                  gap: 2,
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  gap: 1.5,
                   pt: 2,
                   borderTop: "1px solid",
                   borderColor: "divider",
@@ -2260,10 +2261,17 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
               >
                 <Button
                   type="button"
-                  variant="outlined"
+                  variant="text"
+                  size="small"
                   onClick={handleReset}
-                  startIcon={<RefreshIcon />}
-                  sx={{ minWidth: 120, py: 1.5, height: 40 }}
+                  startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+                  sx={{
+                    color: "#667085",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    textTransform: "none",
+                    "&:hover": { backgroundColor: "#F2F4F7" },
+                  }}
                 >
                   Reset
                 </Button>
@@ -2271,16 +2279,27 @@ const NewBarcodeGeneration: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                 <Button
                   type="submit"
                   variant="contained"
-                  size="medium"
+                  size="small"
                   disabled={loading}
                   startIcon={
                     loading ? (
-                      <CircularProgress size={20} color="inherit" />
+                      <CircularProgress size={16} color="inherit" />
                     ) : (
-                      <QrCodeIcon />
+                      <QrCodeIcon sx={{ fontSize: 18 }} />
                     )
                   }
-                  sx={{ minWidth: 200, py: 1.5, height: 40 }}
+                  sx={{
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    borderRadius: "8px",
+                    px: 2.5,
+                    py: 0.75,
+                    textTransform: "none",
+                    boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                  }}
                 >
                   {loading ? "Generating..." : "Generate QR Code"}
                 </Button>
