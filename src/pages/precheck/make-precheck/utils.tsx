@@ -137,7 +137,7 @@ export const getStatusBadgeChip = (item: any) => {
   const scannedQty = item.scannedQuantity ?? 0;
   const totalQty = item.quantity ?? 1;
 
-  if (isComplete || (scannedQty > 0 && scannedQty >= totalQty)) {
+  if (isComplete) {
     return (
       <Chip
         label="Verified"

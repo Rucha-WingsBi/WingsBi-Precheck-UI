@@ -20,8 +20,26 @@ declare module '@mui/material/styles' {
     body?: string;
     muted?: string;
     subtle?: string;
+    placeholder?: string;
+    link?: string;
+  }
+  interface SimplePaletteColorOptions {
+    tint?: string;
+    hover?: string;
+  }
+  interface PaletteColor {
+    tint?: string;
+    hover?: string;
   }
   interface Palette {
+    border?: {
+      strong?: string;
+      hairline?: string;
+      light?: string;
+    };
+    canvas?: string;
+    brandGradient?: string;
+    destructive?: PaletteColor;
     neutral?: {
       50?: string;
       100?: string;
@@ -41,6 +59,14 @@ declare module '@mui/material/styles' {
     };
   }
   interface PaletteOptions {
+    border?: {
+      strong?: string;
+      hairline?: string;
+      light?: string;
+    };
+    canvas?: string;
+    brandGradient?: string;
+    destructive?: SimplePaletteColorOptions;
     neutral?: {
       50?: string;
       100?: string;
@@ -66,9 +92,9 @@ let theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#6B288A',
-      light: '#8E3AB0',
-      dark: '#4A1964',
+      main: '#6D2A8F',       // Primary
+      light: '#F3E8F8',      // Primary tint
+      dark: '#571F73',       // Primary hover
       contrastText: '#ffffff',
     },
     secondary: {
@@ -78,65 +104,81 @@ let theme = createTheme({
       contrastText: '#ffffff',
     },
     error: {
-      main: '#d32f2f',
-      light: '#ef5350',
-      dark: '#c62828',
+      main: '#B91C1C',       // Destructive
+      light: '#EF5350',
+      dark: '#7F1D1D',
+      contrastText: '#ffffff',
+    },
+    destructive: {
+      main: '#B91C1C',
+      light: '#FEE2E2',
+      dark: '#991B1B',
+      contrastText: '#ffffff',
     },
     warning: {
-      main: '#ed6c02',
-      light: '#ff9800',
-      dark: '#e65100',
+      main: '#B45309',
+      light: '#FDE68A',
+      dark: '#78350F',
     },
     info: {
-      main: '#1E4D92',
-      light: '#3B75C4',
-      dark: '#133363',
+      main: '#2563EB',       // Link
+      light: '#60A5FA',
+      dark: '#1D4ED8',
     },
     success: {
-      main: '#2e7d32',
-      light: '#4caf50',
-      dark: '#1b5e20',
+      main: '#047857',
+      light: '#A7F3D0',
+      dark: '#064E3B',
     },
     background: {
-      default: '#F8FAF2',
+      default: '#F4F4F6',    // Canvas
       paper: '#ffffff',
     },
+    canvas: '#F4F4F6',
+    brandGradient: 'linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)',
+    border: {
+      strong: '#D1D5DB',
+      hairline: '#E5E7EB',
+      light: '#E5E7EB',
+    },
     text: {
-      primary: '#101828',
-      secondary: '#344054',
-      heading: '#6B288A',
-      body: '#344054',
-      muted: '#667085',
-      subtle: '#475467',
+      primary: '#1F2937',    // Text
+      secondary: '#4B5563',  // Text secondary
+      heading: '#6D2A8F',
+      body: '#1F2937',
+      muted: '#6B7280',      // Placeholder
+      subtle: '#4B5563',
+      placeholder: '#6B7280',
+      link: '#2563EB',
     },
     grey: {
       50: '#F9FAFB',
-      100: '#F2F4F7',
-      200: '#EAECF0',
-      300: '#D0D5DD',
-      400: '#98A2B3',
-      500: '#667085',
-      600: '#475467',
-      700: '#344054',
-      800: '#1D2939',
-      900: '#101828',
+      100: '#F4F4F6',
+      200: '#E5E7EB',        // Hairline #E5E7EB
+      300: '#D1D5DB',        // Border strong #D1D5DB
+      400: '#9CA3AF',
+      500: '#6B7280',        // Placeholder #6B7280
+      600: '#4B5563',        // Text secondary #4B5563
+      700: '#374151',
+      800: '#1F2937',        // Text #1F2937
+      900: '#111827',
     },
     neutral: {
       50: '#F9FAFB',
-      100: '#F2F4F7',
-      200: '#EAECF0',
-      300: '#D0D5DD',
-      400: '#98A2B3',
-      500: '#667085',
-      600: '#475467',
-      700: '#344054',
-      800: '#1D2939',
-      900: '#101828',
-      border: '#EAECF0',
+      100: '#F4F4F6',
+      200: '#E5E7EB',
+      300: '#D1D5DB',
+      400: '#9CA3AF',
+      500: '#6B7280',
+      600: '#4B5563',
+      700: '#374151',
+      800: '#1F2937',
+      900: '#111827',
+      border: '#E5E7EB',
       cardBg: '#ffffff',
       hoverBg: '#F9FAFB',
-      chipBg: '#F2F4F7',
-      appBg: '#F8FAF2',
+      chipBg: '#F3E8F8',
+      appBg: '#F4F4F6',
     },
   },
   typography: {
@@ -152,7 +194,7 @@ let theme = createTheme({
     ].join(','),
     // Responsive typography
     h1: {
-      color: '#6B288A',
+      color: '#6D2A8F',
       fontSize: '2rem',
       fontWeight: 600,
       '@media (min-width:600px)': {
@@ -169,7 +211,7 @@ let theme = createTheme({
       },
     },
     h2: {
-      color: '#6B288A',
+      color: '#6D2A8F',
       fontSize: '1.75rem',
       fontWeight: 600,
       '@media (min-width:600px)': {
@@ -186,7 +228,7 @@ let theme = createTheme({
       },
     },
     h3: {
-      color: '#6B288A',
+      color: '#6D2A8F',
       fontSize: '1.5rem',
       fontWeight: 600,
       '@media (min-width:600px)': {
@@ -203,7 +245,7 @@ let theme = createTheme({
       },
     },
     h4: {
-      color: '#6B288A',
+      color: '#6D2A8F',
       fontSize: '1.25rem',
       fontWeight: 500,
       '@media (min-width:600px)': {
@@ -220,7 +262,7 @@ let theme = createTheme({
       },
     },
     h5: {
-      color: '#6B288A',
+      color: '#6D2A8F',
       fontSize: '1.125rem',
       fontWeight: 500,
       '@media (min-width:600px)': {
@@ -237,7 +279,7 @@ let theme = createTheme({
       },
     },
     h6: {
-      color: '#6B288A',
+      color: '#6D2A8F',
       fontSize: '1rem',
       fontWeight: 500,
       '@media (min-width:600px)': {
@@ -401,7 +443,7 @@ let theme = createTheme({
             borderColor: '#9CA3AF',
           },
           '&.Mui-focused fieldset': {
-            borderColor: '#6B288A',
+            borderColor: '#6D2A8F',
             borderWidth: '1.5px',
           },
           '&.Mui-disabled': {
@@ -427,7 +469,7 @@ let theme = createTheme({
           fontSize: '0.875rem',
           color: '#374151',
           '&.Mui-focused': {
-            color: '#6B288A',
+            color: '#6D2A8F',
           },
         },
       },
@@ -446,7 +488,7 @@ let theme = createTheme({
               borderColor: '#9CA3AF',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#6B288A',
+              borderColor: '#6D2A8F',
               borderWidth: '1.5px',
             },
             '&.Mui-disabled': {
@@ -465,7 +507,7 @@ let theme = createTheme({
             fontSize: '0.875rem',
             color: '#374151',
             '&.Mui-focused': {
-              color: '#6B288A',
+              color: '#6D2A8F',
             },
           },
         },
@@ -485,7 +527,7 @@ let theme = createTheme({
               borderColor: '#9CA3AF',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#6B288A',
+              borderColor: '#6D2A8F',
               borderWidth: '1.5px',
             },
             '&.Mui-disabled': {
@@ -496,7 +538,7 @@ let theme = createTheme({
             fontSize: '0.875rem',
             color: '#374151',
             '&.Mui-focused': {
-              color: '#6B288A',
+              color: '#6D2A8F',
             },
           },
         },
@@ -518,8 +560,8 @@ let theme = createTheme({
     MuiTableContainer: {
       styleOverrides: {
         root: {
-          borderRadius: 6,
-          border: '1px solid #EAECF0',
+          borderRadius: 12,
+          border: '1px solid #E5E7EB',
           backgroundColor: '#ffffff',
           overflowX: 'auto',
           boxShadow: 'none',
@@ -533,12 +575,12 @@ let theme = createTheme({
           backgroundColor: '#F9FAFB',
           '& .MuiTableCell-root': {
             backgroundColor: '#F9FAFB',
-            color: '#475467',
-            fontWeight: 600,
-            fontSize: '0.75rem',
+            color: '#4B5563',
+            fontWeight: 700,
+            fontSize: '0.8rem',
             fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            borderBottom: '1px solid #EAECF0',
-            padding: '8px 12px',
+            borderBottom: '1px solid #E5E7EB',
+            padding: '6px 10px',
           },
         },
       },
@@ -547,38 +589,38 @@ let theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          fontSize: '0.8rem',
-          padding: '6px 12px',
+          fontSize: '0.775rem',
+          padding: '2px 8px',
           whiteSpace: 'nowrap',
-          borderBottom: '1px solid #F2F4F7',
-          color: '#344054',
+          borderBottom: '1px solid #E5E7EB',
+          color: '#1F2937',
           '& .MuiTableSortLabel-root': {
             whiteSpace: 'nowrap',
           },
         },
         head: {
           fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          fontWeight: 600,
+          fontWeight: 700,
           backgroundColor: '#F9FAFB',
-          color: '#475467',
-          padding: '8px 12px',
-          fontSize: '0.75rem',
-          borderBottom: '1px solid #EAECF0',
+          color: '#4B5563',
+          padding: '6px 10px',
+          fontSize: '0.8rem',
+          borderBottom: '1px solid #E5E7EB',
         },
       },
     },
     MuiTableRow: {
       styleOverrides: {
         root: {
-          height: 40,
+          height: 28,
           fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           '&:hover': {
             backgroundColor: '#F9FAFB !important',
           },
           '&.Mui-selected': {
-            backgroundColor: '#F2F4F7',
+            backgroundColor: '#F3E8F8',
             '&:hover': {
-              backgroundColor: '#EAECF0',
+              backgroundColor: '#E5E7EB',
             },
           },
         },
@@ -669,6 +711,32 @@ let theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          border: '1px solid #E5E7EB',
+          borderRadius: 12,
+          backgroundColor: '#FFFFFF',
+          '& .MuiDataGrid-columnHeaders': {
+            backgroundColor: '#F9FAFB',
+            color: '#4B5563',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            borderBottom: '1px solid #E5E7EB',
+            minHeight: '36px !important',
+            maxHeight: '36px !important',
+          },
+          '& .MuiDataGrid-cell': {
+            fontSize: '0.775rem',
+            color: '#1F2937',
+            borderBottom: '1px solid #E5E7EB',
+            py: '2px',
+          },
+          '& .MuiDataGrid-row': {
+            minHeight: '28px !important',
+            maxHeight: '28px !important',
+            '&:hover': { backgroundColor: '#F9FAFB' },
+          },
+          '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus': {
+            outline: 'none !important',
+          },
           '& .MuiDataGrid-virtualScroller': {
             overflowX: 'auto !important',
           },
@@ -677,12 +745,12 @@ let theme = createTheme({
             width: '8px',
           },
           '& ::-webkit-scrollbar-track': {
-            backgroundColor: '#F2F4F7',
+            backgroundColor: '#F4F4F6',
           },
           '& ::-webkit-scrollbar-thumb': {
-            backgroundColor: '#D0D5DD',
+            backgroundColor: '#D1D5DB',
             borderRadius: '4px',
-            '&:hover': { backgroundColor: '#98A2B3' },
+            '&:hover': { backgroundColor: '#9CA3AF' },
           },
         },
       },

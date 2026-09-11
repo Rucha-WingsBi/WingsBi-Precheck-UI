@@ -119,7 +119,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
                   mr: 0.5,
                   color: "#2D3748",
                   "&.Mui-checked": {
-                    color: "#6B288A",
+                    color: "#6D2A8F",
                   },
                   "& .MuiSvgIcon-root": {
                     fontSize: 16,

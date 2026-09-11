@@ -656,7 +656,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       size="small"
                       onClick={handleReset}
                       sx={{
-                        color: "#6B288A",
+                        color: "#6D2A8F",
                         fontWeight: 600,
                         fontSize: "0.775rem",
                         textTransform: "none",

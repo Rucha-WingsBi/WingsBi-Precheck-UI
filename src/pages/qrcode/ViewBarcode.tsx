@@ -62,6 +62,10 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { MultiSelectFilter } from '../../components/MultiSelectFilter';
 import { EmptyState } from '../../components/EmptyState';
+import { StatusChip } from "../../components/StatusChip";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 const ALL_EXPORTABLE_COLUMNS = [
   { key: "qrCodeNumber", label: "QRCode ID" },
@@ -287,8 +291,8 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
         <TableCell sx={{ textAlign: 'left', minWidth: '160px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
           {barcodeDetails?.nomenclature || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
-          {barcodeDetails?.componentType || 'N/A'}
+        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '2px', px: '12px', whiteSpace: 'nowrap' }}>
+          <ComponentTypeChip type={barcodeDetails?.componentType} />
         </TableCell>
         <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
           {barcodeDetails?.consumedInDrawing || 'N/A'}
@@ -320,6 +324,7 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
               open={isMenuOpen}
               onClose={handleMenuClose}
               transitionDuration={0}
+              disableRestoreFocus
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               PaperProps={{
@@ -329,9 +334,12 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
             >
               {!isConsumed && (
                 <MenuItem
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleMenuClose();
-                    handleEdit();
+                    setTimeout(() => {
+                      handleEdit();
+                    }, 0);
                   }}
                   sx={{ fontSize: '0.85rem', py: 0.75 }}
                 >
@@ -614,11 +622,11 @@ const ViewBarcode: React.FC = () => {
         const genByArr = returnFilters.selectedGeneratedBy || [];
         const fromD = returnFilters.fromDate ? new Date(returnFilters.fromDate) : null;
         const toD = returnFilters.toDate ? new Date(returnFilters.toDate) : null;
-        const params = buildApiParams(queryStr, seriesArr, genByArr, fromD, toD, 1, 20);
+        const params = buildApiParams(queryStr, seriesArr, genByArr, fromD, toD, 1, 10);
         dispatch(getBarcodeDetailsWithParameters(params));
       }
     } else {
-      const initialParams = buildApiParams("", [], [], null, null, 1, 20);
+      const initialParams = buildApiParams("", [], [], null, null, 1, 10);
       setLastSearchParams(initialParams);
       dispatch(getBarcodeDetailsWithParameters(initialParams));
     }
@@ -627,7 +635,7 @@ const ViewBarcode: React.FC = () => {
   const { barcodeDetails, loading, error, isDownloading, totalCount } = useSelector((state: RootState) => state.qrcode);
 
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [displayedData, setDisplayedData] = useState<any[]>([]);
 
   const totalRecordsCount = totalCount || displayedData.length;
@@ -679,14 +687,17 @@ const ViewBarcode: React.FC = () => {
       } else if (sortColumn === 'productionOrderNumber') {
         valA = a.productionOrderNumber || a.poNumber || '';
         valB = b.productionOrderNumber || b.poNumber || '';
-      } else if (typeof valA === 'string') {
-        valA = (valA || '').toLowerCase();
-        valB = (valB || '').toLowerCase();
       }
 
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortDirection === "asc" ? valA - valB : valB - valA;
+      }
+
+      const strA = String(valA || "").toLowerCase().trim();
+      const strB = String(valB || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [barcodeDetails, sortColumn, sortDirection]);
 
@@ -1237,7 +1248,7 @@ const ViewBarcode: React.FC = () => {
                 '&:hover': { borderColor: 'grey.400', backgroundColor: 'grey.50' },
               }}
             >
-              {isDownloading ? 'Downloading...' : 'Download'}
+              {isDownloading ? 'Exporting...' : 'Export'}
             </Button>
 
             <Button
@@ -1735,12 +1746,26 @@ const ViewBarcode: React.FC = () => {
               borderBottom: '1px solid #eaecf0',
             }}
           >
-            <Typography variant="body2" sx={{ color: '#475467', fontSize: '0.85rem' }}>
-              <Box component="span" sx={{ fontWeight: 600, color: '#101828' }}>
-                {selectedQRCodes.length} of {displayedData.length} selected
-              </Box>
-              {' · select rows to download'}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Checkbox
+                checked={selectedQRCodes.length === displayedData.length && displayedData.length > 0}
+                indeterminate={selectedQRCodes.length > 0 && selectedQRCodes.length < displayedData.length}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+                size="small"
+                sx={{
+                  p: 0,
+                  color: '#d0d5dd',
+                  '&.Mui-checked': { color: 'primary.main' },
+                  '&.MuiCheckbox-indeterminate': { color: 'primary.main' },
+                }}
+              />
+              <Typography variant="body2" sx={{ color: '#475467', fontSize: '0.85rem' }}>
+                <Box component="span" sx={{ fontWeight: 600, color: '#101828' }}>
+                  {selectedQRCodes.length} of {displayedData.length} selected
+                </Box>
+                {' · Select rows if you want to export specific QR codes'}
+              </Typography>
+            </Stack>
 
             <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
               <Button

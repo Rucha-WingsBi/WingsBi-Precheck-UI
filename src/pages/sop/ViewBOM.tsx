@@ -35,6 +35,8 @@ import {
   setSelectedAssemblyNumber,
   clearError,
 } from "../../store/slices/sopSlice";
+import { COLOUR_ROLES, commonTableRowStyle } from "../../components/tableStyles";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 import { useHierarchicalTable } from "../../hooks/useHierarchicalTable";
 import { BomFilterCard } from "./components/BomFilterCard";
 
@@ -85,7 +87,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       minWidth: 70,
       align: "center" as const,
       format: (_: any, __: any, index: number) => (
-        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#64748b" }}>
+        <Typography variant="body2" sx={{ fontSize: "0.775rem", color: COLOUR_ROLES.textSecondary }}>
           {index + 1}
         </Typography>
       ),
@@ -99,9 +101,9 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
         <Typography
           variant="body2"
           sx={{
-            fontSize: "0.8rem",
+            fontSize: "0.775rem",
             fontWeight: row.level === 0 ? 600 : row.level === 1 ? 500 : 400,
-            color: row.level === 0 ? "primary.main" : row.level === 1 ? "#2e7d32" : "#64748b",
+            color: row.level === 0 ? "primary.main" : row.level === 1 ? "#2e7d32" : COLOUR_ROLES.textSecondary,
           }}
         >
           {row.level !== undefined && row.level !== null ? row.level : "0"}
@@ -143,8 +145,8 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
             variant="body2"
             sx={{
               fontWeight: row.level === 0 ? 600 : 500,
-              color: row.level === 0 ? "primary.main" : "#424242",
-              fontSize: { xs: "0.75rem", md: "0.8rem" },
+              color: row.level === 0 ? "primary.main" : COLOUR_ROLES.textMain,
+              fontSize: "0.775rem",
             }}
           >
             {value}
@@ -157,7 +159,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       label: "Nomenclature",
       minWidth: 150,
       format: (value: any) => (
-        <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+        <Typography variant="body2" sx={{ fontSize: "0.775rem" }}>
           {value || "-"}
         </Typography>
       ),
@@ -169,7 +171,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       format: (value: any) => (
         <Typography
           variant="body2"
-          sx={{ fontSize: "0.8rem", color: "primary.main", fontWeight: 500 }}
+          sx={{ fontSize: "0.775rem", color: "primary.main", fontWeight: 500 }}
         >
           {value || "-"}
         </Typography>
@@ -180,12 +182,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       label: "Component Type",
       minWidth: 120,
       format: (value: any) => (
-        <Chip
-          label={value || "Standard"}
-          size="small"
-          variant="outlined"
-          sx={{ fontSize: "0.7rem", height: 20 }}
-        />
+        <ComponentTypeChip type={value || "Standard"} />
       ),
     },
     {
@@ -194,7 +191,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       minWidth: 60,
       align: "center" as const,
       format: (value: any) => (
-        <Typography variant="body2" sx={{ fontWeight: 600, color: "#059669" }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: "#059669", fontSize: "0.775rem" }}>
           {value || "0"}
         </Typography>
       ),
@@ -205,7 +202,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       minWidth: 80,
       align: "center" as const,
       format: (value: any) => (
-        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#1e293b" }}>
+        <Typography variant="body2" sx={{ fontSize: "0.775rem", color: COLOUR_ROLES.textMain }}>
           {value || "-"}
         </Typography>
       ),
@@ -215,7 +212,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       label: "Assembly No",
       minWidth: 120,
       format: (value: any) => (
-        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#64748b" }}>
+        <Typography variant="body2" sx={{ fontSize: "0.775rem", color: COLOUR_ROLES.textSecondary }}>
           {value || "-"}
         </Typography>
       ),
@@ -389,12 +386,12 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
                       align={column.align || "left"}
                       sx={{
                         fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
+                        backgroundColor: COLOUR_ROLES.headerBg,
+                        color: COLOUR_ROLES.textSecondary,
                         fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 1,
-                        px: 1.5,
+                        borderBottom: `1px solid ${COLOUR_ROLES.hairline}`,
+                        py: 0.75,
+                        px: 1.25,
                         minWidth: column.minWidth,
                       }}
                     >
@@ -409,19 +406,10 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
                     <TableRow
                       key={`${item.childDrawingId}-${index}`}
                       hover
-                      sx={{
-                        "&:hover": { backgroundColor: "#F9FAFB" },
-                        "& td": {
-                          borderBottom: "1px solid #F2F4F7",
-                          fontSize: "0.85rem",
-                          color: "#344054",
-                          py: 0.75,
-                          px: 1.5,
-                        },
-                      }}
+                      sx={commonTableRowStyle}
                     >
                       {columns.map((column) => (
-                        <TableCell key={column.id} align={column.align || "left"}>
+                        <TableCell key={column.id} align={column.align || "left"} sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem" }}>
                           {column.format
                             ? column.format(item[column.id], item, index)
                             : item[column.id]}

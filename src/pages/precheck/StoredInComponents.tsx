@@ -45,6 +45,10 @@ import { getStoredComponentsByDate, exportStoredComponents, clearStoredComponent
 import { format } from 'date-fns';
 import api from '../../services/api';
 import debounce from 'lodash/debounce';
+import { StatusChip } from '../../components/StatusChip';
+import { ComponentTypeChip } from '../../components/ComponentTypeChip';
+import { SortableTableHeader } from '../../components/SortableTableHeader';
+import { commonTableHeaderStyle, commonTableRowStyle } from '../../components/tableStyles';
 
 // Types for stored components
 interface StoredComponent {
@@ -330,12 +334,41 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     );
   }, [storedComponents, searchQuery]);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedComponents = React.useMemo(() => {
+    if (!sortColumn) return filteredComponents;
+    return [...filteredComponents].sort((a: any, b: any) => {
+      let aVal = a[sortColumn] ?? "";
+      let bVal = b[sortColumn] ?? "";
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [filteredComponents, sortColumn, sortDirection]);
+
   // Paginated results
   const paginatedComponents = React.useMemo(() => {
     const startIndex = page * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return filteredComponents.slice(startIndex, endIndex);
-  }, [filteredComponents, page, rowsPerPage]);
+    return sortedComponents.slice(startIndex, endIndex);
+  }, [sortedComponents, page, rowsPerPage]);
 
   // Fetch drawing numbers for autocomplete
   const fetchDrawingNumbers = async (search: string) => {
@@ -687,36 +720,17 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               <TableContainer sx={{ overflowX: "auto", maxHeight: "calc(100vh - 290px)" }}>
                 <Table stickyHeader size="small">
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: 'grey.50', height: 42 }}>
-                      {[
-                        "Sr.No",
-                        "QRCode ID",
-                        "PO Number",
-                        "Project Number",
-                        "Prod Series",
-                        "Drawing Number",
-                        "ID",
-                        "Qty",
-                        "Nomenclature",
-                        "Actions",
-                      ].map((header) => (
-                        <TableCell
-                          key={header}
-                          sx={{
-                            fontWeight: 600,
-                            color: "text.primary",
-                            fontSize: "0.8rem",
-                            borderBottom: "1px solid",
-                            borderColor: "grey.200",
-                            py: 1,
-                            px: 1.5,
-                            textAlign: "center",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {header}
-                        </TableCell>
-                      ))}
+                    <TableRow>
+                      <SortableTableHeader label="Sr.No" sortKey="id" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                      <TableCell align="center" sx={commonTableHeaderStyle}>QRCode ID</TableCell>
+                      <SortableTableHeader label="PO Number" sortKey="poNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="left" sx={commonTableHeaderStyle}>Project Number</TableCell>
+                      <SortableTableHeader label="Prod Series" sortKey="productionSeries" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <SortableTableHeader label="Drawing Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="center" sx={commonTableHeaderStyle}>ID</TableCell>
+                      <TableCell align="center" sx={commonTableHeaderStyle}>Qty</TableCell>
+                      <SortableTableHeader label="Nomenclature" sortKey="nomenclature" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="center" sx={commonTableHeaderStyle}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>

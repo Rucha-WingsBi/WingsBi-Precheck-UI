@@ -38,6 +38,10 @@ import {
   getAvailableComponentsForBOM,
   getProductionOrderDetails,
 } from "../../store/slices/precheckSlice";
+import { StatusChip } from "../../components/StatusChip";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 interface BOMItem {
   sr: number;
@@ -95,6 +99,36 @@ const ViewOrder: React.FC = () => {
   const [poMasterDetails, setPoMasterDetails] = useState<any>(() => navigationState || null);
   const fetchedPoRef = useRef<string | null>(null);
   const [openBomDialog, setOpenBomDialog] = useState(false);
+
+  // Sorting state for BOM table
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedBomData = useMemo(() => {
+    if (!sortColumn) return bomData;
+    return [...bomData].sort((a: any, b: any) => {
+      let aVal = a[sortColumn] ?? a[sortColumn === "lnitemcode" ? "lnItemCode" : sortColumn] ?? "";
+      let bVal = b[sortColumn] ?? b[sortColumn === "lnitemcode" ? "lnItemCode" : sortColumn] ?? "";
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [bomData, sortColumn, sortDirection]);
 
   // Fetch PO Details helper
   const handleFetchDetails = async (poNumber: string) => {
@@ -217,7 +251,7 @@ const ViewOrder: React.FC = () => {
       color = "#B54708";
     } else if (stLower.includes("issue") || stLower.includes("complet") || stLower.includes("used")) {
       bg = "#F4EBFF";
-      color = "#6B288A";
+      color = "#6D2A8F";
     } else if (stLower.includes("reject") || stLower.includes("scrap") || stLower.includes("expired")) {
       bg = "#FEF3F2";
       color = "#B42318";
@@ -263,112 +297,14 @@ const ViewOrder: React.FC = () => {
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 45,
-              }}
-            >
-              Sr
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-              }}
-            >
-              LN Item Code
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-              }}
-            >
-              Drawing Number
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 55,
-              }}
-            >
-              Unit
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 70,
-              }}
-              align="center"
-            >
-              Qty / <br /> Assm
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 75,
-              }}
-              align="center"
-            >
-              Total <br /> Req Qty
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 80,
-              }}
-              align="center"
-            >
-              Total <br /> QR Qty
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 80,
-              }}
-              align="center"
-            >
-              Available <br /> Store Qty
-            </TableCell>
+            <SortableTableHeader label="Sr" sortKey="sr" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="LN Item Code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="Drawing Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 55 }}>Unit</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 70 }} align="center">Qty / <br /> Assm</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 75 }} align="center">Total <br /> Req Qty</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 80 }} align="center">Total <br /> QR Qty</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 80 }} align="center">Available <br /> Store Qty</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -383,7 +319,7 @@ const ViewOrder: React.FC = () => {
             </TableRow>
           ) : (
             <>
-              {bomData.map((item, index) => {
+              {sortedBomData.map((item, index) => {
                 const isSelected = selectedBomRow === index;
                 return (
                   <TableRow

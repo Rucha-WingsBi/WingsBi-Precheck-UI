@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Card, CardContent, Typography, Chip } from "@mui/material";
 import { InsertDriveFile as FileIcon } from "@mui/icons-material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { commonDataGridSx } from "../../../components/tableStyles";
 
 interface DataGridPreviewProps {
   validFilesToPreview: File[];
@@ -132,22 +133,7 @@ export const DataGridPreview: React.FC<DataGridPreviewProps> = ({
                     },
                   }}
                   pageSizeOptions={[10, 25, 50, 100]}
-                  sx={{
-                    border: "none",
-                    "& .MuiDataGrid-columnHeaders": {
-                      bgcolor: "neutral.hoverBg",
-                      borderBottom: "1px solid",
-                      borderColor: "neutral.border",
-                      fontWeight: 600,
-                      color: "neutral.600",
-                    },
-                    "& .MuiDataGrid-cell": {
-                      borderBottom: "1px solid",
-                      borderColor: "neutral.chipBg",
-                      fontSize: "0.8125rem",
-                      color: "text.primary",
-                    },
-                  }}
+                  sx={commonDataGridSx}
                 />
               </Box>
             </CardContent>

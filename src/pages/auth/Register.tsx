@@ -183,7 +183,7 @@ const Register = () => {
         <Box
           sx={{
             bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+            background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
             p: 2,
             pb: 2.5,
             display: "flex",
@@ -662,7 +662,7 @@ const Register = () => {
                   px: 3,
                   fontWeight: 600,
                   minWidth: "100px",
-                  backgroundColor: "#6B288A",
+                  backgroundColor: "#6D2A8F",
                   "&:hover": { backgroundColor: "#4A1964" },
                 }}
               >

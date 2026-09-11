@@ -51,6 +51,10 @@ import {
 import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { COLOUR_ROLES, commonTableRowStyle } from "../../components/tableStyles";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { StatusChip } from "../../components/StatusChip";
 
 import {
   viewPrecheckDetails,
@@ -197,7 +201,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
   // ── Pagination State ───────────────────────────────────────────────────────
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // ── Details Modal & Action Menu State ─────────────────────────────────────
   const [selectedRow, setSelectedRow] = useState<any | null>(null);
@@ -461,14 +465,15 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       let aVal = a[orderBy];
       let bVal = b[orderBy];
       if (orderBy === "sr" || orderBy === "quantity") {
-        aVal = Number(aVal) || 0;
-        bVal = Number(bVal) || 0;
-      } else {
-        aVal = String(aVal || "").toLowerCase();
-        bVal = String(bVal || "").toLowerCase();
+        const numA = Number(aVal) || 0;
+        const numB = Number(bVal) || 0;
+        return order === "asc" ? numA - numB : numB - numA;
       }
-      if (order === "asc") return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      else return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return order === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [filteredData, orderBy, order]);
 
@@ -532,46 +537,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     }
 
     if (colField === "componentType") {
-      const type = (row.componentType || "").toUpperCase();
-      switch (type) {
-        case "ID":
-          return <Chip icon={<QrCodeIcon fontSize="small" />} label="ID" size="small" color="primary" variant="outlined" sx={{ height: 22, fontSize: "0.725rem" }} />;
-        case "BATCH":
-          return <Chip icon={<InventoryIcon fontSize="small" />} label="BATCH" size="small" color="secondary" variant="outlined" sx={{ height: 22, fontSize: "0.725rem" }} />;
-        case "FIM":
-          return <Chip icon={<CategoryIcon fontSize="small" />} label="FIM" size="small" color="success" variant="outlined" sx={{ height: 22, fontSize: "0.725rem" }} />;
-        case "SI":
-          return <Chip icon={<SettingsIcon fontSize="small" />} label="SI" size="small" color="warning" variant="outlined" sx={{ height: 22, fontSize: "0.725rem" }} />;
-        default:
-          return <Chip label={type || "N/A"} size="small" variant="outlined" sx={{ height: 22, fontSize: "0.725rem" }} />;
-      }
+      return <ComponentTypeChip type={row.componentType} />;
     }
 
     if (colField === "status") {
       if (activeTab === "precheck") {
-        // Precheck tab: REJECTED / ACTIVE chip
-        return row.isRejected ? (
-          <Chip label="REJECTED" size="small" sx={{ backgroundColor: "#FEF3F2", color: "#B42318", fontWeight: 700, fontSize: "0.725rem", height: 22, letterSpacing: "0.02em" }} />
-        ) : (
-          <Chip label="ACTIVE" size="small" sx={{ backgroundColor: "#ECFDF3", color: "#027A48", fontWeight: 700, fontSize: "0.725rem", height: 22, letterSpacing: "0.02em" }} />
-        );
+        return <StatusChip status={row.isRejected ? "Rejected" : "Active"} />;
       } else {
-        // Consumed tab: existing chip logic
-        return row.status === "Rejected" ? (
-          <Chip label="Rejected" size="small" sx={{ backgroundColor: "#FEF3F2", color: "#B42318", fontWeight: 700, fontSize: "0.725rem", height: 22 }} />
-        ) : (
-          <Chip label="Completed" size="small" sx={{ backgroundColor: "#ECFDF3", color: "#027A48", fontWeight: 700, fontSize: "0.725rem", height: 22 }} />
-        );
+        return <StatusChip status={row.status} />;
       }
     }
 
     if (colField === "isRejected") {
       const isRej = row.isRejected === true || row.isRejected === "Yes" || row.isRejected === "Rejected";
-      return isRej ? (
-        <Chip label="Yes" size="small" sx={{ backgroundColor: "#FEF3F2", color: "#B42318", fontWeight: 700, fontSize: "0.725rem", height: 22 }} />
-      ) : (
-        <Chip label="No" size="small" sx={{ backgroundColor: "#ECFDF3", color: "#027A48", fontWeight: 700, fontSize: "0.725rem", height: 22 }} />
-      );
+      return <StatusChip status={isRej ? "Rejected" : "Active"} label={isRej ? "Yes" : "No"} />;
     }
 
     // Details column (3-dots menu icon matching ViewComponents)
@@ -1095,44 +1074,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           <Table stickyHeader size="small">
             {/* Table Head */}
             <TableHead>
-              <TableRow sx={{ backgroundColor: "grey.50", height: 42 }}>
-                {visibleColumns.map((col) => {
-                  const isSortActive = orderBy === col.field;
-                  return (
-                    <TableCell
-                      key={col.field}
-                      align={col.align || "center"}
-                      sx={{
-                        fontWeight: 600,
-                        color: "text.primary",
-                        fontSize: "0.8rem",
-                        py: 1,
-                        px: 1.5,
-                        borderBottom: "1px solid",
-                        borderColor: "grey.200",
-                        minWidth: col.minWidth || "auto",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {col.sortable !== false ? (
-                        <TableSortLabel
-                          active={isSortActive}
-                          direction={isSortActive ? order : "asc"}
-                          onClick={() => handleRequestSort(col.field)}
-                          sx={{
-                            fontWeight: 600,
-                            color: isSortActive ? "primary.main" : "text.primary",
-                            "& .MuiTableSortLabel-icon": { color: "primary.main !important" },
-                          }}
-                        >
-                          {col.headerName}
-                        </TableSortLabel>
-                      ) : (
-                        col.headerName
-                      )}
-                    </TableCell>
-                  );
-                })}
+              <TableRow sx={{ backgroundColor: COLOUR_ROLES.headerBg }}>
+                {visibleColumns.map((col) => (
+                  <SortableTableHeader
+                    key={col.field}
+                    label={col.headerName}
+                    columnKey={col.field}
+                    sortColumn={orderBy}
+                    sortDirection={order}
+                    onSort={col.sortable !== false ? handleRequestSort : undefined}
+                    align={col.align || "center"}
+                    minWidth={col.minWidth}
+                    isSortable={col.sortable !== false}
+                  />
+                ))}
               </TableRow>
             </TableHead>
 
@@ -1155,8 +1110,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                       <TableRow
                         hover
                         sx={{
-                          height: 40,
-                          "&:hover": { backgroundColor: "grey.50" },
+                          ...commonTableRowStyle,
                         }}
                       >
                         {visibleColumns.map((col) => (
@@ -1164,12 +1118,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                             key={col.field}
                             align={col.align || "center"}
                             sx={{
-                              fontSize: "0.8rem",
-                              color: "#344054",
-                              py: 0.75,
-                              px: 1.5,
-                              borderBottom: "1px solid",
-                              borderColor: "grey.100",
+                              fontSize: "0.775rem",
+                              color: COLOUR_ROLES.textMain,
+                              py: 0.15,
+                              px: 0.75,
                               whiteSpace: "nowrap",
                             }}
                           >

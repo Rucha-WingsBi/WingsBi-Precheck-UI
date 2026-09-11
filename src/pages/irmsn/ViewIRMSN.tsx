@@ -66,7 +66,9 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { format } from "date-fns";
 import api from "../../services/api";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
-import { EmptyState } from "../../components/EmptyState";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { COLOUR_ROLES, commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
+import EmptyState from "@/components/EmptyState";
 
 const ALL_IRMSN_EXPORT_COLUMNS = [
   { key: "displayNumber", label: "IR/MSN No." },
@@ -108,7 +110,20 @@ const ViewIRMSN: React.FC = () => {
 
   // Pagination State
   const [page, setPage] = useState<number>(0);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(20);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
 
   // Export Menu & Options Dialog State
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
@@ -440,6 +455,37 @@ const ViewIRMSN: React.FC = () => {
     }));
   }, [irmsnList]);
 
+  const sortedDisplayList = useMemo(() => {
+    if (!sortColumn) return displayList;
+    return [...displayList].sort((a: any, b: any) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
+
+      if (sortColumn === "lineItemCode" || sortColumn === "lnItemCode") {
+        aVal = a.lnItemCode || a.lineItemCode || "";
+        bVal = b.lnItemCode || b.lineItemCode || "";
+      } else if (sortColumn === "drawingNumber") {
+        aVal = a.drawingNumberIdName || a.drawingNumber || "";
+        bVal = b.drawingNumberIdName || b.drawingNumber || "";
+      } else if (sortColumn === "date") {
+        aVal = new Date(a.createdDate || a.date || 0).getTime();
+        bVal = new Date(b.createdDate || b.date || 0).getTime();
+      } else if (sortColumn === "displayNumber" || sortColumn === "id") {
+        aVal = a.displayNumber || a.irNumber || a.msnNumber || a.id || "";
+        bVal = b.displayNumber || b.irNumber || b.msnNumber || b.id || "";
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [displayList, sortColumn, sortDirection]);
+
   // Reset page to 0 if pagination exceeds list range
   useEffect(() => {
     setPage(0);
@@ -488,7 +534,7 @@ const ViewIRMSN: React.FC = () => {
               variant="outlined"
               size="small"
               onClick={() => handleOpenExportDialog("BOTH")}
-              disabled={isExporting || !isFilterApplied}
+              disabled={isExporting}
               startIcon={
                 isExporting ? (
                   <CircularProgress size={16} color="inherit" />
@@ -515,6 +561,7 @@ const ViewIRMSN: React.FC = () => {
               open={Boolean(exportMenuAnchor)}
               onClose={handleExportClose}
               transitionDuration={0}
+              disableRestoreFocus
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               PaperProps={{
@@ -1098,203 +1145,76 @@ const ViewIRMSN: React.FC = () => {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell
+                  <SortableTableHeader
+                    label="Sr.No"
+                    sortKey="id"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                      width: 50,
-                    }}
-                  >
-                    Sr.No
-                  </TableCell>
-                  <TableCell
+                  />
+                  <SortableTableHeader
+                    label="IR/MSN No."
+                    sortKey="displayNumber"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    IR/MSN No.
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                      width: 70,
-                    }}
-                  >
+                  />
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 70 }}>
                     Type
                   </TableCell>
-                  <TableCell
+                  <SortableTableHeader
+                    label="PO Number"
+                    sortKey="orderNumber"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    PO Number
-                  </TableCell>
-                  <TableCell
+                  />
+                  <SortableTableHeader
+                    label="LN Item Code"
+                    sortKey="lineItemCode"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    LN Item Code
-                  </TableCell>
-                  <TableCell
+                  />
+                  <SortableTableHeader
+                    label="Drawing No."
+                    sortKey="drawingNumber"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    Drawing No.
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  />
+                  <TableCell align="center" sx={commonTableHeaderStyle}>
                     ID Number
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="center" sx={commonTableHeaderStyle}>
                     MRIR
                   </TableCell>
-                  <TableCell
+                  <SortableTableHeader
+                    label="Date"
+                    sortKey="date"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    Date
-                  </TableCell>
-                  <TableCell
-                    align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  />
+                  <TableCell align="left" sx={commonTableHeaderStyle}>
                     UserName
                   </TableCell>
-                  <TableCell
-                    align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="left" sx={commonTableHeaderStyle}>
                     Department
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="center" sx={commonTableHeaderStyle}>
                     Stage
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="center" sx={commonTableHeaderStyle}>
                     Build No
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                      width: 70,
-                    }}
-                  >
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 70 }}>
                     Actions
                   </TableCell>
                 </TableRow>
@@ -1310,8 +1230,8 @@ const ViewIRMSN: React.FC = () => {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : displayList.length > 0 ? (
-                  displayList.map((item, index) => (
+                ) : sortedDisplayList.length > 0 ? (
+                  sortedDisplayList.map((item, index) => (
                     <TableRow
                       key={`${item.recordType}-${item.id}`}
                       hover
@@ -1433,6 +1353,7 @@ const ViewIRMSN: React.FC = () => {
           open={Boolean(actionMenuAnchor)}
           onClose={() => setActionMenuAnchor(null)}
           transitionDuration={0}
+          disableRestoreFocus
           transformOrigin={{ horizontal: "right", vertical: "top" }}
           anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
           PaperProps={{
@@ -1448,16 +1369,19 @@ const ViewIRMSN: React.FC = () => {
           }}
         >
           <MenuItem
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               const targetItem = actionMenuAnchor?.item;
               setActionMenuAnchor(null);
               if (targetItem) {
-                navigate(
-                  `/irmsn/edit/${targetItem.recordType}/${encodeURIComponent(
-                    targetItem.displayNumber || ""
-                  )}`,
-                  { state: targetItem }
-                );
+                setTimeout(() => {
+                  navigate(
+                    `/irmsn/edit/${targetItem.recordType}/${encodeURIComponent(
+                      targetItem.displayNumber || ""
+                    )}`,
+                    { state: targetItem }
+                  );
+                }, 0);
               }
             }}
             sx={{

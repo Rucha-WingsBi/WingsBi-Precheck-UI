@@ -32,6 +32,7 @@ import {
   MoreVert as MoreVertIcon,
 
 } from "@mui/icons-material";
+import { commonDataGridSx } from "../../components/tableStyles";
 import {
   useUserRoles,
   useAddUserRole,
@@ -350,37 +351,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
           disableColumnMenu
           disableColumnFilter
           disableColumnSelector
-          sx={{
-            border: "none",
-            "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#F9FAFB",
-              borderBottom: "1px solid #EAECF0",
-              color: "#475467",
-              fontWeight: 700,
-              fontSize: "0.8rem",
-            },
-            "& .MuiDataGrid-columnHeaderTitle": {
-              fontWeight: 700,
-              fontSize: "0.8rem",
-              color: "#475467",
-            },
-            "& .MuiDataGrid-cell": {
-              fontSize: "0.85rem",
-              color: "#344054",
-              borderBottom: "1px solid #F2F4F7",
-            },
-            "& .MuiDataGrid-row": {
-              "&:hover": { backgroundColor: "#F9FAFB" },
-              transition: "background-color 0.2s ease",
-            },
-            "& .MuiDataGrid-cell:focus": { outline: "none" },
-            "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-            "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-            "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-            "& .MuiDataGrid-footerContainer": {
-              borderTop: "1px solid #EAECF0",
-            },
-          }}
+          sx={commonDataGridSx}
         />
       </Box>
 
@@ -616,37 +587,7 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
           disableColumnMenu
           disableColumnFilter
           disableColumnSelector
-          sx={{
-            border: "none",
-            "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#F9FAFB",
-              borderBottom: "1px solid #EAECF0",
-              color: "#475467",
-              fontWeight: 700,
-              fontSize: "0.8rem",
-            },
-            "& .MuiDataGrid-columnHeaderTitle": {
-              fontWeight: 700,
-              fontSize: "0.8rem",
-              color: "#475467",
-            },
-            "& .MuiDataGrid-cell": {
-              fontSize: "0.85rem",
-              color: "#344054",
-              borderBottom: "1px solid #F2F4F7",
-            },
-            "& .MuiDataGrid-row": {
-              "&:hover": { backgroundColor: "#F9FAFB" },
-              transition: "background-color 0.2s ease",
-            },
-            "& .MuiDataGrid-cell:focus": { outline: "none" },
-            "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-            "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-            "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-            "& .MuiDataGrid-footerContainer": {
-              borderTop: "1px solid #EAECF0",
-            },
-          }}
+          sx={commonDataGridSx}
         />
       </Box>
 

@@ -1236,7 +1236,7 @@ const StoreIn: React.FC = () => {
               }}
               disabled={!isDropdownFilterSelected || isLoading}
               sx={{
-                backgroundColor: "#6B288A",
+                backgroundColor: "#6D2A8F",
                 color: "#ffffff",
                 fontWeight: 600,
                 fontSize: "0.825rem",
@@ -1306,7 +1306,7 @@ const StoreIn: React.FC = () => {
                 size="small"
                 onClick={handleClearFilters}
                 sx={{
-                  color: "#6B288A",
+                  color: "#6D2A8F",
                   fontWeight: 600,
                   fontSize: "0.775rem",
                   textTransform: "none",
@@ -1420,8 +1420,8 @@ const StoreIn: React.FC = () => {
                         }
                         disabled={!hasMakeAccess}
                         sx={{
-                          borderColor: "#6B288A",
-                          color: "#6B288A",
+                          borderColor: "#6D2A8F",
+                          color: "#6D2A8F",
                           fontWeight: 600,
                           fontSize: "0.775rem",
                           borderRadius: "6px",

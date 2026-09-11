@@ -165,7 +165,7 @@ const ForgetPassword: React.FC = () => {
         <Box
           sx={{
             bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+            background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
             p: 3,
             pb: 4,
             display: "flex",

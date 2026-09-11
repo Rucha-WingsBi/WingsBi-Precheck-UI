@@ -148,7 +148,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
 
       if (isRej) {
         rejected++;
-      } else if (isComplete || scannedQty >= totalQty) {
+      } else if (isComplete) {
         verified++;
       } else if (scannedQty > 0 && scannedQty < totalQty) {
         short++;

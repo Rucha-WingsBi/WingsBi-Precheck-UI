@@ -49,6 +49,9 @@ import * as XLSX from "xlsx";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 
 interface DrawingNumberRow {
@@ -150,18 +153,7 @@ const DrawingNumberRowComponent = ({
           {drawingData?.nomenclature || "N/A"}
         </TableCell>
         <TableCell sx={{ textAlign: "center" }}>
-          <Chip
-            label={drawingData?.componentType || "N/A"}
-            size="small"
-            sx={{
-              height: 20,
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              backgroundColor: "grey.100",
-              color: "text.secondary",
-              borderRadius: "4px",
-            }}
-          />
+          <ComponentTypeChip type={drawingData?.componentType} />
         </TableCell>
         <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
           {drawingData?.unitName || "N/A"}
@@ -278,8 +270,18 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
   // Pagination & sorting state
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sortColumn, setSortColumn] = useState<string>("modifiedDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (columnKey: string) => {
+    if (sortColumn === columnKey) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(columnKey);
+      setSortOrder("asc");
+    }
+  };
 
   // Reset page when search query changes
   React.useEffect(() => {
@@ -397,11 +399,22 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
     let result = [...rawList];
 
-    // Sorting by modifiedDate / createdDate
-    result.sort((a, b) => {
-      const dateA = new Date(a.modifiedDate || a.createdDate || 0).getTime();
-      const dateB = new Date(b.modifiedDate || b.createdDate || 0).getTime();
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    // Sorting functionality
+    result.sort((a: any, b: any) => {
+      let aVal: any = "";
+      let bVal: any = "";
+      if (sortColumn === "modifiedDate") {
+        aVal = new Date(a.modifiedDate || a.createdDate || 0).getTime();
+        bVal = new Date(b.modifiedDate || b.createdDate || 0).getTime();
+      } else {
+        aVal = a[sortColumn] ?? "";
+        bVal = b[sortColumn] ?? "";
+        if (typeof aVal === "string") aVal = aVal.toLowerCase();
+        if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      }
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
     });
 
     const isServerPaginated = serverTotalRecords !== undefined || (rawList.length <= rowsPerPage && rawList.length > 0);
@@ -409,7 +422,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     const finalTotalCount = serverTotalRecords !== undefined ? serverTotalRecords : result.length;
 
     return { displayData: finalDisplayData, totalCount: finalTotalCount };
-  }, [drawingNumbersData, sortOrder, page, rowsPerPage]);
+  }, [drawingNumbersData, sortColumn, sortOrder, page, rowsPerPage]);
 
   const handleExport = () => {
     if (displayData.length === 0) {
@@ -769,7 +782,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                     size="small"
                     onClick={handleClearFilters}
                     sx={{
-                      color: "#6B288A",
+                      color: "#6D2A8F",
                       fontWeight: 600,
                       fontSize: "0.8rem",
                       textTransform: "none",
@@ -804,23 +817,16 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
           >
             <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
               <TableHead>
-                <TableRow sx={{ height: 42 }}>
-                  <TableCell sx={{ width: "55px", textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Sr.No</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Drawing No.</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>LN Item Code</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Nomenclature</TableCell>
-                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Type</TableCell>
-                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Unit</TableCell>
-                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Qty</TableCell>
-                  <TableCell sx={{ textAlign: "center", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>
-                    <Box
-                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                      sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, cursor: "pointer", userSelect: "none" }}
-                    >
-                      Updated On {sortOrder === "asc" ? <ArrowUpwardIcon sx={{ fontSize: "0.75rem" }} /> : <ArrowDownwardIcon sx={{ fontSize: "0.75rem" }} />}
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ textAlign: "center", width: "60px", fontWeight: 700, color: "#475467", backgroundColor: "#F9FAFB", fontSize: "0.8rem", py: 1, px: 1.5, borderBottom: "1px solid #EAECF0" }}>Actions</TableCell>
+                <TableRow sx={{ height: 36 }}>
+                  <SortableTableHeader label="Sr.No" columnKey="srNo" align="center" width="55px" isSortable={false} />
+                  <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} />
+                  <SortableTableHeader label="LN Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} />
+                  <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} />
+                  <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
+                  <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
+                  <SortableTableHeader label="Qty" columnKey="qty" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
+                  <SortableTableHeader label="Updated On" columnKey="modifiedDate" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
+                  <SortableTableHeader label="Actions" columnKey="actions" align="center" width="60px" isSortable={false} />
                 </TableRow>
               </TableHead>
               <TableBody>

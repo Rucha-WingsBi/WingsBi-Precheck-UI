@@ -41,6 +41,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { format } from "date-fns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { commonDataGridSx } from "../../components/tableStyles";
 import {
   DataGrid,
   type GridColDef,
@@ -2249,7 +2250,7 @@ const CommonTable: React.FC<CommonTableProps> = ({
             loading={isLoading}
             pageSizeOptions={[5, 10, 25, 50]}
             initialState={{
-              pagination: { paginationModel: { pageSize: 50 } },
+              pagination: { paginationModel: { pageSize: 10 } },
             }}
             filterModel={filters.filterModel}
             onFilterModelChange={(newModel) => filters.setFilterModel(newModel)}
@@ -2302,27 +2303,7 @@ const CommonTable: React.FC<CommonTableProps> = ({
                 </GridFooterContainer>
               ),
             }}
-            sx={{
-              border: "none",
-              "& .MuiDataGrid-columnHeaders": {
-                backgroundColor: "grey.100",
-                color: "text.primary",
-                fontWeight: 800,
-                fontSize: "0.875rem",
-              },
-              "& .MuiDataGrid-cell": {
-                fontSize: "0.875rem",
-              },
-              "& .MuiDataGrid-cell:focus": {
-                outline: "none !important",
-              },
-              "& .MuiDataGrid-cell:focus-within": {
-                outline: "none !important",
-              },
-              "& .MuiDataGrid-columnHeader:focus": {
-                outline: "none !important",
-              },
-            }}
+            sx={commonDataGridSx}
           />
         </Paper>
       )}

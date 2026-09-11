@@ -38,6 +38,9 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import api from "../../services/api";
 import debounce from "lodash/debounce";
 import { EmptyState } from "../../components/EmptyState";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
@@ -569,6 +572,35 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       .filter((parent) => parent.isActive !== false);
   }, [searchResults]);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedParents = useMemo(() => {
+    if (!sortColumn) return parents;
+    return [...parents].sort((a: any, b: any) => {
+      let aVal = a[sortColumn] ?? "";
+      let bVal = b[sortColumn] ?? "";
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [parents, sortColumn, sortDirection]);
+
 
   return (
     <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
@@ -799,79 +831,73 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#F8FAFC" }}>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", width: 60, textAlign: "center", py: 1.2 }}>
-                  SrNo
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", py: 1.2 }}>
-                  DrawingNumber
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", py: 1.2 }}>
+              <TableRow>
+                <SortableTableHeader
+                  label="Sr.No"
+                  sortKey="id"
+                  activeSortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <SortableTableHeader
+                  label="Drawing No."
+                  sortKey="drawingNumber"
+                  activeSortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="left"
+                />
+                <TableCell sx={commonTableHeaderStyle}>
                   Nomenclature
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", py: 1.2 }}>
-                  LnItemCode
+                <SortableTableHeader
+                  label="LN Item Code"
+                  sortKey="lnItemCode"
+                  activeSortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="left"
+                />
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 120 }}>
+                  Component Type
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", width: 120, textAlign: "center", py: 1.2 }}>
-                  ComponentType
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", width: 80, textAlign: "center", py: 1.2 }}>
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 80 }}>
                   Qty
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", width: 110, textAlign: "center", py: 1.2 }}>
-                  PositionNo
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 110 }}>
+                  Position No
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", width: 120, textAlign: "center", py: 1.2 }}>
-                  AssemblyNo
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 120 }}>
+                  Assembly No
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", color: "#475467", textTransform: "none", width: 80, textAlign: "center", py: 1.2 }}>
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 80 }}>
                   Actions
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {parents.length > 0 ? (
-                parents.map((parent: any, idx: number) => (
+              {sortedParents.length > 0 ? (
+                sortedParents.map((parent: any, idx: number) => (
                   <TableRow
                     key={idx}
                     hover
-                    sx={{
-                      height: 28,
-                      "& > *": { borderBottom: "1px solid", borderColor: "grey.100", py: 0.15, px: 0.75 },
-                      "&:hover": { backgroundColor: "grey.50" },
-                    }}
+                    sx={commonTableRowStyle}
                   >
-                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", fontWeight: 600 }}>
+                    <TableCell sx={{ textAlign: "center" }}>
                       {idx + 1}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: "text.primary", fontSize: "0.8rem" }}>
+                    <TableCell sx={{ fontWeight: 600 }}>
                       {parent.drawingNumber}
                     </TableCell>
-                    <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
+                    <TableCell>
                       {parent.nomenclature}
                     </TableCell>
-                    <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
+                    <TableCell>
                       {parent.lnItemCode}
                     </TableCell>
-                    <TableCell sx={{ textAlign: "center" }}>
-                      {parent.componentType && parent.componentType !== "N/A" ? (
-                        <Chip
-                          label={parent.componentType}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: "0.7rem",
-                            fontWeight: 600,
-                            backgroundColor: "grey.100",
-                            color: "text.secondary",
-                            borderRadius: "4px",
-                          }}
-                        />
-                      ) : (
-                        <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
-                          N/A
-                        </Typography>
-                      )}
+                    <TableCell align="center">
+                      <ComponentTypeChip type={parent.componentType} />
                     </TableCell>
                     <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
                       {parent.qty}

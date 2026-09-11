@@ -96,8 +96,8 @@ const Main = styled("main")(({ theme }) => ({
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: theme.zIndex.drawer + 2,
-  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
-  boxShadow: "0 4px 15px rgba(107, 40, 138, 0.25)",
+  background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
+  boxShadow: "0 4px 15px rgba(109, 42, 143, 0.25)",
   [theme.breakpoints.up("lg")]: {
     paddingLeft: 0,
   },
@@ -138,7 +138,7 @@ const LogoBox = styled(Box, {
   alignItems: "center",
   padding: theme.spacing(0, 1),
   minHeight: 64,
-  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+  background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
   color: "white",
   cursor: "pointer",
   justifyContent: open ? "space-between" : "center",
@@ -147,7 +147,7 @@ const LogoBox = styled(Box, {
     duration: theme.transitions.duration.enteringScreen,
   }),
   "&:hover": {
-    background: "linear-gradient(90deg, #4A1964 0%, #9D1352 100%)",
+    background: "linear-gradient(90deg, #571F73 0%, #9D1352 100%)",
   },
 }));
 
@@ -581,11 +581,11 @@ export default function Layout() {
                     borderRadius: 2,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      backgroundColor: "rgba(107, 40, 138, 0.08)",
+                      backgroundColor: "rgba(109, 42, 143, 0.08)",
                       transform: "translateX(4px)",
                     },
                     backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(107, 40, 138, 0.12)"
+                      ? "rgba(109, 42, 143, 0.12)"
                       : "transparent",
                   }}
                 >
@@ -595,7 +595,7 @@ export default function Layout() {
                       mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
                       justifyContent: "center",
                       color: location.pathname.startsWith(item.path)
-                        ? "#6B288A"
+                        ? "#6D2A8F"
                         : "text.secondary",
                     }}
                   >
@@ -613,7 +613,7 @@ export default function Layout() {
                           ? 600
                           : 500,
                         color: location.pathname.startsWith(item.path)
-                          ? "#6B288A"
+                          ? "#6D2A8F"
                           : "text.primary",
                       },
                     }}
@@ -656,12 +656,12 @@ export default function Layout() {
                         borderRadius: 2,
                         transition: "all 0.2s ease",
                         "&:hover": {
-                          backgroundColor: "rgba(107, 40, 138, 0.05)",
+                          backgroundColor: "rgba(109, 42, 143, 0.05)",
                           transform: "translateX(4px)",
                         },
                         backgroundColor:
                           location.pathname === subItem.path
-                            ? "rgba(107, 40, 138, 0.1)"
+                            ? "rgba(109, 42, 143, 0.1)"
                             : "transparent",
                       }}
                     >
@@ -670,7 +670,7 @@ export default function Layout() {
                           minWidth: 32,
                           color:
                             location.pathname === subItem.path
-                              ? "#6B288A"
+                              ? "#6D2A8F"
                               : "text.secondary",
                         }}
                       >
@@ -685,7 +685,7 @@ export default function Layout() {
                               location.pathname === subItem.path ? 600 : 400,
                             color:
                               location.pathname === subItem.path
-                                ? "#6B288A"
+                                ? "#6D2A8F"
                                 : "text.secondary",
                           },
                         }}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
@@ -82,7 +82,7 @@ export default function EditIRMSN() {
 
   const [poSearchText, setPOSearchText] = useState("");
   const debouncedPOSearch = useDebounce(poSearchText, 500);
-  const { data: poNumbers = [] } = usePONumbers(debouncedPOSearch);
+  const { data: poNumbers = [], isLoading: isPOLoading } = usePONumbers(debouncedPOSearch);
 
   const stages = isIR ? irStages : msnStages;
 
@@ -104,15 +104,20 @@ export default function EditIRMSN() {
   const [selectedDrawing, setSelectedDrawing] = useState<any>(null);
   const [selectedStage, setSelectedStage] = useState<any>(null);
   const [selectedPO, setSelectedPO] = useState<any>(null);
+  const isInitialized = useRef(false);
 
-  // Initialize selections from data
+  // Initialize selections from data once on mount / master data ready
   useEffect(() => {
-    if (initialData) {
+    if (initialData && !isInitialized.current) {
       console.log("EditIRMSN initialData:", initialData);
 
       const getVal = (key: string) =>
         initialData[key] ||
         initialData[key.charAt(0).toUpperCase() + key.slice(1)];
+
+      let drawingDone = false;
+      let stageDone = false;
+      let poDone = false;
 
       // 1. Set Drawing
       const drawingId = getVal("drawingNumberId");
@@ -145,16 +150,22 @@ export default function EditIRMSN() {
             drawingName,
           });
         }
+        drawingDone = true;
       }
 
       // 2. Set Stage
       const stageName = getVal("stage");
-      if (stageName && stages.length > 0) {
-        const match = stages.find((s: { stage: any }) => s.stage === stageName);
-        if (match) {
-          setSelectedStage(match);
-          setValue("stage", match.stage);
+      if (stageName) {
+        if (stages.length > 0) {
+          const match = stages.find((s: { stage: any }) => s.stage === stageName);
+          if (match) {
+            setSelectedStage(match);
+            setValue("stage", match.stage);
+          }
+          stageDone = true;
         }
+      } else {
+        stageDone = true;
       }
 
       // 3. Set PO Number
@@ -171,6 +182,9 @@ export default function EditIRMSN() {
           });
         }
         setValue("productionOrderNumber", poNum);
+        poDone = true;
+      } else {
+        poDone = true;
       }
 
       // 4. Set other fields explicitly
@@ -188,6 +202,10 @@ export default function EditIRMSN() {
 
       const opNum = getVal("operationNumber");
       if (opNum) setValue("operationNumber", opNum);
+
+      if (drawingDone && stageDone && poDone) {
+        isInitialized.current = true;
+      }
     }
   }, [initialData, allDrawingNumbers, stages, poNumbers, setValue]);
 
@@ -396,7 +414,13 @@ export default function EditIRMSN() {
               <Autocomplete
                 size="small"
                 options={allDrawingNumbers}
-                getOptionLabel={(option: any) => option.drawingNumber || ""}
+                isOptionEqualToValue={(option: any, value: any) =>
+                  (option?.id && value?.id && option.id === value.id) ||
+                  option?.drawingNumber === value?.drawingNumber
+                }
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" ? option : option?.drawingNumber || ""
+                }
                 value={selectedDrawing}
                 loading={isDrgLoading}
                 onChange={(_, newValue) => {
@@ -477,10 +501,19 @@ export default function EditIRMSN() {
               <Autocomplete
                 size="small"
                 options={poNumbers}
-                getOptionLabel={(option: any) =>
-                  option.productionOrderNumber || ""
+                loading={isPOLoading}
+                isOptionEqualToValue={(option: any, value: any) =>
+                  option?.productionOrderNumber === value?.productionOrderNumber ||
+                  (option?.id && value?.id && option.id === value.id)
                 }
-                onInputChange={(_, value) => setPOSearchText(value)}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" ? option : option?.productionOrderNumber || ""
+                }
+                onInputChange={(_, value, reason) => {
+                  if (reason === "input" || reason === "clear") {
+                    setPOSearchText(value);
+                  }
+                }}
                 value={selectedPO}
                 onChange={(_, newValue: ProductionOrderMaster | null) => {
                   setSelectedPO(newValue);
@@ -508,7 +541,20 @@ export default function EditIRMSN() {
                   }
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="PO Number" fullWidth />
+                  <TextField
+                    {...params}
+                    label="PO Number"
+                    fullWidth
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {isPOLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
                 )}
               />
             </Grid>
@@ -544,8 +590,12 @@ export default function EditIRMSN() {
                   <Autocomplete
                     size="small"
                     options={stages}
+                    isOptionEqualToValue={(option: any, value: any) =>
+                      (option?.id && value?.id && option.id === value.id) ||
+                      option?.stage === value?.stage
+                    }
                     getOptionLabel={(option: any) =>
-                      typeof option === "string" ? option : option.stage || ""
+                      typeof option === "string" ? option : option?.stage || ""
                     }
                     value={selectedStage}
                     onChange={(_, newValue) => {

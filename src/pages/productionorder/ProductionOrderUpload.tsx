@@ -201,7 +201,7 @@ const RowActionsMenu: React.FC<{
 
   if (isConfirming) {
     return (
-      <Box sx={{ display: "flex", gap: 0.5 }}>
+      <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
         <Tooltip title="Confirm Delete">
           <IconButton
             size="small"
@@ -231,7 +231,7 @@ const RowActionsMenu: React.FC<{
   }
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
       <IconButton
         size="small"
         onClick={handleOpen}
@@ -522,12 +522,12 @@ const ProductionOrderUpload: React.FC = () => {
 
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 20,
+    pageSize: 10,
   });
 
   const [previewPaginationModel, setPreviewPaginationModel] = useState({
     page: 0,
-    pageSize: 50,
+    pageSize: 10,
   });
 
   // Handle automatic reload if coming from edit success
@@ -1276,7 +1276,7 @@ const ProductionOrderUpload: React.FC = () => {
         let chipColor = "#B42318";
         if (status === 4) {
           chipBg = "#F4EBFF";
-          chipColor = "#6B288A";
+          chipColor = "#6D2A8F";
         } else if (status === 3) {
           chipBg = "#ECFDF3";
           chipColor = "#027A48";
@@ -1667,7 +1667,7 @@ const ProductionOrderUpload: React.FC = () => {
                 paginationModel={previewPaginationModel}
                 onPaginationModelChange={setPreviewPaginationModel}
                 pageSizeOptions={[10, 25, 50, 100]}
-                density="compact"
+                rowHeight={42}
                 disableColumnFilter
                 disableColumnMenu
                 disableColumnSelector
@@ -1696,6 +1696,10 @@ const ProductionOrderUpload: React.FC = () => {
                     border: "2px solid #F2F4F7 !important",
                     "&:hover": { backgroundColor: "#667085 !important" },
                   },
+                  "& .MuiDataGrid-row": {
+                    minHeight: "42px !important",
+                    maxHeight: "42px !important",
+                  },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",
                     color: "#475467",
@@ -1706,10 +1710,24 @@ const ProductionOrderUpload: React.FC = () => {
                     top: 0,
                     zIndex: 2,
                   },
+                  "& .MuiDataGrid-columnHeader": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitleContainer": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
                   "& .MuiDataGrid-cell": {
                     fontSize: "0.85rem",
                     color: "#344054",
                     borderBottom: "1px solid #F2F4F7",
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-cellContent": {
+                    display: "flex !important",
+                    alignItems: "center !important",
                   },
                 }}
               />
@@ -1736,7 +1754,7 @@ const ProductionOrderUpload: React.FC = () => {
             <HistoryStatCard
               title="Total orders"
               count={totalOrdersCount}
-              indicatorColor="#6B288A"
+              indicatorColor="#6D2A8F"
               subtext="All Orders"
             />
             <HistoryStatCard
@@ -1999,7 +2017,7 @@ const ProductionOrderUpload: React.FC = () => {
                 disableColumnFilter
                 disableColumnMenu
                 disableColumnSelector
-                density="compact"
+                rowHeight={42}
                 disableRowSelectionOnClick
                 getRowId={(row) => row.id || row.sr}
                 hideFooter
@@ -2028,6 +2046,10 @@ const ProductionOrderUpload: React.FC = () => {
                     border: "2px solid #F2F4F7 !important",
                     "&:hover": { backgroundColor: "#667085 !important" },
                   },
+                  "& .MuiDataGrid-row": {
+                    minHeight: "42px !important",
+                    maxHeight: "42px !important",
+                  },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",
                     color: "#475467",
@@ -2038,10 +2060,24 @@ const ProductionOrderUpload: React.FC = () => {
                     top: 0,
                     zIndex: 2,
                   },
+                  "& .MuiDataGrid-columnHeader": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitleContainer": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
                   "& .MuiDataGrid-cell": {
                     fontSize: "0.85rem",
                     color: "#344054",
                     borderBottom: "1px solid #F2F4F7",
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-cellContent": {
+                    display: "flex !important",
+                    alignItems: "center !important",
                   },
                   "& .MuiDataGrid-cell:focus": { outline: "none !important" },
                   "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
