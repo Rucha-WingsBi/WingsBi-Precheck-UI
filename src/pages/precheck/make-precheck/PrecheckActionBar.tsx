@@ -270,23 +270,19 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
         <Box>
           <Button
             variant="outlined"
+            size="small"
             onClick={handleMoreMenuOpen}
-            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: "1.125rem", color: "#374151" }} />}
+            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: "1.125rem", color: "text.secondary" }} />}
             sx={{
-              borderRadius: "8px",
-              borderColor: "#D1D5DB",
-              color: "#111827",
-              backgroundColor: "#FFFFFF",
+              height: 34,
+              borderRadius: "6px",
+              borderColor: "grey.300",
+              color: "text.secondary",
               textTransform: "none",
               fontWeight: 600,
-              fontSize: "0.875rem",
-              height: 38,
-              px: 2,
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-              "&:hover": {
-                borderColor: "#9CA3AF",
-                backgroundColor: "#F9FAFB",
-              },
+              fontSize: "0.8rem",
+              backgroundColor: "background.paper",
+              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
             }}
           >
             More

@@ -237,7 +237,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
           <OpenInNewIcon sx={{ fontSize: 13, flexShrink: 0 }} />
           <span>Open in Components</span>
         </Button>
-        <Button
+        {/* <Button
           variant="outlined"
           size="small"
           onClick={() =>
@@ -266,7 +266,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
         >
           <PlayIcon sx={{ fontSize: 13, flexShrink: 0 }} />
           <span>Run Precheck</span>
-        </Button>
+        </Button> */}
       </Stack>
     </Paper>
   );

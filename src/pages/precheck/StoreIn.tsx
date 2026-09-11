@@ -17,6 +17,7 @@ import {
   Collapse,
   Chip,
   Alert,
+  Snackbar,
   CircularProgress,
   Button,
   Dialog,
@@ -150,63 +151,6 @@ const StoreIn: React.FC = () => {
   const isDropdownFilterSelected = selectedSeries.length > 0 || !!selectedStatus || !!fromDate || !!toDate || !!filterDate;
   const hasAnyFilter = searchTerm.trim().length > 0 || isDropdownFilterSelected;
 
-  // Filtered Store In List
-  const filteredStoreInList = useMemo(() => {
-    let result = storeInList;
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      result = result.filter(
-        (row) =>
-          (row.productionOrderNumber && row.productionOrderNumber.toLowerCase().includes(term)) ||
-          (row.drawingNumber && row.drawingNumber.toLowerCase().includes(term)) ||
-          (row.idNumber && row.idNumber.toLowerCase().includes(term)) ||
-          (row.projectNumber && row.projectNumber.toLowerCase().includes(term)) ||
-          (row.createdByName && row.createdByName.toLowerCase().includes(term))
-      );
-    }
-
-    if (selectedSeries.length > 0) {
-      result = result.filter((row) =>
-        selectedSeries.some(
-          (s) => String(s).toLowerCase() === String(row.productionSeries).toLowerCase()
-        )
-      );
-    }
-
-    if (selectedStatus) {
-      result = result.filter(
-        (row) => row.precheckStatus?.toLowerCase() === selectedStatus.toLowerCase()
-      );
-    }
-
-    if (dateFilterMode === "single" && filterDate) {
-      const targetStr = new Date(filterDate).toDateString();
-      result = result.filter((row) => {
-        if (!row.createdDate) return false;
-        return new Date(row.createdDate).toDateString() === targetStr;
-      });
-    } else if (dateFilterMode === "range" && fromDate && toDate) {
-      const start = new Date(fromDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(toDate);
-      end.setHours(23, 59, 59, 999);
-      result = result.filter((row) => {
-        if (!row.createdDate) return false;
-        const d = new Date(row.createdDate);
-        return d >= start && d <= end;
-      });
-    }
-
-    return result;
-  }, [storeInList, searchTerm, selectedSeries, selectedStatus, dateFilterMode, filterDate, fromDate, toDate]);
-
-  // Paginated Store In List
-  const paginatedStoreInList = useMemo(() => {
-    const start = page * rowsPerPage;
-    return filteredStoreInList.slice(start, start + rowsPerPage);
-  }, [filteredStoreInList, page, rowsPerPage]);
-
   // Active Filter Chips for Awaiting Precheck Table
   const activeChips = useMemo(() => {
     const chips: Array<{ id: string; label: string; onRemove: () => void }> = [];
@@ -215,34 +159,56 @@ const StoreIn: React.FC = () => {
       chips.push({
         id: "search",
         label: `Search: "${searchTerm.trim()}"`,
-        onRemove: () => setSearchTerm(""),
+        onRemove: () => {
+          setSearchTerm("");
+          setPage(0);
+          fetchStoreInData({ searchQuery: "", pageNumber: 0 });
+        },
       });
     }
     selectedSeries.forEach((ser) => {
       chips.push({
         id: `series_${ser}`,
         label: `Series: ${ser}`,
-        onRemove: () => setSelectedSeries((prev) => prev.filter((s) => s !== ser)),
+        onRemove: () => {
+          const updated = selectedSeries.filter((s) => s !== ser);
+          setSelectedSeries(updated);
+          setPage(0);
+          fetchStoreInData({ prodSeries: updated, pageNumber: 0 });
+        },
       });
     });
     if (selectedStatus) {
       chips.push({
         id: "status",
         label: `Status: ${selectedStatus}`,
-        onRemove: () => setSelectedStatus(""),
+        onRemove: () => {
+          setSelectedStatus("");
+          setPage(0);
+          fetchStoreInData({ status: "", pageNumber: 0 });
+        },
       });
     }
     if (fromDate && toDate) {
       chips.push({
         id: "dateRange",
         label: `Created: ${format(fromDate, "dd/MM/yyyy")} - ${format(toDate, "dd/MM/yyyy")}`,
-        onRemove: () => { setFromDate(null); setToDate(null); },
+        onRemove: () => {
+          setFromDate(null);
+          setToDate(null);
+          setPage(0);
+          fetchStoreInData({ fromDate: null, toDate: null, pageNumber: 0 });
+        },
       });
     } else if (filterDate) {
       chips.push({
         id: "singleDate",
         label: `Created: ${format(filterDate, "dd/MM/yyyy")}`,
-        onRemove: () => setFilterDate(null),
+        onRemove: () => {
+          setFilterDate(null);
+          setPage(0);
+          fetchStoreInData({ filterDate: null, pageNumber: 0 });
+        },
       });
     }
 
@@ -458,58 +424,150 @@ const StoreIn: React.FC = () => {
 
   const activeQrCode = qrCodeList[0]?.qrCodeNumber || "";
 
-  // Re-fetch store-in data when date filters or the active QR code changes
-  useEffect(() => {
-    if (!activeQrCode) return;
+  // Core function to fetch store-in data from API (/api/Precheck/GetStoreAvailablComponents)
+  const fetchStoreInData = useCallback(
+    (overrides?: {
+      searchQuery?: string;
+      prodSeries?: (string | number)[];
+      status?: string;
+      fromDate?: Date | null;
+      toDate?: Date | null;
+      filterDate?: Date | null;
+      pageNumber?: number;
+      pageSize?: number;
+    }) => {
+      const queryVal = overrides?.searchQuery !== undefined ? overrides.searchQuery : searchTerm;
+      const seriesVal = overrides?.prodSeries !== undefined ? overrides.prodSeries : selectedSeries;
+      const statusVal = overrides?.status !== undefined ? overrides.status : selectedStatus;
+      const fromDateVal = overrides?.fromDate !== undefined ? overrides.fromDate : fromDate;
+      const toDateVal = overrides?.toDate !== undefined ? overrides.toDate : toDate;
+      const filterDateVal = overrides?.filterDate !== undefined ? overrides.filterDate : filterDate;
+      const pageVal = overrides?.pageNumber !== undefined ? overrides.pageNumber : page;
+      const sizeVal = overrides?.pageSize !== undefined ? overrides.pageSize : rowsPerPage;
 
-    const reqFromDate = fromDate ? format(fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : undefined;
-    const reqToDate = toDate ? format(toDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") : undefined;
-    const seriesArray = selectedSeries.map((s) => String(s));
+      let reqFromDate: string | undefined = undefined;
+      let reqToDate: string | undefined = undefined;
 
-    setIsLoading(true);
-    dispatch(
-      getStoreInData({
-        qrCode: activeQrCode,
-        fromDate: reqFromDate,
-        toDate: reqToDate,
-        searchQuery: searchTerm.trim(),
-        prodSeries: seriesArray,
-        status: selectedStatus,
-        pageNumber: page + 1,
-        pageSize: rowsPerPage,
-      })
-    )
-      .unwrap()
-      .then((storeInResult) => {
-        const rawList = Array.isArray(storeInResult)
-          ? storeInResult
-          : storeInResult?.data || storeInResult?.items || [];
-        if (rawList && rawList.length > 0) {
-          setStoreInList(rawList);
-          setAlertMessage({
-            message: `QR Code ${activeQrCode} processed successfully. ${rawList.length} awaiting pending precheck record(s) found.`,
-            type: "success",
-          });
-        } else {
-          setStoreInList([]);
-          setAlertMessage({
-            message: `QR Code ${activeQrCode} processed successfully. No awaiting pending precheck found for QR Code ${activeQrCode}.`,
-            type: "info",
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching store-in data:", error);
+      if (dateFilterMode === "single" && filterDateVal) {
+        reqFromDate = format(filterDateVal, "yyyy-MM-dd'T'00:00:00.000'Z'");
+        reqToDate = format(filterDateVal, "yyyy-MM-dd'T'23:59:59.999'Z'");
+      } else if (dateFilterMode === "range" && fromDateVal && toDateVal) {
+        reqFromDate = format(fromDateVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        reqToDate = format(toDateVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+      }
+
+      const seriesArray = seriesVal.map((s) => String(s));
+
+      const hasSearchOrFilter =
+        queryVal.trim().length > 0 ||
+        seriesArray.length > 0 ||
+        !!statusVal ||
+        !!fromDateVal ||
+        !!toDateVal ||
+        !!filterDateVal;
+
+      // Do not trigger API call with empty QR code if no search or filter criteria are applied
+      if (!activeQrCode && !hasSearchOrFilter) {
         setStoreInList([]);
-        setAlertMessage({
-          message: `Error fetching store-in data: ${error.message || error}`,
-          type: "error",
+        return;
+      }
+
+      setIsLoading(true);
+      dispatch(
+        getStoreInData({
+          qrCode: activeQrCode,
+          fromDate: reqFromDate,
+          toDate: reqToDate,
+          searchQuery: queryVal.trim(),
+          prodSeries: seriesArray,
+          status: statusVal,
+          pageNumber: pageVal + 1,
+          pageSize: sizeVal,
+        })
+      )
+        .unwrap()
+        .then((storeInResult) => {
+          const rawList = Array.isArray(storeInResult)
+            ? storeInResult
+            : storeInResult?.data || storeInResult?.items || [];
+          if (rawList && rawList.length > 0) {
+            setStoreInList(rawList);
+            if (activeQrCode) {
+              setAlertMessage({
+                message: `QR Code ${activeQrCode} processed successfully. ${rawList.length} awaiting pending precheck record(s) found.`,
+                type: "success",
+              });
+            }
+          } else {
+            setStoreInList([]);
+            if (activeQrCode) {
+              setAlertMessage({
+                message: `QR Code ${activeQrCode} processed successfully. No awaiting pending precheck found for QR Code ${activeQrCode}.`,
+                type: "info",
+              });
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching store-in data:", error);
+          setStoreInList([]);
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [fromDate, toDate, activeQrCode, dispatch]);
+    },
+    [
+      activeQrCode,
+      searchTerm,
+      selectedSeries,
+      selectedStatus,
+      fromDate,
+      toDate,
+      filterDate,
+      dateFilterMode,
+      page,
+      rowsPerPage,
+      dispatch,
+    ]
+  );
+
+  // Initial fetch when active QR code changes or component mounts
+  useEffect(() => {
+    fetchStoreInData();
+  }, [activeQrCode]);
+
+  // Direct API call when typing in Search bar (debounced 400ms)
+  const isSearchMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isSearchMountedRef.current) {
+      isSearchMountedRef.current = true;
+      return;
+    }
+    const timer = setTimeout(() => {
+      setPage(0);
+      fetchStoreInData({ searchQuery: searchTerm, pageNumber: 0 });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedSeries([]);
+    setSelectedStatus("");
+    setFromDate(null);
+    setToDate(null);
+    setFilterDate(null);
+    setPage(0);
+    fetchStoreInData({
+      searchQuery: "",
+      prodSeries: [],
+      status: "",
+      fromDate: null,
+      toDate: null,
+      filterDate: null,
+      pageNumber: 0,
+    });
+  };
 
   const submitQRCode = async (qrCode: string) => {
     try {
@@ -575,15 +633,6 @@ const StoreIn: React.FC = () => {
     }
   };
 
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setSelectedSeries([]);
-    setSelectedStatus("");
-    setFromDate(null);
-    setToDate(null);
-    setFilterDate(null);
-    setPage(0);
-  };
 
   return (
     <Box
@@ -644,16 +693,21 @@ const StoreIn: React.FC = () => {
         </Button> */}
       </Stack>
 
-      {/* Alert Message */}
-      {alertMessage.message && (
+      {/* Alert Message Toast */}
+      <Snackbar
+        open={Boolean(alertMessage.message)}
+        autoHideDuration={4000}
+        onClose={() => setAlertMessage({ message: "", type: "info" })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
         <Alert
           severity={alertMessage.type}
-          sx={{ mb: 2, borderRadius: "8px" }}
+          sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}
           onClose={() => setAlertMessage({ message: "", type: "info" })}
         >
           {alertMessage.message}
         </Alert>
-      )}
+      </Snackbar>
 
       {/* 2. Hero Scan QR Panel */}
       <Paper
@@ -1048,7 +1102,7 @@ const StoreIn: React.FC = () => {
               variant="caption"
               sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
             >
-              {filteredStoreInList.length} orders
+              {storeInList.length} orders
             </Typography>
           </Box>
         </Box>
@@ -1176,7 +1230,10 @@ const StoreIn: React.FC = () => {
             <Button
               size="small"
               variant="contained"
-              onClick={() => setPage(0)}
+              onClick={() => {
+                setPage(0);
+                fetchStoreInData({ pageNumber: 0 });
+              }}
               disabled={!isDropdownFilterSelected || isLoading}
               sx={{
                 backgroundColor: "#6B288A",
@@ -1312,8 +1369,8 @@ const StoreIn: React.FC = () => {
                     <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
-              ) : paginatedStoreInList.length > 0 ? (
-                paginatedStoreInList.map((row, index) => (
+              ) : storeInList.length > 0 ? (
+                storeInList.map((row, index) => (
                   <TableRow
                     key={index}
                     hover
@@ -1394,13 +1451,17 @@ const StoreIn: React.FC = () => {
         </TableContainer>
 
         <CustomPagination
-          totalCount={filteredStoreInList.length || 4}
+          totalCount={storeInList.length}
           page={page}
           pageSize={rowsPerPage}
-          onPageChange={setPage}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            fetchStoreInData({ pageNumber: newPage });
+          }}
           onPageSizeChange={(newRpp) => {
             setRowsPerPage(newRpp);
             setPage(0);
+            fetchStoreInData({ pageNumber: 0, pageSize: newRpp });
           }}
           pageSizeOptions={[10, 25, 50, 100]}
         />

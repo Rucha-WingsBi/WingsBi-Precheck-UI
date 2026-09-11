@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store/store";
 import { useForm } from "react-hook-form";
 import debounce from "lodash/debounce";
@@ -17,11 +18,13 @@ import {
   CircularProgress,
   Alert,
   IconButton,
+  Button,
 } from "@mui/material";
 import {
   TableChart as TableIcon,
   KeyboardArrowDown,
   KeyboardArrowRight,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import {
   getBomDetails,
@@ -44,6 +47,7 @@ interface AssemblyOption {
 
 const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
   // Redux state
   const {
@@ -321,18 +325,55 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
               BOM Details
             </Typography>
           </Box>
-          {bomData && bomData.length > 0 && (
-            <Chip
-              label={`${bomData.length} items`}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            {bomData && bomData.length > 0 && (
+              <Chip
+                label={`${bomData.length} items`}
+                size="small"
+                sx={{
+                  backgroundColor: "#ECFDF3",
+                  color: "#027A48",
+                  fontWeight: 600,
+                  fontSize: "0.75rem",
+                }}
+              />
+            )}
+            <Button
+              variant="contained"
               size="small"
-              sx={{
-                backgroundColor: "#ECFDF3",
-                color: "#027A48",
-                fontWeight: 600,
-                fontSize: "0.75rem",
+              startIcon={<EditIcon sx={{ fontSize: "0.95rem" }} />}
+              onClick={() => {
+                const activeDwg =
+                  selectedAssembly?.drawingNumber ||
+                  selectedAssemblyNumber ||
+                  assemblyInputValue ||
+                  (bomData && bomData.length > 0
+                    ? bomData[0]?.parentDrawingNumber ||
+                      bomData[0]?.assemblyNumber ||
+                      bomData[0]?.childDrawingNumber ||
+                      ""
+                    : "");
+                navigate("/components/assembly", {
+                  state: {
+                    drawingNumber: activeDwg,
+                  },
+                });
               }}
-            />
-          )}
+              sx={{
+                height: 32,
+                borderRadius: "6px",
+                backgroundColor: "primary.main",
+                color: "#ffffff",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
+            >
+              Edit BOM
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ position: "relative" }}>
