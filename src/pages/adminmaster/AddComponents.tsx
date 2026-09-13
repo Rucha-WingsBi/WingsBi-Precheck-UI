@@ -34,6 +34,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import { useQueryClient } from "@tanstack/react-query";
 import { commonDataGridSx } from "../../components/tableStyles";
+import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUsers,
   useUnits,
@@ -175,6 +176,8 @@ function GenericTable<T extends { id: number }>({
     <Box sx={{ width: "100%" }}>
       <DataGrid
         autoHeight
+        rowHeight={42}
+        columnHeaderHeight={40}
         rows={rows}
         columns={columns}
         loading={loading}
@@ -189,6 +192,9 @@ function GenericTable<T extends { id: number }>({
         disableColumnMenu
         disableColumnFilter
         disableColumnSelector
+        slots={{
+          pagination: DataGridCustomPagination,
+        }}
         sx={commonDataGridSx}
       />
     </Box>
@@ -1424,8 +1430,6 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
   const { data: productionSeries = [] } = useProductionSeries();
   const { data: signatures = [] } = useUsersWithSignatures();
 
-  const [searchQuery, setSearchQuery] = useState("");
-
   const activeUnitsCount = units.filter((u: any) => u.isActive === 1 || u.isActive === true).length;
   const activeStagesCount = stages.filter((s: any) => s.isActive === 1 || s.isActive === true).length;
   const activeShapesCount = shapes.filter((s: any) => s.isActive === 1 || s.isActive === true).length;
@@ -1568,36 +1572,13 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
             p: 1.5,
             px: 2,
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
             alignItems: "center",
             flexWrap: "wrap",
             gap: 2,
             borderBottom: "1px solid #EAECF0",
           }}
         >
-          <TextField
-            placeholder={`Search ${TAB_LABELS[activeTab]?.toLowerCase() || "items"}...`}
-            size="small"
-            variant="outlined"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{
-              width: { xs: "100%", sm: 320 },
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "8px",
-                fontSize: "0.82rem",
-                height: 38,
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#6D2A8F" },
-              },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
-                </InputAdornment>
-              ),
-            }}
-          />
 
           <Button
             id="btn-add-tab-item"

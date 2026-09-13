@@ -93,7 +93,7 @@ const TreeRow: React.FC<TreeRowProps> = React.memo(({
             ? `rgba(37, 99, 235, 0.02)`
             : "inherit",
         transition: "background-color 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms",
-        height: "100%",
+        height: 42,
         display: "table-row",
         verticalAlign: "middle",
         outline: 0,
@@ -123,6 +123,7 @@ const TreeRow: React.FC<TreeRowProps> = React.memo(({
               color: '#334155',
               textAlign: column.align || "left",
               verticalAlign: "middle",
+              height: 42,
             }}
           >
             {isExpander && (
@@ -132,9 +133,12 @@ const TreeRow: React.FC<TreeRowProps> = React.memo(({
                     size="small"
                     onClick={handleToggleClick}
                     sx={{
-                      p: 0.5,
+                      p: 0,
+                      width: 24,
+                      height: 24,
                       color: theme.palette.primary.main,
                       flexShrink: 0,
+                      "& .MuiSvgIcon-root": { fontSize: 20 },
                     }}
                   >
                     {node.isExpanded ? (
@@ -421,157 +425,144 @@ export const TreeTable = React.forwardRef<any, TreeTableProps>(({
   }
 
   return (
-    <Box sx={{ width: "100%", overflowX: "auto" }}>
+    <Box sx={{ width: "100%", overflow: "hidden" }}>
       {/* Table Container */}
       <TableContainer
+        className="scroll-hover"
         sx={{
           width: "100%",
-          minWidth: totalWidth,
-          maxHeight: height,
+          maxHeight: height || "calc(100vh - 280px)",
           overflowY: enableVirtualization ? "hidden" : "auto",
           overflowX: "auto",
-          "&::-webkit-scrollbar": {
-            width: 6,
-            height: 6,
-          },
-          "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f5f9",
-            borderRadius: 3,
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#cbd5e1",
-            borderRadius: 3,
-            "&:hover": {
-              backgroundColor: "#94a3b8",
-            },
-          },
         }}
       >
-        <Table stickyHeader size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
-          <TableHead>
-            <TableRow>
-              {effectiveColumns.map((column, index) => {
-                const isExpanderCol = index === expanderIndex;
-                const colWidth = column.minWidth || 100;
-                return (
-                  <TableCell
-                    key={column.id}
-                    align={column.align || "left"}
-                    onMouseDown={(e) => handleResizeStart(e, column.id)}
-                    sx={{
-                      width: colWidth,
-                      minWidth: colWidth,
-                      fontWeight: 700,
-                      background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
-                      borderBottom: "2px solid #cbd5e1",
-                      boxShadow: "0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                      borderRadius: "0 !important",
-                      borderTopLeftRadius: "0 !important",
-                      borderTopRightRadius: "0 !important",
-                      borderBottomLeftRadius: "0 !important",
-                      borderBottomRightRadius: "0 !important",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      boxSizing: "border-box",
-                      paddingLeft: isExpanderCol ? "28px" : "16px",
-                      paddingRight: "16px",
-                      paddingTop: "11px",
-                      paddingBottom: "11px",
-                      position: "relative",
-                      cursor: "col-resize",
-                      userSelect: "none",
-                      zIndex: 3,
-                      transition: "background-color 0.15s ease",
-                      "&:hover": {
-                        background: "#e2e8f0",
-                      },
-                      "&:hover .col-resizer-line": {
-                        backgroundColor: "#6D2A8F",
-                        width: 3,
-                      },
-                      "&:first-of-type": {
-                        borderRadius: "0 !important",
-                      },
-                      "&:last-of-type": {
-                        borderRadius: "0 !important",
-                      },
-                    }}
-                  >
-                    <Tooltip title={`Click and drag to resize column`} arrow placement="top">
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: column.align === "center" ? "center" : column.align === "right" ? "flex-end" : "flex-start", width: "100%", pr: 0.5 }}>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: "0.75rem",
-                            color: "#334155",
-                            letterSpacing: "0.5px",
-                            textTransform: "none",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {column.label}
-                        </Typography>
-                      </Box>
-                    </Tooltip>
-                    {/* Visual Drag Divider Line */}
-                    <Box
-                      className="col-resizer-line"
+        <Box sx={{ minWidth: totalWidth, width: "100%" }}>
+          <Table stickyHeader size="small" sx={{ width: "100%", tableLayout: "fixed" }}>
+            <TableHead>
+              <TableRow>
+                {effectiveColumns.map((column, index) => {
+                  const isExpanderCol = index === expanderIndex;
+                  const colWidth = column.minWidth || 100;
+                  return (
+                    <TableCell
+                      key={column.id}
+                      align={column.align || "left"}
+                      onMouseDown={(e) => handleResizeStart(e, column.id)}
                       sx={{
-                        position: "absolute",
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 2,
-                        backgroundColor: "#cbd5e1",
-                        transition: "background-color 0.15s, width 0.15s",
-                        zIndex: 2,
+                        width: colWidth,
+                        minWidth: colWidth,
+                        fontWeight: 700,
+                        background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+                        borderBottom: "2px solid #cbd5e1",
+                        boxShadow: "0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                        borderRadius: "0 !important",
+                        borderTopLeftRadius: "0 !important",
+                        borderTopRightRadius: "0 !important",
+                        borderBottomLeftRadius: "0 !important",
+                        borderBottomRightRadius: "0 !important",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        boxSizing: "border-box",
+                        paddingLeft: isExpanderCol ? "28px" : "16px",
+                        paddingRight: "16px",
+                        paddingTop: "11px",
+                        paddingBottom: "11px",
+                        position: "relative",
+                        cursor: "col-resize",
+                        userSelect: "none",
+                        zIndex: 3,
+                        transition: "background-color 0.15s ease",
+                        "&:hover": {
+                          background: "#e2e8f0",
+                        },
+                        "&:hover .col-resizer-line": {
+                          backgroundColor: "#6D2A8F",
+                          width: 3,
+                        },
+                        "&:first-of-type": {
+                          borderRadius: "0 !important",
+                        },
+                        "&:last-of-type": {
+                          borderRadius: "0 !important",
+                        },
                       }}
-                    />
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          </TableHead>
-          {!enableVirtualization && (
-            <TableBody>
-              {flattenedData.map((node, index) => (
-                <TreeRow
-                  key={node.id}
-                  node={node}
-                  columns={effectiveColumns}
-                  onToggle={handleToggle}
-                  onRowClick={onRowClick}
-                  renderRowActions={renderRowActions}
-                  rowIndex={index}
-                />
-              ))}
-            </TableBody>
-          )}
-        </Table>
+                    >
+                      <Tooltip title={`Click and drag to resize column`} arrow placement="top">
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: column.align === "center" ? "center" : column.align === "right" ? "flex-end" : "flex-start", width: "100%", pr: 0.5 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 700,
+                              fontSize: "0.75rem",
+                              color: "#334155",
+                              letterSpacing: "0.5px",
+                              textTransform: "none",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {column.label}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                      {/* Visual Drag Divider Line */}
+                      <Box
+                        className="col-resizer-line"
+                        sx={{
+                          position: "absolute",
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 2,
+                          backgroundColor: "#cbd5e1",
+                          transition: "background-color 0.15s, width 0.15s",
+                          zIndex: 2,
+                        }}
+                      />
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            </TableHead>
+            {!enableVirtualization && (
+              <TableBody>
+                {flattenedData.map((node, index) => (
+                  <TreeRow
+                    key={node.id}
+                    node={node}
+                    columns={effectiveColumns}
+                    onToggle={handleToggle}
+                    onRowClick={onRowClick}
+                    renderRowActions={renderRowActions}
+                    rowIndex={index}
+                  />
+                ))}
+              </TableBody>
+            )}
+          </Table>
 
-        {enableVirtualization && (
-          <List
-            height={height - 56} // Subtract header height
-            width="100%"
-            itemCount={flattenedData.length}
-            itemSize={rowHeight}
-            overscanCount={15}
-            style={{ overflowX: "hidden" }}
-            itemData={{
-              nodes: flattenedData,
-              columns: effectiveColumns,
-              onToggle: handleToggle,
-              onRowClick,
-              renderRowActions,
-            }}
-          >
-            {VirtualizedTreeRow}
-          </List>
-        )}
+          {enableVirtualization && (
+            <List
+              height={height - 44}
+              width="100%"
+              itemCount={flattenedData.length}
+              itemSize={rowHeight}
+              overscanCount={15}
+              style={{ overflowX: "hidden", overflowY: "auto" }}
+              itemData={{
+                nodes: flattenedData,
+                columns: effectiveColumns,
+                onToggle: handleToggle,
+                onRowClick,
+                renderRowActions,
+              }}
+            >
+              {VirtualizedTreeRow}
+            </List>
+          )}
+        </Box>
       </TableContainer>
     </Box>
   );

@@ -339,6 +339,71 @@ let theme = createTheme({
     borderRadius: 8,
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        'html, body': {
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#D1D5DB transparent',
+        },
+        '::-webkit-scrollbar': {
+          width: '6px',
+          height: '6px',
+        },
+        '::-webkit-scrollbar-button': {
+          display: 'none !important',
+          width: '0px !important',
+          height: '0px !important',
+        },
+        '::-webkit-scrollbar-corner': {
+          backgroundColor: 'transparent',
+        },
+        '::-webkit-scrollbar-track': {
+          backgroundColor: 'transparent',
+        },
+        '::-webkit-scrollbar-thumb': {
+          backgroundColor: '#D1D5DB',
+          borderRadius: '4px',
+          transition: 'background-color 200ms ease-in-out',
+        },
+        '::-webkit-scrollbar-thumb:hover': {
+          backgroundColor: '#9CA3AF',
+        },
+        '.scroll-hover': {
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'transparent transparent',
+          transition: 'scrollbar-color 200ms ease-in-out',
+          '&::-webkit-scrollbar': {
+            width: '6px',
+            height: '6px',
+          },
+          '&::-webkit-scrollbar-button': {
+            display: 'none !important',
+            width: '0px !important',
+            height: '0px !important',
+          },
+          '&::-webkit-scrollbar-corner': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'transparent',
+            borderRadius: '4px',
+            transition: 'background-color 200ms ease-in-out',
+          },
+          '&:hover': {
+            scrollbarColor: '#D1D5DB transparent',
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#D1D5DB',
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              backgroundColor: '#9CA3AF',
+            },
+          },
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
@@ -566,6 +631,38 @@ let theme = createTheme({
           overflowX: 'auto',
           boxShadow: 'none',
           fontFamily: '"Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'transparent transparent',
+          transition: 'scrollbar-color 200ms ease-in-out',
+          '&::-webkit-scrollbar': {
+            width: '6px',
+            height: '6px',
+          },
+          '&::-webkit-scrollbar-button': {
+            display: 'none !important',
+            width: '0px !important',
+            height: '0px !important',
+          },
+          '&::-webkit-scrollbar-corner': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'transparent',
+            borderRadius: '4px',
+            transition: 'background-color 200ms ease-in-out',
+          },
+          '&:hover': {
+            scrollbarColor: '#D1D5DB transparent',
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#D1D5DB',
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              backgroundColor: '#9CA3AF',
+            },
+          },
         },
       },
     },
@@ -739,18 +836,35 @@ let theme = createTheme({
           },
           '& .MuiDataGrid-virtualScroller': {
             overflowX: 'auto !important',
-          },
-          '& ::-webkit-scrollbar': {
-            height: '8px',
-            width: '8px',
-          },
-          '& ::-webkit-scrollbar-track': {
-            backgroundColor: '#F4F4F6',
-          },
-          '& ::-webkit-scrollbar-thumb': {
-            backgroundColor: '#D1D5DB',
-            borderRadius: '4px',
-            '&:hover': { backgroundColor: '#9CA3AF' },
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            transition: 'all 200ms ease-in-out',
+            '&::-webkit-scrollbar': {
+              width: '0px',
+              height: '0px',
+              backgroundColor: 'transparent',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'transparent',
+              borderRadius: '4px',
+            },
+            '&:hover': {
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#D1D5DB transparent',
+              '&::-webkit-scrollbar': {
+                width: '6px',
+                height: '6px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#D1D5DB',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                backgroundColor: '#9CA3AF',
+              },
+            },
           },
         },
       },

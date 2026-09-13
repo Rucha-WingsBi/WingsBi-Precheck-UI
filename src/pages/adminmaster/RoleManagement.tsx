@@ -33,6 +33,7 @@ import {
 
 } from "@mui/icons-material";
 import { commonDataGridSx } from "../../components/tableStyles";
+import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUserRoles,
   useAddUserRole,
@@ -336,6 +337,8 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
       <Box sx={{ width: "100%" }}>
         <DataGrid
           autoHeight
+          rowHeight={42}
+          columnHeaderHeight={40}
           rows={rows}
           columns={columns}
           initialState={{
@@ -351,6 +354,9 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
           disableColumnMenu
           disableColumnFilter
           disableColumnSelector
+          slots={{
+            pagination: DataGridCustomPagination,
+          }}
           sx={commonDataGridSx}
         />
       </Box>
@@ -572,6 +578,8 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
       <Box sx={{ width: "100%" }}>
         <DataGrid
           autoHeight
+          rowHeight={42}
+          columnHeaderHeight={40}
           rows={activeDepartments}
           columns={columns}
           initialState={{
@@ -587,6 +595,9 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
           disableColumnMenu
           disableColumnFilter
           disableColumnSelector
+          slots={{
+            pagination: DataGridCustomPagination,
+          }}
           sx={commonDataGridSx}
         />
       </Box>

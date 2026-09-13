@@ -1417,7 +1417,7 @@ const ProductionOrderUpload: React.FC = () => {
     setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   };
 
-  // Construct active filter chips
+  // Construct active filter chips for selected filters
   const activeChips: FilterChipItem[] = React.useMemo(() => {
     const list: FilterChipItem[] = [];
 
@@ -1429,7 +1429,12 @@ const ProductionOrderUpload: React.FC = () => {
       });
     }
 
-    appliedStatusList.forEach((st: any) => {
+    const currentStatusList = draftStatusList.length > 0 ? draftStatusList : appliedStatusList;
+    const currentSeriesList = draftProductionSeries.length > 0 ? draftProductionSeries : appliedProductionSeries;
+    const currentFromDate = draftFromDate !== null ? draftFromDate : appliedFromDate;
+    const currentToDate = draftToDate !== null ? draftToDate : appliedToDate;
+
+    currentStatusList.forEach((st: any) => {
       const stVal = typeof st === "object" ? st.id : st;
       const matchOpt = statusOptions.find(
         (opt) => opt.id === Number(stVal) || opt.label.toLowerCase() === String(st).toLowerCase()
@@ -1439,7 +1444,7 @@ const ProductionOrderUpload: React.FC = () => {
         id: `status_${stVal}`,
         label: `Status: ${label || "All"}`,
         onRemove: () => {
-          const updated = appliedStatusList.filter((item: any) => {
+          const updated = currentStatusList.filter((item: any) => {
             const itemVal = typeof item === "object" ? item.id : item;
             return itemVal !== stVal && itemVal !== Number(stVal);
           });
@@ -1449,13 +1454,13 @@ const ProductionOrderUpload: React.FC = () => {
       });
     });
 
-    appliedProductionSeries.forEach((ser: any) => {
+    currentSeriesList.forEach((ser: any) => {
       const val = typeof ser === "object" ? ser.productionSeries || ser.id : ser;
       list.push({
         id: `series_${val}`,
         label: `Series: ${val}`,
         onRemove: () => {
-          const updated = appliedProductionSeries.filter((item: any) => {
+          const updated = currentSeriesList.filter((item: any) => {
             const itemVal = typeof item === "object" ? item.productionSeries || item.id : item;
             return itemVal !== val;
           });
@@ -1465,9 +1470,9 @@ const ProductionOrderUpload: React.FC = () => {
       });
     });
 
-    if (appliedFromDate || appliedToDate) {
-      const fromStr = appliedFromDate ? format(appliedFromDate, "dd/MM/yyyy") : "...";
-      const toStr = appliedToDate ? format(appliedToDate, "dd/MM/yyyy") : "...";
+    if (currentFromDate || currentToDate) {
+      const fromStr = currentFromDate ? format(currentFromDate, "dd/MM/yyyy") : "...";
+      const toStr = currentToDate ? format(currentToDate, "dd/MM/yyyy") : "...";
       list.push({
         id: "dateRange",
         label: `Created On: ${fromStr} – ${toStr}`,
@@ -1481,7 +1486,17 @@ const ProductionOrderUpload: React.FC = () => {
     }
 
     return list;
-  }, [searchQuery, appliedStatusList, appliedProductionSeries, appliedFromDate, appliedToDate]);
+  }, [
+    searchQuery,
+    draftStatusList,
+    appliedStatusList,
+    draftProductionSeries,
+    appliedProductionSeries,
+    draftFromDate,
+    appliedFromDate,
+    draftToDate,
+    appliedToDate,
+  ]);
 
   const totalOrdersCount = counts.totalCount || totalRowCount;
   const pendingCount = counts.pendingCount || 0;
@@ -1748,8 +1763,8 @@ const ProductionOrderUpload: React.FC = () => {
           {/* Stat Cards Row */}
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={1.25}
-            sx={{ mb: 1 }}
+            spacing={1}
+            sx={{ mb: 0.75 }}
           >
             <HistoryStatCard
               title="Total orders"
@@ -1792,7 +1807,7 @@ const ProductionOrderUpload: React.FC = () => {
             }}
           >
             {/* Top Filter Bar Section */}
-            <Box sx={{ p: 1.5, pb: 1, borderBottom: "1px solid #EAECF0" }}>
+            <Box sx={{ p: 1.25, pb: 0.75, borderBottom: "1px solid #EAECF0" }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <Stack
                   direction="row"
@@ -1802,8 +1817,8 @@ const ProductionOrderUpload: React.FC = () => {
                   sx={{
                     width: "100%",
                     overflowX: "auto",
-                    pt: 1.25,
-                    pb: 0.5,
+                    pt: 0.75,
+                    pb: 0.25,
                     "&::-webkit-scrollbar": { height: 6 },
                     "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
                   }}
@@ -1870,8 +1885,6 @@ const ProductionOrderUpload: React.FC = () => {
                             px: 0.5,
                             fontSize: "0.82rem",
                             color: "#667085",
-                            transform: "translate(10px, -7px) scale(0.75)",
-                            transformOrigin: "top left",
                             "&.Mui-focused": {
                               color: "primary.main",
                             },
@@ -1907,8 +1920,6 @@ const ProductionOrderUpload: React.FC = () => {
                             px: 0.5,
                             fontSize: "0.82rem",
                             color: "#667085",
-                            transform: "translate(10px, -7px) scale(0.75)",
-                            transformOrigin: "top left",
                             "&.Mui-focused": {
                               color: "primary.main",
                             },
@@ -1983,7 +1994,7 @@ const ProductionOrderUpload: React.FC = () => {
               </LocalizationProvider>
 
               {/* Active Filter Chips & Results Count Bar */}
-              <Box sx={{ mt: 1 }}>
+              <Box sx={{ mt: 0.5 }}>
                 <ActiveFilterChips
                   chips={activeChips}
                   onClearAll={handleClearFilters}

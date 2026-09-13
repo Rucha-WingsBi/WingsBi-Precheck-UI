@@ -22,7 +22,7 @@ import {
   Snackbar,
   Alert,
   Paper,
-  
+
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import {
@@ -34,6 +34,7 @@ import {
   MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
 import { commonDataGridSx } from "../../components/tableStyles";
+import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUserRoles,
   useUsers,
@@ -722,11 +723,14 @@ export default function UserManagement() {
         <Box sx={{ width: "100%" }}>
           <DataGrid
             autoHeight
+            rowHeight={42}
+            columnHeaderHeight={40}
             rows={displayedUsers}
             columns={mainTab === 0 ? userColumns : pendingColumns}
             loading={mainTab === 0 ? isUsersLoading : isPendingUsersLoading}
             slots={{
               noRowsOverlay: () => <EmptyState />,
+              pagination: DataGridCustomPagination,
             }}
             initialState={{
               pagination: {

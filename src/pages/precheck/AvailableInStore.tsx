@@ -263,6 +263,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           if (!map.has(key)) {
             map.set(key, {
               id: item.drawingnumberId || item.id || 0,
+              drawingnumberId: item.drawingnumberId || item.drawingNumberId || item.id || 0,
+              prodSeriesId: item.prodSeriesId || item.prodSeries || item.productionSeriesId || item.productionSeries || 0,
               drawingNumber: item.drawingNumber || "N/A",
               lnitemcode: item.lnItemCode || "N/A",
               unit: item.unit || "ECH",
@@ -287,9 +289,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         const generatedBom = Array.from(map.values());
         setBomItems(generatedBom);
 
-        if (generatedBom.length > 0) {
-          setSelectedBomRowIndex(0);
-        }
+        setSelectedBomRowIndex(null);
+        setOverrideQrCodes(null);
       } else {
         setResults([]);
         setMasterData(null);
@@ -344,17 +345,10 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     handleSearch("", activeTab, []);
   };
 
-  const handleBomRowClick = (bomItem: any, index: number) => {
-    if (selectedBomRowIndex !== index) {
-      setSelectedBomRowIndex(index);
-      setOverrideQrCodes(null);
-      setQrPage(0);
-    }
-  };
-
-  const handleBomRowDoubleClick = async (bomItem: any) => {
+  const fetchAvailableComponents = async (bomItem: any) => {
+    if (!bomItem) return;
     const drawingNumberId = bomItem.drawingnumberId || bomItem.drawingNumberId || bomItem.drawingId || bomItem.id || 0;
-    let activeSeriesId = selectedSeries.length > 0 ? selectedSeries[0] : 0;
+    let activeSeriesId = bomItem.prodSeriesId || (selectedSeries.length > 0 ? selectedSeries[0] : 0);
 
     setIsQrLoading(true);
     setError(null);
@@ -382,7 +376,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         setOverrideQrCodes([]);
       }
     } catch (err: any) {
-      console.error("Error fetching components on double click:", err);
+      console.error("Error fetching components on click:", err);
       setError(
         err.response?.data?.message ||
         err.message ||
@@ -392,6 +386,11 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     } finally {
       setIsQrLoading(false);
     }
+  };
+
+  const handleBomRowClick = (bomItem: any, index: number) => {
+    setSelectedBomRowIndex(index);
+    fetchAvailableComponents(bomItem);
   };
 
   const formatQuantity = (qty: any) => {
@@ -723,7 +722,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   key={globalIndex}
                                   hover
                                   onClick={() => handleBomRowClick(row, globalIndex)}
-                                  onDoubleClick={() => handleBomRowDoubleClick(row)}
                                   sx={{
                                     cursor: "pointer",
                                     height: 40,
@@ -846,7 +844,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                               colSpan={5}
                               title={
                                 overrideQrCodes === null
-                                  ? "Double-click a material row to view available QR codes"
+                                  ? "Click a material row to view available QR codes"
                                   : undefined
                               }
                             />

@@ -130,12 +130,21 @@ export const getStatusBadgeChip = (item: any) => {
     );
   }
 
+  const statusLower = (item.precheckStatus || "").toLowerCase();
+  const isRej = item.isRejected || statusLower === "rejected";
   const isComplete =
-    item.isPrecheckComplete ||
-    item.precheckStatus?.toLowerCase() === "verified" ||
-    item.precheckStatus?.toLowerCase() === "completed";
-  const scannedQty = item.scannedQuantity ?? 0;
+    !isRej &&
+    (item.isPrecheckComplete ||
+      statusLower === "verified" ||
+      statusLower === "completed" ||
+      statusLower === "updated" ||
+      item.isUpdated ||
+      (item.precheckDetailsId !== undefined && item.precheckDetailsId > 0 && statusLower !== "pending") ||
+      (Boolean(item.qrCode) && (item.remainingQuantity === 0 || item.remainingQuantity === null || item.remainingQuantity === undefined)));
+
+  const scannedQty = item.scannedQuantity ?? (item.qrCode ? item.quantity : 0);
   const totalQty = item.quantity ?? 1;
+  const remQty = item.remainingQuantity;
 
   if (isComplete) {
     return (
@@ -153,7 +162,10 @@ export const getStatusBadgeChip = (item: any) => {
     );
   }
 
-  if (scannedQty > 0 && scannedQty < totalQty) {
+  if (
+    (scannedQty > 0 && scannedQty < totalQty) ||
+    (remQty !== undefined && remQty !== null && remQty > 0 && remQty < totalQty)
+  ) {
     return (
       <Chip
         label="Short"

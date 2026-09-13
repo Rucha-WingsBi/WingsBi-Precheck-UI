@@ -44,7 +44,7 @@ import { useProductionSeries, useDrawingNumbers } from "../../hooks/useMasterDat
 import TreeTable from "../../components/TreeTable/TreeTable";
 import ViewBOM from "./ViewBOM";
 import { SopFilterCard } from "./components/SopFilterCard";
-import { NodeDetailsCard } from "./components/NodeDetailsCard";
+import { EmptyState } from "../../components/EmptyState";
 
 const ALL_SOP_EXPORT_COLUMNS = [
   { key: "level", label: "Level" },
@@ -157,40 +157,44 @@ const ViewSOP: React.FC = () => {
     },
     {
       id: "drawingNumber",
-      label: "Drawing Number · Nomenclature",
-      minWidth: 280,
+      label: "Drawing Number",
+      minWidth: 220,
       align: "left" as const,
       format: (value: any, row: any) => (
-        <Box sx={{ overflow: "hidden", width: "100%" }}>
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: row.level === 0 ? 700 : row.level === 1 ? 600 : 500,
-              color: row.level === 0 ? "#101828" : row.level === 1 ? "#344054" : "#475467",
-              fontSize: "0.85rem",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {value}
-          </Typography>
-          {row.nomenclature && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: "#667085",
-                fontSize: "0.75rem",
-                display: "block",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {row.nomenclature}
-            </Typography>
-          )}
-        </Box>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: row.level === 0 ? 700 : row.level === 1 ? 600 : 500,
+            color: row.level === 0 ? "#101828" : row.level === 1 ? "#344054" : "#475467",
+            fontSize: "0.85rem",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {value || "-"}
+        </Typography>
+      ),
+    },
+    {
+      id: "nomenclature",
+      label: "Nomenclature",
+      minWidth: 220,
+      align: "left" as const,
+      format: (value: any, row: any) => (
+        <Typography
+          variant="body2"
+          sx={{
+            fontSize: "0.825rem",
+            color: row.level === 0 ? "#101828" : "#475467",
+            fontWeight: row.level === 0 ? 600 : 400,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {value || row.nomenclature || "-"}
+        </Typography>
       ),
     },
     {
@@ -234,52 +238,7 @@ const ViewSOP: React.FC = () => {
         </Typography>
       ),
     },
-    {
-      id: "componentType",
-      label: "Component Type",
-      minWidth: 120,
-      align: "center" as const,
-      format: (value: any, row: any) => {
-        const typeLabel =
-          value ||
-          row.componentType ||
-          row.itemType ||
-          row.type ||
-          row.component_Type ||
-          row.drawingType ||
-          (row.hasChildren ? "Assembly" : "Manufactured");
-        return (
-          <Chip
-            label={typeLabel}
-            size="small"
-            variant="outlined"
-            sx={{
-              fontSize: "0.725rem",
-              height: 22,
-              fontWeight: 600,
-              borderColor:
-                typeLabel === "Assembly"
-                  ? "#B2DDFF"
-                  : typeLabel === "Bought-out" || typeLabel === "Purchase"
-                  ? "#FEDF89"
-                  : "#EAECF0",
-              color:
-                typeLabel === "Assembly"
-                  ? "#175CD3"
-                  : typeLabel === "Bought-out" || typeLabel === "Purchase"
-                  ? "#B54708"
-                  : "#344054",
-              backgroundColor:
-                typeLabel === "Assembly"
-                  ? "#EFF8FF"
-                  : typeLabel === "Bought-out" || typeLabel === "Purchase"
-                  ? "#FEF0C7"
-                  : "#F9FAFB",
-            }}
-          />
-        );
-      },
-    },
+
     {
       id: "idNumber",
       label: "ID No",
@@ -844,10 +803,9 @@ const ViewSOP: React.FC = () => {
             hasAssemblyData={assemblyData && assemblyData.length > 0}
           />
 
-          {/* 2-Column Assembly Tree & Node Details Layout */}
+          {/* Assembly Tree Table */}
           <Grid container spacing={1.5}>
-            {/* Left Panel: Assembly Tree Table */}
-            <Grid item xs={12} md={7.5} lg={8}>
+            <Grid item xs={12}>
               <Paper
                 elevation={0}
                 sx={{
@@ -929,7 +887,7 @@ const ViewSOP: React.FC = () => {
                 </Box>
 
                 {/* Tree Table View */}
-                <Box sx={{ minHeight: 450, maxHeight: "calc(100vh - 290px)", overflow: "auto" }}>
+                <Box sx={{ overflow: "hidden" }}>
                   {assemblyData && assemblyData.length > 0 ? (
                     <TreeTable
                       ref={treeTableRef}
@@ -944,7 +902,7 @@ const ViewSOP: React.FC = () => {
                         setSelectedNode(row);
                       }}
                     />
-                  ) : (
+                  ) : isLoading ? (
                     <Box
                       sx={{
                         display: "flex",
@@ -955,20 +913,20 @@ const ViewSOP: React.FC = () => {
                         color: "#667085",
                       }}
                     >
+                      <CircularProgress size={32} color="primary" sx={{ mb: 2 }} />
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {isLoading
-                          ? "Loading assembly tree structure..."
-                          : "No assembly data available. Search for Series and Drawing Number to explore the tree."}
+                        Loading assembly tree structure...
                       </Typography>
                     </Box>
+                  ) : (
+                    <EmptyState
+                      title="Apply filters to search"
+                      subtitle="Search for Series and Drawing Number to explore the tree."
+                      height={260}
+                    />
                   )}
                 </Box>
               </Paper>
-            </Grid>
-
-            {/* Right Panel: Selected Node Details Card */}
-            <Grid item xs={12} md={4.5} lg={4}>
-              <NodeDetailsCard selectedNode={selectedNode} childCount={selectedChildCount} />
             </Grid>
           </Grid>
         </>

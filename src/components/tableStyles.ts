@@ -54,21 +54,57 @@ export const commonDataGridSx = {
     fontWeight: 700,
     fontSize: "0.8rem",
     borderBottom: `1px solid ${COLOUR_ROLES.hairline}`,
-    minHeight: "36px !important",
-    maxHeight: "36px !important",
+    minHeight: "40px !important",
+    maxHeight: "40px !important",
+    lineHeight: "40px !important",
   },
   "& .MuiDataGrid-cell": {
-    fontSize: "0.775rem",
+    fontSize: "0.8rem",
     color: COLOUR_ROLES.textMain,
     borderBottom: `1px solid ${COLOUR_ROLES.hairline}`,
+    display: "flex",
+    alignItems: "center",
     py: "2px",
   },
   "& .MuiDataGrid-row": {
-    minHeight: "28px !important",
-    maxHeight: "28px !important",
+    minHeight: "42px !important",
+    maxHeight: "42px !important",
     "&:hover": { backgroundColor: `${COLOUR_ROLES.rowHover} !important` },
   },
   "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus": {
     outline: "none !important",
   },
+  "& .MuiDataGrid-footerContainer": {
+    borderTop: `1px solid ${COLOUR_ROLES.hairline}`,
+    minHeight: "40px !important",
+    "& .MuiTablePagination-root": {
+      width: "100%",
+    },
+    "& .MuiTablePagination-toolbar": {
+      display: "flex",
+      justifyContent: "space-between !important",
+      width: "100%",
+      px: 2,
+    },
+    "& .MuiTablePagination-spacer": {
+      display: "none !important",
+    },
+    "& .MuiTablePagination-selectLabel": {
+      margin: 0,
+      fontSize: "0.775rem",
+      color: "#475467",
+      fontWeight: 500,
+    },
+    "& .MuiTablePagination-displayedRows": {
+      fontSize: "0.775rem",
+      color: "#475467",
+      fontWeight: 500,
+      marginLeft: "auto !important",
+    },
+    "& .MuiBox-root": {
+      width: "100%",
+      borderTop: "none",
+    },
+  },
 };
+

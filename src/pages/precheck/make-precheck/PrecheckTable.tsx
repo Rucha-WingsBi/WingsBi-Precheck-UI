@@ -114,8 +114,8 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
     <Paper
       elevation={0}
       sx={{
-        mt: 0.5,
-        mb: 1,
+        mt: 0.25,
+        mb: 0.5,
         borderRadius: "16px",
         border: "1px solid #EAECF0",
         backgroundColor: "#FFFFFF",
@@ -130,7 +130,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
       <Box
         sx={{
           px: 2,
-          py: 1,
+          py: 0.5,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -140,16 +140,16 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, fontSize: "1.0625rem", color: "#101828" }}
+            
+            sx={{ fontWeight: 700, fontSize: "0.8rem", color: "#101828" }}
           >
             BOM lines
           </Typography>
           <Typography
             variant="body2"
-            sx={{ color: "#667085", fontSize: "0.875rem", fontWeight: 500 }}
+            sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
           >
-            {searchResults.length > 0 ? `${searchResults.length} lines` : ""} 
+            {searchResults.length > 0 ? `${searchResults.length} lines` : ""}
           </Typography>
         </Box>
       </Box>
@@ -159,7 +159,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
           overflow: "auto",
           width: "100%",
           minHeight: searchResults.length > 0 ? 200 : 80,
-          maxHeight: "calc(100vh - 360px)",
+          maxHeight: "calc(100vh - 330px)",
         }}
       >
         <Table
@@ -170,30 +170,30 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
               backgroundColor: "#F9FAFB",
               color: "#475467",
               fontWeight: 600,
-              fontSize: "0.8125rem",
+              fontSize: "0.75rem",
               borderBottom: "1px solid #EAECF0",
-              py: 1.25,
+              py: 0.75,
             },
           }}
           size="small"
         >
           <TableHead>
             <TableRow sx={{ backgroundColor: COLOUR_ROLES.headerBg }}>
-              <SortableTableHeader label="Sr. No." columnKey="sr" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={50} />
+              <SortableTableHeader label="Sr. No." columnKey="sr" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={45} />
               <SortableTableHeader label="Position No" columnKey="findNo" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={20} />
-              <SortableTableHeader label="Line Item Code" columnKey="lnItemCode" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={120} />
-              <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={150} />
-              <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={100} />
-              <SortableTableHeader label="Unit" columnKey="unit" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={100} />
+              <SortableTableHeader label="Line Item Code" columnKey="lnItemCode" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
+              <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={140} />
+              <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={95} />
+              <SortableTableHeader label="Unit" columnKey="unit" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={90} />
               <SortableTableHeader label="Qty" columnKey="quantity" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={40} />
-              <SortableTableHeader label="Rem Qty" columnKey="remainingQuantity" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={80} />
-              <SortableTableHeader label="ID Number" columnKey="idNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={80} />
-              <SortableTableHeader label="IR" columnKey="ir" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={60} />
-              <SortableTableHeader label="MSN" columnKey="msn" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={60} />
-              <SortableTableHeader label="MRIR Number" columnKey="mrirNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={80} />
-              <SortableTableHeader label="Type" columnKey="componentType" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={80} />
-              <SortableTableHeader label="Remarks" columnKey="remarks" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={120} />
-              <TableCell align="center" sx={{ fontWeight: 700, backgroundColor: COLOUR_ROLES.headerBg, color: COLOUR_ROLES.textSecondary, fontSize: "0.8rem", borderBottom: `1px solid ${COLOUR_ROLES.hairline}`, py: 0.75, px: 1.25, minWidth: 80 }}>Actions</TableCell>
+              <SortableTableHeader label="Rem Qty" columnKey="remainingQuantity" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
+              <SortableTableHeader label="ID Number" columnKey="idNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
+              <SortableTableHeader label="IR" columnKey="ir" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={55} />
+              <SortableTableHeader label="MSN" columnKey="msn" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={55} />
+              <SortableTableHeader label="MRIR Number" columnKey="mrirNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
+              <SortableTableHeader label="Type" columnKey="componentType" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
+              <SortableTableHeader label="Remarks" columnKey="remarks" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
+              <TableCell align="center" sx={{ fontWeight: 700, backgroundColor: COLOUR_ROLES.headerBg, color: COLOUR_ROLES.textSecondary, fontSize: "0.75rem", borderBottom: `1px solid ${COLOUR_ROLES.hairline}`, py: 0.5, px: 1, minWidth: 75 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -215,6 +215,8 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                       onDoubleClick={() => onRowDoubleClick(index)}
                       sx={{
                         ...commonTableRowStyle,
+                        height: 24,
+                        maxHeight: 24,
                         backgroundColor: item.isRejected
                           ? "#e0e0e0"
                           : item.isPrecheckComplete ||
@@ -254,63 +256,67 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                 : `${COLOUR_ROLES.rowHover} !important`,
                         },
                         "& .MuiTableCell-root": {
+                          py: "1px !important",
+                          px: 0.5,
+                          height: 24,
+                          fontSize: "0.72rem",
                           color: item.isRejected ? "error.main" : "inherit",
                         },
                       }}
                     >
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         {item.sr}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         {item.findNo}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         {item.lnItemCode}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         {item.drawingNumber}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         {item.nomenclature}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         {item.unit}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         {item.quantity}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         <Box
                           sx={{
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            gap: 1,
-                            fontSize: "0.775rem",
+                            gap: 0.75,
+                            fontSize: "0.72rem",
                           }}
                         >
                           {item.componentType?.toUpperCase() === "BATCH" || item.componentType?.toUpperCase() === "FIM" ? (
@@ -318,7 +324,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                               {formatQuantity(item.remainingQuantity) !== "-" && (
                                 <Typography
                                   variant="caption"
-                                  sx={{ fontSize: "0.775rem" }}
+                                  sx={{ fontSize: "0.72rem" }}
                                 >
                                   {formatQuantity(item.remainingQuantity)}
                                 </Typography>
@@ -344,6 +350,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                       cursor: "pointer",
                                       minWidth: "auto",
                                       padding: "0 4px",
+                                      fontSize: "0.72rem",
                                     }}
                                     size="small"
                                     onClick={() => onAddRow(item)}
@@ -376,37 +383,37 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         {item.idNumber || "-"}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         {item.ir || "-"}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap" }}
                       >
                         {item.msn || "-"}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem", whiteSpace: "nowrap", textAlign: "center" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem", whiteSpace: "nowrap", textAlign: "center" }}
                       >
                         {item.mrirNumber || "-"}
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.15, px: 0.75, fontSize: "0.775rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         <ComponentTypeChip type={item.componentType} />
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.2, px: 0.8, fontSize: "0.75rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         <TextField
                           size="small"
@@ -421,12 +428,16 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                           sx={{
                             width: "100%",
                             "& .MuiOutlinedInput-root": {
-                              fontSize: "0.75rem",
-                              py: 0.2,
+                              fontSize: "0.68rem",
+                              py: "0 !important",
+                              px: 0.5,
+                              minHeight: "20px !important",
+                              height: "20px",
                               color: item.isRejected
                                 ? "error.main"
                                 : "inherit",
                               "& .MuiInputBase-input": {
+                                py: "0 !important",
                                 color: item.isRejected
                                   ? "error.main"
                                   : "inherit",
@@ -443,7 +454,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                       </TableCell>
                       <TableCell
                         align="center"
-                        sx={{ py: 0.2, px: 0.8, fontSize: "0.75rem" }}
+                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
                         <IconButton
                           size="small"
@@ -454,7 +465,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                           }}
                           sx={{
                             color: "#667085",
-                            p: 0.5,
+                            p: 0.25,
                             "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
                           }}
                         >

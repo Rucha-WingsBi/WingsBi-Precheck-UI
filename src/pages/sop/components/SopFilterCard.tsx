@@ -83,26 +83,35 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                 productionSeriesData.find((s: any) => s.id === value) || null;
               return (
                 <Autocomplete
-                  key={value || 0}
                   size="small"
-                  freeSolo
                   options={productionSeriesData}
                   getOptionLabel={(option: any) => {
+                    if (!option) return "";
                     if (typeof option === "string") return option;
                     return option.productionSeries || "";
                   }}
+                  isOptionEqualToValue={(option: any, val: any) => {
+                    if (!option || !val) return false;
+                    const optId = typeof option === "object" ? option.id : option;
+                    const valId = typeof val === "object" ? val.id : val;
+                    return optId === valId;
+                  }}
                   value={selectedOption}
                   inputValue={prodSeriesInputText}
-                  onInputChange={(_, newInputValue) => {
+                  onInputChange={(_, newInputValue, reason) => {
                     setProdSeriesInputText(newInputValue);
-                    const match = productionSeriesData.find(
-                      (s: any) =>
-                        s.productionSeries?.toLowerCase() ===
-                        newInputValue.trim().toLowerCase()
-                    );
-                    if (match) {
-                      onChange(match.id);
-                    } else if (!newInputValue) {
+                    if (reason === "input") {
+                      const match = productionSeriesData.find(
+                        (s: any) =>
+                          s.productionSeries?.toLowerCase() ===
+                          newInputValue.trim().toLowerCase()
+                      );
+                      if (match) {
+                        onChange(match.id);
+                      } else if (!newInputValue) {
+                        onChange(0);
+                      }
+                    } else if (reason === "clear") {
                       onChange(0);
                     }
                   }}

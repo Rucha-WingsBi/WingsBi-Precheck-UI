@@ -179,8 +179,8 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       sx={{
         display: "flex",
         alignItems: "center",
-        p: 1.5,
-        mb: 1.5,
+        p: 1,
+        mb: 0.75,
         borderRadius: "12px",
         border: "1px solid #EAECF0",
         backgroundColor: "#FFFFFF",

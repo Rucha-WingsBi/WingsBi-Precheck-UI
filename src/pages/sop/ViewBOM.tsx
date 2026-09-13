@@ -39,6 +39,7 @@ import { COLOUR_ROLES, commonTableRowStyle } from "../../components/tableStyles"
 import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 import { useHierarchicalTable } from "../../hooks/useHierarchicalTable";
 import { BomFilterCard } from "./components/BomFilterCard";
+import { EmptyState } from "../../components/EmptyState";
 
 interface AssemblyOption {
   id: number;
@@ -376,7 +377,14 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
         </Box>
 
         <Box sx={{ position: "relative" }}>
-          <TableContainer sx={{ maxHeight: "calc(100vh - 280px)", overflow: "auto" }}>
+          <TableContainer
+            className="scroll-hover"
+            sx={{
+              maxHeight: "calc(100vh - 280px)",
+              overflowY: "auto",
+              overflowX: "auto",
+            }}
+          >
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
@@ -418,15 +426,12 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} align="center" sx={{ py: 6, borderBottom: "none" }}>
-                      <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
-                        {isBomLoading
-                          ? "Loading BOM details..."
-                          : "No data available. Search for an assembly to view BOM details."}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
+                  <EmptyState
+                    colSpan={columns.length}
+                    title="Apply filters to search"
+                    subtitle="Search for an assembly to view BOM details."
+                    height={260}
+                  />
                 )}
               </TableBody>
             </Table>

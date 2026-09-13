@@ -24,10 +24,10 @@ export const HistoryStatCard: React.FC<HistoryStatCardProps> = ({
       onClick={onClick}
       sx={{
         flex: 1,
-        minWidth: { xs: "100%", sm: "200px", md: "0" },
-        py: { xs: 1, sm: 1.25 },
-        px: { xs: 2, sm: 2.25 },
-        borderRadius: "10px",
+        minWidth: { xs: "100%", sm: "180px", md: "0" },
+        py: { xs: 0.6, sm: 0.75 },
+        px: { xs: 1.25, sm: 1.5 },
+        borderRadius: "8px",
         border: isActive ? "2px solid #7F56D9" : "1px solid #E9EAEB",
         backgroundColor: "#ffffff",
         cursor: onClick ? "pointer" : "default",
@@ -41,7 +41,7 @@ export const HistoryStatCard: React.FC<HistoryStatCardProps> = ({
           : {},
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.25 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.15 }}>
         <Box
           sx={{
             width: 7,
@@ -55,7 +55,7 @@ export const HistoryStatCard: React.FC<HistoryStatCardProps> = ({
           sx={{
             fontWeight: 600,
             color: "#475467",
-            fontSize: "0.8rem",
+            fontSize: "0.775rem",
           }}
         >
           {title}
@@ -67,9 +67,9 @@ export const HistoryStatCard: React.FC<HistoryStatCardProps> = ({
         sx={{
           fontWeight: 700,
           color: "#101828",
-          fontSize: { xs: "1.25rem", sm: "1.4rem" },
+          fontSize: { xs: "1.15rem", sm: "1.3rem" },
           lineHeight: 1.15,
-          mb: 0.25,
+          mb: 0.15,
         }}
       >
         {count.toLocaleString()}

@@ -11,9 +11,16 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
+import {
+  useGridApiContext,
+  useGridSelector,
+  gridPageSelector,
+  gridPageSizeSelector,
+  gridRowCountSelector,
+} from "@mui/x-data-grid";
 
 export interface CustomPaginationProps {
-  page: number; 
+  page: number;
   pageSize: number;
   totalCount: number;
   pageSizeOptions?: number[];
@@ -120,3 +127,23 @@ export const CustomPagination: React.FC<CustomPaginationProps> = ({
     </Box>
   );
 };
+
+export const DataGridCustomPagination: React.FC = () => {
+  const apiRef = useGridApiContext();
+  const page = useGridSelector(apiRef, gridPageSelector);
+  const pageSize = useGridSelector(apiRef, gridPageSizeSelector);
+  const totalCount = useGridSelector(apiRef, gridRowCountSelector);
+
+  return (
+    <Box sx={{ width: "100%" }}>
+      <CustomPagination
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={(newPage) => apiRef.current.setPage(newPage)}
+        onPageSizeChange={(newPageSize) => apiRef.current.setPageSize(newPageSize)}
+      />
+    </Box>
+  );
+};
+
