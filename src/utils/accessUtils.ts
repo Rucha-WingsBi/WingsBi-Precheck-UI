@@ -11,7 +11,7 @@ export const isPageAccessible = (
   if (!accessData || !pageName) return false;
 
   for (const item of accessData) {
-    if (item.pageName === pageName) {
+    if (item.pageName && item.pageName.trim().toLowerCase() === pageName.trim().toLowerCase()) {
       return item.fullAccess === true;
     }
     if (item.children && item.children.length > 0) {

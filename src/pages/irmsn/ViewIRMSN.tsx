@@ -35,6 +35,7 @@ import {
   RadioGroup,
   FormControlLabel,
   Grid,
+  Tooltip,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -58,7 +59,9 @@ import {
 import {
   useDepartments,
   useProductionSeries,
+  usePageAccess,
 } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
 import type { RootState, AppDispatch } from "../../store/store";
 import { useNavigate } from "react-router-dom";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
@@ -93,6 +96,21 @@ const ViewIRMSN: React.FC = () => {
   const navigate = useNavigate();
   const hasRestored = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
+    user?.roleid ? Number(user.roleid) : null
+  );
+
+  const hasCreateAccess = useMemo(() => {
+    if (!user?.roleid) return true;
+    if (isAccessLoading || pageAccessData === undefined) return true;
+    return (
+      isPageAccessible(pageAccessData, "Create") ||
+      isPageAccessible(pageAccessData, "Create IR/MSN") ||
+      isPageAccessible(pageAccessData, "Generate IR/MSN")
+    );
+  }, [user, pageAccessData, isAccessLoading]);
 
   // Local state - Unified Search Bar
   const [drawingOrLnSearch, setDrawingOrLnSearch] = useState<string>("");
@@ -618,25 +636,37 @@ const ViewIRMSN: React.FC = () => {
             </Menu>
 
             {/* New IR/MSN Action Button */}
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon fontSize="small" />}
-              onClick={() => navigate("/irmsn/generate")}
-              sx={{
-                height: 34,
-                borderRadius: "6px",
-                backgroundColor: "primary.main",
-                color: "#ffffff",
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.8rem",
-                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-                "&:hover": { backgroundColor: "primary.dark" },
-              }}
+            <Tooltip
+              title={!hasCreateAccess ? "You do not have access to create IR/MSN page" : ""}
+              arrow
             >
-              New IR/MSN
-            </Button>
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddIcon fontSize="small" />}
+                  disabled={!hasCreateAccess}
+                  onClick={() => navigate("/irmsn/generate")}
+                  sx={{
+                    height: 34,
+                    borderRadius: "6px",
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                    "&.Mui-disabled": {
+                      backgroundColor: "#EAECF0",
+                      color: "#98A2B3",
+                    },
+                  }}
+                >
+                  New IR/MSN
+                </Button>
+              </span>
+            </Tooltip>
           </Stack>
         </Stack>
 
@@ -1141,8 +1171,15 @@ const ViewIRMSN: React.FC = () => {
           </Box>
 
           {/* Section 2: Table */}
-          <TableContainer sx={{ borderTop: "1px solid #EAECF0", maxHeight: "calc(100vh - 310px)", overflow: "auto" }}>
-            <Table stickyHeader size="small">
+          <TableContainer
+            sx={{
+              borderTop: "1px solid #EAECF0",
+              minHeight: 320,
+              maxHeight: "calc(100vh - 310px)",
+              overflow: "auto",
+            }}
+          >
+            <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1200 }}>
               <TableHead>
                 <TableRow>
                   <SortableTableHeader
@@ -1152,6 +1189,7 @@ const ViewIRMSN: React.FC = () => {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     align="center"
+                    minWidth={60}
                   />
                   <SortableTableHeader
                     label="IR/MSN No."
@@ -1160,8 +1198,9 @@ const ViewIRMSN: React.FC = () => {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     align="center"
+                    minWidth={130}
                   />
-                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 70 }}>
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 70 }}>
                     Type
                   </TableCell>
                   <SortableTableHeader
@@ -1171,6 +1210,7 @@ const ViewIRMSN: React.FC = () => {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     align="left"
+                    minWidth={120}
                   />
                   <SortableTableHeader
                     label="LN Item Code"
@@ -1179,6 +1219,7 @@ const ViewIRMSN: React.FC = () => {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     align="left"
+                    minWidth={130}
                   />
                   <SortableTableHeader
                     label="Drawing No."
@@ -1187,11 +1228,12 @@ const ViewIRMSN: React.FC = () => {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     align="left"
+                    minWidth={150}
                   />
-                  <TableCell align="center" sx={commonTableHeaderStyle}>
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 90 }}>
                     ID Number
                   </TableCell>
-                  <TableCell align="center" sx={commonTableHeaderStyle}>
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 90 }}>
                     MRIR
                   </TableCell>
                   <SortableTableHeader
@@ -1201,20 +1243,21 @@ const ViewIRMSN: React.FC = () => {
                     sortDirection={sortDirection}
                     onSort={handleSort}
                     align="center"
+                    minWidth={130}
                   />
-                  <TableCell align="left" sx={commonTableHeaderStyle}>
+                  <TableCell align="left" sx={{ ...commonTableHeaderStyle, minWidth: 100 }}>
                     UserName
                   </TableCell>
-                  <TableCell align="left" sx={commonTableHeaderStyle}>
+                  <TableCell align="left" sx={{ ...commonTableHeaderStyle, minWidth: 110 }}>
                     Department
                   </TableCell>
-                  <TableCell align="center" sx={commonTableHeaderStyle}>
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 70 }}>
                     Stage
                   </TableCell>
-                  <TableCell align="center" sx={commonTableHeaderStyle}>
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 80 }}>
                     Build No
                   </TableCell>
-                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 70 }}>
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 70 }}>
                     Actions
                   </TableCell>
                 </TableRow>
@@ -1223,7 +1266,7 @@ const ViewIRMSN: React.FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={14} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                    <TableCell colSpan={14} align="center" sx={{ height: 280, borderBottom: "none" }}>
                       <CircularProgress size={32} color="primary" />
                       <Typography variant="body2" sx={{ color: "#667085", mt: 1 }}>
                         Loading IR/MSN records...

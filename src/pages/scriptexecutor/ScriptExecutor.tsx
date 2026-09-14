@@ -632,7 +632,7 @@ export default function ScriptExecutor() {
         formData.append("scriptType", activeTab.toString());
         formData.append("tabIndex", activeTab.toString());
 
-        const tabName = activeTab === TABS.QR_CODE ? "QRCode" : "StdQRCode";
+        const tabName = "QRCode";
         formData.append("tabName", tabName);
         formData.append("scriptName", tabName);
 
@@ -700,8 +700,6 @@ export default function ScriptExecutor() {
         endpoint = "/api/script/RunMasterData";
       } else if (activeTab === TABS.QR_CODE) {
         endpoint = "/api/script/RunQRCodeImport";
-      } else if (activeTab === TABS.STD_QR_CODE) {
-        endpoint = "/api/script/RunSTDQRGeneration";
       }
 
       const payload = { fileName: uploadedFileNamesFromServer };
@@ -780,7 +778,7 @@ export default function ScriptExecutor() {
   return (
     <Box sx={{ py: { xs: 1, sm: 1.25 }, px: { xs: 1.5, sm: 2 } }}>
       {/* 1. Header Section */}
-      <ImportHeader selectedFilesCount={selectedFiles.length} />
+      <ImportHeader />
 
       {/* 2. Import Type Selector Cards */}
       <ImportTypeSelector activeTab={activeTab} onTabChange={setActiveTab} />

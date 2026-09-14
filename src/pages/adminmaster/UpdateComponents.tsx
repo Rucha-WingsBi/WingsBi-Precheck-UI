@@ -592,7 +592,7 @@ export default function InsertMappings() {
                                     py: 0.5,
                                   }}
                                 >
-                                  <Typography variant="body2" fontWeight="bold">
+                                  <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                     {typeof option === "string"
                                       ? option
                                       : option.lnItemCode}
@@ -718,7 +718,7 @@ export default function InsertMappings() {
                                     py: 0.5,
                                   }}
                                 >
-                                  <Typography variant="body2" fontWeight="bold">
+                                  <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                     {typeof option === "string"
                                       ? option
                                       : option.drawingNumber}
@@ -907,7 +907,7 @@ export default function InsertMappings() {
                           return (
                             <li {...optionProps} key={key}>
                               <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                                <Typography variant="body2" fontWeight="bold">
+                                <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                   {typeof option === "string" ? option : option.drawingNumber}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
@@ -980,7 +980,7 @@ export default function InsertMappings() {
                           return (
                             <li {...optionProps} key={key}>
                               <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                                <Typography variant="body2" fontWeight="bold">
+                                <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                   {typeof option === "string" ? option : option.lnItemCode}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">

@@ -168,6 +168,29 @@ const UpdateBarcode: React.FC = () => {
   const [selectedUnit, setSelectedUnit] = React.useState<any>(null);
 
   // Initialize selected objects from initialData
+  React.useEffect(() => {
+    const handleScroll = (event: Event) => {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        target.classList &&
+        (target.classList.contains("MuiAutocomplete-listbox") ||
+          target.closest?.(".MuiAutocomplete-popper") ||
+          target.closest?.(".MuiAutocomplete-listbox"))
+      ) {
+        return;
+      }
+      if (
+        document.activeElement instanceof HTMLElement &&
+        (document.activeElement.tagName === "INPUT" ||
+          document.activeElement.getAttribute("role") === "combobox")
+      ) {
+        document.activeElement.blur();
+      }
+    };
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, []);
   useEffect(() => {
     if (initialData.productionSeriesId && productionSeriesList.length > 0) {
       const match = productionSeriesList.find(
@@ -571,7 +594,6 @@ const UpdateBarcode: React.FC = () => {
                 <Autocomplete
                   size="small"
                   options={allDrawingNumbers}
-                  groupBy={(option: any) => option.lnItemCode || "No LN Code"}
                   getOptionLabel={(option: any) => {
                     if (typeof option === "string") return option;
                     return option.lnItemCode || "";
@@ -593,6 +615,9 @@ const UpdateBarcode: React.FC = () => {
                       componentTypeId: value?.componentTypeId,
                     }));
                   }}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value?.id
+                  }
                   filterOptions={(options, { inputValue }) => {
                     if (!inputValue) return options.slice(0, 100);
                     const searchLower = inputValue.toLowerCase();
@@ -612,6 +637,25 @@ const UpdateBarcode: React.FC = () => {
                   }}
                   renderOption={(props: any, option: any) => {
                     const { key, ...optionProps } = props;
+                    const lnCode =
+                      typeof option === "string"
+                        ? option
+                        : option.lnItemCode || "";
+                    const drawingNo =
+                      typeof option === "string" ? "" : option.drawingNumber;
+                    const nomenclature =
+                      typeof option === "string" ? "" : option.nomenclature;
+                    const compType =
+                      typeof option === "string" ? "" : option.componentType;
+
+                    const details = [
+                      drawingNo ? `Drawing: ${drawingNo}` : null,
+                      nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                      compType ? `Component Type: ${compType}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" | ");
+
                     return (
                       <li {...optionProps} key={key}>
                         <Box
@@ -624,43 +668,29 @@ const UpdateBarcode: React.FC = () => {
                         >
                           <Typography
                             variant="body2"
-                            fontWeight="500"
-                            sx={{ fontSize: "0.85rem", color: "text.primary" }}
+                            fontWeight="600"
+                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
                           >
-                            Drawing: {option.drawingNumber}
+                            {lnCode.startsWith("LN:")
+                              ? lnCode
+                              : `LN: ${lnCode}`}
                           </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: "0.72rem" }}
-                          >
-                            {option.nomenclature} | Type: {option.componentType}
-                          </Typography>
+                          {details && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontSize: "0.75rem",
+                                lineHeight: 1.35,
+                                color: "text.secondary",
+                              }}
+                            >
+                              {details}
+                            </Typography>
+                          )}
                         </Box>
                       </li>
                     );
                   }}
-                  renderGroup={(params) => (
-                    <li key={params.key}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight="800"
-                        sx={{
-                          px: 2,
-                          py: 0.5,
-                          backgroundColor: "grey.200",
-                          color: "primary.main",
-                          fontSize: "0.95rem",
-                          letterSpacing: "0.5px",
-                        }}
-                      >
-                        LN CODE: {params.group}
-                      </Typography>
-                      <ul style={{ padding: 0, margin: 0 }}>
-                        {params.children}
-                      </ul>
-                    </li>
-                  )}
                   renderInput={(params: any) => (
                     <TextField
                       {...params}
@@ -709,6 +739,62 @@ const UpdateBarcode: React.FC = () => {
                   isOptionEqualToValue={(option, value) =>
                     option.id === value?.id
                   }
+                  renderOption={(props: any, option: any) => {
+                    const { key, ...optionProps } = props;
+                    const drawingNo =
+                      typeof option === "string"
+                        ? option
+                        : option.drawingNumber || "";
+                    const lnCode =
+                      typeof option === "string" ? "" : option.lnItemCode;
+                    const nomenclature =
+                      typeof option === "string" ? "" : option.nomenclature;
+                    const compType =
+                      typeof option === "string" ? "" : option.componentType;
+
+                    const details = [
+                      lnCode ? `LN: ${lnCode}` : null,
+                      nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                      compType ? `Component Type: ${compType}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" | ");
+
+                    return (
+                      <li {...optionProps} key={key}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            py: 0.5,
+                            width: "100%",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                          >
+                            {drawingNo.startsWith("Drawing:")
+                              ? drawingNo
+                              : `Drawing: ${drawingNo}`}
+                          </Typography>
+                          {details && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontSize: "0.75rem",
+                                lineHeight: 1.35,
+                                color: "text.secondary",
+                              }}
+                            >
+                              {details}
+                            </Typography>
+                          )}
+                        </Box>
+                      </li>
+                    );
+                  }}
                   renderInput={(params) => (
                     <TextField {...params} label="Drawing Number" fullWidth />
                   )}

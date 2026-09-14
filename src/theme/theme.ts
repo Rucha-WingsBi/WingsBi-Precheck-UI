@@ -827,8 +827,8 @@ let theme = createTheme({
             py: '2px',
           },
           '& .MuiDataGrid-row': {
-            minHeight: '28px !important',
-            maxHeight: '28px !important',
+            minHeight: '32px !important',
+            maxHeight: '32px !important',
             '&:hover': { backgroundColor: '#F9FAFB' },
           },
           '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus': {

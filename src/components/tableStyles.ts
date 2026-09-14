@@ -25,7 +25,7 @@ export const commonTableHeaderStyle = {
 };
 
 export const commonTableRowStyle = {
-  height: 28,
+  height: 32,
   "&:hover": { backgroundColor: `${COLOUR_ROLES.rowHover} !important` },
   "& td, & th": {
     borderBottom: `1px solid ${COLOUR_ROLES.hairline}`,
@@ -59,7 +59,7 @@ export const commonDataGridSx = {
     lineHeight: "40px !important",
   },
   "& .MuiDataGrid-cell": {
-    fontSize: "0.8rem",
+    fontSize: "0.775rem",
     color: COLOUR_ROLES.textMain,
     borderBottom: `1px solid ${COLOUR_ROLES.hairline}`,
     display: "flex",
@@ -67,8 +67,8 @@ export const commonDataGridSx = {
     py: "2px",
   },
   "& .MuiDataGrid-row": {
-    minHeight: "42px !important",
-    maxHeight: "42px !important",
+    minHeight: "32px !important",
+    maxHeight: "32px !important",
     "&:hover": { backgroundColor: `${COLOUR_ROLES.rowHover} !important` },
   },
   "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus": {

@@ -18,59 +18,28 @@ import {
   Description as DescriptionIcon,
   RadioButtonChecked as RadioButtonCheckedIcon,
   RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 import { TABS, TAB_METADATA } from "../constants/scriptExecutorConstants";
 
-interface ImportHeaderProps {
-  selectedFilesCount: number;
-}
+interface ImportHeaderProps {}
 
-export const ImportHeader: React.FC<ImportHeaderProps> = ({ selectedFilesCount }) => {
+export const ImportHeader: React.FC<ImportHeaderProps> = () => {
   return (
-    <Stack
-      direction={{ xs: "column", sm: "row" }}
-      justifyContent="space-between"
-      alignItems={{ xs: "flex-start", sm: "center" }}
-      spacing={2}
-      sx={{ mb: 1 }}
-    >
-      <Box>
-        <Typography
-          variant="h5"
-          sx={{
-            fontWeight: 700,
-            color: "primary.main",
-            fontSize: { xs: "1.25rem", sm: "1.5rem" },
-          }}
-        >
-          Bulk Import
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Import master data or QR code records from Excel
-        </Typography>
-      </Box>
-
-      <Button
-        variant="outlined"
-        color="inherit"
-        size="small"
-        startIcon={<AccessTimeIcon sx={{ fontSize: 16 }} />}
+    <Box sx={{ mb: 1.5 }}>
+      <Typography
+        variant="h5"
         sx={{
-          borderRadius: 2,
-          borderColor: "neutral.border",
-          color: "text.primary",
-          fontWeight: 600,
-          textTransform: "none",
-          height: 36,
-          px: 2,
-          bgcolor: "background.paper",
-          "&:hover": { borderColor: "grey.400", bgcolor: "neutral.hoverBg" },
+          fontWeight: 700,
+          color: "primary.main",
+          fontSize: { xs: "1.25rem", sm: "1.5rem" },
         }}
       >
-        Import history ({selectedFilesCount})
-      </Button>
-    </Stack>
+        Bulk Import
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        Import master data or QR code records from Excel
+      </Typography>
+    </Box>
   );
 };
 
@@ -84,17 +53,12 @@ export const ImportTypeSelector: React.FC<ImportTypeSelectorProps> = ({ activeTa
     {
       tab: TABS.MASTER_DATA,
       title: "Master data",
-      subtitle: "Units, stages, shapes, production series & drawing mappings",
+      subtitle: "Drawing & assembly mappings",
     },
     {
       tab: TABS.QR_CODE,
-      title: "QR codes (Old)",
+      title: "QR code",
       subtitle: "Bulk QR code records with ID ranges",
-    },
-    {
-      tab: TABS.STD_QR_CODE,
-      title: "Std QR codes (New)",
-      subtitle: "Standardized QR code records with MRIR numbers",
     },
   ];
 
@@ -107,7 +71,7 @@ export const ImportTypeSelector: React.FC<ImportTypeSelectorProps> = ({ activeTa
         {options.map((item) => {
           const isSelected = activeTab === item.tab;
           return (
-            <Grid item xs={12} sm={4} key={item.tab} sx={{ display: "flex" }}>
+            <Grid item xs={12} sm={6} key={item.tab} sx={{ display: "flex" }}>
               <Card
                 elevation={0}
                 onClick={() => onTabChange(item.tab)}

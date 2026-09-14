@@ -368,6 +368,88 @@ export const exportPrecheckDetails = createAsyncThunk(
   },
 );
 
+export const exportViewPrecheckDetails = createAsyncThunk(
+  "precheck/exportViewPrecheckDetails",
+  async (
+    payload: {
+      searchQuery?: string;
+      productionSeries?: string[];
+      status?: string[];
+      fromDate?: string | null;
+      toDate?: string | null;
+      selectedColumns?: string[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const body = {
+        searchQuery: payload.searchQuery || "",
+        productionSeries: Array.isArray(payload.productionSeries)
+          ? payload.productionSeries
+          : payload.productionSeries
+            ? [payload.productionSeries]
+            : [],
+        status: Array.isArray(payload.status)
+          ? payload.status
+          : payload.status
+            ? [payload.status]
+            : [],
+        fromDate: payload.fromDate || null,
+        toDate: payload.toDate || null,
+        selectedColumns: Array.isArray(payload.selectedColumns)
+          ? payload.selectedColumns
+          : [],
+      };
+
+      const response = await api.post(
+        "/api/Precheck/ExportViewPrecheckdetails",
+        body,
+        {
+          responseType: "blob",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data && response.data.size > 0) {
+        const contentDisposition = response.headers["content-disposition"];
+        let filename = `ViewPrecheckExport_${new Date().toISOString().split("T")[0]}.xlsx`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, "");
+          }
+        }
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        return {
+          success: true,
+          message: "Precheck details exported successfully",
+        };
+      } else {
+        throw new Error("No file content received from the API");
+      }
+    } catch (error: any) {
+      console.error("Error exporting view precheck details:", error);
+      return rejectWithValue(
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to export precheck details"
+      );
+    }
+  }
+);
+
 export const downloadBulkPrecheckTemplate = createAsyncThunk(
   "precheck/downloadBulkPrecheckTemplate",
   async (_, { rejectWithValue }) => {
@@ -767,6 +849,19 @@ const precheckSlice = createSlice({
         state.error = null;
       })
       .addCase(viewPrecheckDetails.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Export View Precheck Details
+      .addCase(exportViewPrecheckDetails.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(exportViewPrecheckDetails.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(exportViewPrecheckDetails.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })

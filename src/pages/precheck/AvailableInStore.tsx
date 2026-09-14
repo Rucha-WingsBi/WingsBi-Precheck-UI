@@ -229,23 +229,23 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     setResults([]);
 
     try {
-      const seriesArr = seriesList.map(String);
+      const seriesArr = seriesList
+        .map((item: any) => {
+          if (typeof item === "string") return item;
+          const match = seriesOptions.find(
+            (s) => String(s.id) === String(item) || s.label === String(item)
+          );
+          return match ? match.label : String(item);
+        })
+        .filter(Boolean);
+
       const searchPayload = {
         searchQuery: queryStr?.trim() || "",
-        drawingNumber: queryStr?.trim() || "",
-        lnItemCode: queryStr?.trim() || "",
-        productionSeries: seriesArr,
         prodSeries: seriesArr,
-        documentType: selectedDocumentType,
-        unit: selectedUnits,
-        prodSeriesId: seriesArr.length > 0 ? seriesArr.join(",") : null,
-        prodSeriesIds: seriesArr.length > 0 ? seriesArr.join(",") : null,
         QrType: qrType,
       };
 
-      const response = await api.get("/api/QRCode/GetAvailableQr", {
-        params: searchPayload,
-      });
+      const response = await api.post("/api/QRCode/GetAvailableQr", searchPayload);
 
       const data = response.data;
       const qrCodesList = Array.isArray(data)

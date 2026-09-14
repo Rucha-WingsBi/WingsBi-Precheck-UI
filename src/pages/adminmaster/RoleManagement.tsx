@@ -43,7 +43,9 @@ import {
   useUpdateDepartment,
   useDeleteDepartment,
   useAddDepartment,
+  usePageAccess,
 } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import EditRoleDrawer from "./components/EditRoleDrawer";
@@ -652,6 +654,17 @@ export default function RoleManagement() {
   const roleRef = useRef<TabHandle>(null);
   const deptRef = useRef<TabHandle>(null);
 
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
+    user?.roleid ? Number(user.roleid) : null
+  );
+
+  const hasRoleManagementAccess = useMemo(() => {
+    if (!user?.roleid) return true;
+    if (isAccessLoading || pageAccessData === undefined) return true;
+    return isPageAccessible(pageAccessData, "Role Management");
+  }, [user, pageAccessData, isAccessLoading]);
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -702,24 +715,38 @@ export default function RoleManagement() {
           </Typography>
         </Box>
 
-        <Button
-          id="btn-add-role-dept"
-          variant="contained"
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={handleOpenAdd}
-          sx={{
-            fontWeight: 600,
-            backgroundColor: "primary.main",
-            "&:hover": { backgroundColor: "primary.dark" },
-            textTransform: "none",
-            borderRadius: 1.5,
-            px: 2.5,
-            py: 0.8,
-          }}
+        <Tooltip
+          title={!hasRoleManagementAccess ? `You do not have access to manage ${TAB_LABELS[activeTab].toLowerCase()}` : ""}
+          arrow
         >
-          Add {TAB_LABELS[activeTab]}
-        </Button>
+          <span>
+            <Button
+              id="btn-add-role-dept"
+              variant="contained"
+              size="small"
+              onClick={handleOpenAdd}
+              disabled={!hasRoleManagementAccess}
+              startIcon={<AddIcon fontSize="small" />}
+              sx={{
+                height: 34,
+                borderRadius: "6px",
+                backgroundColor: "primary.main",
+                color: "#ffffff",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                "&:hover": { backgroundColor: "primary.dark" },
+                "&.Mui-disabled": {
+                  backgroundColor: "#EAECF0",
+                  color: "#98A2B3",
+                },
+              }}
+            >
+              Add {TAB_LABELS[activeTab]}
+            </Button>
+          </span>
+        </Tooltip>
       </Stack>
 
       {/* 2. Tabs Bar */}

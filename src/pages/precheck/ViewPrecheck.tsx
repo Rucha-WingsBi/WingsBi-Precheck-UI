@@ -34,6 +34,10 @@ import {
   Collapse,
   InputAdornment,
   FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Checkbox,
 } from "@mui/material";
 import {
   Visibility as VisibilityIcon,
@@ -57,9 +61,9 @@ import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 import { StatusChip } from "../../components/StatusChip";
 
 import {
-  viewPrecheckDetails,
+  
   viewPrecheckByParameters,
-  exportPrecheckDetails,
+  exportViewPrecheckDetails,
 } from "../../store/slices/precheckSlice";
 import {
   getConsumedIn,
@@ -70,6 +74,7 @@ import {
   useAllDrawingNumbers,
   useAllLnItemCodes,
   useLnItemCodeSearch,
+  useDrawingNumbers,
 } from "../../hooks/useMasterData";
 import {
   usePONumbers,
@@ -87,32 +92,60 @@ interface ColumnDef {
 }
 
 const PRECHECK_COLUMNS: ColumnDef[] = [
-  { field: "sr", headerName: "SR", minWidth: 55, align: "center", sortable: true },
+  { field: "sr", headerName: "SR", minWidth: 60, align: "center", sortable: true },
   { field: "lnItemCode", headerName: "LN Item Code", minWidth: 140, align: "left", sortable: true },
   { field: "drawingNumber", headerName: "Drawing No.", minWidth: 150, align: "left", sortable: true },
-  { field: "nomenclature", headerName: "Nomenclature", minWidth: 160, align: "left", sortable: true },
+  { field: "nomenclature", headerName: "Nomenclature", minWidth: 170, align: "left", sortable: true },
   { field: "quantity", headerName: "Qty", minWidth: 70, align: "center", sortable: true },
   { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
-  { field: "irNumber", headerName: "IR", minWidth: 90, align: "center", sortable: false },
-  { field: "msnNumber", headerName: "MSN", minWidth: 90, align: "center", sortable: false },
+  { field: "irNumber", headerName: "IR", minWidth: 100, align: "center", sortable: false },
+  { field: "msnNumber", headerName: "MSN", minWidth: 100, align: "center", sortable: false },
   { field: "mrirNumber", headerName: "MRIR Number", minWidth: 120, align: "center", sortable: false },
-  { field: "componentType", headerName: "Type", minWidth: 90, align: "center", sortable: false },
-  { field: "status", headerName: "Status", minWidth: 105, align: "center", sortable: false },
+  { field: "componentType", headerName: "Type", minWidth: 95, align: "center", sortable: false },
+  { field: "status", headerName: "Status", minWidth: 110, align: "center", sortable: false },
   { field: "details", headerName: "Details", minWidth: 80, align: "center", sortable: false },
 ];
 
 const CONSUMED_IN_COLUMNS: ColumnDef[] = [
   { field: "sr", headerName: "Sr No", minWidth: 60, align: "center", sortable: true },
-  { field: "idNumber", headerName: "ID Number", minWidth: 100, align: "center", sortable: true },
+  { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
   { field: "consumedInDrawingNumber", headerName: "Consumed IN Drawing Number", minWidth: 220, align: "left", sortable: true },
   { field: "quantity", headerName: "Quantity", minWidth: 80, align: "center", sortable: true },
-  { field: "poNumber", headerName: "PO Number", minWidth: 130, align: "left", sortable: true },
-  { field: "irNumber", headerName: "IR Number", minWidth: 95, align: "center", sortable: false },
-  { field: "msnNumber", headerName: "MSN Number", minWidth: 105, align: "center", sortable: false },
-  { field: "date", headerName: "Date", minWidth: 130, align: "center", sortable: true },
-  { field: "username", headerName: "Username", minWidth: 110, align: "center", sortable: true },
+  { field: "poNumber", headerName: "PO Number", minWidth: 140, align: "left", sortable: true },
+  { field: "irNumber", headerName: "IR Number", minWidth: 100, align: "center", sortable: false },
+  { field: "msnNumber", headerName: "MSN Number", minWidth: 110, align: "center", sortable: false },
+  { field: "date", headerName: "Date", minWidth: 140, align: "center", sortable: true },
+  { field: "username", headerName: "Username", minWidth: 120, align: "center", sortable: true },
   { field: "isRejected", headerName: "Is Rejected", minWidth: 100, align: "center", sortable: false },
-  { field: "rejectionRemarks", headerName: "Remarks", minWidth: 130, align: "left", sortable: false },
+  { field: "rejectionRemarks", headerName: "Remarks", minWidth: 140, align: "left", sortable: false },
+];
+
+const ALL_PRECHECK_EXPORT_COLUMNS = [
+  { key: "sr", label: "SR" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing No." },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "quantity", label: "Qty" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "componentType", label: "Component Type" },
+  { key: "status", label: "Status" },
+];
+
+const ALL_CONSUMED_EXPORT_COLUMNS = [
+  { key: "sr", label: "Sr No" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "consumedInDrawingNumber", label: "Consumed IN Drawing" },
+  { key: "quantity", label: "Quantity" },
+  { key: "poNumber", label: "PO Number" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "date", label: "Date" },
+  { key: "username", label: "Username" },
+  { key: "isRejected", label: "Is Rejected" },
+  { key: "rejectionRemarks", label: "Remarks" },
 ];
 
 export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
@@ -127,6 +160,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   // ── Redux Loading States ───────────────────────────────────────────────────
   const { isLoading: isPrecheckLoading } = useSelector((state: RootState) => state.precheck);
   const { loading: isConsumedLoading, isDownloading } = useSelector((state: RootState) => state.qrcode);
+  const isExporting = isPrecheckLoading || isDownloading;
 
   // ── Precheck tab filter states ─────────────────────────────────────────────
   const [combinedSearch, setCombinedSearch] = useState("");        // PO / Drawing / LN search
@@ -150,7 +184,9 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   const { data: searchedLnCodes = [] } = useLnItemCodeSearch(debouncedLnSearch);
 
   const [poSearchText, setPOSearchText] = useState("");
-  const debouncedPOSearch = useDebounce(poSearchText, 400);
+  const effectivePoSearch = poSearchText.trim() || (selectedDrawing.length > 0 ? selectedDrawing[0] : "");
+  const debouncedPOSearch = useDebounce(effectivePoSearch, 300);
+  const { data: assemblyDrawingNumbers = [] } = useDrawingNumbers("", debouncedPOSearch);
   const { data: poNumbers = [] } = usePONumbers(debouncedPOSearch);
 
   // ── Options Derivation for MultiSelectFilter ────────────────────────────────
@@ -168,12 +204,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       .filter(Boolean);
   }, [allDrawingNumbers]);
 
-  const poOptions = useMemo(() => {
-    if (!poNumbers) return [];
-    return poNumbers
-      .map((item: any) => (typeof item === "string" ? item : item.productionOrderNumber))
-      .filter(Boolean);
-  }, [poNumbers]);
+  const poOptions = drawingOptions;
 
   // ── Row expansion (precheck tab) ───────────────────────────────────────────
   const [expandedRows, setExpandedRows] = useState<Set<number | string>>(new Set());
@@ -194,6 +225,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   const [precheckResults, setPrecheckResults] = useState<any[]>([]);
   const [consumedResults, setConsumedResults] = useState<any[]>([]);
   const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [hasAppliedFilters, setHasAppliedFilters] = useState<boolean>(false);
 
   // ── Sorting State ──────────────────────────────────────────────────────────
   const [orderBy, setOrderBy] = useState<string>("sr");
@@ -208,6 +240,35 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeMenuRow, setActiveMenuRow] = useState<any | null>(null);
+
+  // ── Export Dialog State & Handlers ─────────────────────────────────────────
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+
+  const activeExportColumns = useMemo(() => {
+    return activeTab === "precheck" ? ALL_PRECHECK_EXPORT_COLUMNS : ALL_CONSUMED_EXPORT_COLUMNS;
+  }, [activeTab]);
+
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(activeExportColumns.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === activeExportColumns.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(activeExportColumns.map((c) => c.key));
+    }
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
 
   // ── Format date helper ─────────────────────────────────────────────────────
   const formatDate = (dateString: string) => {
@@ -283,6 +344,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     if (activeTab === "precheck") {
       const trimmed = debouncedCombinedSearch.trim();
       if (trimmed.length >= 3 || (trimmed.length === 0 && precheckResults.length > 0)) {
+        if (trimmed.length >= 3) setHasAppliedFilters(true);
         setPage(0);
         fetchPrecheckData();
       }
@@ -294,6 +356,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     if (activeTab === "consumed") {
       const trimmed = debouncedIdNumber.trim();
       if (trimmed.length >= 3 || (trimmed.length === 0 && consumedResults.length > 0)) {
+        if (trimmed.length >= 3) setHasAppliedFilters(true);
         setPage(0);
         fetchConsumedData();
       }
@@ -301,7 +364,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   }, [debouncedIdNumber]);
 
   const isPrecheckDropdownSelected = selectedProductionSeries.length > 0 || selectedStatus.length > 0 || !!dateFrom || !!dateTo;
-  const isConsumedDropdownSelected = selectedLnItemCode.length > 0 || selectedDrawing.length > 0 || selectedProductionSeries.length > 0 || selectedPO.length > 0;
+  const isConsumedDropdownSelected = selectedLnItemCode.length > 0 && selectedDrawing.length > 0 && selectedProductionSeries.length > 0;
 
   // ── Fetch Consumed In Details from API ────────────────────────────────────
   const fetchConsumedData = () => {
@@ -345,33 +408,48 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
   const handleExport = () => {
     if (activeTab === "precheck") {
+      const selectedCols =
+        exportMode === "custom"
+          ? selectedExportColumns
+          : ALL_PRECHECK_EXPORT_COLUMNS.map((c) => c.key);
+
       const exportParams: any = {
-        prodSeries: selectedProductionSeries,
-        searchTerm: combinedSearch.trim(),
-        status: selectedStatus.length > 0 ? selectedStatus[0] : "",
-        fromDate: dateFrom || undefined,
-        toDate: dateTo || undefined,
+        searchQuery: combinedSearch.trim(),
+        productionSeries: selectedProductionSeries,
+        status: selectedStatus,
+        fromDate: dateFrom || null,
+        toDate: dateTo || null,
+        documentType: [],
+        selectedColumns: selectedCols,
       };
-      dispatch(exportPrecheckDetails(exportParams))
+
+      dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
         .catch((err) => alert(err.message || "Failed to export precheck details"));
     } else {
-      if (selectedDrawing.length === 0 || selectedProductionSeries.length === 0) {
-        alert("Please select both Drawing Number and Production Series before exporting");
-        return;
-      }
-      const params: any = {
-        ProdSeries: selectedProductionSeries,
-        DrawingNumber: selectedDrawing[0],
+      const selectedCols =
+        exportMode === "custom"
+          ? selectedExportColumns
+          : ALL_CONSUMED_EXPORT_COLUMNS.map((c) => c.key);
+
+      const exportParams: any = {
+        searchQuery: idNumber.trim() || combinedSearch.trim(),
+        productionSeries: selectedProductionSeries,
+        status: [],
+        fromDate: dateFrom || null,
+        toDate: dateTo || null,
+        documentType: ["ConsumedIn"],
+        selectedColumns: selectedCols,
       };
-      if (idNumber) params.IdNumber = parseInt(idNumber);
-      if (selectedPO.length > 0) params.ProductionOrderNumber = selectedPO[0];
-      if (selectedLnItemCode.length > 0) params.LnItemCode = selectedLnItemCode[0];
-      dispatch(exportConsumedIn(params));
+
+      dispatch(exportViewPrecheckDetails(exportParams))
+        .unwrap()
+        .catch((err) => alert(err.message || "Failed to export consumed details"));
     }
   };
 
   const handleApplyFilters = () => {
+    setHasAppliedFilters(true);
     setPage(0);
     if (activeTab === "precheck") {
       fetchPrecheckData(1, rowsPerPage);
@@ -381,6 +459,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   };
 
   const handleClearAll = () => {
+    setHasAppliedFilters(false);
     // Precheck filters
     setCombinedSearch("");
     setSelectedStatus([]);
@@ -460,20 +539,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
   // ── Client-side Sorted Rows ────────────────────────────────────────────────
   const sortedData = useMemo(() => {
-    if (!orderBy) return filteredData;
+    if (!orderBy || orderBy === "sr" || filteredData.length <= 1) return filteredData;
     return [...filteredData].sort((a, b) => {
       let aVal = a[orderBy];
       let bVal = b[orderBy];
-      if (orderBy === "sr" || orderBy === "quantity") {
+      if (orderBy === "quantity") {
         const numA = Number(aVal) || 0;
         const numB = Number(bVal) || 0;
         return order === "asc" ? numA - numB : numB - numA;
       }
-      const strA = String(aVal || "").toLowerCase().trim();
-      const strB = String(bVal || "").toLowerCase().trim();
-      return order === "asc"
-        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
-        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
+      const strA = String(aVal || "").toLowerCase();
+      const strB = String(bVal || "").toLowerCase();
+      if (strA < strB) return order === "asc" ? -1 : 1;
+      if (strA > strB) return order === "asc" ? 1 : -1;
+      return 0;
     });
   }, [filteredData, orderBy, order]);
 
@@ -509,26 +588,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       if (dateTo) {
         chips.push({ id: "dateTo", label: `To: ${dateTo}`, onRemove: () => setDateTo("") });
       }
-    } else {
-      selectedLnItemCode.forEach((code) => {
-        chips.push({ id: `ln-${code}`, label: `LN Code: ${code}`, onRemove: () => setSelectedLnItemCode((prev) => prev.filter((v) => v !== code)) });
-      });
-      selectedDrawing.forEach((dr) => {
-        chips.push({ id: `dr-${dr}`, label: `Drawing: ${dr}`, onRemove: () => setSelectedDrawing((prev) => prev.filter((v) => v !== dr)) });
-      });
-      selectedProductionSeries.forEach((s) => {
-        chips.push({ id: `series-${s}`, label: `Series: ${s}`, onRemove: () => setSelectedProductionSeries((prev) => prev.filter((v) => v !== s)) });
-      });
-      selectedPO.forEach((po) => {
-        chips.push({ id: `po-${po}`, label: `Assembly No: ${po}`, onRemove: () => setSelectedPO((prev) => prev.filter((v) => v !== po)) });
-      });
-      if (idNumber.trim()) {
-        chips.push({ id: "idNum", label: `ID: ${idNumber.trim()}`, onRemove: () => setIdNumber("") });
-      }
     }
 
     return chips;
-  }, [activeTab, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, dateTo, selectedPO, selectedLnItemCode, selectedDrawing, idNumber]);
+  }, [activeTab, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, dateTo]);
 
   // ── Cell Content Renderer ──────────────────────────────────────────────────
   const renderCellContent = (colField: string, row: any, idx: number) => {
@@ -621,6 +684,11 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     return row[colField] ?? "";
   };
 
+  const handleConfirmExportData = () => {
+    setExportDialogOpen(false);
+    handleExport();
+  };
+
   // ── JSX ────────────────────────────────────────────────────────────────────
   return (
     <Box
@@ -659,9 +727,9 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           <Button
             variant="outlined"
             size="small"
-            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
-            onClick={handleExport}
-            disabled={isDownloading}
+            startIcon={isExporting ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
+            onClick={handleOpenExportDialog}
+            disabled={isExporting || !hasAppliedFilters}
             sx={{
               height: 32,
               borderRadius: "6px",
@@ -685,6 +753,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           value={activeTab}
           onChange={(_, newValue) => {
             setActiveTab(newValue);
+            setHasAppliedFilters(false);
             setPage(0);
           }}
           textColor="primary"
@@ -753,10 +822,22 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                       <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
                     </InputAdornment>
                   ),
+                  endAdornment: combinedSearch ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => { setCombinedSearch(""); setPage(0); }}
+                        edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                      >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
                 }}
                 sx={{
-                  flex: "1 1 200px",
-                  minWidth: 160,
+                  flex: "1 1 340px",
+                  minWidth: 260,
                 }}
               />
 
@@ -895,56 +976,179 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 "&::-webkit-scrollbar": { display: "none" },
               }}
             >
-              {/* 1. LN Item Code */}
-              <MultiSelectFilter
-                label="LN Item Code"
-                value={selectedLnItemCode}
+              {/* 1. LN Item Code (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
                 options={lnItemCodeOptions}
-                onChange={(newValue) => {
-                  setSelectedLnItemCode(newValue);
+                value={selectedLnItemCode.length > 0 ? selectedLnItemCode[0] : null}
+                onChange={(_, newValue) => {
+                  setSelectedLnItemCode(newValue ? [newValue] : []);
                   setPage(0);
                 }}
-                flex="0 0 160px"
-                minWidth={130}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "input") {
+                    setLnSearchText(newInputValue);
+                  }
+                }}
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt) => String(opt).toLowerCase().includes(searchLower))
+                    .slice(0, 100);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="LN Item Code *"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "0 0 210px", minWidth: 170 }}
               />
 
-              {/* 2. Drawing Number */}
-              <MultiSelectFilter
-                label="Drawing No."
-                value={selectedDrawing}
+              {/* 2. Drawing Number (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
                 options={drawingOptions}
-                onChange={(newValue) => {
-                  setSelectedDrawing(newValue);
+                value={selectedDrawing.length > 0 ? selectedDrawing[0] : null}
+                onChange={(_, newValue) => {
+                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
+                  setSelectedDrawing(val ? [String(val)] : []);
                   setPage(0);
                 }}
-                flex="0 0 170px"
-                minWidth={140}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.drawingNumber || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.drawingNumber || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Drawing No. *"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "0 0 230px", minWidth: 180 }}
               />
 
-              {/* 3. Production Series */}
-              <MultiSelectFilter
-                label="Prod Series"
-                value={selectedProductionSeries}
+              {/* 3. Production Series (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
                 options={prodSeriesOptions}
-                onChange={(newValue) => {
-                  setSelectedProductionSeries(newValue);
+                value={selectedProductionSeries.length > 0 ? selectedProductionSeries[0] : null}
+                onChange={(_, newValue) => {
+                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
+                  setSelectedProductionSeries(val ? [String(val)] : []);
                   setPage(0);
                 }}
-                flex="0 0 150px"
-                minWidth={120}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionSeries || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.productionSeries || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Prod Series *"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "0 0 180px", minWidth: 140 }}
               />
 
-              {/* 4. Assembly No */}
-              <MultiSelectFilter
-                label="Assembly No"
-                value={selectedPO}
+              {/* 4. Assembly No (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
                 options={poOptions}
-                onChange={(newValue) => {
-                  setSelectedPO(newValue);
+                value={selectedPO.length > 0 ? selectedPO[0] : null}
+                onChange={(_, newValue) => {
+                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
+                  setSelectedPO(val ? [String(val)] : []);
                   setPage(0);
                 }}
-                flex="0 0 150px"
-                minWidth={120}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "input") {
+                    setPOSearchText(newInputValue);
+                  }
+                }}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionOrderNumber || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.productionOrderNumber || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Assembly No"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "0 0 190px", minWidth: 150 }}
               />
 
               {/* 5. ID Number */}
@@ -954,10 +1158,30 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 variant="outlined"
                 value={idNumber}
                 onChange={(e) => setIdNumber(e.target.value)}
+                InputProps={{
+                  endAdornment: idNumber ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setIdNumber("")}
+                        edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                      >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
                 sx={{
-                  flex: "0 0 130px",
-                  minWidth: 100,
-                  "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem", height: 38 },
+                  flex: "0 0 150px",
+                  minWidth: 120,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.825rem",
+                    height: 38,
+                    backgroundColor: "background.paper",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                  },
                 }}
               />
 
@@ -1070,8 +1294,14 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         </Box>
 
         {/* Section 2: Data Table */}
-        <TableContainer sx={{ overflowX: "auto", maxHeight: "calc(100vh - 290px)" }}>
-          <Table stickyHeader size="small">
+        <TableContainer
+          sx={{
+            overflowX: "auto",
+            minHeight: 350,
+            maxHeight: "calc(100vh - 290px)",
+          }}
+        >
+          <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1300 }}>
             {/* Table Head */}
             <TableHead>
               <TableRow sx={{ backgroundColor: COLOUR_ROLES.headerBg }}>
@@ -1095,8 +1325,11 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             <TableBody>
               {isPrecheckLoading || isConsumedLoading ? (
                 <TableRow>
-                  <TableCell colSpan={visibleColumns.length} align="center" sx={{ py: 6 }}>
-                    <CircularProgress size={32} />
+                  <TableCell colSpan={visibleColumns.length} align="center" sx={{ height: 280, borderBottom: "none" }}>
+                    <CircularProgress size={32} color="primary" />
+                    <Typography variant="body2" sx={{ color: "#667085", mt: 1 }}>
+                      Loading precheck records...
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : paginatedRows.length > 0 ? (
@@ -1122,6 +1355,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                               color: COLOUR_ROLES.textMain,
                               py: 0.15,
                               px: 0.75,
+                              minWidth: col.minWidth,
                               whiteSpace: "nowrap",
                             }}
                           >
@@ -1429,6 +1663,152 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           />
         </MenuItem>
       </Menu>
+
+      {/* Export Options Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => !isDownloading && setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 700,
+            color: "#101828",
+            fontSize: "1.1rem",
+            pb: 1,
+          }}
+        >
+          Export {activeTab === "precheck" ? "Precheck Details" : "Consumed In Details"}
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isDownloading}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns(activeExportColumns.map((c) => c.key));
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === activeExportColumns.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < activeExportColumns.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === activeExportColumns.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${activeExportColumns.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {activeExportColumns.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isExporting}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
+            onClick={handleConfirmExportData}
+            disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

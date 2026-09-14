@@ -1584,17 +1584,18 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
             id="btn-add-tab-item"
             variant="contained"
             size="small"
-            startIcon={<AddIcon />}
             onClick={handleOpenAdd}
+            startIcon={<AddIcon fontSize="small" />}
             sx={{
-              fontWeight: 600,
+              height: 34,
+              borderRadius: "6px",
               backgroundColor: "primary.main",
-              "&:hover": { backgroundColor: "primary.dark" },
+              color: "#ffffff",
               textTransform: "none",
-              borderRadius: "8px",
-              px: 2.5,
-              height: 38,
-              boxShadow: "none",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+              "&:hover": { backgroundColor: "primary.dark" },
             }}
           >
             {activeTab === 4 ? TAB_LABELS[activeTab] : `Add ${TAB_LABELS[activeTab]}`}

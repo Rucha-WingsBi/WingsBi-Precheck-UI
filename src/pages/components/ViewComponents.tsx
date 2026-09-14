@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store/store";
 import {
   Box,
   Typography,
@@ -29,6 +31,7 @@ import {
   ListItemText,
   ListItemIcon,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -42,7 +45,8 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useFetchAllDrawingNumbers, useProductionSeries, useUnits } from "../../hooks/useMasterData";
+import { useFetchAllDrawingNumbers, useProductionSeries, useUnits, usePageAccess } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
 import { useDebounce } from "../../hooks/useDebounce";
 import api from "../../services/api";
 import * as XLSX from "xlsx";
@@ -140,32 +144,32 @@ const DrawingNumberRowComponent = ({
           "&:hover": { backgroundColor: "grey.50" },
         }}
       >
-        <TableCell sx={{ textAlign: "center", width: "45px", color: "text.muted", fontSize: "0.8rem" }}>
+        <TableCell sx={{ textAlign: "center", minWidth: 55, color: "text.muted", fontSize: "0.8rem" }}>
           {index + 1}
         </TableCell>
-        <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600 }}>
+        <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600, minWidth: 160, whiteSpace: "nowrap" }}>
           {drawingData?.drawingNumber || "N/A"}
         </TableCell>
-        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", minWidth: 150, whiteSpace: "nowrap" }}>
           {drawingData?.lnItemCode || "N/A"}
         </TableCell>
-        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", minWidth: 220, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {drawingData?.nomenclature || "N/A"}
         </TableCell>
-        <TableCell sx={{ textAlign: "center" }}>
+        <TableCell sx={{ textAlign: "center", minWidth: 95 }}>
           <ComponentTypeChip type={drawingData?.componentType} />
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 100, whiteSpace: "nowrap" }}>
           {drawingData?.unitName || "N/A"}
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 80, whiteSpace: "nowrap" }}>
           {drawingData?.qty ?? (drawingData?.assemblyNumber || "N/A")}
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.muted", fontSize: "0.8rem" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.muted", fontSize: "0.8rem", minWidth: 130, whiteSpace: "nowrap" }}>
           {formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}
         </TableCell>
 
-        <TableCell sx={{ textAlign: "center", width: "60px" }}>
+        <TableCell sx={{ textAlign: "center", minWidth: 65 }}>
           <IconButton
             size="small"
             onClick={handleOpenMenu}
@@ -255,6 +259,20 @@ const ComponentTypesList = ["ID", "BATCH", "FIM", "SI"];
 
 const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
+    user?.roleid ? Number(user.roleid) : null
+  );
+
+  const hasAddComponentAccess = useMemo(() => {
+    if (!user?.roleid) return true;
+    if (isAccessLoading || pageAccessData === undefined) return true;
+    return (
+      isPageAccessible(pageAccessData, "Add Components") ||
+      isPageAccessible(pageAccessData, "Update Components") ||
+      isPageAccessible(pageAccessData, "View Components")
+    );
+  }, [user, pageAccessData, isAccessLoading]);
 
   // Filter state (Initial state BLANK / EMPTY)
   const [searchQuery, setSearchQuery] = useState("");
@@ -512,25 +530,37 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
               Export
             </Button>
 
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => navigate("/adminmaster/updatecomponents", { state: { fromView: true } })}
-              startIcon={<AddIcon fontSize="small" />}
-              sx={{
-                height: 34,
-                borderRadius: "6px",
-                backgroundColor: "primary.main",
-                color: "#ffffff",
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.8rem",
-                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-                "&:hover": { backgroundColor: "primary.dark" },
-              }}
+            <Tooltip
+              title={!hasAddComponentAccess ? "You do not have access to add component page" : ""}
+              arrow
             >
-              Add Component
-            </Button>
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={!hasAddComponentAccess}
+                  onClick={() => navigate("/adminmaster/updatecomponents", { state: { fromView: true } })}
+                  startIcon={<AddIcon fontSize="small" />}
+                  sx={{
+                    height: 34,
+                    borderRadius: "6px",
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                    "&.Mui-disabled": {
+                      backgroundColor: "#EAECF0",
+                      color: "#98A2B3",
+                    },
+                  }}
+                >
+                  Add Component
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         </Stack>
       )}
@@ -804,48 +834,52 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         </Box>
 
         {/* Section 2: Table */}
-        {isLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-            <CircularProgress color="primary" size={32} />
-          </Box>
-        ) : (
-          <TableContainer
-            sx={{
-              overflowX: "auto",
-              maxHeight: "calc(100vh - 290px)",
-            }}
-          >
-            <Table stickyHeader size="small" sx={{ minWidth: 800 }}>
-              <TableHead>
-                <TableRow sx={{ height: 36 }}>
-                  <SortableTableHeader label="Sr.No" columnKey="srNo" align="center" width="55px" isSortable={false} />
-                  <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} />
-                  <SortableTableHeader label="LN Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} />
-                  <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} />
-                  <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
-                  <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
-                  <SortableTableHeader label="Qty" columnKey="qty" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
-                  <SortableTableHeader label="Updated On" columnKey="modifiedDate" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" />
-                  <SortableTableHeader label="Actions" columnKey="actions" align="center" width="60px" isSortable={false} />
+        <TableContainer
+          sx={{
+            overflowX: "auto",
+            minHeight: 350,
+            maxHeight: "calc(100vh - 290px)",
+          }}
+        >
+          <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1100 }}>
+            <TableHead>
+              <TableRow sx={{ height: 36 }}>
+                <SortableTableHeader label="Sr.No" columnKey="srNo" align="center" minWidth={55} isSortable={false} />
+                <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={160} />
+                <SortableTableHeader label="LN Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={150} />
+                <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={220} />
+                <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={95} />
+                <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={100} />
+                <SortableTableHeader label="Qty" columnKey="qty" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={80} />
+                <SortableTableHeader label="Updated On" columnKey="modifiedDate" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={130} />
+                <SortableTableHeader label="Actions" columnKey="actions" align="center" minWidth={65} isSortable={false} />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ height: 280, borderBottom: "none" }}>
+                    <CircularProgress size={32} color="primary" />
+                    <Typography variant="body2" sx={{ color: "#667085", mt: 1 }}>
+                      Loading components...
+                    </Typography>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {displayData.length === 0 ? (
-                  <EmptyState colSpan={9} />
-                ) : (
-                  displayData.map((drawing, index) => (
-                    <DrawingNumberRowComponent
-                      key={drawing.id}
-                      drawingData={drawing}
-                      index={page * rowsPerPage + index}
-                      onDelete={handleDeleteClick}
-                    />
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+              ) : displayData.length === 0 ? (
+                <EmptyState colSpan={9} />
+              ) : (
+                displayData.map((drawing, index) => (
+                  <DrawingNumberRowComponent
+                    key={drawing.id}
+                    drawingData={drawing}
+                    index={page * rowsPerPage + index}
+                    onDelete={handleDeleteClick}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
         {/* Section 3: Footer Pagination */}
         <CustomPagination

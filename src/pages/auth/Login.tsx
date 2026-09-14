@@ -98,36 +98,52 @@ const Login: React.FC = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        backgroundColor: "#D82578",
+        background: "linear-gradient(135deg, #F4EBFF 0%, #F9FAFB 50%, #FCF5F9 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        py: 3,
       }}
     >
       <Card
         sx={{
-          maxWidth: 420,  
+          maxWidth: 420,
           width: "100%",
           mx: 2,
-          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.1)",
-          borderRadius: 2,
+          boxShadow: "0px 12px 32px rgba(16, 24, 40, 0.08), 0px 4px 12px rgba(16, 24, 40, 0.04)",
+          borderRadius: "16px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
           overflow: "hidden",
         }}
       >
         {/* Header */}
         <Box
           sx={{
-            bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
+            background: "linear-gradient(135deg, #6D2A8F 0%, #8E35B7 100%)",
             p: 3,
-            pb: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
+          <Box>
+            <Typography variant="h5" sx={{ color: "#ffffff", fontWeight: 700, fontSize: "1.35rem", lineHeight: 1.2 }}>
+              Sign In
+            </Typography>
+            <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "0.8rem", mt: 0.5 }}>
+              Enter your credentials to access your account
+            </Typography>
+          </Box>
           <Box
             sx={{
+              backgroundColor: "#ffffff",
+              p: 0.5,
+              borderRadius: "10px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "center",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
             }}
           >
             <Box
@@ -135,28 +151,33 @@ const Login: React.FC = () => {
               src="/assets/logo.jpg"
               alt="Logo"
               sx={{
-                height: 50,
+                height: 42,
                 width: "auto",
-                borderRadius: 2,
+                borderRadius: "6px",
+                display: "block",
               }}
             />
           </Box>
         </Box>
 
         {/* Form */}
-        <CardContent sx={{ p: 3, pt: 4 }}>
+        <CardContent sx={{ p: 3, pt: 3.5 }}>
           <form onSubmit={handleSubmit}>
-            <Box mb={3}>
+            <Box mb={2.5}>
               <Typography
-                variant="subtitle1"
-                fontWeight="600"
-                color="secondary.main"
-                mb={1}
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: "#344054",
+                  fontSize: "0.825rem",
+                  mb: 0.75,
+                }}
               >
                 User ID
               </Typography>
               <TextField
                 fullWidth
+                size="small"
                 id="userId"
                 name="userId"
                 placeholder="Enter your user ID"
@@ -171,10 +192,15 @@ const Login: React.FC = () => {
                     document.getElementById("password")?.focus();
                   }
                 }}
-                InputProps={{
-                  sx: {
-                    borderRadius: 1.5,
-                    bgcolor: "background.default",
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "0.875rem",
+                    height: 40,
+                    "& fieldset": { borderColor: "#D0D5DD" },
+                    "&:hover fieldset": { borderColor: "#6D2A8F" },
+                    "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                   },
                 }}
               />
@@ -185,18 +211,22 @@ const Login: React.FC = () => {
                 display="flex"
                 justifyContent="space-between"
                 alignItems="center"
-                mb={1}
+                mb={0.75}
               >
                 <Typography
-                  variant="subtitle1"
-                  fontWeight="600"
-                  color="secondary.main"
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "#344054",
+                    fontSize: "0.825rem",
+                  }}
                 >
                   Password
                 </Typography>
               </Box>
               <TextField
                 fullWidth
+                size="small"
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
@@ -206,19 +236,28 @@ const Login: React.FC = () => {
                 error={!!formErrors.password}
                 helperText={formErrors.password}
                 disabled={isLoading}
-                InputProps={{
-                  sx: {
-                    borderRadius: 1.5,
-                    bgcolor: "background.default",
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "0.875rem",
+                    height: 40,
+                    "& fieldset": { borderColor: "#D0D5DD" },
+                    "&:hover fieldset": { borderColor: "#6D2A8F" },
+                    "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                   },
+                }}
+                InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         aria-label="toggle password visibility"
                         onClick={handleTogglePassword}
                         edge="end"
+                        size="small"
+                        sx={{ color: "#667085" }}
                       >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -227,10 +266,9 @@ const Login: React.FC = () => {
               <Box display="flex" justifyContent="flex-end" mt={1}>
                 <Link
                   component={RouterLink}
-                  to="/forgot-password"
-                  color="primary"
+                  to="/forget-password"
                   underline="hover"
-                  sx={{ fontWeight: 500 }}
+                  sx={{ fontWeight: 600, color: "#6D2A8F", fontSize: "0.825rem" }}
                 >
                   Forgot Password?
                 </Link>
@@ -238,7 +276,7 @@ const Login: React.FC = () => {
             </Box>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert severity="error" sx={{ mb: 2, borderRadius: "8px", fontSize: "0.825rem" }}>
                 {error}
               </Alert>
             )}
@@ -247,29 +285,32 @@ const Login: React.FC = () => {
               fullWidth
               type="submit"
               variant="contained"
-              color="primary"
-              size="large"
               disabled={isLoading}
               sx={{
-                mt: 2,
-                py: 1.5,
+                mt: 1.5,
+                height: 40,
                 fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                borderRadius: "8px",
                 backgroundColor: "#6D2A8F",
-                "&:hover": { backgroundColor: "#4A1964" },
+                color: "#ffffff",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                "&:hover": { backgroundColor: "#582075" },
+                "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
               }}
             >
               {isLoading ? "Logging in..." : "Login"}
             </Button>
 
-            <Box mt={3} textAlign="center">
-              <Typography variant="body2" color="text.secondary">
+            <Box mt={2.5} textAlign="center">
+              <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.825rem" }}>
                 Don't have an account?{" "}
                 <Link
                   component={RouterLink}
                   to="/register"
-                  color="primary"
                   underline="hover"
-                  sx={{ fontWeight: 500 }}
+                  sx={{ fontWeight: 600, color: "#6D2A8F" }}
                 >
                   Register
                 </Link>

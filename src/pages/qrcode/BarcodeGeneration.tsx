@@ -594,6 +594,31 @@ export default function BarcodeGeneration() {
     setPage(0);
   }, [qrcodeList]);
 
+  // Close open dropdowns when scrolling the page (except when scrolling within option listbox)
+  useEffect(() => {
+    const handleScroll = (event: Event) => {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        target.classList &&
+        (target.classList.contains("MuiAutocomplete-listbox") ||
+          target.closest?.(".MuiAutocomplete-popper") ||
+          target.closest?.(".MuiAutocomplete-listbox"))
+      ) {
+        return;
+      }
+      if (
+        document.activeElement instanceof HTMLElement &&
+        (document.activeElement.tagName === "INPUT" ||
+          document.activeElement.getAttribute("role") === "combobox")
+      ) {
+        document.activeElement.blur();
+      }
+    };
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, []);
+
   // Debounced search functions
   const debouncedDrawingSearch = useMemo(
     () =>
@@ -1727,7 +1752,7 @@ export default function BarcodeGeneration() {
                                       <Typography
                                         variant="body2"
                                         fontWeight="700"
-                                        sx={{ fontSize: "0.875rem", color: "#0F172A" }}
+                                        sx={{ fontSize: "0.875rem", color: "primary.main" }}
                                       >
                                         {option.productionOrderNumber}
                                       </Typography>
@@ -1846,7 +1871,7 @@ export default function BarcodeGeneration() {
                                   <Typography
                                     variant="body2"
                                     fontWeight="700"
-                                    sx={{ fontSize: "0.875rem", color: "#0F172A" }}
+                                    sx={{ fontSize: "0.875rem", color: "primary.main" }}
                                   >
                                     {lnCode}
                                   </Typography>
@@ -1959,7 +1984,7 @@ export default function BarcodeGeneration() {
                                       <Typography
                                         variant="body2"
                                         fontWeight="700"
-                                        sx={{ fontSize: "0.875rem", color: "#0F172A" }}
+                                        sx={{ fontSize: "0.875rem", color: "primary.main" }}
                                       >
                                         {drawingNo}
                                       </Typography>
@@ -2472,7 +2497,7 @@ export default function BarcodeGeneration() {
                                   return (
                                     <li {...optionProps} key={key}>
                                       <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                                        <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "#0F172A" }}>
+                                        <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "primary.main" }}>
                                           {lnCode}
                                         </Typography>
                                         {details && (

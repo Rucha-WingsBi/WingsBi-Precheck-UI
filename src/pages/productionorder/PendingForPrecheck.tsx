@@ -2238,7 +2238,7 @@ const CommonTable: React.FC<CommonTableProps> = ({
             </IconButton>
           </Box>
           <DataGrid
-            rowHeight={42}
+            rowHeight={32}
             columnHeaderHeight={40}
             rows={
               isLoading

@@ -31,6 +31,7 @@ import {
   FormControl,
   Select,
   MenuItem,
+  Tooltip,
 } from "@mui/material";
 import {
   QrCodeScanner as QrCodeScannerIcon,
@@ -1412,31 +1413,38 @@ const StoreIn: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() =>
-                          navigate("/precheck/make", { state: row })
-                        }
-                        disabled={!hasMakeAccess}
-                        sx={{
-                          borderColor: "#6D2A8F",
-                          color: "#6D2A8F",
-                          fontWeight: 600,
-                          fontSize: "0.775rem",
-                          borderRadius: "6px",
-                          py: 0.25,
-                          px: 1.5,
-                          height: 28,
-                          textTransform: "none",
-                          "&:hover": {
-                            borderColor: "#551F6F",
-                            backgroundColor: "#F5EEF8",
-                          },
-                        }}
+                      <Tooltip
+                        title={!hasMakeAccess ? "You do not have access to make precheck" : ""}
+                        arrow
                       >
-                        Run Precheck
-                      </Button>
+                        <span>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() =>
+                              navigate("/precheck/make", { state: row })
+                            }
+                            disabled={!hasMakeAccess}
+                            sx={{
+                              borderColor: "#6D2A8F",
+                              color: "#6D2A8F",
+                              fontWeight: 600,
+                              fontSize: "0.775rem",
+                              borderRadius: "6px",
+                              py: 0.25,
+                              px: 1.5,
+                              height: 28,
+                              textTransform: "none",
+                              "&:hover": {
+                                borderColor: "#551F6F",
+                                backgroundColor: "#F5EEF8",
+                              },
+                            }}
+                          >
+                            Run Precheck
+                          </Button>
+                        </span>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))

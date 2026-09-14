@@ -14,7 +14,23 @@ import {
   useTheme,
   Stack,
   Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Checkbox,
+  Chip,
+  Grid,
+  Typography,
+  IconButton,
+  Button,
+  CircularProgress,
 } from "@mui/material";
+import { Close as CloseIcon, FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import {
   viewPrecheckDetails,
   makePrecheck,
@@ -68,6 +84,24 @@ import PrecheckTable from "./make-precheck/PrecheckTable";
 import { usePrecheckScanning } from "./make-precheck/usePrecheckScanning";
 import ExcelUploadResultDialog from "./make-precheck/ExcelUploadResultDialog";
 import AddBomDrawingDialog from "./make-precheck/AddBomDrawingDialog";
+
+const MAKE_PRECHECK_EXPORT_COLUMNS = [
+  { key: "sr", label: "SR" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing No." },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "quantity", label: "Qty" },
+  { key: "scannedQuantity", label: "Scanned Qty" },
+  { key: "remainingQuantity", label: "Remaining Qty" },
+  { key: "qrCode", label: "QR Code" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "ir", label: "IR Number" },
+  { key: "msn", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "componentType", label: "Type" },
+  { key: "precheckStatus", label: "Precheck Status" },
+  { key: "remarks", label: "Remarks" },
+];
 
 const MakePrecheck: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -1469,18 +1503,38 @@ const MakePrecheck: React.FC = () => {
     }
   };
 
-  // handle export
-  const handleExport = () => {
-    // Create export parameters object with only defined values
-    const exportParams: {
-      productionOrderNumber?: string;
-      productionSeriesId?: number;
-      id?: number;
-      drawingNumberId?: number;
-      remainingPrecheck?: boolean;
-    } = {};
+  // Export Modal state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
 
-    // Only add parameters that have values
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === MAKE_PRECHECK_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const handleConfirmExportData = () => {
+    const selectedCols = exportMode === "all"
+      ? MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key)
+      : selectedExportColumns;
+
+    const exportParams: any = {};
+
     if (selectedPO?.productionOrderNumber) {
       exportParams.productionOrderNumber = selectedPO.productionOrderNumber;
     }
@@ -1494,27 +1548,27 @@ const MakePrecheck: React.FC = () => {
       exportParams.drawingNumberId = selectedDrawing.id;
     }
 
-    // Check if at least one parameter is provided
     if (Object.keys(exportParams).length === 0) {
       alert("Please enter at least one search criteria before exporting");
       return;
     }
 
-    // Add remainingPrecheck parameter based on filterRemainingOnly state
     exportParams.remainingPrecheck = filterRemainingOnly;
+    exportParams.selectedColumns = selectedCols;
 
-    // Call the export API
     dispatch(exportPrecheckDetails(exportParams))
       .unwrap()
-      .then((result) => {
-        if (result.success) {
-          // You can show a success message here if needed
-          // toast.success(result.message);
-        }
+      .then(() => {
+        setExportDialogOpen(false);
       })
       .catch((error) => {
         alert(error.message || "Failed to export precheck details");
       });
+  };
+
+  // handle export
+  const handleExport = () => {
+    handleOpenExportDialog();
   };
 
   //handle next 
@@ -1973,6 +2027,151 @@ const MakePrecheck: React.FC = () => {
         onClose={() => setExcelResultDialogOpen(false)}
         data={excelUploadResult}
       />
+
+      {/* Export Options Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 700,
+            color: "#101828",
+            fontSize: "1.1rem",
+            pb: 1,
+          }}
+        >
+          Export Precheck Details
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns(MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key));
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === MAKE_PRECHECK_EXPORT_COLUMNS.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < MAKE_PRECHECK_EXPORT_COLUMNS.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === MAKE_PRECHECK_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${MAKE_PRECHECK_EXPORT_COLUMNS.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {MAKE_PRECHECK_EXPORT_COLUMNS.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<FileDownloadIcon fontSize="small" />}
+            onClick={handleConfirmExportData}
+            disabled={exportMode === "custom" && selectedExportColumns.length === 0}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            Export
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

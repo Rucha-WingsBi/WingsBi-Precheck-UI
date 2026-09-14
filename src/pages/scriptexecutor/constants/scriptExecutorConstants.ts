@@ -13,7 +13,6 @@ export interface AssemblyStats {
 export const TABS = {
   MASTER_DATA: 0,
   QR_CODE: 1,
-  STD_QR_CODE: 2,
 } as const;
 
 export const TAB_METADATA = {
@@ -30,7 +29,7 @@ export const TAB_METADATA = {
     ],
   },
   [TABS.QR_CODE]: {
-    templateName: "Old_QR_Code_Template.xlsx",
+    templateName: "QR_Code_Template.xlsx",
     instructions: [
       "Ensure all data is accurate and validated before execution.",
       "Verify that the correct Drawing Number and LN Item are selected.",
@@ -38,19 +37,7 @@ export const TAB_METADATA = {
       "Confirm that the Quantity and Remaining Quantity fields contain the same value.",
     ],
     downloadEndpoints: [
-      { endpoint: "/api/Script/DownloadTemplate/qrcodeimport", label: "Old QR Code Template", fileName: "Old_QR_Code_Template.xlsx" },
-    ],
-  },
-  [TABS.STD_QR_CODE]: {
-    templateName: "New_STD_QR_Code_Template.xlsx",
-    instructions: [
-      "Ensure all data is accurate and validated before execution.",
-      "Verify that the correct Drawing Number and LN Item are selected.",
-      "Ensure the Quantity value is greater than 0.",
-      "Confirm that the Quantity and Remaining Quantity fields contain the same value.",
-    ],
-    downloadEndpoints: [
-      { endpoint: "/api/Script/DownloadTemplate/stdqrgeneration", label: "New Std QR Code Template", fileName: "New_STD_QR_Code_Template.xlsx" },
+      { endpoint: "/api/Script/DownloadTemplate/qrcodeimport", label: "QR Code Template", fileName: "QR_Code_Template.xlsx" },
     ],
   },
 };
@@ -68,11 +55,8 @@ export const detectTemplateType = (headers: string[], fileName?: string): { type
     if (normName.includes("masterdatadrawing")) {
       return { type: "masterdata-drawing", templateName: "Master Data Drawing Template" };
     }
-    if (normName.includes("stdqrcodesample") || normName.includes("newstdqrcodetemplate") || normName.includes("newstdqr")) {
-      return { type: "STDqrcodesample", templateName: "New STD QR Code Template" };
-    }
-    if (normName.includes("qrcodesample") || normName.includes("oldqrcodetemplate") || normName.includes("oldqr")) {
-      return { type: "qrcodesample", templateName: "Old QR Code Template" };
+    if (normName.includes("qrcodesample") || normName.includes("qrcodetemplate") || normName.includes("oldqr") || normName.includes("qr")) {
+      return { type: "qrcodesample", templateName: "QR Code Template" };
     }
   }
 
@@ -86,12 +70,6 @@ export const detectTemplateType = (headers: string[], fileName?: string): { type
   const hasQuantity = headersSet.has("quantity");
   const hasRemainingQuantity = headersSet.has("remainingquantity");
 
-  const stdColumns = [
-    "mrirnumber", "mrir", "customeritemcode", "htlotno", "htlotnumber",
-    "fanmannumber", "fanmanserialnumber", "gfnno", "wc", "material", "partno", "size"
-  ];
-  const hasStdColumn = stdColumns.some(col => headersSet.has(col));
-
   if (hasAssemblyLN && hasChildPart) {
     return { type: "masterdata-drawing-assembly", templateName: "Master Data Assembly Template" };
   }
@@ -99,10 +77,7 @@ export const detectTemplateType = (headers: string[], fileName?: string): { type
     return { type: "masterdata-drawing", templateName: "Master Data Drawing Template" };
   }
   if (hasDrawingNumber && hasLnItem && hasQuantity && hasRemainingQuantity) {
-    if (hasStdColumn) {
-      return { type: "STDqrcodesample", templateName: "New STD QR Code Template" };
-    }
-    return { type: "qrcodesample", templateName: "Old QR Code Template" };
+    return { type: "qrcodesample", templateName: "QR Code Template" };
   }
 
   return { type: "unrelated", templateName: "Invalid Template" };
@@ -113,8 +88,6 @@ export const isTemplateValidForTab = (detectedType: string, tabIndex: number): b
     return detectedType === "masterdata-drawing-assembly" || detectedType === "masterdata-drawing";
   } else if (tabIndex === TABS.QR_CODE) {
     return detectedType === "qrcodesample";
-  } else if (tabIndex === TABS.STD_QR_CODE) {
-    return detectedType === "STDqrcodesample";
   }
   return false;
 };
@@ -123,9 +96,7 @@ export const getExpectedTemplateName = (tabIndex: number): string => {
   if (tabIndex === TABS.MASTER_DATA) {
     return "Master Data Assembly Template and Master Data Drawing Template";
   } else if (tabIndex === TABS.QR_CODE) {
-    return "Old QR Code Template";
-  } else if (tabIndex === TABS.STD_QR_CODE) {
-    return "New STD QR Code Template";
+    return "QR Code Template";
   }
   return "Unknown Template";
 };

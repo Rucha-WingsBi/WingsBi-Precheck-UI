@@ -26,6 +26,17 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  Checkbox,
+  Chip,
+  Grid,
+  FormControl,
 } from '@mui/material';
 import { CustomPagination } from '../../components/CustomPagination';
 
@@ -97,6 +108,25 @@ interface StoredComponent {
   assemblyNumber: string;
   lnItemCode: string;
 }
+
+const ALL_STORED_IN_EXPORT_COLUMNS = [
+  { key: "sr", label: "Sr.No" },
+  { key: "qrCodeNumber", label: "QRCode ID" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "projectNumber", label: "Project Number" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "quantity", label: "Qty" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "consumedInDrawing", label: "Consumed in Drawing" },
+  { key: "qrCodeStatus", label: "Status" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "desposition", label: "Disposition" },
+  { key: "users", label: "Username" },
+];
 
 const Row = ({ component, sr }: { component: StoredComponent; sr: number }) => {
   const [open, setOpen] = useState(false);
@@ -308,7 +338,34 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
   const [loadingDrawings, setLoadingDrawings] = useState(false);
 
   // Get data from Redux store
-  const { storedComponents, loading, error } = useSelector((state: RootState) => state.qrcode);
+  const { storedComponents, loading, isDownloading, error } = useSelector((state: RootState) => state.qrcode);
+
+  // Export Dialog State & Handlers
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
+    ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key)
+  );
+
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_STORED_IN_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -473,13 +530,20 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
 
   const handleExport = async () => {
     try {
+      const selectedCols =
+        exportMode === "custom"
+          ? selectedExportColumns
+          : ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key);
+
       const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
       await dispatch(
         exportStoredComponents({
           storeInDate: dateStr,
           drawingNumber: searchQuery || selectedDrawingNo || null,
+          selectedColumns: selectedCols,
         })
       ).unwrap();
+      setExportDialogOpen(false);
       setSnackbar({
         open: true,
         message: 'Components exported successfully!',
@@ -681,9 +745,9 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                   variant="contained"
                   color="primary"
                   size="small"
-                  onClick={handleExport}
-                  disabled={!filteredComponents.length}
-                  startIcon={<DownloadIcon fontSize="small" />}
+                  onClick={handleOpenExportDialog}
+                  disabled={!filteredComponents.length || isDownloading}
+                  startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon fontSize="small" />}
                   sx={{
                     height: 36,
                     borderRadius: "6px",
@@ -818,6 +882,128 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                 {snackbar.message}
               </Alert>
             </Snackbar>
+
+            {/* Export Column Selection Dialog */}
+            <Dialog
+              open={exportDialogOpen}
+              onClose={() => setExportDialogOpen(false)}
+              maxWidth="sm"
+              fullWidth
+              PaperProps={{
+                sx: { borderRadius: "12px", p: 1 },
+              }}
+            >
+              <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+                Export Stored In Components
+              </DialogTitle>
+              <DialogContent>
+                <FormControl component="fieldset" sx={{ width: "100%" }}>
+                  <RadioGroup
+                    value={exportMode}
+                    onChange={(e) => setExportMode(e.target.value as "all" | "custom")}
+                    sx={{ mb: 2 }}
+                  >
+                    <FormControlLabel
+                      value="all"
+                      control={<Radio size="small" />}
+                      label={<Typography variant="body2" fontWeight={600}>Export All Columns</Typography>}
+                    />
+                    <FormControlLabel
+                      value="custom"
+                      control={<Radio size="small" />}
+                      label={<Typography variant="body2" fontWeight={600}>Select Custom Columns</Typography>}
+                    />
+                  </RadioGroup>
+
+                  {exportMode === "custom" && (
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: "12px",
+                        bgcolor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedExportColumns.length === ALL_STORED_IN_EXPORT_COLUMNS.length}
+                              indeterminate={
+                                selectedExportColumns.length > 0 &&
+                                selectedExportColumns.length < ALL_STORED_IN_EXPORT_COLUMNS.length
+                              }
+                              onChange={handleToggleSelectAllColumns}
+                              sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" fontWeight="700">
+                              {selectedExportColumns.length === ALL_STORED_IN_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                            </Typography>
+                          }
+                        />
+                        <Chip
+                          label={`${selectedExportColumns.length} / ${ALL_STORED_IN_EXPORT_COLUMNS.length} selected`}
+                          size="small"
+                          variant="outlined"
+                          sx={{ borderColor: "primary.main", color: "primary.main" }}
+                        />
+                      </Box>
+
+                      <Grid container spacing={1}>
+                        {ALL_STORED_IN_EXPORT_COLUMNS.map((col) => (
+                          <Grid item xs={6} sm={4} key={col.key}>
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  size="small"
+                                  checked={selectedExportColumns.includes(col.key)}
+                                  onChange={() => handleToggleColumn(col.key)}
+                                  sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                                />
+                              }
+                              label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  )}
+                </FormControl>
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, py: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  onClick={() => setExportDialogOpen(false)}
+                  disabled={isDownloading}
+                  sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={isDownloading ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon fontSize="small" />}
+                  onClick={handleExport}
+                  disabled={isDownloading || (exportMode === "custom" && selectedExportColumns.length === 0)}
+                  sx={{
+                    minWidth: 110,
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    textTransform: "none",
+                    backgroundColor: "primary.main",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                  }}
+                >
+                  {isDownloading ? "Exporting..." : "Export"}
+                </Button>
+              </DialogActions>
+            </Dialog>
           </>
         )}
       </Box>

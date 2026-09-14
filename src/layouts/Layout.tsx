@@ -749,7 +749,7 @@ export default function Layout() {
             </Box>
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Typography
+          {/* <Typography
             variant="caption"
             sx={{
               color: "#ffe0f0",
@@ -763,7 +763,7 @@ export default function Layout() {
             }}
           >
             Precheck Version 9.6
-          </Typography>
+          </Typography> */}
 
           {/* User Profile */}
           {user && (

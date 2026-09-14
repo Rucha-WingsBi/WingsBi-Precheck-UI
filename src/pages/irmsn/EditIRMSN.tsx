@@ -441,6 +441,62 @@ export default function EditIRMSN() {
                     setValue("componentType", "");
                   }
                 }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const drawingNo =
+                    typeof option === "string"
+                      ? option
+                      : option?.drawingNumber || "";
+                  const lnCode =
+                    typeof option === "string" ? "" : option?.lnItemCode;
+                  const nomenclature =
+                    typeof option === "string" ? "" : option?.nomenclature;
+                  const compType =
+                    typeof option === "string" ? "" : option?.componentType;
+
+                  const details = [
+                    lnCode ? `LN: ${lnCode}` : null,
+                    nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                    compType ? `Component Type: ${compType}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" | ");
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          py: 0.5,
+                          width: "100%",
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                        >
+                          {drawingNo.startsWith("Drawing:")
+                            ? drawingNo
+                            : `Drawing: ${drawingNo}`}
+                        </Typography>
+                        {details && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: "0.75rem",
+                              lineHeight: 1.35,
+                              color: "text.secondary",
+                            }}
+                          >
+                            {details}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  );
+                }}
                 renderInput={(params) => (
                   <TextField {...params} label="Drawing Number" fullWidth />
                 )}
@@ -539,6 +595,58 @@ export default function EditIRMSN() {
                   } else {
                     setValue("productionOrderNumber", null);
                   }
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  if (typeof option === "string") {
+                    return (
+                      <li {...optionProps} key={key}>
+                        {option}
+                      </li>
+                    );
+                  }
+                  const poNum = option.productionOrderNumber || "";
+                  const details = [
+                    option.lnItemCode ? `LN: ${option.lnItemCode}` : null,
+                    option.drawingNumber ? `Drawing: ${option.drawingNumber}` : null,
+                    option.nomenclature ? `Nomenclature: ${option.nomenclature}` : null,
+                    option.componentType ? `Component Type: ${option.componentType}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" | ");
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          py: 0.5,
+                          width: "100%",
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                        >
+                          {poNum.startsWith("PO:") ? poNum : `PO: ${poNum}`}
+                        </Typography>
+                        {details && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: "0.75rem",
+                              lineHeight: 1.35,
+                              color: "text.secondary",
+                            }}
+                          >
+                            {details}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  );
                 }}
                 renderInput={(params) => (
                   <TextField

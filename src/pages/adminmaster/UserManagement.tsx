@@ -47,7 +47,9 @@ import {
   useSecurityQuestions,
   usePendingUsers,
   useApproveUser,
+  usePageAccess,
 } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { UserRole, User } from "../../types";
@@ -121,6 +123,16 @@ export default function UserManagement() {
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const userRole = currentUser?.role;
+
+  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
+    currentUser?.roleid ? Number(currentUser.roleid) : null
+  );
+
+  const hasUserManagementAccess = useMemo(() => {
+    if (!currentUser?.roleid) return true;
+    if (isAccessLoading || pageAccessData === undefined) return true;
+    return isPageAccessible(pageAccessData, "User Management");
+  }, [currentUser, pageAccessData, isAccessLoading]);
 
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("edit");
@@ -633,24 +645,37 @@ export default function UserManagement() {
         </Box>
 
         {userRole === "Admin" && (
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={handleAddUserOpen}
-            sx={{
-              fontWeight: 600,
-              backgroundColor: "primary.main",
-              "&:hover": { backgroundColor: "primary.dark" },
-              textTransform: "none",
-              borderRadius: 1.5,
-              px: 2.5,
-              py: 0.8,
-              height: 38,
-            }}
+          <Tooltip
+            title={!hasUserManagementAccess ? "You do not have access to manage users" : ""}
+            arrow
           >
-            Add User
-          </Button>
+            <span>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleAddUserOpen}
+                disabled={!hasUserManagementAccess}
+                startIcon={<AddIcon fontSize="small" />}
+                sx={{
+                  height: 34,
+                  borderRadius: "6px",
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#EAECF0",
+                    color: "#98A2B3",
+                  },
+                }}
+              >
+                Add User
+              </Button>
+            </span>
+          </Tooltip>
         )}
       </Stack>
 

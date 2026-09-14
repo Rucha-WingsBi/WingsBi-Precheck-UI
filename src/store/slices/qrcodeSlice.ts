@@ -866,7 +866,11 @@ export const bulkUpdateQRCode = createAsyncThunk(
 export const exportStoredComponents = createAsyncThunk(
   "qrcode/exportStoredComponents",
   async (
-    payload: { storeInDate: string | null; drawingNumber: string | null },
+    payload: {
+      storeInDate: string | null;
+      drawingNumber: string | null;
+      selectedColumns?: string[];
+    },
     { rejectWithValue }
   ) => {
     try {
@@ -891,6 +895,7 @@ export const exportStoredComponents = createAsyncThunk(
         {
           storeInDate: formattedDate,
           drawingNumber: payload.drawingNumber && payload.drawingNumber.trim() ? payload.drawingNumber : null,
+          selectedColumns: payload.selectedColumns || [],
         },
         {
           responseType: "blob",

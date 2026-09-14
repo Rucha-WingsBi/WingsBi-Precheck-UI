@@ -256,31 +256,47 @@ const RowActionsMenu: React.FC<{
           sx: { minWidth: 170, borderRadius: 2, py: 0.5 },
         }}
       >
-        <MenuItem
-          disabled={!hasViewAccess}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleNavigate("/production-order/view", row);
-          }}
+        <Tooltip
+          title={!hasViewAccess ? "You do not have access to view order details" : ""}
+          arrow
+          placement="left"
         >
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
-          </ListItemIcon>
-          <ListItemText primary="View Available QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
-        </MenuItem>
+          <span>
+            <MenuItem
+              disabled={!hasViewAccess}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNavigate("/production-order/view", row);
+              }}
+            >
+              <ListItemIcon>
+                <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
+              </ListItemIcon>
+              <ListItemText primary="View Available QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+            </MenuItem>
+          </span>
+        </Tooltip>
 
-        <MenuItem
-          disabled={!hasMakeAccess}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleNavigate("/precheck/make", row);
-          }}
+        <Tooltip
+          title={!hasMakeAccess ? "You do not have access to make precheck" : ""}
+          arrow
+          placement="left"
         >
-          <ListItemIcon>
-            <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
-          </ListItemIcon>
-          <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
-        </MenuItem>
+          <span>
+            <MenuItem
+              disabled={!hasMakeAccess}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNavigate("/precheck/make", row);
+              }}
+            >
+              <ListItemIcon>
+                <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
+              </ListItemIcon>
+              <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+            </MenuItem>
+          </span>
+        </Tooltip>
 
         <MenuItem
           disabled={!canDeleteOrEdit}
@@ -1682,7 +1698,7 @@ const ProductionOrderUpload: React.FC = () => {
                 paginationModel={previewPaginationModel}
                 onPaginationModelChange={setPreviewPaginationModel}
                 pageSizeOptions={[10, 25, 50, 100]}
-                rowHeight={42}
+                rowHeight={32}
                 disableColumnFilter
                 disableColumnMenu
                 disableColumnSelector
@@ -1712,8 +1728,8 @@ const ProductionOrderUpload: React.FC = () => {
                     "&:hover": { backgroundColor: "#667085 !important" },
                   },
                   "& .MuiDataGrid-row": {
-                    minHeight: "42px !important",
-                    maxHeight: "42px !important",
+                    minHeight: "32px !important",
+                    maxHeight: "32px !important",
                   },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",
@@ -1734,7 +1750,7 @@ const ProductionOrderUpload: React.FC = () => {
                     alignItems: "center !important",
                   },
                   "& .MuiDataGrid-cell": {
-                    fontSize: "0.85rem",
+                    fontSize: "0.775rem",
                     color: "#344054",
                     borderBottom: "1px solid #F2F4F7",
                     display: "flex !important",
@@ -2028,7 +2044,7 @@ const ProductionOrderUpload: React.FC = () => {
                 disableColumnFilter
                 disableColumnMenu
                 disableColumnSelector
-                rowHeight={42}
+                rowHeight={32}
                 disableRowSelectionOnClick
                 getRowId={(row) => row.id || row.sr}
                 hideFooter
@@ -2058,8 +2074,8 @@ const ProductionOrderUpload: React.FC = () => {
                     "&:hover": { backgroundColor: "#667085 !important" },
                   },
                   "& .MuiDataGrid-row": {
-                    minHeight: "42px !important",
-                    maxHeight: "42px !important",
+                    minHeight: "32px !important",
+                    maxHeight: "32px !important",
                   },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",
@@ -2080,7 +2096,7 @@ const ProductionOrderUpload: React.FC = () => {
                     alignItems: "center !important",
                   },
                   "& .MuiDataGrid-cell": {
-                    fontSize: "0.85rem",
+                    fontSize: "0.775rem",
                     color: "#344054",
                     borderBottom: "1px solid #F2F4F7",
                     display: "flex !important",

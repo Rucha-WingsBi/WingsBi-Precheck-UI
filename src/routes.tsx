@@ -101,6 +101,7 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forget-password" element={<ForgetPassword />} />
+        <Route path="/forgot-password" element={<ForgetPassword />} />
 
         {/* Protected Dashboard/App Routes */}
         <Route element={<ProtectedRoute />}>
