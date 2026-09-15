@@ -33,7 +33,7 @@ import { IconButton, Tooltip } from "@mui/material";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import { useQueryClient } from "@tanstack/react-query";
-import { commonDataGridSx } from "../../components/tableStyles";
+import { adminDataGridSx } from "../../components/tableStyles";
 import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUsers,
@@ -195,7 +195,7 @@ function GenericTable<T extends { id: number }>({
         slots={{
           pagination: DataGridCustomPagination,
         }}
-        sx={commonDataGridSx}
+        sx={adminDataGridSx}
       />
     </Box>
   );

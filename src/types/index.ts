@@ -288,6 +288,7 @@ export interface QRCodeFormData {
   gfnNo?: string;
   shapes?: string;
   material?: string;
+  rmItemCode?: string;
   noMfgDate?: boolean;
   noExpiryDate?: boolean;
 }

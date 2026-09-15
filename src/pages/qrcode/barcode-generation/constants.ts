@@ -1,0 +1,18 @@
+export const ALL_BARCODE_EXPORT_COLUMNS = [
+  { key: "srNo", label: "SR Number" },
+  { key: "qrCodeNumber", label: "QR Code Number" },
+  { key: "productionSeries", label: "Production Series" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "projectNumber", label: "Project Number" },
+  { key: "unit", label: "Unit" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "quantity", label: "Quantity" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "manufacturingDate", label: "MFG Date" },
+  { key: "expiryDate", label: "Expiry Date" },
+  { key: "disposition", label: "Disposition" },
+  { key: "rackLocationId", label: "Rack Location" },
+  { key: "remarks", label: "Remarks" },
+];

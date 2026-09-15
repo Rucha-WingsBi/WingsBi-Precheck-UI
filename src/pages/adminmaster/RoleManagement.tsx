@@ -32,7 +32,7 @@ import {
   MoreVert as MoreVertIcon,
 
 } from "@mui/icons-material";
-import { commonDataGridSx } from "../../components/tableStyles";
+import { adminDataGridSx } from "../../components/tableStyles";
 import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUserRoles,
@@ -176,7 +176,7 @@ function RoleRowActionMenu({ row, onEdit, onDelete }: RoleRowActionMenuProps) {
           <ListItemText primary="Edit Role / Access " />
         </MenuItem>
 
-        
+
 
         <MenuItem
           onClick={() => setIsConfirmingDelete(true)}
@@ -359,7 +359,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
           slots={{
             pagination: DataGridCustomPagination,
           }}
-          sx={commonDataGridSx}
+          sx={adminDataGridSx}
         />
       </Box>
 
@@ -481,8 +481,8 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
     } catch (err: any) {
       setApiError(
         err?.response?.data?.message ||
-          err?.message ||
-          `Failed to ${editingDepartment ? "update" : "add"} department.`
+        err?.message ||
+        `Failed to ${editingDepartment ? "update" : "add"} department.`
       );
     }
   };
@@ -600,7 +600,7 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
           slots={{
             pagination: DataGridCustomPagination,
           }}
-          sx={commonDataGridSx}
+          sx={adminDataGridSx}
         />
       </Box>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -33,7 +33,7 @@ import {
   Search as SearchIcon,
   MoreVert as MoreVertIcon,
 } from "@mui/icons-material";
-import { commonDataGridSx } from "../../components/tableStyles";
+import { adminDataGridSx } from "../../components/tableStyles";
 import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUserRoles,
@@ -767,7 +767,7 @@ export default function UserManagement() {
             disableColumnMenu
             disableColumnFilter
             disableColumnSelector
-            sx={commonDataGridSx}
+            sx={adminDataGridSx}
           />
         </Box>
       </Paper>

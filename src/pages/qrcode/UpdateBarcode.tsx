@@ -167,6 +167,16 @@ const UpdateBarcode: React.FC = () => {
   const [selectedShape, setSelectedShape] = React.useState<any>(null);
   const [selectedUnit, setSelectedUnit] = React.useState<any>(null);
 
+  // Controlled open states for all Autocomplete fields
+  const [openProdSeries, setOpenProdSeries] = React.useState(false);
+  const [openLN, setOpenLN] = React.useState(false);
+  const [openDrawing, setOpenDrawing] = React.useState(false);
+  const [openIR, setOpenIR] = React.useState(false);
+  const [openMSN, setOpenMSN] = React.useState(false);
+  const [openPO, setOpenPO] = React.useState(false);
+  const [openUnit, setOpenUnit] = React.useState(false);
+  const [openShape, setOpenShape] = React.useState(false);
+
   // Initialize selected objects from initialData
   React.useEffect(() => {
     const handleScroll = (event: Event) => {
@@ -569,6 +579,12 @@ const UpdateBarcode: React.FC = () => {
               <Grid item xs={12} md={4}>
                 <Autocomplete
                   size="small"
+                  open={openProdSeries}
+                  onOpen={() => setOpenProdSeries(true)}
+                  onClose={() => setOpenProdSeries(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={productionSeriesList}
                   getOptionLabel={(option) => {
                     if (typeof option === "string") return option;
@@ -576,6 +592,7 @@ const UpdateBarcode: React.FC = () => {
                   }}
                   value={selectedProductionSeries}
                   onChange={(_, newValue) => {
+                    setOpenProdSeries(false);
                     setSelectedProductionSeries(newValue);
                     setFormData((prev) => ({
                       ...prev,
@@ -586,13 +603,28 @@ const UpdateBarcode: React.FC = () => {
                     option.id === value?.id
                   }
                   renderInput={(params) => (
-                    <TextField {...params} label="Prod Series" fullWidth />
+                    <TextField
+                      {...params}
+                      label="Prod Series"
+                      fullWidth
+                      onClick={() => setOpenProdSeries(true)}
+                      onFocus={(e) => {
+                        setOpenProdSeries(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
+                    />
                   )}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
                 <Autocomplete
                   size="small"
+                  open={openLN}
+                  onOpen={() => setOpenLN(true)}
+                  onClose={() => setOpenLN(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={allDrawingNumbers}
                   getOptionLabel={(option: any) => {
                     if (typeof option === "string") return option;
@@ -602,6 +634,7 @@ const UpdateBarcode: React.FC = () => {
                   loading={isLnSearchLoading}
                   freeSolo={false}
                   onChange={(_: any, value: any) => {
+                    setOpenLN(false);
                     setSelectedDrawing(value);
                     setSelectedComponentType(value?.componentType || "");
                     setFormData((prev) => ({
@@ -621,6 +654,8 @@ const UpdateBarcode: React.FC = () => {
                   filterOptions={(options, { inputValue }) => {
                     if (!inputValue) return options.slice(0, 100);
                     const searchLower = inputValue.toLowerCase();
+                    const selectedLn = (selectedDrawing?.lnItemCode || "").toLowerCase();
+                    if (searchLower === selectedLn) return options.slice(0, 100);
                     const filtered = options.filter(
                       (option: any) =>
                         option.lnItemCode
@@ -695,6 +730,11 @@ const UpdateBarcode: React.FC = () => {
                     <TextField
                       {...params}
                       label="LN Item Code"
+                      onClick={() => setOpenLN(true)}
+                      onFocus={(e) => {
+                        setOpenLN(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
@@ -716,6 +756,12 @@ const UpdateBarcode: React.FC = () => {
               <Grid item xs={12} md={4}>
                 <Autocomplete
                   size="small"
+                  open={openDrawing}
+                  onOpen={() => setOpenDrawing(true)}
+                  onClose={() => setOpenDrawing(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={allDrawingNumbers}
                   getOptionLabel={(option) => {
                     if (typeof option === "string") return option;
@@ -723,6 +769,7 @@ const UpdateBarcode: React.FC = () => {
                   }}
                   value={selectedDrawing}
                   onChange={(_: any, value: any) => {
+                    setOpenDrawing(false);
                     setSelectedDrawing(value);
                     setSelectedComponentType(value?.componentType || "");
                     setFormData((prev) => ({
@@ -739,6 +786,17 @@ const UpdateBarcode: React.FC = () => {
                   isOptionEqualToValue={(option, value) =>
                     option.id === value?.id
                   }
+                  filterOptions={(options, { inputValue }) => {
+                    if (!inputValue) return options.slice(0, 100);
+                    const searchLower = inputValue.toLowerCase();
+                    const selectedDrw = (selectedDrawing?.drawingNumber || "").toLowerCase();
+                    if (searchLower === selectedDrw) return options.slice(0, 100);
+                    return options.filter((option: any) =>
+                      option.drawingNumber?.toLowerCase().includes(searchLower) ||
+                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
+                      option.nomenclature?.toLowerCase().includes(searchLower)
+                    ).slice(0, 100);
+                  }}
                   renderOption={(props: any, option: any) => {
                     const { key, ...optionProps } = props;
                     const drawingNo =
@@ -796,7 +854,16 @@ const UpdateBarcode: React.FC = () => {
                     );
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="Drawing Number" fullWidth />
+                    <TextField
+                      {...params}
+                      label="Drawing Number"
+                      fullWidth
+                      onClick={() => setOpenDrawing(true)}
+                      onFocus={(e) => {
+                        setOpenDrawing(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
+                    />
                   )}
                 />
               </Grid>
@@ -882,6 +949,12 @@ const UpdateBarcode: React.FC = () => {
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={4}>
                 <Autocomplete
+                  open={openIR}
+                  onOpen={() => setOpenIR(true)}
+                  onClose={() => setOpenIR(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={irNumbers}
                   getOptionLabel={(option) => {
                     if (typeof option === "string") return option;
@@ -898,6 +971,7 @@ const UpdateBarcode: React.FC = () => {
                     }
                   }}
                   onChange={(_, value) => {
+                    setOpenIR(false);
                     setSelectedIRNumber(value);
                     setFormData((prev) => ({
                       ...prev,
@@ -906,6 +980,17 @@ const UpdateBarcode: React.FC = () => {
                     }));
                   }}
                   isOptionEqualToValue={(option, value) => option.id === value?.id}
+                  filterOptions={(options, { inputValue }) => {
+                    if (!inputValue) return options;
+                    const searchLower = inputValue.toLowerCase();
+                    const currentIr = (selectedIRNumber?.irNumber || "").toLowerCase();
+                    if (searchLower === currentIr) return options;
+                    return options.filter((item: any) =>
+                      typeof item === "string"
+                        ? item.toLowerCase().includes(searchLower)
+                        : item.irNumber?.toLowerCase().includes(searchLower)
+                    );
+                  }}
                   renderOption={(props, option) => {
                     const { key, ...optionProps } = props;
                     return (
@@ -931,6 +1016,11 @@ const UpdateBarcode: React.FC = () => {
                     <TextField
                       {...params}
                       label="IR Number"
+                      onClick={() => setOpenIR(true)}
+                      onFocus={(e) => {
+                        setOpenIR(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (
@@ -948,6 +1038,12 @@ const UpdateBarcode: React.FC = () => {
               </Grid>
               <Grid item xs={12} md={4}>
                 <Autocomplete
+                  open={openMSN}
+                  onOpen={() => setOpenMSN(true)}
+                  onClose={() => setOpenMSN(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={msnNumbers}
                   getOptionLabel={(option) => option.msnNumber}
                   value={selectedMSNNumber}
@@ -959,12 +1055,24 @@ const UpdateBarcode: React.FC = () => {
                     }
                   }}
                   onChange={(_, value) => {
+                    setOpenMSN(false);
                     setSelectedMSNNumber(value);
                     setFormData((prev) => ({
                       ...prev,
                       msnNumber: value?.msnNumber || "",
                       msnNumberId: value?.id || undefined,
                     }));
+                  }}
+                  filterOptions={(options, { inputValue }) => {
+                    if (!inputValue) return options;
+                    const searchLower = inputValue.toLowerCase();
+                    const currentMsn = (selectedMSNNumber?.msnNumber || "").toLowerCase();
+                    if (searchLower === currentMsn) return options;
+                    return options.filter((item: any) =>
+                      typeof item === "string"
+                        ? item.toLowerCase().includes(searchLower)
+                        : item.msnNumber?.toLowerCase().includes(searchLower)
+                    );
                   }}
                   renderOption={(props, option) => (
                     <li {...props}>
@@ -990,6 +1098,11 @@ const UpdateBarcode: React.FC = () => {
                       <TextField
                         {...params}
                         label="MSN Number"
+                        onClick={() => setOpenMSN(true)}
+                        onFocus={(e) => {
+                          setOpenMSN(true);
+                          (e.target as HTMLInputElement)?.select?.();
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -1046,6 +1159,12 @@ const UpdateBarcode: React.FC = () => {
               <Grid item xs={12} md={4}>
                 <Autocomplete
                   size="small"
+                  open={openPO}
+                  onOpen={() => setOpenPO(true)}
+                  onClose={() => setOpenPO(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={poNumbers || []}
                   getOptionLabel={(option) => {
                     if (typeof option === "string") return option;
@@ -1054,6 +1173,8 @@ const UpdateBarcode: React.FC = () => {
                   filterOptions={(options, { inputValue }) => {
                     if (!inputValue) return options.slice(0, 100);
                     const searchLower = inputValue.toLowerCase();
+                    const selectedVal = (selectedPO?.productionOrderNumber || "").toLowerCase();
+                    if (searchLower === selectedVal) return options.slice(0, 100);
                     const filtered = options.filter((option) => {
                       return (
                         option.productionOrderNumber?.toLowerCase().includes(searchLower) ||
@@ -1066,6 +1187,7 @@ const UpdateBarcode: React.FC = () => {
                   value={selectedPO}
                   onInputChange={(_, value) => setPOSearchText(value)}
                   onChange={(_, newValue) => {
+                    setOpenPO(false);
                     if (newValue && typeof newValue !== "string") {
                       setSelectedPO(newValue);
                       setFormData((prev) => ({
@@ -1148,13 +1270,28 @@ const UpdateBarcode: React.FC = () => {
                     );
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="PO Number" size="small" />
+                    <TextField
+                      {...params}
+                      label="PO Number"
+                      size="small"
+                      onClick={() => setOpenPO(true)}
+                      onFocus={(e) => {
+                        setOpenPO(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
+                    />
                   )}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
                 <Autocomplete
                   size="small"
+                  open={openUnit}
+                  onOpen={() => setOpenUnit(true)}
+                  onClose={() => setOpenUnit(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={unitsList}
                   getOptionLabel={(option) => {
                     if (typeof option === "string") return option;
@@ -1162,6 +1299,7 @@ const UpdateBarcode: React.FC = () => {
                   }}
                   value={selectedUnit}
                   onChange={(_, newValue) => {
+                    setOpenUnit(false);
                     setSelectedUnit(newValue);
                     setFormData((prev) => ({
                       ...prev,
@@ -1172,7 +1310,16 @@ const UpdateBarcode: React.FC = () => {
                     option.id === value?.id
                   }
                   renderInput={(params) => (
-                    <TextField {...params} label="Unit" fullWidth />
+                    <TextField
+                      {...params}
+                      label="Unit"
+                      fullWidth
+                      onClick={() => setOpenUnit(true)}
+                      onFocus={(e) => {
+                        setOpenUnit(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
+                    />
                   )}
                 />
               </Grid>
@@ -1183,6 +1330,12 @@ const UpdateBarcode: React.FC = () => {
                 <Autocomplete
                   freeSolo
                   size="small"
+                  open={openShape}
+                  onOpen={() => setOpenShape(true)}
+                  onClose={() => setOpenShape(false)}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
                   options={shapesList}
                   getOptionLabel={(option) => {
                     if (typeof option === "string") return option;
@@ -1210,6 +1363,7 @@ const UpdateBarcode: React.FC = () => {
                     }
                   }}
                   onChange={(_, newValue) => {
+                    setOpenShape(false);
                     if (typeof newValue === "string") {
                       const match = shapesList.find(
                         (s) =>
