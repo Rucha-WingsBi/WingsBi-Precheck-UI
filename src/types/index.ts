@@ -374,9 +374,6 @@ export interface PaginatedResponse<T> {
 
 export interface ExportQRCodePayload {
   qrCodeNumbers: string[];
-  batchIdNumbers: string[];
-  serialNumberSummary?: Array<{ qrCodeNumber: string }>;
-  qrCodeDetails?: Array<{ qrCodeNumber: string }>;
   selectedColumns?: string[];
 }
 

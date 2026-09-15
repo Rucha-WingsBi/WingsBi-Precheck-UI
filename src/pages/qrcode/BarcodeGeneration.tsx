@@ -503,44 +503,84 @@ export default function BarcodeGeneration() {
 
   const requiredFieldsRemainingCount = useMemo(() => {
     let count = 0;
-    if (!watchPoNumber) count++;
-    if (!watchDrawingNumber) count++;
+
+    const isIdOrBatch = componentType === "ID" || componentType === "BATCH";
+    const isFimOrSi = componentType === "FIM" || componentType === "SI";
+
+    // 1. PO Number (only required for ID & BATCH)
+    if (isIdOrBatch && !watchPoNumber) {
+      count++;
+    }
+
+    // 2. Drawing Number / LN Item Code
+    if (isIdOrBatch) {
+      if (!watchDrawingNumber && !selectedDrawing) count++;
+    } else if (isFimOrSi) {
+      if (!watchDrawingNumber && !selectedDrawing) count++;
+    }
+
+    // 3. Production Series (required for all)
     if (!watchProductionSeries) count++;
+
+    // 4. Unit (required for all)
     if (!watchUnit) count++;
+
+    // 5. MSN Number (required for all)
     if (!watchMsnNumber) count++;
+
+    // 6. MFG Date (required for all)
     if (!watchMfgDate) count++;
+
+    // 7. Disposition (required for all)
     if (!watchDesposition) count++;
 
-    if (componentType === "ID" || componentType === "BATCH") {
-      if (!watchMrirNumber) count++;
-    }
-
+    // 8. ID Range / Matrix Table specific checks
     if (componentType === "ID") {
       if (watchIdType === "series") {
-        if (!watchStartRange) count++;
-        if (!watchEndRange) count++;
+        if (!watchStartRange || Number(watchStartRange) <= 0) count++;
+        if (!watchEndRange || Number(watchEndRange) <= 0) count++;
       } else if (watchIdType === "custom") {
-        if (!watchCustomIdRange) count++;
+        if (!watchCustomIdRange || !watchCustomIdRange.trim()) count++;
+      } else if (watchIdType === "random") {
+        const hasRandomId =
+          Array.isArray(randomIds) &&
+          randomIds.some((id) => id && String(id).trim() !== "");
+        if (!hasRandomId && (!watchQuantity || Number(watchQuantity) <= 0))
+          count++;
       }
     } else if (componentType === "BATCH") {
-      if (!watchCustomIdRange) count++;
+      if (!watchCustomIdRange || !watchCustomIdRange.trim()) count++;
+    } else if (isFimOrSi) {
+      const hasValidRow =
+        Array.isArray(QrTableRows) &&
+        QrTableRows.some(
+          (row) =>
+            row.idNo &&
+            String(row.idNo).trim() !== "" &&
+            row.quantity !== "" &&
+            Number(row.quantity) > 0,
+        );
+      if (!hasValidRow) count++;
     }
+
     return count;
   }, [
-    watchPoNumber,
-    watchDrawingNumber,
-    watchProductionSeries,
-    watchUnit,
-    watchIrNumber,
-    watchMsnNumber,
-    watchMrirNumber,
-    watchMfgDate,
-    watchDesposition,
     componentType,
     watchIdType,
+    watchPoNumber,
+    watchDrawingNumber,
+    selectedDrawing,
+    watchProductionSeries,
+    watchUnit,
+    watchMsnNumber,
+    watchMfgDate,
+    watchDesposition,
     watchStartRange,
     watchEndRange,
     watchCustomIdRange,
+    watchQuantity,
+    randomIds,
+    QrTableRows,
   ]);
 
   // Master data handled by hooks
@@ -1353,6 +1393,10 @@ export default function BarcodeGeneration() {
   };
 
   const handleSelectAll = (checked: boolean) => {
+    if (selectedBarcodes.length > 0 && selectedBarcodes.length < displayedQRCodes.length) {
+      setSelectedBarcodes([]);
+      return;
+    }
     if (checked) {
       setSelectedBarcodes(
         displayedQRCodes.map((item) => item.id || item.qrCodeNumber || item.serialNumber),
@@ -1797,29 +1841,29 @@ export default function BarcodeGeneration() {
 
           {/* Generated QR Codes */}
           {displayedQRCodes.length > 0 && (
-          <QRCodesTable
-            displayedQRCodes={displayedQRCodes}
-            selectedBarcodes={selectedBarcodes}
-            onSelectAll={handleSelectAll}
-            onSelectBarcode={handleSelectBarcode}
-            onDownload={handleDownload}
-            onOpenBulkUpdateDialog={handleOpenBulkUpdateDialog}
-            onSplit={handleSplit}
-            onSplitAll={handleSplitAll}
-            hasAnySplit={hasAnySplit}
-            canSplitAny={canSplitAny}
-            showBatchIdColumn={showBatchIdColumn}
-            componentType={componentType}
-            isDownloading={isDownloading}
-            onOpenSingleExportDialog={handleOpenSingleExportDialog}
-            page={page}
-            rowsPerPage={rowsPerPage}
-            onPageChange={(newPage) => setPage(newPage)}
-            onRowsPerPageChange={(newSize) => {
-              setRowsPerPage(newSize);
-              setPage(0);
-            }}
-          />
+            <QRCodesTable
+              displayedQRCodes={displayedQRCodes}
+              selectedBarcodes={selectedBarcodes}
+              onSelectAll={handleSelectAll}
+              onSelectBarcode={handleSelectBarcode}
+              onDownload={handleDownload}
+              onOpenBulkUpdateDialog={handleOpenBulkUpdateDialog}
+              onSplit={handleSplit}
+              onSplitAll={handleSplitAll}
+              hasAnySplit={hasAnySplit}
+              canSplitAny={canSplitAny}
+              showBatchIdColumn={showBatchIdColumn}
+              componentType={componentType}
+              isDownloading={isDownloading}
+              onOpenSingleExportDialog={handleOpenSingleExportDialog}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              onPageChange={(newPage) => setPage(newPage)}
+              onRowsPerPageChange={(newSize) => {
+                setRowsPerPage(newSize);
+                setPage(0);
+              }}
+            />
           )}
 
           {/* Existing QR Code Dialog */}
