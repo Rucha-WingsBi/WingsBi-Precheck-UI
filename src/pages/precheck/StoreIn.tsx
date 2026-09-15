@@ -60,6 +60,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { CustomPagination } from "../../components/CustomPagination";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 import { EmptyState } from "../../components/EmptyState";
+import { ClearIcon } from "@mui/x-date-pickers";
 
 interface QRCodeDetailsResponse {
   qrCodeNumber: string;
@@ -1120,19 +1121,26 @@ const StoreIn: React.FC = () => {
         {/* Filter Controls Bar */}
         <Box
           sx={{
-            p: 1.5,
-            pb: activeChips.length > 0 ? 1 : 1.5,
+            pt: 1.5,
+            px: 1,
+            pb: 0.5,
             borderBottom: "1px solid #EAECF0",
           }}
         >
           <Box
             sx={{
               display: "flex",
-              alignItems: "center",
-              gap: 1.25,
+              alignItems: "flex-end",
+              gap: 1,
               flexWrap: "nowrap",
+              width: "100%",
               overflowX: "auto",
-              py: 0.25,
+              overflowY: "hidden",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              pt: 1.5,
+              pb: 0.5,
+              "&::-webkit-scrollbar": { display: "none" },
             }}
           >
             <TextField
@@ -1149,27 +1157,38 @@ const StoreIn: React.FC = () => {
                     <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
                   </InputAdornment>
                 ),
+                endAdornment: searchTerm ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setPage(0);
+                      }}
+                      edge="end"
+                      sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
               }}
               sx={{
-                flex: "1 1 240px",
-                minWidth: 180,
-                "& .MuiOutlinedInput-root": {
-                  fontSize: "0.825rem",
-                  height: 38,
-                },
+                flex: "1 1 340px",
+                minWidth: 260,
               }}
             />
 
             <MultiSelectFilter
-              label="Prod. Series"
+              label="Prod Series"
               value={selectedSeries}
               options={seriesOptions}
               onChange={(newValue) => setSelectedSeries(newValue)}
-              flex="0 0 145px"
+              flex="0 0 150px"
               minWidth={120}
             />
 
-            <FormControl size="small" sx={{ flex: "0 0 135px", minWidth: 110 }}>
+            <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
               <Select
                 displayEmpty
                 value={selectedStatus}
@@ -1177,96 +1196,102 @@ const StoreIn: React.FC = () => {
                   setSelectedStatus(e.target.value);
                   setPage(0);
                 }}
-                sx={{ fontSize: "0.825rem", height: 38 }}
+                sx={{ fontSize: "0.82rem", height: 38 }}
                 renderValue={(val) =>
                   val ? (
-                    <Typography sx={{ fontSize: "0.825rem", color: "#344054" }}>
+                    <Typography sx={{ fontSize: "0.82rem", color: "#344054", fontWeight: 600 }}>
                       {val}
                     </Typography>
                   ) : (
-                    <Typography sx={{ fontSize: "0.825rem", color: "#98A2B3" }}>
+                    <Typography sx={{ fontSize: "0.82rem", color: "#98A2B3" }}>
                       Status
                     </Typography>
                   )
                 }
               >
                 <MenuItem value="">
-                  <em style={{ fontSize: "0.825rem" }}>All Statuses</em>
+                  <em style={{ fontSize: "0.82rem" }}>All Statuses</em>
                 </MenuItem>
-                <MenuItem value="Pending" sx={{ fontSize: "0.825rem" }}>
+                <MenuItem value="Pending" sx={{ fontSize: "0.82rem" }}>
                   Pending
                 </MenuItem>
-                <MenuItem value="Partial" sx={{ fontSize: "0.825rem" }}>
+                <MenuItem value="Partial" sx={{ fontSize: "0.82rem" }}>
                   Partial
                 </MenuItem>
-               
               </Select>
             </FormControl>
 
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                value={fromDate}
-                onChange={(newValue: Date | null) => setFromDate(newValue)}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    placeholder: "From Date",
-                    sx: {
-                      flex: "0 0 145px",
-                      minWidth: 130,
-                      "& .MuiOutlinedInput-root": {
-                        height: 38,
-                        fontSize: "0.825rem",
-                        backgroundColor: "#ffffff",
-                      },
-                      "& .MuiOutlinedInput-input": {
-                        height: 38,
-                        py: 0,
-                        px: 1.5,
-                        fontSize: "0.825rem",
-                        boxSizing: "border-box",
-                        color: "#344054",
-                        "&::placeholder": {
-                          color: "#98A2B3",
-                          opacity: 1,
-                        },
-                      },
-                    },
-                  },
-                }}
-              />
-              <DatePicker
-                value={toDate}
-                onChange={(newValue: Date | null) => setToDate(newValue)}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    placeholder: "To Date",
-                    sx: {
-                      flex: "0 0 145px",
-                      minWidth: 130,
-                      "& .MuiOutlinedInput-root": {
-                        height: 38,
-                        fontSize: "0.825rem",
-                        backgroundColor: "#ffffff",
-                      },
-                      "& .MuiOutlinedInput-input": {
-                        height: 38,
-                        py: 0,
-                        px: 1.5,
-                        fontSize: "0.825rem",
-                        boxSizing: "border-box",
-                        color: "#344054",
-                        "&::placeholder": {
-                          color: "#98A2B3",
-                          opacity: 1,
-                        },
-                      },
-                    },
-                  },
-                }}
-              />
-            </LocalizationProvider>
+            {/* From Date */}
+            <TextField
+              size="small"
+              type="date"
+              label="From Date"
+              InputLabelProps={{ shrink: true }}
+              placeholder="From Date"
+              value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFromDate(val ? new Date(val) : null);
+                setPage(0);
+              }}
+              inputProps={{ title: "From Date" }}
+              sx={{
+                flex: "0 0 148px",
+                minWidth: 140,
+                "& .MuiOutlinedInput-root": {
+                  height: 38,
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: "0.75rem",
+                  bgcolor: "#ffffff",
+                  px: 0.5,
+                  color: "#667085",
+                  "&.Mui-focused": { color: "primary.main" },
+                },
+                "& .MuiOutlinedInput-input": {
+                  py: "8.5px",
+                  px: 1.5,
+                  fontSize: "0.82rem",
+                  color: fromDate ? "#344054" : "#98A2B3",
+                },
+              }}
+            />
+
+            {/* To Date */}
+            <TextField
+              size="small"
+              type="date"
+              label="To Date"
+              InputLabelProps={{ shrink: true }}
+              placeholder="To Date"
+              value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setToDate(val ? new Date(val) : null);
+                setPage(0);
+              }}
+              inputProps={{ title: "To Date" }}
+              sx={{
+                flex: "0 0 148px",
+                minWidth: 140,
+                "& .MuiOutlinedInput-root": {
+                  height: 38,
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: "0.75rem",
+                  bgcolor: "#ffffff",
+                  px: 0.5,
+                  color: "#667085",
+                  "&.Mui-focused": { color: "primary.main" },
+                },
+                "& .MuiOutlinedInput-input": {
+                  py: "8.5px",
+                  px: 1.5,
+                  fontSize: "0.82rem",
+                  color: toDate ? "#344054" : "#98A2B3",
+                },
+              }}
+            />
 
             <Button
               size="small"
@@ -1277,17 +1302,18 @@ const StoreIn: React.FC = () => {
               }}
               disabled={!isDropdownFilterSelected || isLoading}
               sx={{
-                backgroundColor: "#6D2A8F",
+                flex: "0 0 auto",
+                backgroundColor: "primary.main",
                 color: "#ffffff",
                 fontWeight: 600,
-                fontSize: "0.825rem",
+                fontSize: "0.82rem",
                 borderRadius: "6px",
-                px: 2.5,
+                px: 2,
                 height: 38,
                 textTransform: "none",
                 boxShadow: "none",
-                minWidth: 70,
-                "&:hover": { backgroundColor: "#551F6F", boxShadow: "none" },
+                minWidth: 65,
+                "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
               }}
             >
               Apply
@@ -1298,11 +1324,12 @@ const StoreIn: React.FC = () => {
               variant="text"
               onClick={handleClearFilters}
               sx={{
+                flex: "0 0 auto",
                 color: "#667085",
                 fontWeight: 600,
-                fontSize: "0.825rem",
+                fontSize: "0.82rem",
                 height: 38,
-                px: 1.5,
+                px: 1,
                 minWidth: 55,
                 textTransform: "none",
                 "&:hover": { color: "#101828", backgroundColor: "transparent" },

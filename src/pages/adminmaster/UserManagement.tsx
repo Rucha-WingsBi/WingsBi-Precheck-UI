@@ -50,6 +50,7 @@ import {
   usePageAccess,
 } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
+import { useDebounce } from "../../hooks/useDebounce";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { UserRole, User } from "../../types";
@@ -109,8 +110,10 @@ function UserActionMenu({
 }
 
 export default function UserManagement() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const { data: userRoles = [] } = useUserRoles();
-  const { data: users = [], isLoading: isUsersLoading } = useUsers(true);
+  const { data: users = [], isLoading: isUsersLoading } = useUsers(debouncedSearchQuery);
   const { data: pendingUsers = [], isLoading: isPendingUsersLoading } = usePendingUsers(true);
   const { data: departments = [] } = useDepartments();
   const { data: plants = [] } = usePlants();
@@ -143,7 +146,6 @@ export default function UserManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -608,7 +610,8 @@ export default function UserManagement() {
     },
   ];
 
-  if (isUsersLoading || isPendingUsersLoading) {
+  const isInitialLoading = mainTab === 0 ? (isUsersLoading && !users.length) : (isPendingUsersLoading && !pendingUsers.length);
+  if (isInitialLoading) {
     return (
       <Box
         display="flex"

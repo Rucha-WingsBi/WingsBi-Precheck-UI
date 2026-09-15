@@ -399,7 +399,10 @@ const ViewIRMSN: React.FC = () => {
         fromDate: fromDate ? fromDate.toISOString() : null,
         toDate: toDate ? toDate.toISOString() : null,
         documentType: docTypes,
-        selectedColumns: exportMode === "custom" ? selectedExportColumns : ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key),
+        selectedColumns:
+          exportMode === "custom"
+            ? ALL_IRMSN_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+            : ALL_IRMSN_EXPORT_COLUMNS.map((col) => col.key),
       };
 
       const response = await api.post("/api/reports/ExportIrMsn", payload, {
@@ -693,35 +696,33 @@ const ViewIRMSN: React.FC = () => {
           }}
         >
           {/* Section 1: Filter Card / Controls */}
-          <Box sx={{ p: 1.5, pb: 1.25 }}>
+          <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
             <Box
               sx={{
                 display: "flex",
-                flexWrap: "nowrap",
+                alignItems: "flex-end",
                 gap: 1,
-                alignItems: "center",
+                flexWrap: "nowrap",
                 width: "100%",
                 overflowX: "auto",
-                pt: 1.25,
+                overflowY: "hidden",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                pt: 1.5,
                 pb: 0.5,
-                "&::-webkit-scrollbar": { height: 6 },
-                "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
+                "&::-webkit-scrollbar": { display: "none" },
               }}
             >
               {/* Search Bar */}
               <TextField
                 size="small"
-                sx={{
-                  flex: "1 1 200px",
-                  minWidth: 160,
-                }}
                 placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
                 value={drawingOrLnSearch}
                 onChange={(e) => setDrawingOrLnSearch(e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ fontSize: 18, color: "#667085" }} />
+                      <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
                     </InputAdornment>
                   ),
                   endAdornment: drawingOrLnSearch ? (
@@ -734,22 +735,27 @@ const ViewIRMSN: React.FC = () => {
                           executeFetch(0, rowsPerPage, { search: "" });
                         }}
                         edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
                       >
                         <ClearIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </InputAdornment>
                   ) : null,
                 }}
+                sx={{
+                  flex: "1 1 200px",
+                  minWidth: 160,
+                }}
               />
 
               {/* Production Series Filter */}
               <MultiSelectFilter
-                label="Prod. Series"
+                label="Prod Series"
                 value={selectedProductionSeries}
                 options={prodSeriesOptions}
                 onChange={(newValue) => setSelectedProductionSeries(newValue)}
                 flex="0 0 130px"
-                minWidth={110}
+                minWidth={105}
               />
 
               {/* Department / Type Multi-select */}
@@ -758,38 +764,23 @@ const ViewIRMSN: React.FC = () => {
                 value={selectedDepartments}
                 options={deptOptions}
                 onChange={(newValue) => setSelectedDepartments(newValue)}
-                flex="0 0 130px"
-                minWidth={110}
+                flex="0 0 115px"
+                minWidth={95}
               />
 
               {/* Document Type Selector (IR / MSN) */}
-              <FormControl size="small" sx={{ flex: "0 0 150px", minWidth: 130 }}>
-                <InputLabel
-                  id="doc-type-label"
-                  shrink
-                  sx={{
-                    bgcolor: "#ffffff",
-                    px: 0.5,
-                    fontSize: "0.82rem",
-                    color: "#667085",
-                    transform: "translate(10px, -7px) scale(0.75)",
-                    transformOrigin: "top left",
-                    "&.Mui-focused": {
-                      color: "primary.main",
-                    },
-                  }}
-                >
-                  Document Type
-                </InputLabel>
+              <FormControl size="small" sx={{ flex: "0 0 125px", minWidth: 105 }}>
                 <Select
-                  labelId="doc-type-label"
-                  label="Document Type"
                   value={typeFilter === "All" ? "" : typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value || "All")}
                   displayEmpty
                   renderValue={(selected) => {
                     if (!selected || selected === "All") {
-                      return null;
+                      return (
+                        <Box component="span" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>
+                          Document Type
+                        </Box>
+                      );
                     }
                     return (
                       <Box component="span" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>
@@ -805,7 +796,7 @@ const ViewIRMSN: React.FC = () => {
                           e.stopPropagation();
                           setTypeFilter("All");
                         }}
-                        sx={{ mr: 1, p: 0.25, color: "#667085" }}
+                        sx={{ mr: 1, p: 0.25, color: "#98A2B3" }}
                       >
                         <ClearIcon sx={{ fontSize: 16 }} />
                       </IconButton>
@@ -814,7 +805,7 @@ const ViewIRMSN: React.FC = () => {
                   sx={{
                     fontSize: "0.82rem",
                     height: 38,
-                    borderRadius: "8px",
+                    borderRadius: "6px",
                   }}
                 >
                   <SelectMenuItem value="IR" sx={{ fontSize: "0.82rem" }}>
@@ -826,123 +817,116 @@ const ViewIRMSN: React.FC = () => {
                 </Select>
               </FormControl>
 
-              {/* Date Range Pickers */}
-              <DatePicker
+              {/* Date From */}
+              <TextField
+                size="small"
+                type="date"
                 label="From Date"
-                value={fromDate}
-                onChange={(newValue) => setFromDate(newValue)}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    InputLabelProps: {
-                      shrink: true,
-                      sx: {
-                        bgcolor: "#ffffff",
-                        px: 0.5,
-                        fontSize: "0.82rem",
-                        color: "#667085",
-                        transform: "translate(10px, -7px) scale(0.75)",
-                        transformOrigin: "top left",
-                        "&.Mui-focused": {
-                          color: "primary.main",
-                        },
-                      },
-                    },
-                    sx: {
-                      flex: "0 0 140px",
-                      minWidth: 120,
-                      "& .MuiOutlinedInput-root": {
-                        height: 38,
-                        borderRadius: "8px",
-                      },
-                      "& .MuiOutlinedInput-input": {
-                        py: "8px",
-                        px: 1.25,
-                        fontSize: "0.82rem",
-                      },
-                    },
+                InputLabelProps={{ shrink: true }}
+                placeholder="From Date"
+                value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFromDate(val ? new Date(val) : null);
+                  setPage(0);
+                }}
+                inputProps={{ title: "From Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: fromDate ? "#344054" : "#98A2B3",
                   },
                 }}
               />
-              <DatePicker
+
+              {/* Date To */}
+              <TextField
+                size="small"
+                type="date"
                 label="To Date"
-                value={toDate}
-                onChange={(newValue) => setToDate(newValue)}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    InputLabelProps: {
-                      shrink: true,
-                      sx: {
-                        bgcolor: "#ffffff",
-                        px: 0.5,
-                        fontSize: "0.82rem",
-                        color: "#667085",
-                        transform: "translate(10px, -7px) scale(0.75)",
-                        transformOrigin: "top left",
-                        "&.Mui-focused": {
-                          color: "primary.main",
-                        },
-                      },
-                    },
-                    sx: {
-                      flex: "0 0 140px",
-                      minWidth: 120,
-                      "& .MuiOutlinedInput-root": {
-                        height: 38,
-                        borderRadius: "8px",
-                      },
-                      "& .MuiOutlinedInput-input": {
-                        py: "8px",
-                        px: 1.25,
-                        fontSize: "0.82rem",
-                      },
-                    },
+                InputLabelProps={{ shrink: true }}
+                placeholder="To Date"
+                value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setToDate(val ? new Date(val) : null);
+                  setPage(0);
+                }}
+                inputProps={{ title: "To Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: toDate ? "#344054" : "#98A2B3",
                   },
                 }}
               />
 
               {/* Action Buttons: Apply & Clear */}
               <Button
-                variant="contained"
                 size="small"
+                variant="contained"
                 onClick={handleSearch}
                 disabled={!isDropdownFilterSelected || loading}
                 sx={{
                   flex: "0 0 auto",
-                  minWidth: 65,
-                  height: 38,
-                  borderRadius: "8px",
                   backgroundColor: "primary.main",
+                  color: "#ffffff",
                   fontWeight: 600,
-                  fontSize: "0.85rem",
+                  fontSize: "0.82rem",
+                  borderRadius: "6px",
+                  px: 1.75,
+                  height: 38,
                   textTransform: "none",
                   boxShadow: "none",
-                  px: 1.75,
-                  "&:hover": { backgroundColor: "primary.dark" },
-                  "&.Mui-disabled": {
-                    backgroundColor: "#F2F4F7",
-                    color: "#98A2B3",
-                  },
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
                 }}
               >
                 Apply
               </Button>
               <Button
-                variant="text"
                 size="small"
+                variant="text"
                 onClick={handleReset}
                 disabled={!isResetEnabled}
                 sx={{
                   flex: "0 0 auto",
-                  minWidth: 55,
-                  height: 38,
                   color: "#667085",
                   fontWeight: 600,
-                  fontSize: "0.85rem",
-                  textTransform: "none",
+                  fontSize: "0.82rem",
+                  height: 38,
                   px: 1,
-                  "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
+                  minWidth: 50,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
                 }}
               >
                 Clear

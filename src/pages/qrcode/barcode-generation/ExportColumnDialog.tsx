@@ -53,7 +53,11 @@ const ExportColumnDialog = ({
   };
 
   const handleConfirm = () => {
-    onConfirmExport(selectedExportColumns, exportMode);
+    const colsToExport =
+      exportMode === "custom"
+        ? ALL_BARCODE_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+        : ALL_BARCODE_EXPORT_COLUMNS.map((col) => col.key);
+    onConfirmExport(colsToExport, exportMode);
   };
 
   return (

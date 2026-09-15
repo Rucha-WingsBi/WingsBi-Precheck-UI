@@ -156,9 +156,9 @@ const ALL_EXPORTABLE_COLUMNS = [
   { key: "itemDescription", label: "Item Description" },
   { key: "drawingNumber", label: "Drawing Number" },
   { key: "productionSeries", label: "Prod Series" },
+  { key: "quantity", label: "Qty" },
   { key: "startIdNumber", label: "Start ID" },
   { key: "endIdNumber", label: "End ID" },
-  { key: "quantity", label: "Qty" },
   { key: "mrirNumber", label: "MRIR No" },
   { key: "buildNumber", label: "Build No" },
   { key: "status", label: "Status" },
@@ -1109,6 +1109,14 @@ const ProductionOrderUpload: React.FC = () => {
       align: "center",
     },
     {
+      field: "quantity",
+      headerName: "Qty",
+      flex: 0.6,
+      minWidth: 70,
+      headerAlign: "center",
+      align: "center",
+    },
+    {
       field: "id_num",
       headerName: "Start ID",
       flex: 0.8,
@@ -1121,14 +1129,6 @@ const ProductionOrderUpload: React.FC = () => {
       headerName: "End ID",
       flex: 0.8,
       minWidth: 90,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "quantity",
-      headerName: "Qty",
-      flex: 0.6,
-      minWidth: 70,
       headerAlign: "center",
       align: "center",
     },
@@ -1258,6 +1258,24 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 50,
       headerAlign: "center",
       align: "center",
+    },
+    {
+      field: "startIdNumber",
+      headerName: "Start ID",
+      flex: 0.8,
+      minWidth: 90,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params: any) => params.value || "-",
+    },
+    {
+      field: "endIdNumber",
+      headerName: "End ID",
+      flex: 0.8,
+      minWidth: 90,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params: any) => params.value || "-",
     },
     {
       field: "buildNumber",
@@ -1823,191 +1841,188 @@ const ProductionOrderUpload: React.FC = () => {
             }}
           >
             {/* Top Filter Bar Section */}
-            <Box sx={{ p: 1.25, pb: 0.75, borderBottom: "1px solid #EAECF0" }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  flexWrap="nowrap"
-                  alignItems="center"
+            <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 1,
+                  flexWrap: "nowrap",
+                  width: "100%",
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  pt: 1.5,
+                  pb: 0.5,
+                  "&::-webkit-scrollbar": { display: "none" },
+                }}
+              >
+                {/* Search Field */}
+                <TextField
+                  placeholder="Search PO, LN Item Code, Drawing No..."
+                  variant="outlined"
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchQuery ? (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchQuery("")}
+                          edge="end"
+                          sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                        >
+                          <ClearIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  }}
                   sx={{
-                    width: "100%",
-                    overflowX: "auto",
-                    pt: 0.75,
-                    pb: 0.25,
-                    "&::-webkit-scrollbar": { height: 6 },
-                    "&::-webkit-scrollbar-thumb": { backgroundColor: "#D0D5DD", borderRadius: 3 },
+                    flex: "1 1 340px",
+                    minWidth: 260,
+                  }}
+                />
+
+                {/* Prod. Series Dropdown */}
+                <MultiSelectFilter
+                  label="Prod Series"
+                  value={draftProductionSeries}
+                  options={prodSeriesOptions}
+                  onChange={(newValue) => setDraftProductionSeries(newValue)}
+                  flex="0 0 150px"
+                  minWidth={120}
+                />
+
+                {/* Status Dropdown */}
+                <MultiSelectFilter
+                  label="Status"
+                  value={draftStatusList}
+                  options={statusOptions}
+                  onChange={(newValue) => setDraftStatusList(newValue)}
+                  flex="0 0 120px"
+                  minWidth={100}
+                />
+
+                {/* From Date */}
+                <TextField
+                  size="small"
+                  type="date"
+                  label="From Date"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="From Date"
+                  value={draftFromDate ? format(draftFromDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDraftFromDate(val ? new Date(val) : null);
+                  }}
+                  inputProps={{ title: "From Date" }}
+                  sx={{
+                    flex: "0 0 148px",
+                    minWidth: 140,
+                    "& .MuiOutlinedInput-root": {
+                      height: 38,
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.75rem",
+                      bgcolor: "#ffffff",
+                      px: 0.5,
+                      color: "#667085",
+                      "&.Mui-focused": { color: "primary.main" },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      py: "8.5px",
+                      px: 1.5,
+                      fontSize: "0.82rem",
+                      color: draftFromDate ? "#344054" : "#98A2B3",
+                    },
+                  }}
+                />
+
+                {/* To Date */}
+                <TextField
+                  size="small"
+                  type="date"
+                  label="To Date"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="To Date"
+                  value={draftToDate ? format(draftToDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDraftToDate(val ? new Date(val) : null);
+                  }}
+                  inputProps={{ title: "To Date" }}
+                  sx={{
+                    flex: "0 0 148px",
+                    minWidth: 140,
+                    "& .MuiOutlinedInput-root": {
+                      height: 38,
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.75rem",
+                      bgcolor: "#ffffff",
+                      px: 0.5,
+                      color: "#667085",
+                      "&.Mui-focused": { color: "primary.main" },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      py: "8.5px",
+                      px: 1.5,
+                      fontSize: "0.82rem",
+                      color: draftToDate ? "#344054" : "#98A2B3",
+                    },
+                  }}
+                />
+
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={!hasSelectedDropdownFilters}
+                  onClick={handleApplyFilters}
+                  sx={{
+                    flex: "0 0 auto",
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    borderRadius: "6px",
+                    px: 2,
+                    height: 38,
+                    textTransform: "none",
+                    boxShadow: "none",
+                    minWidth: 65,
+                    "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
                   }}
                 >
-                  {/* Search Field */}
-                  <TextField
-                    placeholder="Search PO, LN Item Code, Drawing No..."
-                    variant="outlined"
-                    size="small"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon fontSize="small" sx={{ color: "#667085" }} />
-                        </InputAdornment>
-                      ),
-                      endAdornment: searchQuery ? (
-                        <InputAdornment position="end">
-                          <IconButton size="small" onClick={() => setSearchQuery("")}>
-                            <ClearIcon fontSize="small" />
-                          </IconButton>
-                        </InputAdornment>
-                      ) : null,
-                    }}
-                    sx={{
-                      flex: "1 1 200px",
-                      minWidth: 160,
-                    }}
-                  />
+                  Apply
+                </Button>
 
-                  {/* Prod. Series Dropdown */}
-                  <MultiSelectFilter
-                    label="Prod. Series"
-                    value={draftProductionSeries}
-                    options={prodSeriesOptions}
-                    onChange={(newValue) => setDraftProductionSeries(newValue)}
-                    flex="0 0 130px"
-                    minWidth={110}
-                  />
-
-                  {/* Status Dropdown */}
-                  <MultiSelectFilter
-                    label="Status"
-                    value={draftStatusList}
-                    options={statusOptions}
-                    onChange={(newValue) => setDraftStatusList(newValue)}
-                    flex="0 0 120px"
-                    minWidth={100}
-                  />
-
-                  {/* Date Range Pickers */}
-                  <DatePicker
-                    label="From Date"
-                    value={draftFromDate}
-                    onChange={(newValue) => setDraftFromDate(newValue)}
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        InputLabelProps: {
-                          shrink: true,
-                          sx: {
-                            bgcolor: "#ffffff",
-                            px: 0.5,
-                            fontSize: "0.82rem",
-                            color: "#667085",
-                            "&.Mui-focused": {
-                              color: "primary.main",
-                            },
-                          },
-                        },
-                        sx: {
-                          flex: "0 0 140px",
-                          minWidth: 120,
-                          "& .MuiOutlinedInput-root": {
-                            height: 38,
-                            borderRadius: "8px",
-                          },
-                          "& .MuiOutlinedInput-input": {
-                            py: "8px",
-                            px: 1.25,
-                            fontSize: "0.82rem",
-                          },
-                        },
-                      },
-                    }}
-                  />
-                  <DatePicker
-                    label="To Date"
-                    value={draftToDate}
-                    onChange={(newValue) => setDraftToDate(newValue)}
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        InputLabelProps: {
-                          shrink: true,
-                          sx: {
-                            bgcolor: "#ffffff",
-                            px: 0.5,
-                            fontSize: "0.82rem",
-                            color: "#667085",
-                            "&.Mui-focused": {
-                              color: "primary.main",
-                            },
-                          },
-                        },
-                        sx: {
-                          flex: "0 0 140px",
-                          minWidth: 120,
-                          "& .MuiOutlinedInput-root": {
-                            height: 38,
-                            borderRadius: "8px",
-                          },
-                          "& .MuiOutlinedInput-input": {
-                            py: "8px",
-                            px: 1.25,
-                            fontSize: "0.82rem",
-                          },
-                        },
-                      },
-                    }}
-                  />
-
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disabled={!hasSelectedDropdownFilters}
-                    onClick={handleApplyFilters}
-                    sx={{
-                      flex: "0 0 auto",
-                      minWidth: 65,
-                      height: 38,
-                      borderRadius: "8px",
-                      backgroundColor: "primary.main",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
-                      textTransform: "none",
-                      boxShadow: "none",
-                      px: 1.75,
-                      "&:hover": { backgroundColor: "primary.dark" },
-                      "&.Mui-disabled": {
-                        backgroundColor: "#F2F4F7",
-                        color: "#98A2B3",
-                      },
-                    }}
-                  >
-                    Apply
-                  </Button>
-
-                  <Button
-                    size="small"
-                    variant="text"
-                    disabled={!hasAnyFilterActive}
-                    onClick={handleClearFilters}
-                    sx={{
-                      flex: "0 0 auto",
-                      minWidth: 55,
-                      height: 38,
-                      color: "#667085",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
-                      textTransform: "none",
-                      px: 1,
-                      "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
-                      "&.Mui-disabled": {
-                        color: "#D0D5DD",
-                      },
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </Stack>
-              </LocalizationProvider>
+                <Button
+                  size="small"
+                  variant="text"
+                  disabled={!hasAnyFilterActive}
+                  onClick={handleClearFilters}
+                  sx={{
+                    flex: "0 0 auto",
+                    color: "#667085",
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    height: 38,
+                    px: 1,
+                    minWidth: 55,
+                    textTransform: "none",
+                    "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                  }}
+                >
+                  Clear
+                </Button>
+              </Box>
 
               {/* Active Filter Chips & Results Count Bar */}
               <Box sx={{ mt: 0.5 }}>

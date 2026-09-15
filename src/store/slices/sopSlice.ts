@@ -27,6 +27,7 @@ interface GetSopRequestDto {
   serielNumberId: number;
   prodSeriesId: number;
   assemblyDrawing?: string;
+  selectedColumns?: string[];
 }
 
 // BOM Types

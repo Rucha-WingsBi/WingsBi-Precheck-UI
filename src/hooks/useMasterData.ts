@@ -207,14 +207,21 @@ export const useDeleteUserRole = () => {
   });
 };
 
-export const useUsers = (enabled: boolean = true) => {
+export const useUsers = (searchQueryOrEnabled?: string | boolean, enabledArg: boolean = true) => {
+  const searchQuery = typeof searchQueryOrEnabled === "string" ? searchQueryOrEnabled : "";
+  const enabled = typeof searchQueryOrEnabled === "boolean" ? searchQueryOrEnabled : enabledArg;
+
   return useQuery<User[]>({
-    queryKey: ["users"],
+    queryKey: ["users", searchQuery],
     queryFn: async () => {
-      const response = await api.get("/api/User/GetAllUsers");
-      return response.data;
+      const response = await api.get("/api/User/GetAllUsers", {
+        params: searchQuery ? { searchQuery } : undefined,
+      });
+      const rawData = response.data?.data || response.data?.$values || response.data;
+      return Array.isArray(rawData) ? rawData : [];
     },
     enabled,
+    placeholderData: (previousData) => previousData,
   });
 };
 

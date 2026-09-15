@@ -532,7 +532,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     try {
       const selectedCols =
         exportMode === "custom"
-          ? selectedExportColumns
+          ? ALL_STORED_IN_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
           : ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key);
 
       const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;

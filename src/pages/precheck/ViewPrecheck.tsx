@@ -60,7 +60,7 @@ import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 import { StatusChip } from "../../components/StatusChip";
 
 import {
-  
+
   viewPrecheckByParameters,
   exportViewPrecheckDetails,
 } from "../../store/slices/precheckSlice";
@@ -423,7 +423,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     if (activeTab === "precheck") {
       const selectedCols =
         exportMode === "custom"
-          ? selectedExportColumns
+          ? ALL_PRECHECK_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
           : ALL_PRECHECK_EXPORT_COLUMNS.map((c) => c.key);
 
       const exportParams: any = {
@@ -443,7 +443,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     } else {
       const selectedCols =
         exportMode === "custom"
-          ? selectedExportColumns
+          ? ALL_CONSUMED_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
           : ALL_CONSUMED_EXPORT_COLUMNS.map((c) => c.key);
 
       const exportParams: any = {
@@ -826,13 +826,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         }}
       >
         {/* Section 1: Filter Bar & Active Chips */}
-        <Box sx={{ p: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+        <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
           {/* ── Precheck Tab Filters ─────────────────────────────────────────── */}
           {activeTab === "precheck" && (
             <Box
               sx={{
                 display: "flex",
-                alignItems: "center",
+                alignItems: "flex-end",
                 gap: 1,
                 flexWrap: "nowrap",
                 width: "100%",
@@ -840,7 +840,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 overflowY: "hidden",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
-                py: 0.25,
+                pt: 1.5,
+                pb: 0.5,
                 "&::-webkit-scrollbar": { display: "none" },
               }}
             >
@@ -905,6 +906,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               <TextField
                 size="small"
                 type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
                 placeholder="From Date"
                 value={dateFrom}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
@@ -914,6 +917,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   minWidth: 140,
                   "& .MuiOutlinedInput-root": {
                     height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
                   },
                   "& .MuiOutlinedInput-input": {
                     py: "8.5px",
@@ -928,6 +938,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               <TextField
                 size="small"
                 type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
                 placeholder="To Date"
                 value={dateTo}
                 onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
@@ -937,6 +949,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   minWidth: 140,
                   "& .MuiOutlinedInput-root": {
                     height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
                   },
                   "& .MuiOutlinedInput-input": {
                     py: "8.5px",

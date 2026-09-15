@@ -1531,7 +1531,7 @@ const MakePrecheck: React.FC = () => {
   const handleConfirmExportData = () => {
     const selectedCols = exportMode === "all"
       ? MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key)
-      : selectedExportColumns;
+      : MAKE_PRECHECK_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key);
 
     const exportParams: any = {};
 

@@ -579,7 +579,6 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
         size="small"
         onClick={onApply || onReset}
         disabled={!isApplyEnabled}
-        startIcon={<CheckIcon />}
       >
         Apply
       </Button>

@@ -242,20 +242,6 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
 
           <Divider sx={{ my: 0.5 }} />
 
-          {onReset && (
-            <MenuItem
-              onClick={() => {
-                handleMoreMenuClose();
-                onReset();
-              }}
-            >
-              <ListItemIcon>
-                <RefreshIcon fontSize="small" sx={{ color: "#DC2626" }} />
-              </ListItemIcon>
-              <ListItemText primary="Reset scans" />
-            </MenuItem>
-          )}
-
           {onReject && (
             <MenuItem
               onClick={() => {

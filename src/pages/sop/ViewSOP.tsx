@@ -530,34 +530,38 @@ const ViewSOP: React.FC = () => {
     }
   }, [dispatch, validateRequiredFields, getValues, selectedDrawingNumber, drwDisplayText]);
 
-  const executeExport = useCallback(async () => {
-    try {
-      const missingFields = validateRequiredFields();
-      if (missingFields.length > 0) {
-        setSuccessMessage(`Please select required fields before exporting.`);
-        return;
+  const executeExport = useCallback(
+    async (customSelectedCols?: string[]) => {
+      try {
+        const missingFields = validateRequiredFields();
+        if (missingFields.length > 0) {
+          setSuccessMessage(`Please select required fields before exporting.`);
+          return;
+        }
+
+        if (!assemblyData || assemblyData.length === 0) {
+          setSuccessMessage("No data available to export. Please perform a search first.");
+          return;
+        }
+
+        const values = getValues();
+        const request = {
+          assemblyDrawingId: values.drawingNumberId || 0,
+          serielNumberId: parseInt(values.assemblyNumber || "0") || 0,
+          prodSeriesId: values.prodSeriesId || 0,
+          assemblyDrawing: selectedDrawingNumber?.drawingNumber || drwDisplayText || "",
+          selectedColumns: customSelectedCols || ALL_SOP_EXPORT_COLUMNS.map((c) => c.key),
+        };
+
+        await dispatch(exportSopAssemblyData(request) as any);
+        setSuccessMessage("Export completed successfully!");
+      } catch (error) {
+        console.error("Error during export:", error);
+        setSuccessMessage("Error during export");
       }
-
-      if (!assemblyData || assemblyData.length === 0) {
-        setSuccessMessage("No data available to export. Please perform a search first.");
-        return;
-      }
-
-      const values = getValues();
-      const request = {
-        assemblyDrawingId: values.drawingNumberId || 0,
-        serielNumberId: parseInt(values.assemblyNumber || "0") || 0,
-        prodSeriesId: values.prodSeriesId || 0,
-        assemblyDrawing: selectedDrawingNumber?.drawingNumber || drwDisplayText || "",
-      };
-
-      await dispatch(exportSopAssemblyData(request) as any);
-      setSuccessMessage("Export completed successfully!");
-    } catch (error) {
-      console.error("Error during export:", error);
-      setSuccessMessage("Error during export");
-    }
-  }, [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText]);
+    },
+    [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText]
+  );
 
   // Export Options Dialog State
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -594,46 +598,11 @@ const ViewSOP: React.FC = () => {
 
   const handleConfirmExportData = async () => {
     setExportDialogOpen(false);
-    if (exportMode === "all") {
-      await executeExport();
-    } else {
-      try {
-        if (!treeData || treeData.length === 0) {
-          setSuccessMessage("No records available for export.");
-          return;
-        }
-
-        const formattedData = treeData.map((item: any, idx: number) => {
-          const row: any = { "Sr No": idx + 1 };
-          ALL_SOP_EXPORT_COLUMNS.forEach((col) => {
-            if (selectedExportColumns.includes(col.key)) {
-              let val = item[col.key];
-              if (col.key === "componentType" && !val) {
-                val =
-                  item.componentType ||
-                  item.itemType ||
-                  item.type ||
-                  item.component_Type ||
-                  item.drawingType ||
-                  (item.hasChildren ? "Assembly" : "Manufactured");
-              }
-              row[col.label] = val ?? "-";
-            }
-          });
-          return row;
-        });
-
-        const worksheet = XLSX.utils.json_to_sheet(formattedData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Assembly_Tree");
-        XLSX.writeFile(workbook, `SOP_Assembly_Tree_${Date.now()}.xlsx`);
-
-        setSuccessMessage("Export downloaded successfully.");
-      } catch (err: any) {
-        console.error("Export error:", err);
-        setSuccessMessage("Failed to download export report.");
-      }
-    }
+    const colsToExport =
+      exportMode === "custom"
+        ? ALL_SOP_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+        : ALL_SOP_EXPORT_COLUMNS.map((c) => c.key);
+    await executeExport(colsToExport);
   };
 
   const executeReset = useCallback(() => {
