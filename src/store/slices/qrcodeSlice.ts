@@ -482,6 +482,7 @@ export const exportQRCode = createAsyncThunk(
         qrCodeDetailsInput ||
         qrCodeNumbers.map((code) => ({ qrCodeNumber: code }));
 
+        
       const payload: any = {
         qrCodeNumbers,
         batchIdNumbers,
