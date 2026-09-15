@@ -813,12 +813,12 @@ const ViewBarcode: React.FC = () => {
     if (!item) return;
 
     if (item.hasBeenSplit || item.isSplitRow) {
-      const parentId = item.isSplitRow ? item.parentId : (item.id || item.qrCodeNumber);
+      const parentId = item.isSplitRow ? item.parentId : (item.qrCodeNumber || item.id);
       const newData = displayedData.filter(row => row.parentId !== parentId);
-      const updatedIndex = newData.findIndex(row => (row.id || row.qrCodeNumber) === parentId && !row.isSplitRow);
+      const updatedIndex = newData.findIndex(row => (row.qrCodeNumber || row.id) === parentId && !row.isSplitRow);
 
       if (updatedIndex !== -1) {
-        const originalItem = sortedBarcodeDetails.find(orig => (orig.id || orig.qrCodeNumber) === parentId);
+        const originalItem = sortedBarcodeDetails.find(orig => (orig.qrCodeNumber || orig.id) === parentId);
         if (originalItem) {
           newData[updatedIndex] = { ...originalItem, hasBeenSplit: false };
         } else {
@@ -838,9 +838,9 @@ const ViewBarcode: React.FC = () => {
         quantity: 1,
         batchId: `${i}/${qty}`,
         isSplitRow: true,
-        parentId: item.id || item.qrCodeNumber,
+        parentId: item.qrCodeNumber || item.id,
         qrCodeNumber: item.qrCodeNumber,
-        id: `${item.id || item.qrCodeNumber}-split-${i}`
+        id: `${item.qrCodeNumber || item.id}-split-${i}`
       });
     }
 
@@ -868,7 +868,7 @@ const ViewBarcode: React.FC = () => {
 
     displayedData.forEach((item) => {
       const isBatch = String(item.componentType || '').toLowerCase() === 'batch';
-      const isSelected = selectedQRCodes.length === 0 || selectedQRCodes.includes(item.id || item.qrCodeNumber) || selectedQRCodes.includes(item.qrCodeNumber);
+      const isSelected = selectedQRCodes.length === 0 || selectedQRCodes.includes(item.qrCodeNumber || item.id) || selectedQRCodes.includes(item.qrCodeNumber);
       if (isBatch && isSelected && Number(item.quantity) > 1 && !item.hasBeenSplit) {
         hasSplit = true;
         const qty = Number(item.quantity);
@@ -886,9 +886,9 @@ const ViewBarcode: React.FC = () => {
             quantity: 1,
             batchId: `${i}/${qty}`,
             isSplitRow: true,
-            parentId: item.id || item.qrCodeNumber,
+            parentId: item.qrCodeNumber || item.id,
             qrCodeNumber: item.qrCodeNumber,
-            id: `${item.id || item.qrCodeNumber}-split-${i}`
+            id: `${item.qrCodeNumber || item.id}-split-${i}`
           });
         }
       } else {
@@ -1011,7 +1011,7 @@ const ViewBarcode: React.FC = () => {
     }
     if (checked) {
       const allIds = displayedData
-        .map((item: any) => item.id || item.qrCodeNumber)
+        .map((item: any) => item.qrCodeNumber || item.id)
         .filter((id: string) => id);
       setSelectedQRCodes(allIds);
     } else {
@@ -1497,25 +1497,28 @@ const ViewBarcode: React.FC = () => {
 
               {/* Apply Button */}
               <Button
-                variant="outlined"
+                variant="contained"
                 onClick={handleFilterSearch}
                 disabled={!isDropdownFilterSelected || loading}
                 size="small"
                 sx={{
                   flex: "0 0 auto",
-                  borderRadius: '6px',
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
+                  borderRadius: "6px",
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
                   fontWeight: 600,
-                  textTransform: 'none',
+                  textTransform: "none",
                   px: 1.5,
                   height: 34,
-                  fontSize: '0.8rem',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    borderColor: 'primary.dark',
-                    bgcolor: 'rgba(107, 40, 138, 0.05)',
-                    boxShadow: 'none',
+                  fontSize: "0.8rem",
+                  boxShadow: "none",
+                  "&:hover": {
+                    backgroundColor: "primary.dark",
+                    boxShadow: "none",
+                  },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#F2F4F7",
+                    color: "#98A2B3",
                   },
                 }}
               >
@@ -1643,6 +1646,9 @@ const ViewBarcode: React.FC = () => {
                           const nextApp = appliedStatus.filter((v) => v !== st);
                           setSelectedStatus(nextSel);
                           setAppliedStatus(nextApp);
+                          const params = buildApiParams(searchQuery, appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, rowsPerPage);
+                          setLastSearchParams(params);
+                          dispatch(getBarcodeDetailsWithParameters(params));
                         }}
                         sx={{
                           borderRadius: '16px',
@@ -1898,8 +1904,8 @@ const ViewBarcode: React.FC = () => {
                       <Row
                         key={item.id || `${item.qrCodeNumber}-${index}`}
                         barcodeDetails={item}
-                        isSelected={selectedQRCodes.includes(item.id || item.qrCodeNumber)}
-                        onSelect={(checked) => handleSelectQRCode(item.id || item.qrCodeNumber, checked)}
+                        isSelected={selectedQRCodes.includes(item.qrCodeNumber || item.id)}
+                        onSelect={(checked) => handleSelectQRCode(item.qrCodeNumber || item.id, checked)}
                         onSplit={() => handleSplit(globalIndex)}
                         showBatchId={showBatchIdColumn}
                         onDisable={() => handleOpenDisableDialog(item.qrCodeNumber)}

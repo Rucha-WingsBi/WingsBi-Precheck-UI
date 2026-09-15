@@ -193,7 +193,7 @@ const StoreIn: React.FC = () => {
     if (fromDate && toDate) {
       chips.push({
         id: "dateRange",
-        label: `Created: ${format(fromDate, "dd/MM/yyyy")} - ${format(toDate, "dd/MM/yyyy")}`,
+        label: `From: ${format(fromDate, "dd/MM/yyyy")} - To: ${format(toDate, "dd/MM/yyyy")}`,
         onRemove: () => {
           setFromDate(null);
           setToDate(null);
@@ -201,14 +201,24 @@ const StoreIn: React.FC = () => {
           fetchStoreInData({ fromDate: null, toDate: null, pageNumber: 0 });
         },
       });
-    } else if (filterDate) {
+    } else if (fromDate) {
       chips.push({
-        id: "singleDate",
-        label: `Created: ${format(filterDate, "dd/MM/yyyy")}`,
+        id: "fromDateChip",
+        label: `From: ${format(fromDate, "dd/MM/yyyy")}`,
         onRemove: () => {
-          setFilterDate(null);
+          setFromDate(null);
           setPage(0);
-          fetchStoreInData({ filterDate: null, pageNumber: 0 });
+          fetchStoreInData({ fromDate: null, pageNumber: 0 });
+        },
+      });
+    } else if (toDate) {
+      chips.push({
+        id: "toDateChip",
+        label: `To: ${format(toDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setToDate(null);
+          setPage(0);
+          fetchStoreInData({ toDate: null, pageNumber: 0 });
         },
       });
     }
@@ -449,12 +459,11 @@ const StoreIn: React.FC = () => {
       let reqFromDate: string | undefined = undefined;
       let reqToDate: string | undefined = undefined;
 
-      if (dateFilterMode === "single" && filterDateVal) {
-        reqFromDate = format(filterDateVal, "yyyy-MM-dd'T'00:00:00.000'Z'");
-        reqToDate = format(filterDateVal, "yyyy-MM-dd'T'23:59:59.999'Z'");
-      } else if (dateFilterMode === "range" && fromDateVal && toDateVal) {
-        reqFromDate = format(fromDateVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-        reqToDate = format(toDateVal, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+      if (fromDateVal) {
+        reqFromDate = format(fromDateVal, "yyyy-MM-dd");
+      }
+      if (toDateVal) {
+        reqToDate = format(toDateVal, "yyyy-MM-dd");
       }
 
       const seriesArray = seriesVal.map((s) => String(s));
@@ -1201,9 +1210,40 @@ const StoreIn: React.FC = () => {
                 slotProps={{
                   textField: {
                     size: "small",
-                    placeholder: "Created Date",
+                    placeholder: "From Date",
                     sx: {
-                      flex: "0 0 150px",
+                      flex: "0 0 145px",
+                      minWidth: 130,
+                      "& .MuiOutlinedInput-root": {
+                        height: 38,
+                        fontSize: "0.825rem",
+                        backgroundColor: "#ffffff",
+                      },
+                      "& .MuiOutlinedInput-input": {
+                        height: 38,
+                        py: 0,
+                        px: 1.5,
+                        fontSize: "0.825rem",
+                        boxSizing: "border-box",
+                        color: "#344054",
+                        "&::placeholder": {
+                          color: "#98A2B3",
+                          opacity: 1,
+                        },
+                      },
+                    },
+                  },
+                }}
+              />
+              <DatePicker
+                value={toDate}
+                onChange={(newValue: Date | null) => setToDate(newValue)}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    placeholder: "To Date",
+                    sx: {
+                      flex: "0 0 145px",
                       minWidth: 130,
                       "& .MuiOutlinedInput-root": {
                         height: 38,

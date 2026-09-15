@@ -1132,6 +1132,98 @@ export default function BarcodeGeneration() {
     clearErrors();
   };
 
+  // Handle QR Type change - clear all form fields and local states when switching QR Type
+  const handleQrTypeChange = (newQrType: string) => {
+    const newCompType = (newQrType === "Purchase Item" ? "SI" : newQrType) as any;
+
+    setQrTypeState(newQrType);
+    setComponentType(newCompType);
+
+    // Reset react-hook-form fields with clean state for new QR type
+    reset({
+      qrType: newQrType,
+      productionOrderNumber: "",
+      drawingNumber: "",
+      nomenclature: "",
+      productionSeries: "",
+      componentType: newCompType,
+      idType: "series",
+      startRange: 0,
+      endRange: 0,
+      quantity: 0,
+      randomIds: Array(200).fill(""),
+      customIdRange: "",
+      batchId: "",
+      unit: "",
+      manufacturingDate: new Date() as any,
+      expiryDate: undefined,
+      irNumber: "",
+      msnNumber: "",
+      poNumber: "",
+      projectNumber: "",
+      mrirNumber: "",
+      desposition: "" as any,
+      location: "",
+      partAssemblyId: "",
+      remark: "",
+      buildNumber: "",
+      fanManNumber: "",
+      fanManSerialNumber: "",
+      customerItemCode: "",
+      gfnNo: "",
+      shapes: "",
+      material: "",
+      rmItemCode: "",
+    });
+
+    // Reset manual override ref for remarks
+    lastAutoRemarkRef.current = "";
+
+    // Reset local state variables
+    setSelectedDrawing(null);
+    setSelectedIRNumber(null);
+    setSelectedMSNNumber(null);
+    setSelectedPO(null);
+    setPOSearchText("");
+    setPoInputValue("");
+    setRandomIds(Array(200).fill(""));
+    setVisibleRandomCount(20);
+    setQrTableRows(
+      Array.from({ length: 5 }, (_, index) => ({
+        srNo: index + 1,
+        idNo: "",
+        quantity: "",
+        size: "",
+        mirir: "",
+        heatLotBatchNo: "",
+      })),
+    );
+    setSelectedBarcodes([]);
+    setPage(0);
+
+    // Reset preview & search states
+    setPreviewQrInput("");
+    setFetchedPreviewItem(null);
+    setLabelQrDataUrl("");
+    setDisplayedQRCodes([]);
+    setNoExpiryDate(false);
+
+    setDrawingSearchText("");
+    setIrSearchText("");
+    setMsnSearchText("");
+    setDebouncedLnSearch("");
+
+    // Clear Redux & messages
+    dispatch(clearGeneratedNumber());
+    dispatch(clearQRCodeList());
+    dispatch(clearError());
+    setSuccessMessage("");
+    setExistingItems([]);
+    setOpenExistingDialog(false);
+
+    clearErrors();
+  };
+
   // Handle PO field key press (Enter or Tab)
   const handlePOKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" || event.key === "Tab") {
@@ -1666,6 +1758,7 @@ export default function BarcodeGeneration() {
                   setComponentType={setComponentType}
                   qrTypeState={qrTypeState}
                   setQrTypeState={setQrTypeState}
+                  onQrTypeChange={handleQrTypeChange}
                   poNumbers={poNumbers}
                   selectedPO={selectedPO}
                   setSelectedPO={setSelectedPO}
@@ -1744,6 +1837,9 @@ export default function BarcodeGeneration() {
                 watchProjectNumber={watch("projectNumber")}
                 watchBuildNumber={watch("buildNumber") || ""}
                 watchLocation={watch("location") || ""}
+                watchFanManNumber={watch("fanManNumber") || ""}
+                watchGfnNo={watch("gfnNo") || ""}
+                watchMaterial={watch("material") || ""}
                 previewQrInput={previewQrInput}
                 onPreviewQrInputChange={setPreviewQrInput}
                 fetchedPreviewItem={fetchedPreviewItem}

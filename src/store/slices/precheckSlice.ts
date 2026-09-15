@@ -3,7 +3,7 @@ import api from "../../services/api";
 
 interface PrecheckState {
   assemblyDrawings: any[];
-  precheckDetails: any[];
+  precheckDetails: any;
   precheckStatus: any[];
   availableComponents: any[];
   storeInData: any[];
@@ -15,7 +15,7 @@ interface PrecheckState {
 
 const initialState: PrecheckState = {
   assemblyDrawings: [],
-  precheckDetails: [],
+  precheckDetails: null,
   precheckStatus: [],
   availableComponents: [],
   storeInData: [],

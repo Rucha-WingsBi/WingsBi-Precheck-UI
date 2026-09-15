@@ -210,7 +210,7 @@ export default function Layout() {
         {
           text: "Production Order Management",
           pageName: "Upload Orders",
-          icon: <ShoppingCartIcon />,
+          icon: <AssignmentIcon />,
           path: "/production-order/upload",
         },
       ],
@@ -597,7 +597,8 @@ export default function Layout() {
                       key={subItem.text}
                       onClick={() => handleSubItemClick(subItem)}
                       sx={{
-                        pl: 5,
+                        pl: 3.5,
+                        pr: 1.5,
                         py: 1,
                         mx: 1,
                         mb: 0.5,
@@ -637,6 +638,8 @@ export default function Layout() {
                               location.pathname === subItem.path
                                 ? "#6D2A8F"
                                 : "text.secondary",
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
                           },
                         }}
                       />

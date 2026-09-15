@@ -92,14 +92,14 @@ interface ColumnDef {
 
 const PRECHECK_COLUMNS: ColumnDef[] = [
   { field: "sr", headerName: "SR", minWidth: 60, align: "center", sortable: true },
+  { field: "productionOrderNumber", headerName: "PO Number", minWidth: 140, align: "left", sortable: true },
   { field: "lnItemCode", headerName: "LN Item Code", minWidth: 140, align: "left", sortable: true },
   { field: "drawingNumber", headerName: "Drawing No.", minWidth: 150, align: "left", sortable: true },
-  { field: "nomenclature", headerName: "Nomenclature", minWidth: 170, align: "left", sortable: true },
+  { field: "productionSeries", headerName: "Prod Series", minWidth: 110, align: "center", sortable: true },
   { field: "quantity", headerName: "Qty", minWidth: 70, align: "center", sortable: true },
   { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
   { field: "irNumber", headerName: "IR", minWidth: 100, align: "center", sortable: false },
   { field: "msnNumber", headerName: "MSN", minWidth: 100, align: "center", sortable: false },
-  { field: "mrirNumber", headerName: "MRIR Number", minWidth: 120, align: "center", sortable: false },
   { field: "componentType", headerName: "Type", minWidth: 95, align: "center", sortable: false },
   { field: "status", headerName: "Status", minWidth: 110, align: "center", sortable: false },
   { field: "details", headerName: "Details", minWidth: 80, align: "center", sortable: false },
@@ -121,8 +121,10 @@ const CONSUMED_IN_COLUMNS: ColumnDef[] = [
 
 const ALL_PRECHECK_EXPORT_COLUMNS = [
   { key: "sr", label: "SR" },
+  { key: "productionOrderNumber", label: "PO Number" },
   { key: "lnItemCode", label: "LN Item Code" },
   { key: "drawingNumber", label: "Drawing No." },
+  { key: "productionSeries", label: "Prod Series" },
   { key: "nomenclature", label: "Nomenclature" },
   { key: "quantity", label: "Qty" },
   { key: "idNumber", label: "ID Number" },
@@ -156,10 +158,11 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     location.pathname.includes("consumed") ? "consumed" : "precheck"
   );
 
-  // ── Redux Loading States ───────────────────────────────────────────────────
+  // ── Redux & Local Loading States ───────────────────────────────────────────
   const { isLoading: isPrecheckLoading } = useSelector((state: RootState) => state.precheck);
   const { loading: isConsumedLoading, isDownloading } = useSelector((state: RootState) => state.qrcode);
-  const isExporting = isPrecheckLoading || isDownloading;
+  const [isExportLoading, setIsExportLoading] = useState(false);
+  const isExporting = isExportLoading || isDownloading;
 
   // ── Precheck tab filter states ─────────────────────────────────────────────
   const [combinedSearch, setCombinedSearch] = useState("");        // PO / Drawing / LN search
@@ -234,11 +237,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // ── Details Modal & Action Menu State ─────────────────────────────────────
-  const [selectedRow, setSelectedRow] = useState<any | null>(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeMenuRow, setActiveMenuRow] = useState<any | null>(null);
+  // ── Details Expansion State ────────────────────────────────────────────────
 
   // ── Export Dialog State & Handlers ─────────────────────────────────────────
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -286,15 +285,29 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   };
 
   // ── Fetch Precheck Details from API (Using ViewPrechekByParameters) ────────
-  const fetchPrecheckData = (pNum: number = page + 1, pSize: number = rowsPerPage) => {
+  const fetchPrecheckData = (
+    pNum: number = page + 1,
+    pSize: number = rowsPerPage,
+    searchOverride?: string,
+    seriesOverride?: string[],
+    statusOverride?: string[],
+    fromDateOverride?: string,
+    toDateOverride?: string
+  ) => {
+    const searchVal = searchOverride !== undefined ? searchOverride : combinedSearch;
+    const seriesVal = seriesOverride !== undefined ? seriesOverride : selectedProductionSeries;
+    const statusVal = statusOverride !== undefined ? statusOverride : selectedStatus;
+    const fromVal = fromDateOverride !== undefined ? fromDateOverride : dateFrom;
+    const toVal = toDateOverride !== undefined ? toDateOverride : dateTo;
+
     const payload: any = {
       pageNumber: pNum,
       pageSize: pSize,
-      searchQuery: combinedSearch.trim(),
-      prodSeries: selectedProductionSeries,
-      status: selectedStatus,
-      fromDate: dateFrom ? dateFrom : null,
-      toDate: dateTo ? dateTo : null,
+      searchQuery: searchVal.trim(),
+      prodSeries: seriesVal,
+      status: statusVal,
+      fromDate: fromVal ? fromVal : null,
+      toDate: toVal ? toVal : null,
     };
 
     dispatch(viewPrecheckByParameters(payload))
@@ -305,11 +318,11 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             : result.payload.data || result.payload.items || [];
           const total = Array.isArray(result.payload)
             ? result.payload.length
-            : result.payload.totalCount || result.payload.totalRecords || result.payload.total || rawList.length;
+            : result.payload.totalRecords ?? result.payload.totalCount ?? result.payload.total ?? rawList.length;
           setTotalRecords(total);
           const mapped = rawList.map((item: any, index: number) => ({
             ...item,
-            id: item.id ?? index + 1,
+            id: item.precheckDetailsId ?? item.id ?? index + 1,
             sr: (pNum - 1) * pSize + index + 1,
             modifiedDate: item.modifiedDate
               ? formatDate(item.modifiedDate)
@@ -345,7 +358,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       if (trimmed.length >= 3 || (trimmed.length === 0 && precheckResults.length > 0)) {
         if (trimmed.length >= 3) setHasAppliedFilters(true);
         setPage(0);
-        fetchPrecheckData();
+        fetchPrecheckData(1, rowsPerPage, trimmed);
       }
     }
   }, [debouncedCombinedSearch]);
@@ -406,6 +419,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   };
 
   const handleExport = () => {
+    setIsExportLoading(true);
     if (activeTab === "precheck") {
       const selectedCols =
         exportMode === "custom"
@@ -424,7 +438,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
-        .catch((err) => alert(err.message || "Failed to export precheck details"));
+        .catch((err) => alert(err.message || "Failed to export precheck details"))
+        .finally(() => setIsExportLoading(false));
     } else {
       const selectedCols =
         exportMode === "custom"
@@ -443,7 +458,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
-        .catch((err) => alert(err.message || "Failed to export consumed details"));
+        .catch((err) => alert(err.message || "Failed to export consumed details"))
+        .finally(() => setIsExportLoading(false));
     }
   };
 
@@ -557,9 +573,12 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
   // ── Paginated Rows ─────────────────────────────────────────────────────────
   const paginatedRows = useMemo(() => {
+    if (activeTab === "precheck") {
+      return sortedData;
+    }
     const start = page * rowsPerPage;
     return sortedData.slice(start, start + rowsPerPage);
-  }, [sortedData, page, rowsPerPage]);
+  }, [activeTab, sortedData, page, rowsPerPage]);
 
   const handleRequestSort = (field: string) => {
     const isAsc = orderBy === field && order === "asc";
@@ -573,29 +592,79 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
     if (activeTab === "precheck") {
       if (combinedSearch.trim()) {
-        chips.push({ id: "search", label: `Search: "${combinedSearch.trim()}"`, onRemove: () => setCombinedSearch("") });
+        chips.push({
+          id: "search",
+          label: `Search: "${combinedSearch.trim()}"`,
+          onRemove: () => {
+            setCombinedSearch("");
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, "", selectedProductionSeries, selectedStatus, dateFrom, dateTo);
+          },
+        });
       }
       selectedProductionSeries.forEach((s) => {
-        chips.push({ id: `series-${s}`, label: `Series: ${s}`, onRemove: () => setSelectedProductionSeries((prev) => prev.filter((v) => v !== s)) });
+        chips.push({
+          id: `series-${s}`,
+          label: `Series: ${s}`,
+          onRemove: () => {
+            const nextSeries = selectedProductionSeries.filter((v) => v !== s);
+            setSelectedProductionSeries(nextSeries);
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, nextSeries, selectedStatus, dateFrom, dateTo);
+          },
+        });
       });
       selectedStatus.forEach((st) => {
-        chips.push({ id: `status-${st}`, label: `Status: ${st}`, onRemove: () => setSelectedStatus((prev) => prev.filter((v) => v !== st)) });
+        chips.push({
+          id: `status-${st}`,
+          label: `Status: ${st}`,
+          onRemove: () => {
+            const nextStatus = selectedStatus.filter((v) => v !== st);
+            setSelectedStatus(nextStatus);
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, selectedProductionSeries, nextStatus, dateFrom, dateTo);
+          },
+        });
       });
       if (dateFrom) {
-        chips.push({ id: "dateFrom", label: `From: ${dateFrom}`, onRemove: () => setDateFrom("") });
+        chips.push({
+          id: "dateFrom",
+          label: `From: ${dateFrom}`,
+          onRemove: () => {
+            setDateFrom("");
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, selectedProductionSeries, selectedStatus, "", dateTo);
+          },
+        });
       }
       if (dateTo) {
-        chips.push({ id: "dateTo", label: `To: ${dateTo}`, onRemove: () => setDateTo("") });
+        chips.push({
+          id: "dateTo",
+          label: `To: ${dateTo}`,
+          onRemove: () => {
+            setDateTo("");
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, "");
+          },
+        });
       }
     }
 
     return chips;
-  }, [activeTab, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, dateTo]);
+  }, [activeTab, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, dateTo, page, rowsPerPage]);
 
   // ── Cell Content Renderer ──────────────────────────────────────────────────
   const renderCellContent = (colField: string, row: any, idx: number) => {
     if (colField === "sr") {
       return page * rowsPerPage + idx + 1;
+    }
+
+    if (colField === "productionOrderNumber") {
+      return row.productionOrderNumber || row.poNumber || "-";
+    }
+
+    if (colField === "productionSeries") {
+      return row.productionSeries || row.prodSeries || "-";
     }
 
     if (colField === "componentType") {
@@ -604,7 +673,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
     if (colField === "status") {
       if (activeTab === "precheck") {
-        return <StatusChip status={row.isRejected ? "Rejected" : "Active"} />;
+        const displayStatus = row.isRejected
+          ? "Rejected"
+          : row.precheckStatus || row.status || (row.isPrecheckComplete ? "Completed" : "Pending");
+        return <StatusChip status={displayStatus} />;
       } else {
         return <StatusChip status={row.status} />;
       }
@@ -615,7 +687,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       return <StatusChip status={isRej ? "Rejected" : "Active"} label={isRej ? "Yes" : "No"} />;
     }
 
-    // Details column (3-dots menu icon matching ViewComponents)
+    // Details column (directly toggle expanded sub-table)
     if (colField === "details") {
       const rowKey = row.id ?? row.sr;
       const isExpanded = expandedRows.has(rowKey);
@@ -624,63 +696,26 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           size="small"
           onClick={(e) => {
             e.stopPropagation();
-            setMenuAnchorEl(e.currentTarget);
-            setActiveMenuRow(row);
+            toggleRowExpand(rowKey);
           }}
           sx={{
-            color: "text.muted",
+            color: isExpanded ? "primary.main" : "#667085",
             p: 0.5,
-            "&:hover": { backgroundColor: "grey.100", color: "text.primary" },
+            "&:hover": { backgroundColor: "grey.100", color: "#101828" },
           }}
         >
-          <MoreVertIcon fontSize="small" />
+          {isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <MoreVertIcon fontSize="small" />}
         </IconButton>
       );
     }
 
-    if (colField === "actions") {
-      return (
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedRow(row);
-              setDetailDialogOpen(true);
-            }}
-            sx={{
-              borderColor: "#D0D5DD",
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: "0.75rem",
-              borderRadius: "6px",
-              py: 0.25,
-              px: 1,
-              minWidth: "auto",
-              height: 26,
-              textTransform: "none",
-              "&:hover": { borderColor: "primary.main", backgroundColor: "#F4EBFF" },
-            }}
-          >
-            View
-          </Button>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuAnchorEl(e.currentTarget);
-              setActiveMenuRow(row);
-            }}
-            sx={{ color: "#667085", p: 0.25 }}
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      );
-    }
 
-    return row[colField] ?? "";
+
+    const val = row[colField];
+    if (val === null || val === undefined || String(val).trim() === "" || String(val).trim() === "null") {
+      return "-";
+    }
+    return val;
   };
 
   const handleConfirmExportData = () => {
@@ -1406,6 +1441,30 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                                           textAlign: "center",
                                         }}
                                       >
+                                        MRIR Number
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        Nomenclature
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
                                         Remarks
                                       </TableCell>
                                       <TableCell
@@ -1436,6 +1495,12 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                                   </TableHead>
                                   <TableBody>
                                     <TableRow>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.mrirNumber || "-"}
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.nomenclature || "-"}
+                                      </TableCell>
                                       <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
                                         {row.remarks || <Typography component="span" sx={{ color: "#98A2B3", fontStyle: "italic", fontSize: "0.75rem" }}>No remarks</Typography>}
                                       </TableCell>
@@ -1485,183 +1550,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
       </Paper>
 
-      {/* Detail Dialog */}
-      <Dialog
-        open={detailDialogOpen}
-        onClose={() => setDetailDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: "16px", p: 1 } }}
-      >
-        <DialogTitle
-          sx={{ pb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }}
-        >
-          <Typography variant="h6" fontWeight="700" color="primary.main">
-            Precheck Record Details
-          </Typography>
-          <IconButton size="small" onClick={() => setDetailDialogOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
 
-        <DialogContent dividers sx={{ py: 2 }}>
-          {selectedRow && (
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">PO Number</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.productionOrderNumber || selectedRow.poNumber || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Drawing Number</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.drawingNumber || selectedRow.consumedInDrawingNumber || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">LN Item Code</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.lnItemCode || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">ID Number</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.idNumber || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Quantity</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.quantity || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Status</Typography>
-                <Typography variant="body2" fontWeight="600" color="primary.main">
-                  {selectedRow.isRejected ? "Rejected" : selectedRow.isPrecheckComplete ? "Completed" : "Active"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">IR Number</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.irNumber || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">MSN Number</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.msnNumber || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">MRIR Number</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.mrirNumber || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Nomenclature</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.nomenclature || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="caption" color="text.secondary">Remarks</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.remarks || "-"}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="caption" color="text.secondary">Verified / Created By</Typography>
-                <Typography variant="body2" fontWeight="600">
-                  {selectedRow.username || "-"}
-                </Typography>
-              </Grid>
-            </Grid>
-          )}
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, py: 1.5 }}>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => setDetailDialogOpen(false)}
-            sx={{ borderRadius: "8px", backgroundColor: "primary.main", textTransform: "none", fontWeight: 600 }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Row Kebab Overflow Menu */}
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={() => setMenuAnchorEl(null)}
-        transitionDuration={0}
-        transformOrigin={{ horizontal: "right", vertical: "top" }}
-        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-        PaperProps={{ sx: { minWidth: 110, borderRadius: "6px", py: 0.25 } }}
-      >
-        <MenuItem
-          onClick={() => {
-            setMenuAnchorEl(null);
-            if (activeMenuRow) {
-              const rowKey = activeMenuRow.id ?? activeMenuRow.sr;
-              toggleRowExpand(rowKey);
-            }
-          }}
-          sx={{ py: 0.35, px: 1, minHeight: 28 }}
-        >
-          <ListItemIcon sx={{ minWidth: 20, "& .MuiSvgIcon-root": { fontSize: 15 } }}>
-            {activeMenuRow && expandedRows.has(activeMenuRow.id ?? activeMenuRow.sr) ? (
-              <KeyboardArrowUpIcon color="primary" />
-            ) : (
-              <KeyboardArrowDownIcon />
-            )}
-          </ListItemIcon>
-          <ListItemText
-            primary={
-              activeMenuRow && expandedRows.has(activeMenuRow.id ?? activeMenuRow.sr)
-                ? "Hide Details"
-                : "View Details"
-            }
-            primaryTypographyProps={{ fontSize: "0.725rem", fontWeight: 500 }}
-          />
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => {
-            setMenuAnchorEl(null);
-            if (activeMenuRow) {
-              setSelectedRow(activeMenuRow);
-              setDetailDialogOpen(true);
-            }
-          }}
-          sx={{ py: 0.35, px: 1, minHeight: 28 }}
-        >
-          <ListItemIcon sx={{ minWidth: 20, "& .MuiSvgIcon-root": { fontSize: 15 } }}>
-            <VisibilityIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText
-            primary="View Record"
-            primaryTypographyProps={{ fontSize: "0.725rem", fontWeight: 500 }}
-          />
-        </MenuItem>
-      </Menu>
 
       {/* Export Options Dialog */}
       <Dialog

@@ -22,6 +22,9 @@ interface LabelPreviewPanelProps {
   watchProjectNumber: string;
   watchBuildNumber: string;
   watchLocation: string;
+  watchFanManNumber?: string;
+  watchGfnNo?: string;
+  watchMaterial?: string;
   // Label Preview state
   previewQrInput: string;
   onPreviewQrInputChange: (value: string) => void;
@@ -54,6 +57,9 @@ const LabelPreviewPanel = ({
   watchProjectNumber,
   watchBuildNumber,
   watchLocation,
+  watchFanManNumber,
+  watchGfnNo,
+  watchMaterial,
   previewQrInput,
   onPreviewQrInputChange,
   fetchedPreviewItem,
@@ -75,6 +81,10 @@ const LabelPreviewPanel = ({
   noExpiryDate,
   userName,
 }: LabelPreviewPanelProps) => {
+  const isIdOrBatch = componentType === "ID" || componentType === "BATCH" || componentType === "Batch";
+  const isFIM = componentType === "FIM";
+  const isSI = componentType === "SI" || componentType === "Purchase Item" || componentType === "PURCHASE ITEM";
+
   return (
     <Grid item xs={12} lg={3.5}>
       {/* 1. MASTER DATA QUICK DISPLAY PANEL */}
@@ -105,6 +115,7 @@ const LabelPreviewPanel = ({
 
         <Stack spacing={1.25}>
 
+          {/* Nomenclature */}
           <Box
             sx={{
               display: "flex",
@@ -130,6 +141,7 @@ const LabelPreviewPanel = ({
             </Typography>
           </Box>
 
+          {/* Component Type */}
           <Box
             sx={{
               display: "flex",
@@ -157,6 +169,7 @@ const LabelPreviewPanel = ({
             />
           </Box>
 
+          {/* Available For */}
           <Box
             sx={{
               display: "flex",
@@ -175,42 +188,112 @@ const LabelPreviewPanel = ({
             </Typography>
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
-              Project No.
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+          {/* Project No. — Shown only for ID/BATCH or when available */}
+          {(isIdOrBatch || (watchProjectNumber && watchProjectNumber !== "—")) && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              {watchProjectNumber || "—"}
-            </Typography>
-          </Box>
+              <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
+                Project No.
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+              >
+                {watchProjectNumber || "—"}
+              </Typography>
+            </Box>
+          )}
 
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
-              Build No.
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+          {/* Build No. — Shown only for ID/BATCH or when available */}
+          {(isIdOrBatch || (watchBuildNumber && watchBuildNumber !== "—")) && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              {watchBuildNumber || "—"}
-            </Typography>
-          </Box>
+              <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
+                Build No.
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+              >
+                {watchBuildNumber || "—"}
+              </Typography>
+            </Box>
+          )}
 
+          {/* FAN/MAN No. — FIM Specific */}
+          {isFIM && !!watchFanManNumber && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
+                FAN/MAN No.
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+              >
+                {watchFanManNumber}
+              </Typography>
+            </Box>
+          )}
+
+          {/* GFN No. — FIM Specific */}
+          {isFIM && !!watchGfnNo && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
+                GFN No.
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+              >
+                {watchGfnNo}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Material Spec — Purchase Item (SI) Specific */}
+          {isSI && !!watchMaterial && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="body2" sx={{ color: "#6B7280", fontSize: "0.825rem" }}>
+                Material Spec
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, color: "#111827", fontSize: "0.825rem" }}
+              >
+                {watchMaterial}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Location */}
           <Box
             sx={{
               display: "flex",

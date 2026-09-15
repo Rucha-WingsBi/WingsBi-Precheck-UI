@@ -121,37 +121,7 @@ function ComponentTypeStep({
                         }}
                       />
                     }
-                    label={
-                      <Box
-                        component="span"
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography
-                          component="span"
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: "0.875rem",
-                            color: "#111827",
-                          }}
-                        >
-                          Series
-                        </Typography>
-                        <Typography
-                          component="span"
-                          sx={{
-                            color: "#6B7280",
-                            fontSize: "0.8rem",
-                            fontWeight: 400,
-                          }}
-                        >
-                          — consecutive from Start ID
-                        </Typography>
-                      </Box>
-                    }
+                    label="Series"
                   />
                   <FormControlLabel
                     value="custom"
@@ -164,37 +134,7 @@ function ComponentTypeStep({
                         }}
                       />
                     }
-                    label={
-                      <Box
-                        component="span"
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography
-                          component="span"
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: "0.875rem",
-                            color: "#111827",
-                          }}
-                        >
-                          Custom
-                        </Typography>
-                        <Typography
-                          component="span"
-                          sx={{
-                            color: "#6B7280",
-                            fontSize: "0.8rem",
-                            fontWeight: 400,
-                          }}
-                        >
-                          — enter each ID
-                        </Typography>
-                      </Box>
-                    }
+                    label="Custom"
                   />
                   <FormControlLabel
                     value="random"
@@ -207,37 +147,7 @@ function ComponentTypeStep({
                         }}
                       />
                     }
-                    label={
-                      <Box
-                        component="span"
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography
-                          component="span"
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: "0.875rem",
-                            color: "#111827",
-                          }}
-                        >
-                          Random
-                        </Typography>
-                        <Typography
-                          component="span"
-                          sx={{
-                            color: "#6B7280",
-                            fontSize: "0.8rem",
-                            fontWeight: 400,
-                          }}
-                        >
-                          — system-generated
-                        </Typography>
-                      </Box>
-                    }
+                    label="Random"
                   />
                 </RadioGroup>
               )}

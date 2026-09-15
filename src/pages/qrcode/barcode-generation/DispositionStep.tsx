@@ -8,6 +8,7 @@ import {
   FormControlLabel,
   Radio,
   FormLabel,
+  FormHelperText,
 } from "@mui/material";
 import { Controller } from "react-hook-form";
 import StepHeader from "./StepHeader";
@@ -52,50 +53,16 @@ function DispositionStep({
           name="desposition"
           control={control}
           rules={{ required: "Disposition is required" }}
-          render={({ field }) => (
-            <RadioGroup
-              {...field}
-              row
-              onChange={(e) => field.onChange(e.target.value)}
-              sx={{ gap: { xs: 1.5, sm: 3 } }}
-            >
-              <FormControlLabel
-                value="Accepted"
-                control={
-                  <Radio
-                    size="small"
-                    sx={{
-                      color: "#D1D5DB",
-                      "&.Mui-checked": { color: "primary.main" },
-                    }}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                    Accepted
-                  </Typography>
-                }
-              />
-              <FormControlLabel
-                value="Rejected"
-                control={
-                  <Radio
-                    size="small"
-                    sx={{
-                      color: "#D1D5DB",
-                      "&.Mui-checked": { color: "primary.main" },
-                    }}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                    Rejected
-                  </Typography>
-                }
-              />
-              {componentType === "FIM" || componentType === "SI" ? (
+          render={({ field, fieldState: { error } }) => (
+            <Box>
+              <RadioGroup
+                {...field}
+                row
+                onChange={(e) => field.onChange(e.target.value)}
+                sx={{ gap: { xs: 1.5, sm: 3 } }}
+              >
                 <FormControlLabel
-                  value="Send Back to Customer"
+                  value="Accepted"
                   control={
                     <Radio
                       size="small"
@@ -107,30 +74,71 @@ function DispositionStep({
                   }
                   label={
                     <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                      Send Back to Customer
+                      Accepted
                     </Typography>
                   }
                 />
-              ) : (
                 <FormControlLabel
-                  value="Used for QT"
+                  value="Rejected"
                   control={
                     <Radio
                       size="small"
                       sx={{
                         color: "#D1D5DB",
-                        "&.Mui-checked": { color: "#7E22CE" },
+                        "&.Mui-checked": { color: "primary.main" },
                       }}
                     />
                   }
                   label={
                     <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                      Used for QT
+                      Rejected
                     </Typography>
                   }
                 />
+                {componentType === "FIM" || componentType === "SI" ? (
+                  <FormControlLabel
+                    value="Send Back to Customer"
+                    control={
+                      <Radio
+                        size="small"
+                        sx={{
+                          color: "#D1D5DB",
+                          "&.Mui-checked": { color: "primary.main" },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
+                        Send Back to Customer
+                      </Typography>
+                    }
+                  />
+                ) : (
+                  <FormControlLabel
+                    value="Used for QT"
+                    control={
+                      <Radio
+                        size="small"
+                        sx={{
+                          color: "#D1D5DB",
+                          "&.Mui-checked": { color: "#7E22CE" },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
+                        Used for QT
+                      </Typography>
+                    }
+                  />
+                )}
+              </RadioGroup>
+              {error && (
+                <FormHelperText error sx={{ mt: 0.5, fontWeight: 500, fontSize: "0.75rem" }}>
+                  {error.message}
+                </FormHelperText>
               )}
-            </RadioGroup>
+            </Box>
           )}
         />
       </Box>

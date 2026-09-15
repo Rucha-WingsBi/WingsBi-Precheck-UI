@@ -27,6 +27,7 @@ interface DrawingDetailsStepProps {
   setComponentType: (type: any) => void;
   qrTypeState: string;
   setQrTypeState: (state: string) => void;
+  onQrTypeChange?: (val: string) => void;
   poNumbers: any[];
   selectedPO: any;
   setSelectedPO: (po: any) => void;
@@ -77,6 +78,7 @@ function DrawingDetailsStep({
   setComponentType,
   qrTypeState,
   setQrTypeState,
+  onQrTypeChange,
   poNumbers,
   selectedPO,
   setSelectedPO,
@@ -137,11 +139,11 @@ function DrawingDetailsStep({
         boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
       }}
     >
-      <StepHeader number={1} title="Source" subtitle="What is being labelled" />
+      <StepHeader number={1} title="Source" />
 
       {/* Standard Manufacturing Item Form (ID & BATCH) */}
       {(componentType === "ID" || componentType === "BATCH") && (
-        <Grid container spacing={1.5}>
+        <Grid container spacing={2.5} sx={{ mb: 2 }}>
           {/* Row 1: QR Type *, PO Number *, LN Item Code * */}
           <Grid item xs={12} md={4}>
             <Controller
@@ -158,10 +160,14 @@ function DrawingDetailsStep({
                     onChange={(e) => {
                       const val = String(e.target.value);
                       field.onChange(val);
-                      setQrTypeState(val);
-                      const newCompType = (val === "Purchase Item" ? "SI" : val) as any;
-                      setComponentType(newCompType);
-                      setValue("componentType", newCompType);
+                      if (onQrTypeChange) {
+                        onQrTypeChange(val);
+                      } else {
+                        setQrTypeState(val);
+                        const newCompType = (val === "Purchase Item" ? "SI" : val) as any;
+                        setComponentType(newCompType);
+                        setValue("componentType", newCompType);
+                      }
                     }}
                   >
                     <MenuItem value="ID">ID</MenuItem>
@@ -343,117 +349,128 @@ function DrawingDetailsStep({
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <Autocomplete
-              open={openLN}
-              onOpen={() => setOpenLN(true)}
-              onClose={() => setOpenLN(false)}
-              options={allDrawingNumbers || []}
-              openOnFocus={true}
-              selectOnFocus={true}
-              forcePopupIcon={true}
-              getOptionLabel={(option) =>
-                typeof option === "string" ? option : option.lnItemCode || ""
-              }
-              value={selectedDrawing}
-              loading={isLnSearchLoading || isLnSearchFetching}
-              size="small"
-              filterOptions={(options, { inputValue }) => {
-                if (!inputValue) return options.slice(0, 100);
-                const searchLower = inputValue.toLowerCase();
-                const selectedLn = (selectedDrawing?.lnItemCode || "").toLowerCase();
-                if (searchLower === selectedLn) return options.slice(0, 100);
-                return options
-                  .filter(
-                    (option) =>
-                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                      option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                      option.nomenclature?.toLowerCase().includes(searchLower),
-                  )
-                  .slice(0, 100);
-              }}
-              onInputChange={(_, value, reason) => {
-                if (reason === "input") {
-                  updateDebouncedLnSearch(value);
-                }
-              }}
-              onChange={(_, newValue) => {
-                setOpenLN(false);
-                if (newValue && typeof newValue !== "string") {
-                  setSelectedDrawing(newValue);
-                  setValue("drawingNumber", newValue.drawingNumber);
-                  setValue("nomenclature", newValue.nomenclature);
-                  setValue("unit", newValue.unitName || "");
-                  setValue("location", newValue.location || "");
-                  setValue(
-                    "partAssemblyId",
-                    newValue.parentDrawingNumbers?.[0] || "",
-                  );
-                  if (newValue.componentType) {
-                    updateComponentAndQrType(newValue.componentType);
+            <Controller
+              name="drawingNumber"
+              control={control}
+              rules={{ required: "LN Item Code is required" }}
+              render={({ field: { onChange, ref }, fieldState: { error } }) => (
+                <Autocomplete
+                  open={openLN}
+                  onOpen={() => setOpenLN(true)}
+                  onClose={() => setOpenLN(false)}
+                  options={allDrawingNumbers || []}
+                  openOnFocus={true}
+                  selectOnFocus={true}
+                  forcePopupIcon={true}
+                  getOptionLabel={(option) =>
+                    typeof option === "string" ? option : option.lnItemCode || ""
                   }
-                } else {
-                  setValue("drawingNumber", "");
-                  setValue("nomenclature", "");
-                  setValue("unit", "");
-                  setValue("partAssemblyId", "");
-                  setValue("location", "");
-                }
-              }}
-              renderOption={(props, option) => {
-                const { key, ...optionProps } = props;
-                const lnCode = typeof option === "string" ? option : (option.lnItemCode || option.drawingNumber || "");
-                const drawingNo = typeof option === "string" ? "" : option.drawingNumber;
-                const nomenclature = typeof option === "string" ? "" : option.nomenclature;
-                const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
-
-                const details = [
-                  drawingNo ? `Drawing: ${drawingNo}` : null,
-                  nomenclature,
-                  compType,
-                ].filter(Boolean).join(" | ");
-
-                return (
-                  <li {...optionProps} key={key}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        py: 0.5,
-                        width: "100%",
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        fontWeight="700"
-                        sx={{ fontSize: "0.875rem", color: "primary.main" }}
-                      >
-                        {lnCode}
-                      </Typography>
-                      {details && (
-                        <Typography
-                          variant="caption"
-                          sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: "#64748B" }}
-                        >
-                          {details}
-                        </Typography>
-                      )}
-                    </Box>
-                  </li>
-                );
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="LN Item Code *"
-                  fullWidth
+                  value={selectedDrawing}
+                  loading={isLnSearchLoading || isLnSearchFetching}
                   size="small"
-                  onClick={() => setOpenLN(true)}
-                  onFocus={(e) => {
-                    setOpenLN(true);
-                    (e.target as HTMLInputElement)?.select?.();
+                  filterOptions={(options, { inputValue }) => {
+                    if (!inputValue) return options.slice(0, 100);
+                    const searchLower = inputValue.toLowerCase();
+                    const selectedLn = (selectedDrawing?.lnItemCode || "").toLowerCase();
+                    if (searchLower === selectedLn) return options.slice(0, 100);
+                    return options
+                      .filter(
+                        (option) =>
+                          option.lnItemCode?.toLowerCase().includes(searchLower) ||
+                          option.drawingNumber?.toLowerCase().includes(searchLower) ||
+                          option.nomenclature?.toLowerCase().includes(searchLower),
+                      )
+                      .slice(0, 100);
                   }}
-                  error={!!errors.lnItemCode}
-                  helperText={errors.lnItemCode?.message}
+                  onInputChange={(_, value, reason) => {
+                    if (reason === "input") {
+                      updateDebouncedLnSearch(value);
+                    }
+                  }}
+                  onChange={(_, newValue) => {
+                    setOpenLN(false);
+                    if (newValue && typeof newValue !== "string") {
+                      setSelectedDrawing(newValue);
+                      setValue("drawingNumber", newValue.drawingNumber);
+                      setValue("nomenclature", newValue.nomenclature);
+                      setValue("unit", newValue.unitName || "");
+                      setValue("location", newValue.location || "");
+                      setValue(
+                        "partAssemblyId",
+                        newValue.parentDrawingNumbers?.[0] || "",
+                      );
+                      if (newValue.componentType) {
+                        updateComponentAndQrType(newValue.componentType);
+                      }
+                      onChange(newValue.drawingNumber);
+                    } else {
+                      setSelectedDrawing(null);
+                      setValue("drawingNumber", "");
+                      setValue("nomenclature", "");
+                      setValue("unit", "");
+                      setValue("partAssemblyId", "");
+                      setValue("location", "");
+                      onChange("");
+                    }
+                  }}
+                  renderOption={(props, option) => {
+                    const { key, ...optionProps } = props;
+                    const lnCode = typeof option === "string" ? option : (option.lnItemCode || option.drawingNumber || "");
+                    const drawingNo = typeof option === "string" ? "" : option.drawingNumber;
+                    const nomenclature = typeof option === "string" ? "" : option.nomenclature;
+                    const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
+
+                    const details = [
+                      drawingNo ? `Drawing: ${drawingNo}` : null,
+                      nomenclature,
+                      compType,
+                    ].filter(Boolean).join(" | ");
+
+                    return (
+                      <li {...optionProps} key={key}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            py: 0.5,
+                            width: "100%",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight="700"
+                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                          >
+                            {lnCode}
+                          </Typography>
+                          {details && (
+                            <Typography
+                              variant="caption"
+                              sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: "#64748B" }}
+                            >
+                              {details}
+                            </Typography>
+                          )}
+                        </Box>
+                      </li>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="LN Item Code *"
+                      fullWidth
+                      size="small"
+                      inputRef={ref}
+                      onClick={() => setOpenLN(true)}
+                      onFocus={(e) => {
+                        setOpenLN(true);
+                        (e.target as HTMLInputElement)?.select?.();
+                      }}
+                      error={!!error || !!errors.lnItemCode || !!errors.drawingNumber}
+                      helperText={error?.message || errors.lnItemCode?.message || errors.drawingNumber?.message}
+                    />
+                  )}
                 />
               )}
             />
@@ -463,7 +480,7 @@ function DrawingDetailsStep({
 
       {/* Non-Standard / Raw Material / FIM / SI Form */}
       {(componentType === "FIM" || componentType === "SI") && (
-        <Grid container spacing={1.5} sx={{ mb: 2 }}>
+        <Grid container spacing={2.5} sx={{ mb: 2 }}>
           <Grid item xs={12} md={4}>
             <Controller
               name="qrType"
@@ -478,10 +495,14 @@ function DrawingDetailsStep({
                     onChange={(e) => {
                       const val = String(e.target.value);
                       field.onChange(val);
-                      setQrTypeState(val);
-                      const newCompType = (val === "Purchase Item" ? "SI" : val) as any;
-                      setComponentType(newCompType);
-                      setValue("componentType", newCompType);
+                      if (onQrTypeChange) {
+                        onQrTypeChange(val);
+                      } else {
+                        setQrTypeState(val);
+                        const newCompType = (val === "Purchase Item" ? "SI" : val) as any;
+                        setComponentType(newCompType);
+                        setValue("componentType", newCompType);
+                      }
                     }}
                   >
                     <MenuItem value="ID">ID</MenuItem>
@@ -499,7 +520,7 @@ function DrawingDetailsStep({
               name="drawingNumber"
               control={control}
               rules={{ required: "RM Drawing Number is required" }}
-              render={({ field: { onChange } }) => (
+              render={({ field: { onChange, ref }, fieldState: { error } }) => (
                 <Autocomplete
                   open={openDrawing}
                   onOpen={() => setOpenDrawing(true)}
@@ -534,7 +555,9 @@ function DrawingDetailsStep({
                   onChange={(_, value) => {
                     setOpenDrawing(false);
                     setSelectedDrawing(value);
-                    onChange(value ? value.drawingNumber : "");
+                    const val = value ? value.drawingNumber : "";
+                    onChange(val);
+                    setValue("drawingNumber", val);
                     if (value) {
                       setValue("nomenclature", value.nomenclature);
                       setValue("location", value.location || "");
@@ -556,13 +579,14 @@ function DrawingDetailsStep({
                     <TextField
                       {...params}
                       label="RM Drawing Number *"
+                      inputRef={ref}
                       onClick={() => setOpenDrawing(true)}
                       onFocus={(e) => {
                         setOpenDrawing(true);
                         (e.target as HTMLInputElement)?.select?.();
                       }}
-                      error={!!errors.drawingNumber}
-                      helperText={errors.drawingNumber?.message}
+                      error={!!error || !!errors.drawingNumber}
+                      helperText={error?.message || errors.drawingNumber?.message}
                     />
                   )}
                 />
@@ -589,13 +613,13 @@ function DrawingDetailsStep({
       )}
 
       {/* Shared Row 2: Production Series * | Unit * | IR Number */}
-      <Grid container spacing={2.5} sx={{ mb: 2, mt: (componentType === "ID" || componentType === "BATCH") ? 1.5 : 0 }}>
+      <Grid container spacing={2.5} sx={{ mb: 2 }}>
         <Grid item xs={12} md={4}>
           <Controller
             name="productionSeries"
             control={control}
             rules={{ required: "Production Series is required" }}
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { onChange, value, ref }, fieldState: { error } }) => (
               <Autocomplete
                 size="small"
                 open={openProdSeries}
@@ -617,19 +641,22 @@ function DrawingDetailsStep({
                 }}
                 onChange={(_, newValue) => {
                   setOpenProdSeries(false);
-                  onChange(newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "");
+                  const val = newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "";
+                  setValue("productionSeries", val);
+                  onChange(val);
                 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Production Series *"
+                    inputRef={ref}
                     onClick={() => setOpenProdSeries(true)}
                     onFocus={(e) => {
                       setOpenProdSeries(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!errors.productionSeries}
-                    helperText={errors.productionSeries?.message}
+                    error={!!error || !!errors.productionSeries}
+                    helperText={error?.message || errors.productionSeries?.message}
                   />
                 )}
               />
@@ -637,8 +664,8 @@ function DrawingDetailsStep({
           />
         </Grid>
         <Grid item xs={12} md={4}>
-          <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field }) => (
-            <FormControl fullWidth error={!!errors.unit} size="small">
+          <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => (
+            <FormControl fullWidth error={!!error || !!errors.unit} size="small">
               <InputLabel>Unit *</InputLabel>
               <Select
                 {...field}
@@ -656,7 +683,9 @@ function DrawingDetailsStep({
                   </MenuItem>
                 ))}
               </Select>
-              {errors.unit && <FormHelperText>{errors.unit.message}</FormHelperText>}
+              {(error || errors.unit) && (
+                <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
+              )}
             </FormControl>
           )} />
         </Grid>
@@ -718,9 +747,8 @@ function DrawingDetailsStep({
       {/* Shared Row 3: MSN Number * | MFG Date * | Expiry Date */}
       <Grid container spacing={2.5} sx={{ mb: 2 }}>
         <Grid item xs={12} md={4}>
-          <Controller name="msnNumber" control={control} rules={{ required: "MSN Number is required" }} render={({ field, fieldState: { error } }) => (
+          <Controller name="msnNumber" control={control} rules={{ required: "MSN Number is required" }} render={({ field: { onChange, ref }, fieldState: { error } }) => (
             <Autocomplete
-              {...field}
               open={openMSN}
               onOpen={() => {
                 handleMSNOpen();
@@ -750,28 +778,49 @@ function DrawingDetailsStep({
               onChange={(_, value) => {
                 setOpenMSN(false);
                 setSelectedMSNNumber(value);
-                setValue("msnNumber", value?.msnNumber || "");
+                const val = value?.msnNumber || "";
+                setValue("msnNumber", val);
                 setMsnSearchText("");
-                field.onChange(value?.msnNumber || "");
+                onChange(val);
               }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="MSN Number *"
+                  inputRef={ref}
                   onClick={() => setOpenMSN(true)}
                   onFocus={(e) => {
                     setOpenMSN(true);
                     (e.target as HTMLInputElement)?.select?.();
                   }}
-                  error={!!error}
-                  helperText={error?.message}
+                  error={!!error || !!errors.msnNumber}
+                  helperText={error?.message || errors.msnNumber?.message}
                 />
               )}
             />
           )} />
         </Grid>
         <Grid item xs={12} md={4}>
-          <Controller name="manufacturingDate" control={control} render={({ field }) => <DatePicker {...field} label="MFG Date *" maxDate={new Date()} slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.manufacturingDate, helperText: errors.manufacturingDate?.message } }} />} />
+          <Controller
+            name="manufacturingDate"
+            control={control}
+            rules={{ required: "MFG Date is required" }}
+            render={({ field, fieldState: { error } }) => (
+              <DatePicker
+                {...field}
+                label="MFG Date *"
+                maxDate={new Date()}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    fullWidth: true,
+                    error: !!error || !!errors.manufacturingDate,
+                    helperText: error?.message || errors.manufacturingDate?.message,
+                  },
+                }}
+              />
+            )}
+          />
         </Grid>
         <Grid item xs={12} md={4}>
           <Controller name="expiryDate" control={control} render={({ field }) => <DatePicker {...field} value={field.value || null} disabled={noExpiryDate} onChange={(newValue) => { field.onChange(newValue || null); if (newValue) setNoExpiryDate(false); }} label="Expiry Date" slotProps={{ textField: { size: "small", fullWidth: true } }} />} />
@@ -779,7 +828,7 @@ function DrawingDetailsStep({
       </Grid>
 
       {/* Extra FIM / SI specific details */}
-      {componentType === "FIM" ? (
+      {componentType === "FIM" && (
         <Grid container spacing={2.5} sx={{ mb: 2 }}>
           <Grid item xs={12} md={4}>
             <Controller name="fanManNumber" control={control} render={({ field }) => <TextField {...field} label="FAN/MAN Number" fullWidth size="small" />} />
@@ -791,7 +840,9 @@ function DrawingDetailsStep({
             <Controller name="gfnNo" control={control} render={({ field }) => <TextField {...field} label="GFN No" fullWidth size="small" />} />
           </Grid>
         </Grid>
-      ) : (
+      )}
+
+      {(componentType === "SI" || componentType === "Purchase Item" || componentType === "PURCHASE ITEM") && (
         <Grid container spacing={2.5} sx={{ mb: 2 }}>
           <Grid item xs={12} md={6}>
             <Controller name="shapes" control={control} render={({ field: { onChange, value } }) => (
