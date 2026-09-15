@@ -129,6 +129,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
     setSearchQuery("");
+    prevSearchQueryRef.current = "";
     setSelectedSeries([]);
     setSelectedDocumentType([]);
     setSelectedUnits([]);
@@ -227,6 +228,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     const seriesList = overrideSeries !== undefined ? overrideSeries : selectedSeries;
     const pNum = targetPage !== undefined ? targetPage : bomPage;
     const pSize = targetPageSize !== undefined ? targetPageSize : bomRowsPerPage;
+
+    prevSearchQueryRef.current = queryStr?.trim() || "";
 
     setError(null);
     if (targetPage === undefined) {
@@ -352,6 +355,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
 
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const isInitialSearchRef = useRef(true);
+  const prevSearchQueryRef = useRef(searchQuery.trim());
 
   // Auto-trigger API call when 3+ characters typed in search bar, or when search is cleared
   useEffect(() => {
@@ -360,21 +364,28 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       return;
     }
     const trimmed = debouncedSearchQuery.trim();
+    if (prevSearchQueryRef.current === trimmed) {
+      return;
+    }
     if (trimmed.length >= 3 || (trimmed.length === 0 && searched)) {
+      prevSearchQueryRef.current = trimmed;
       handleSearch(trimmed);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchQuery]);
 
   const isDropdownFilterSelected = selectedSeries.length > 0 || selectedDocumentType.length > 0 || selectedUnits.length > 0;
 
   // Automatically search when tab changes or component mounts
   useEffect(() => {
+    prevSearchQueryRef.current = searchQuery.trim();
     handleSearch(searchQuery, activeTab, selectedSeries);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const handleReset = () => {
     setSearchQuery("");
+    prevSearchQueryRef.current = "";
     setSelectedSeries([]);
     setSelectedDocumentType([]);
     setSelectedUnits([]);

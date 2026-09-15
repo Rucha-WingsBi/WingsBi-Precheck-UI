@@ -403,13 +403,36 @@ export const generateBatchQRCode = createAsyncThunk(
 export const exportQRCode = createAsyncThunk(
   "qrcode/exportQRCode",
   async (
-    qrCodeIdOrObj: string | { qrCodeId: string; batchId?: string; selectedColumns?: string[] },
+    qrCodeIdOrObj:
+      | string
+      | {
+          qrCodeId: string;
+          batchId?: string;
+          selectedColumns?: string[];
+          serialNumberSummary?: Array<{ qrCodeNumber: string }>;
+          qrCodeDetails?: Array<{ qrCodeNumber: string }>;
+        },
     { rejectWithValue, getState },
   ) => {
     // Handle both old string format and new object format for backward compatibility
-    const qrCodeId = typeof qrCodeIdOrObj === "string" ? qrCodeIdOrObj : qrCodeIdOrObj.qrCodeId;
-    const batchId = typeof qrCodeIdOrObj === "string" ? undefined : qrCodeIdOrObj.batchId;
-    const selectedColumns = typeof qrCodeIdOrObj === "string" ? undefined : qrCodeIdOrObj.selectedColumns;
+    const qrCodeId =
+      typeof qrCodeIdOrObj === "string"
+        ? qrCodeIdOrObj
+        : qrCodeIdOrObj.qrCodeId;
+    const batchId =
+      typeof qrCodeIdOrObj === "string" ? undefined : qrCodeIdOrObj.batchId;
+    const selectedColumns =
+      typeof qrCodeIdOrObj === "string"
+        ? undefined
+        : qrCodeIdOrObj.selectedColumns;
+    const serialNumberSummaryInput =
+      typeof qrCodeIdOrObj === "string"
+        ? undefined
+        : qrCodeIdOrObj.serialNumberSummary;
+    const qrCodeDetailsInput =
+      typeof qrCodeIdOrObj === "string"
+        ? undefined
+        : qrCodeIdOrObj.qrCodeDetails;
 
     if (!qrCodeId) {
       return rejectWithValue("QR code ID must be provided");
@@ -450,9 +473,23 @@ export const exportQRCode = createAsyncThunk(
       const s = String(now.getSeconds()).padStart(2, "0");
       const timestamp = `${dateStr}_${h}:${m}:${s}`;
 
+      const qrCodeNumbers = [qrCodeId];
+      const batchIdNumbers = batchId ? [batchId] : [];
+      const serialNumberSummary =
+        serialNumberSummaryInput ||
+        qrCodeNumbers.map((code) => ({ qrCodeNumber: code }));
+      const qrCodeDetails =
+        qrCodeDetailsInput ||
+        qrCodeNumbers.map((code) => ({ qrCodeNumber: code }));
+
       const payload: any = {
-        QRCodeNumbers: [qrCodeId],
-        BatchIdNumbers: batchId ? [batchId] : [],
+        qrCodeNumbers,
+        batchIdNumbers,
+        serialNumberSummary,
+        qrCodeDetails,
+        // Legacy fields for backward compatibility
+        QRCodeNumbers: qrCodeNumbers,
+        BatchIdNumbers: batchIdNumbers,
       };
       if (selectedColumns && selectedColumns.length > 0) {
         payload.selectedColumns = selectedColumns;
@@ -502,13 +539,35 @@ export const exportQRCode = createAsyncThunk(
 export const exportBulkQRCodes = createAsyncThunk(
   "qrcode/exportBulkQRCodes",
   async (
-    qrCodesOrObj: string[] | { qrCodes: string[]; batchIds?: string[]; selectedColumns?: string[] },
+    qrCodesOrObj:
+      | string[]
+      | {
+          qrCodes?: string[];
+          qrCodeNumbers?: string[];
+          batchIds?: string[];
+          batchIdNumbers?: string[];
+          selectedColumns?: string[];
+          serialNumberSummary?: Array<{ qrCodeNumber: string }>;
+          qrCodeDetails?: Array<{ qrCodeNumber: string }>;
+        },
     { rejectWithValue, getState },
   ) => {
     // Handle both old array format and new object format for backward compatibility
-    const qrCodes = Array.isArray(qrCodesOrObj) ? qrCodesOrObj : qrCodesOrObj.qrCodes;
-    const batchIds = Array.isArray(qrCodesOrObj) ? [] : (qrCodesOrObj.batchIds || []);
-    const selectedColumns = Array.isArray(qrCodesOrObj) ? undefined : qrCodesOrObj.selectedColumns;
+    const qrCodes = Array.isArray(qrCodesOrObj)
+      ? qrCodesOrObj
+      : qrCodesOrObj.qrCodeNumbers || qrCodesOrObj.qrCodes || [];
+    const batchIds = Array.isArray(qrCodesOrObj)
+      ? []
+      : qrCodesOrObj.batchIdNumbers || qrCodesOrObj.batchIds || [];
+    const selectedColumns = Array.isArray(qrCodesOrObj)
+      ? undefined
+      : qrCodesOrObj.selectedColumns;
+    const serialNumberSummaryInput = Array.isArray(qrCodesOrObj)
+      ? undefined
+      : qrCodesOrObj.serialNumberSummary;
+    const qrCodeDetailsInput = Array.isArray(qrCodesOrObj)
+      ? undefined
+      : qrCodesOrObj.qrCodeDetails;
 
     if (!qrCodes || qrCodes.length === 0) {
       return rejectWithValue("At least one QR code must be provided");
@@ -576,7 +635,19 @@ export const exportBulkQRCodes = createAsyncThunk(
       const s = String(now.getSeconds()).padStart(2, "0");
       const timestamp = `${dateStr}_${h}:${m}:${s}`;
 
+      const serialNumberSummary =
+        serialNumberSummaryInput ||
+        qrCodes.map((code) => ({ qrCodeNumber: code }));
+      const qrCodeDetails =
+        qrCodeDetailsInput ||
+        qrCodes.map((code) => ({ qrCodeNumber: code }));
+
       const payload: any = {
+        qrCodeNumbers: qrCodes,
+        batchIdNumbers: batchIds,
+        serialNumberSummary,
+        qrCodeDetails,
+        // Legacy fields for backward compatibility
         QRCodeNumbers: qrCodes,
         BatchIdNumbers: batchIds,
       };
