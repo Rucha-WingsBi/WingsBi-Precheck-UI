@@ -15,7 +15,6 @@ import {
   Button,
   Autocomplete,
   CircularProgress,
-  TableSortLabel,
   IconButton,
   Chip,
   Tabs,
@@ -293,7 +292,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       pageSize: pSize,
       searchQuery: combinedSearch.trim(),
       prodSeries: selectedProductionSeries,
-      status: selectedStatus.length > 0 ? selectedStatus[0] : "",
+      status: selectedStatus,
       fromDate: dateFrom ? dateFrom : null,
       toDate: dateTo ? dateTo : null,
     };

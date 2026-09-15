@@ -121,7 +121,11 @@ export const viewPrecheckByParameters = createAsyncThunk(
           : request?.prodSeries
             ? [request.prodSeries]
             : [],
-        status: request?.status ?? "",
+        status: Array.isArray(request?.status)
+          ? request.status
+          : request?.status
+            ? [request.status]
+            : [],
         fromDate: request?.fromDate ?? null,
         toDate: request?.toDate ?? null,
       };
@@ -310,6 +314,7 @@ export const exportPrecheckDetails = createAsyncThunk(
       id?: number;
       drawingNumberId?: number;
       remainingPrecheck?: boolean;
+      selectedColumns?: string[];
     },
     { rejectWithValue },
   ) => {
@@ -332,19 +337,25 @@ export const exportPrecheckDetails = createAsyncThunk(
       );
 
       if (response.data && response.data.size > 0) {
-        // Create download link for PDF file
+        const contentDisposition = response.headers["content-disposition"];
+        let filename = `PrecheckExport_${new Date().toISOString().split("T")[0]}.xlsx`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, "");
+          }
+        }
+
+        // Create download link for Excel file
         const url = window.URL.createObjectURL(
           new Blob([response.data], {
-            type: "application/pdf",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           }),
         );
 
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute(
-          "download",
-          `PrecheckExport_${new Date().toISOString().split("T")[0]}.pdf`,
-        );
+        link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         link.remove();
