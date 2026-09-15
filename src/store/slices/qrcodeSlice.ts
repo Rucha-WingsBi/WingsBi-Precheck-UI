@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
+import { getErrorMessage } from "../../utils/errorUtils";
 import type {
   QRCodeItem as ImportedQRCodeItem,
   BarcodeDetails as ImportedBarcodeDetails,
@@ -261,25 +262,7 @@ export const getBarcodeDetailsWithParameters = createAsyncThunk(
       );
       return response.data;
     } catch (error: any) {
-      const serverData = error.response?.data;
-      let errorMsg = "Failed to fetch barcode details";
-
-      if (serverData) {
-        if (serverData.message) {
-          errorMsg = serverData.message;
-        } else if (serverData.errors && typeof serverData.errors === "object") {
-          const firstErrList = Object.values(serverData.errors)[0];
-          if (Array.isArray(firstErrList) && firstErrList.length > 0) {
-            errorMsg = firstErrList[0];
-          } else if (typeof firstErrList === "string") {
-            errorMsg = firstErrList;
-          }
-        } else if (serverData.title) {
-          errorMsg = serverData.title;
-        }
-      }
-
-      return rejectWithValue(errorMsg);
+      return rejectWithValue(getErrorMessage(error, "Failed to fetch barcode details"));
     }
   },
 );

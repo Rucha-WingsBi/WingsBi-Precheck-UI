@@ -29,110 +29,116 @@ function DispositionStep({
         borderRadius: "10px",
         borderColor: "#EAECF0",
         backgroundColor: "#FFFFFF",
-        p: { xs: 2.5, md: 3 },
-        mb: 3,
+        p: { xs: 1.5, md: 1.75 },
+        mb: 1.5,
         boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
       }}
     >
       <StepHeader number={3} title="Disposition & remarks" />
 
-      <Box sx={{ mb: 2.5 }}>
-        <FormLabel
-          component="legend"
-          sx={{
-            fontWeight: 700,
-            fontSize: "0.875rem",
-            color: "#111827",
-            mb: 1,
-            display: "block",
-          }}
-        >
-          Disposition *
-        </FormLabel>
+      <Box sx={{ mb: 1.5 }}>
         <Controller
           name="desposition"
           control={control}
           rules={{ required: "Disposition is required" }}
           render={({ field, fieldState: { error } }) => (
             <Box>
-              <RadioGroup
-                {...field}
-                row
-                onChange={(e) => field.onChange(e.target.value)}
-                sx={{ gap: { xs: 1.5, sm: 3 } }}
-              >
-                <FormControlLabel
-                  value="Accepted"
-                  control={
-                    <Radio
-                      size="small"
-                      sx={{
-                        color: "#D1D5DB",
-                        "&.Mui-checked": { color: "primary.main" },
-                      }}
-                    />
-                  }
-                  label={
-                    <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                      Accepted
-                    </Typography>
-                  }
-                />
-                <FormControlLabel
-                  value="Rejected"
-                  control={
-                    <Radio
-                      size="small"
-                      sx={{
-                        color: "#D1D5DB",
-                        "&.Mui-checked": { color: "primary.main" },
-                      }}
-                    />
-                  }
-                  label={
-                    <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                      Rejected
-                    </Typography>
-                  }
-                />
-                {componentType === "FIM" || componentType === "SI" ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, flexWrap: "wrap" }}>
+                <FormLabel
+                  component="legend"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: "0.875rem",
+                    color: "#111827",
+                    display: "block",
+                    "&.MuiFormLabel-root": { color: "#111827" },
+                  }}
+                >
+                  Disposition <span style={{ color: "#050505ff" }}>*</span>
+                </FormLabel>
+                <RadioGroup
+                  {...field}
+                  row
+                  onChange={(e) => field.onChange(e.target.value)}
+                  sx={{ gap: { xs: 1, sm: 1.5 } }}
+                >
                   <FormControlLabel
-                    value="Send Back to Customer"
+                    value="Accepted"
                     control={
                       <Radio
                         size="small"
                         sx={{
-                          color: "#D1D5DB",
+                          color: field.value === "Accepted" ? "primary.main" : "#D1D5DB",
                           "&.Mui-checked": { color: "primary.main" },
                         }}
                       />
                     }
                     label={
-                      <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                        Send Back to Customer
+                      <Typography sx={{ fontWeight: field.value === "Accepted" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                        Accepted
                       </Typography>
                     }
+                    sx={{ mr: 1 }}
                   />
-                ) : (
                   <FormControlLabel
-                    value="Used for QT"
+                    value="Rejected"
                     control={
                       <Radio
                         size="small"
                         sx={{
-                          color: "#D1D5DB",
-                          "&.Mui-checked": { color: "#7E22CE" },
+                          color: field.value === "Rejected" ? "primary.main" : "#D1D5DB",
+                          "&.Mui-checked": { color: "primary.main" },
                         }}
                       />
                     }
                     label={
-                      <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#111827" }}>
-                        Used for QT
+                      <Typography sx={{ fontWeight: field.value === "Rejected" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                        Rejected
                       </Typography>
                     }
+                    sx={{ mr: 1 }}
                   />
-                )}
-              </RadioGroup>
+                  {componentType === "FIM" || componentType === "SI" ? (
+                    <FormControlLabel
+                      value="Send Back to Customer"
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: field.value === "Send Back to Customer" ? "primary.main" : "#D1D5DB",
+                            "&.Mui-checked": { color: "primary.main" },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ fontWeight: field.value === "Send Back to Customer" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                          Send Back to Customer
+                        </Typography>
+                      }
+                      sx={{ mr: 1 }}
+                    />
+                  ) : (
+                    <FormControlLabel
+                      value="Used for QT"
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: field.value === "Used for QT" ? "primary.main" : "#D1D5DB",
+                            "&.Mui-checked": { color: "primary.main" },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ fontWeight: field.value === "Used for QT" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                          Used for QT
+                        </Typography>
+                      }
+                      sx={{ mr: 1 }}
+                    />
+                  )}
+                </RadioGroup>
+              </Box>
               {error && (
                 <FormHelperText error sx={{ mt: 0.5, fontWeight: 500, fontSize: "0.75rem" }}>
                   {error.message}

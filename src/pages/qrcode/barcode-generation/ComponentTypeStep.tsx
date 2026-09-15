@@ -80,8 +80,8 @@ function ComponentTypeStep({
         borderRadius: "10px",
         borderColor: "#EAECF0",
         backgroundColor: "#FFFFFF",
-        p: { xs: 1.75, md: 2 },
-        mb: 2,
+        p: { xs: 1.5, md: 1.75 },
+        mb: 1.5,
         boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
       }}
     >
@@ -92,36 +92,46 @@ function ComponentTypeStep({
 
       {componentType === "ID" && (
         <>
-          <Box sx={{ mb: 2.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2.5, flexWrap: "wrap", mb: 1.5 }}>
             <FormLabel
               component="legend"
               sx={{
                 fontWeight: 700,
                 fontSize: "0.875rem",
                 color: "#111827",
-                mb: 1,
                 display: "block",
+                "&.MuiFormLabel-root": { color: "#111827" },
               }}
             >
-              ID Type *
+              ID Type
             </FormLabel>
             <Controller
               name="idType"
               control={control}
               render={({ field }) => (
-                <RadioGroup {...field} row sx={{ gap: { xs: 1.5, sm: 3 } }}>
+                <RadioGroup
+                  {...field}
+                  row
+                  onChange={(e) => field.onChange(e.target.value)}
+                  sx={{ gap: { xs: 1, sm: 1.5 } }}
+                >
                   <FormControlLabel
                     value="series"
                     control={
                       <Radio
                         size="small"
                         sx={{
-                          color: "#D1D5DB",
+                          color: field.value === "series" ? "primary.main" : "#D1D5DB",
                           "&.Mui-checked": { color: "primary.main" },
                         }}
                       />
                     }
-                    label="Series"
+                    label={
+                      <Typography sx={{ fontWeight: field.value === "series" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                        Series
+                      </Typography>
+                    }
+                    sx={{ mr: 1 }}
                   />
                   <FormControlLabel
                     value="custom"
@@ -129,12 +139,17 @@ function ComponentTypeStep({
                       <Radio
                         size="small"
                         sx={{
-                          color: "#D1D5DB",
+                          color: field.value === "custom" ? "primary.main" : "#D1D5DB",
                           "&.Mui-checked": { color: "primary.main" },
                         }}
                       />
                     }
-                    label="Custom"
+                    label={
+                      <Typography sx={{ fontWeight: field.value === "custom" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                        Custom
+                      </Typography>
+                    }
+                    sx={{ mr: 1 }}
                   />
                   <FormControlLabel
                     value="random"
@@ -142,12 +157,17 @@ function ComponentTypeStep({
                       <Radio
                         size="small"
                         sx={{
-                          color: "#D1D5DB",
+                          color: field.value === "random" ? "primary.main" : "#D1D5DB",
                           "&.Mui-checked": { color: "primary.main" },
                         }}
                       />
                     }
-                    label="Random"
+                    label={
+                      <Typography sx={{ fontWeight: field.value === "random" ? 600 : 500, fontSize: "0.875rem", color: "#111827" }}>
+                        Random
+                      </Typography>
+                    }
+                    sx={{ mr: 1 }}
                   />
                 </RadioGroup>
               )}
@@ -155,7 +175,7 @@ function ComponentTypeStep({
           </Box>
 
           {watchIdType === "series" && (
-            <Grid container spacing={2.5}>
+            <Grid container rowSpacing={1.5} columnSpacing={2}>
               <Grid item xs={12} md={4}>
                 <Controller
                   name="startRange"
@@ -240,7 +260,7 @@ function ComponentTypeStep({
           )}
 
           {watchIdType === "custom" && (
-            <Grid container spacing={2.5}>
+            <Grid container rowSpacing={1.5} columnSpacing={2}>
               <Grid item xs={12} md={8}>
                 <Controller
                   name="customIdRange"
@@ -420,7 +440,7 @@ function ComponentTypeStep({
       )}
 
       {componentType === "BATCH" && (
-        <Grid container spacing={2.5}>
+        <Grid container rowSpacing={1.5} columnSpacing={2}>
           <Grid item xs={12} md={8}>
             <Controller
               name="customIdRange"

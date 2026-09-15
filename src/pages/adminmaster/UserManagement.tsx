@@ -51,6 +51,7 @@ import {
 } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { useDebounce } from "../../hooks/useDebounce";
+import { getErrorMessage } from "../../utils/errorUtils";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { UserRole, User } from "../../types";
@@ -345,7 +346,7 @@ export default function UserManagement() {
     } catch (error: any) {
       console.error(error);
       showSnackbar(
-        error?.response?.data?.message || error?.message || "Operation failed",
+        getErrorMessage(error, "Operation failed"),
         "error"
       );
     }
@@ -376,7 +377,7 @@ export default function UserManagement() {
     } catch (error: any) {
       console.error(error);
       showSnackbar(
-        error?.response?.data?.message || error?.message || "Operation failed",
+        getErrorMessage(error, "Operation failed"),
         "error"
       );
     } finally {
@@ -397,7 +398,7 @@ export default function UserManagement() {
     } catch (error: any) {
       console.error(error);
       showSnackbar(
-        error?.response?.data?.message || error?.message || "Operation failed",
+        getErrorMessage(error, "Operation failed"),
         "error"
       );
     }

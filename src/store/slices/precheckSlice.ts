@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 interface PrecheckState {
   assemblyDrawings: any[];
@@ -49,21 +50,7 @@ export const makePrecheck = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       console.error("Precheck API error:", error);
-
-      // Handle specific error cases
-      if (error.response?.status === 400) {
-        const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data ||
-          "Bad request - Invalid data";
-        return rejectWithValue(errorMessage);
-      } else if (error.response?.status === 500) {
-        return rejectWithValue("Server error - Please try again later");
-      } else {
-        return rejectWithValue(
-          error.response?.data?.message || "Failed to make precheck",
-        );
-      }
+      return rejectWithValue(getErrorMessage(error, "Failed to make precheck"));
     }
   },
 );
@@ -85,7 +72,7 @@ export const makePrecheckFromExcel = createAsyncThunk(
     } catch (error: any) {
       console.error("MakePrecheckFromExcel API error:", error);
       return rejectWithValue(
-        error.response?.data?.message || "Failed to process Excel precheck",
+        getErrorMessage(error, "Failed to process Excel precheck")
       );
     }
   },
