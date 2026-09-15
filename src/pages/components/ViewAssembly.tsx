@@ -326,14 +326,16 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     }
   };
 
-  // Auto-trigger search when navigated from View BOM with location.state.drawingNumber
+  // Auto-trigger search when navigated from View BOM with location.state.drawingNumber and location.state.lnItemCode
   React.useEffect(() => {
     const passedDwg = location.state?.drawingNumber;
-    if (passedDwg && passedDwg.trim()) {
-      setDrawingInput(passedDwg);
-      handleSearch(undefined, passedDwg);
+    const passedLn = location.state?.lnItemCode;
+    if ((passedDwg && passedDwg.trim()) || (passedLn && passedLn.trim())) {
+      if (passedDwg) setDrawingInput(passedDwg);
+      if (passedLn) setLnInput(passedLn);
+      handleSearch(undefined, passedDwg, passedLn);
     }
-  }, [location.state?.drawingNumber]);
+  }, [location.state?.drawingNumber, location.state?.lnItemCode]);
 
 
   const refreshSelectedDrawing = async () => {
@@ -616,7 +618,15 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           }}
         >
           <IconButton
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              const dwg = (selectedDrawingOption?.drawingNumber || drawingInput || "").trim();
+              const ln = (selectedDrawingOption?.lnItemCode || lnInput || "").trim();
+              if (dwg) {
+                navigate("/sop/view", { state: { tab: "bom", drawingNumber: dwg, lnItemCode: ln } });
+              } else {
+                navigate(-1);
+              }
+            }}
             sx={{
               color: "primary.main",
               p: 0.5,
@@ -1003,285 +1013,285 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
         </Menu>
       </Paper>
 
-          {/* Add Dialog */}
-          <Dialog
-            open={openAddDialog}
-            onClose={() => setOpenAddDialog(false)}
-            fullWidth
-            maxWidth="xs"
-            PaperProps={{ sx: { borderRadius: "12px" } }}
-          >
-            <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
-              Add Parent Assembly Mapping
-            </DialogTitle>
-            <DialogContent dividers>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
-                <Autocomplete
-                  size="small"
-                  options={filteredParentDrawingOptions}
-                  getOptionLabel={(option) => {
-                    if (typeof option === "string") return option;
-                    return option.drawingNumber || "";
-                  }}
-                  isOptionEqualToValue={(option, value) => {
-                    if (!option || !value) return false;
-                    return option.id === value.id || option.drawingNumber === value.drawingNumber;
-                  }}
-                  value={selectedParentDwg}
-                  inputValue={parentDrawingInput}
-                  onInputChange={(_, newInputValue) => {
-                    setParentDrawingInput(newInputValue);
-                    debouncedParentSearch(newInputValue);
-                  }}
-                  onChange={(_, newValue) => {
-                    setSelectedParentDwg(newValue);
-                    if (newValue) {
-                      setParentDrawingInput(newValue.drawingNumber || "");
-                      setParentLnInput(newValue.lnItemCode || "");
-                    } else {
-                      setParentDrawingInput("");
-                      setParentLnInput("");
-                    }
-                  }}
-                  filterOptions={(options) => options}
-                  renderOption={(props, option) => {
-                    const opt = option as any;
-                    const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
-                    return (
-                      <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", textAlign: "left", width: "100%" }}>
-                          {opt.drawingNumber}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
-                          LN: {lnCode}
-                        </Typography>
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Parent Drawing Number"
-                      placeholder="Select parent drawing"
-                      required
-                    />
-                  )}
-                />
-                <Autocomplete
-                  size="small"
-                  options={filteredChildDrawingOptions}
-                  getOptionLabel={(option) => {
-                    if (typeof option === "string") return option;
-                    return option.drawingNumber || "";
-                  }}
-                  isOptionEqualToValue={(option, value) => {
-                    if (!option || !value) return false;
-                    return option.id === value.id || option.drawingNumber === value.drawingNumber;
-                  }}
-                  value={selectedChildDwg}
-                  inputValue={childDrawingInput}
-                  onInputChange={(_, newInputValue) => {
-                    setChildDrawingInput(newInputValue);
-                    debouncedChildSearch(newInputValue);
-                  }}
-                  onChange={(_, newValue) => {
-                    setSelectedChildDwg(newValue);
-                    if (newValue) {
-                      setChildDrawingInput(newValue.drawingNumber || "");
-                      setChildLnInput(newValue.lnItemCode || "");
-                    } else {
-                      setChildDrawingInput("");
-                      setChildLnInput("");
-                    }
-                  }}
-                  filterOptions={(options) => options}
-                  renderOption={(props, option) => {
-                    const opt = option as any;
-                    const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
-                    return (
-                      <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", textAlign: "left", width: "100%" }}>
-                          {opt.drawingNumber}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
-                          LN: {lnCode}
-                        </Typography>
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Child Drawing Number"
-                      placeholder="Select child drawing"
-                      required
-                    />
-                  )}
-                />
+      {/* Add Dialog */}
+      <Dialog
+        open={openAddDialog}
+        onClose={() => setOpenAddDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
+          Add Parent Assembly Mapping
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
+            <Autocomplete
+              size="small"
+              options={filteredParentDrawingOptions}
+              getOptionLabel={(option) => {
+                if (typeof option === "string") return option;
+                return option.drawingNumber || "";
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (!option || !value) return false;
+                return option.id === value.id || option.drawingNumber === value.drawingNumber;
+              }}
+              value={selectedParentDwg}
+              inputValue={parentDrawingInput}
+              onInputChange={(_, newInputValue) => {
+                setParentDrawingInput(newInputValue);
+                debouncedParentSearch(newInputValue);
+              }}
+              onChange={(_, newValue) => {
+                setSelectedParentDwg(newValue);
+                if (newValue) {
+                  setParentDrawingInput(newValue.drawingNumber || "");
+                  setParentLnInput(newValue.lnItemCode || "");
+                } else {
+                  setParentDrawingInput("");
+                  setParentLnInput("");
+                }
+              }}
+              filterOptions={(options) => options}
+              renderOption={(props, option) => {
+                const opt = option as any;
+                const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
+                return (
+                  <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", textAlign: "left", width: "100%" }}>
+                      {opt.drawingNumber}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
+                      LN: {lnCode}
+                    </Typography>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
                 <TextField
-                  label="Position No"
-                  value={findNo}
-                  onChange={(e) => setFindNo(e.target.value)}
-                  fullWidth
-                  size="small"
+                  {...params}
+                  label="Parent Drawing Number"
+                  placeholder="Select parent drawing"
+                  required
                 />
-              </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <Button
-                onClick={() => setOpenAddDialog(false)}
-                color="inherit"
-                size="small"
-                sx={{ textTransform: "none", fontWeight: 600 }}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="small"
-                onClick={handleAddAssembly}
-                variant="contained"
-                disabled={isSubmitting || !selectedParentDwg || !selectedChildDwg}
-                sx={{
-                  backgroundColor: "primary.main",
-                  color: "#ffffff",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderRadius: "6px",
-                  px: 2,
-                  "&:hover": { backgroundColor: "primary.dark" },
-                }}
-              >
-                {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Save"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+              )}
+            />
+            <Autocomplete
+              size="small"
+              options={filteredChildDrawingOptions}
+              getOptionLabel={(option) => {
+                if (typeof option === "string") return option;
+                return option.drawingNumber || "";
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (!option || !value) return false;
+                return option.id === value.id || option.drawingNumber === value.drawingNumber;
+              }}
+              value={selectedChildDwg}
+              inputValue={childDrawingInput}
+              onInputChange={(_, newInputValue) => {
+                setChildDrawingInput(newInputValue);
+                debouncedChildSearch(newInputValue);
+              }}
+              onChange={(_, newValue) => {
+                setSelectedChildDwg(newValue);
+                if (newValue) {
+                  setChildDrawingInput(newValue.drawingNumber || "");
+                  setChildLnInput(newValue.lnItemCode || "");
+                } else {
+                  setChildDrawingInput("");
+                  setChildLnInput("");
+                }
+              }}
+              filterOptions={(options) => options}
+              renderOption={(props, option) => {
+                const opt = option as any;
+                const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
+                return (
+                  <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", textAlign: "left", width: "100%" }}>
+                      {opt.drawingNumber}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
+                      LN: {lnCode}
+                    </Typography>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Child Drawing Number"
+                  placeholder="Select child drawing"
+                  required
+                />
+              )}
+            />
+            <TextField
+              label="Position No"
+              value={findNo}
+              onChange={(e) => setFindNo(e.target.value)}
+              fullWidth
+              size="small"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenAddDialog(false)}
+            color="inherit"
+            size="small"
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            onClick={handleAddAssembly}
+            variant="contained"
+            disabled={isSubmitting || !selectedParentDwg || !selectedChildDwg}
+            sx={{
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: "6px",
+              px: 2,
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          {/* Edit Dialog */}
-          <Dialog
-            open={openEditDialog}
-            onClose={() => setOpenEditDialog(false)}
-            fullWidth
-            maxWidth="xs"
-            PaperProps={{ sx: { borderRadius: "12px" } }}
+      {/* Edit Dialog */}
+      <Dialog
+        open={openEditDialog}
+        onClose={() => setOpenEditDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
+          Edit Drawing
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
+            <TextField
+              label="Drawing Number"
+              value={selectedDrawing?.drawingNumber || ""}
+              disabled
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="Position No"
+              value={selectedDrawing?.findNumber || ""}
+              onChange={(e) => setSelectedDrawing({ ...selectedDrawing!, findNumber: e.target.value })}
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="Quantity"
+              type="number"
+              inputProps={{ step: "any" }}
+              value={selectedDrawing?.qtyPerAssembly ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedDrawing({
+                  ...selectedDrawing!,
+                  qtyPerAssembly: val,
+                });
+              }}
+              fullWidth
+              size="small"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenEditDialog(false)}
+            color="inherit"
+            size="small"
+            sx={{ textTransform: "none", fontWeight: 600 }}
           >
-            <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
-              Edit Drawing
-            </DialogTitle>
-            <DialogContent dividers>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
-                <TextField
-                  label="Drawing Number"
-                  value={selectedDrawing?.drawingNumber || ""}
-                  disabled
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Position No"
-                  value={selectedDrawing?.findNumber || ""}
-                  onChange={(e) => setSelectedDrawing({ ...selectedDrawing!, findNumber: e.target.value })}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Quantity"
-                  type="number"
-                  inputProps={{ step: "any" }}
-                  value={selectedDrawing?.qtyPerAssembly ?? ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedDrawing({
-                      ...selectedDrawing!,
-                      qtyPerAssembly: val,
-                    });
-                  }}
-                  fullWidth
-                  size="small"
-                />
-              </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <Button
-                onClick={() => setOpenEditDialog(false)}
-                color="inherit"
-                size="small"
-                sx={{ textTransform: "none", fontWeight: 600 }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdateAssembly}
-                variant="contained"
-                disabled={isSubmitting}
-                sx={{
-                  backgroundColor: "primary.main",
-                  color: "#ffffff",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  borderRadius: "6px",
-                  px: 2,
-                  "&:hover": { backgroundColor: "primary.dark" },
-                }}
-                size="small"
-              >
-                {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Update"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdateAssembly}
+            variant="contained"
+            disabled={isSubmitting}
+            sx={{
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: "6px",
+              px: 2,
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+            size="small"
+          >
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Update"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          {/* Delete Confirmation Dialog */}
-          <Dialog
-            open={openDeleteDialog}
-            onClose={() => setOpenDeleteDialog(false)}
-            fullWidth
-            maxWidth="xs"
-            PaperProps={{ sx: { borderRadius: "12px" } }}
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
+          Delete Parent Assembly Mapping
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child drawing <strong>{selectedDrawing?.drawingNumber}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenDeleteDialog(false)}
+            color="inherit"
+            size="small"
+            sx={{ textTransform: "none", fontWeight: 600 }}
           >
-            <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
-              Delete Parent Assembly Mapping
-            </DialogTitle>
-            <DialogContent dividers>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child drawing <strong>{selectedDrawing?.drawingNumber}</strong>?
-              </Typography>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <Button
-                onClick={() => setOpenDeleteDialog(false)}
-                color="inherit"
-                size="small"
-                sx={{ textTransform: "none", fontWeight: 600 }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleDeleteAssembly}
-                variant="contained"
-                color="error"
-                disabled={isSubmitting}
-                size="small"
-                sx={{ fontWeight: 600, textTransform: "none", borderRadius: "6px", px: 2 }}
-              >
-                {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Delete"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteAssembly}
+            variant="contained"
+            color="error"
+            disabled={isSubmitting}
+            size="small"
+            sx={{ fontWeight: 600, textTransform: "none", borderRadius: "6px", px: 2 }}
+          >
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          {/* Notification Toast */}
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={6000}
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          >
-            <Alert
-              onClose={() => setSnackbar({ ...snackbar, open: false })}
-              severity={snackbar.severity}
-              sx={{ width: "100%" }}
-            >
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
+      {/* Notification Toast */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

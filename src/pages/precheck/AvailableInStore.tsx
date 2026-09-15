@@ -213,19 +213,25 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const handleSearch = async (
     overrideQuery?: string,
     overrideQrType?: number,
-    overrideSeries?: (string | number)[]
+    overrideSeries?: (string | number)[],
+    targetPage?: number,
+    targetPageSize?: number
   ) => {
     const queryStr = overrideQuery !== undefined ? overrideQuery : searchQuery;
     const qrType = overrideQrType !== undefined ? overrideQrType : activeTab;
     const seriesList = overrideSeries !== undefined ? overrideSeries : selectedSeries;
+    const pNum = targetPage !== undefined ? targetPage : bomPage;
+    const pSize = targetPageSize !== undefined ? targetPageSize : bomRowsPerPage;
 
     setError(null);
-    setBomPage(0);
-    setQrPage(0);
-    setOverrideQrCodes(null);
+    if (targetPage === undefined) {
+      setBomPage(0);
+      setQrPage(0);
+      setOverrideQrCodes(null);
+      setSelectedBomRowIndex(null);
+    }
     setIsSearchLoading(true);
     setSearched(true);
-    setSelectedBomRowIndex(null);
     setResults([]);
 
     try {
@@ -239,13 +245,19 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         })
         .filter(Boolean);
 
+      const pageNumber = pNum + 1;
+      const pageSize = pSize;
+
       const searchPayload = {
         searchQuery: queryStr?.trim() || "",
         prodSeries: seriesArr,
         QrType: qrType,
       };
 
-      const response = await api.post("/api/QRCode/GetAvailableQr", searchPayload);
+      const response = await api.post(
+        `/api/QRCode/GetAvailableQr?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        searchPayload
+      );
 
       const data = response.data;
       const qrCodesList = Array.isArray(data)
@@ -345,21 +357,31 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     handleSearch("", activeTab, []);
   };
 
-  const fetchAvailableComponents = async (bomItem: any) => {
+  const fetchAvailableComponents = async (
+    bomItem: any,
+    targetQrPage?: number,
+    targetQrRowsPerPage?: number
+  ) => {
     if (!bomItem) return;
     const drawingNumberId = bomItem.drawingnumberId || bomItem.drawingNumberId || bomItem.drawingId || bomItem.id || 0;
     let activeSeriesId = bomItem.prodSeriesId || (selectedSeries.length > 0 ? selectedSeries[0] : 0);
+    const pNum = targetQrPage !== undefined ? targetQrPage : qrPage;
+    const pSize = targetQrRowsPerPage !== undefined ? targetQrRowsPerPage : qrRowsPerPage;
 
     setIsQrLoading(true);
     setError(null);
-    setOverrideQrCodes(null);
-    setQrPage(0);
+    if (targetQrPage === undefined) {
+      setOverrideQrCodes(null);
+      setQrPage(0);
+    }
 
     try {
       const response = await api.post("/api/Precheck/GetAvailablComponents", {
         prodSeriesId: Number(activeSeriesId) || 0,
         drawingNumberId: Number(drawingNumberId) || 0,
         quantity: Number(bomItem.totalQuantity || bomItem.quantity || bomItem.qty) || 1,
+        pageNumber: pNum + 1,
+        pageSize: pSize,
       });
 
       const data = response.data;
@@ -762,10 +784,14 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                         pageSize={bomRowsPerPage}
                         totalCount={bomItems.length}
                         pageSizeOptions={[5, 10, 25, 50]}
-                        onPageChange={(newPage) => setBomPage(newPage)}
+                        onPageChange={(newPage) => {
+                          setBomPage(newPage);
+                          handleSearch(searchQuery, activeTab, selectedSeries, newPage, bomRowsPerPage);
+                        }}
                         onPageSizeChange={(newSize) => {
                           setBomRowsPerPage(newSize);
                           setBomPage(0);
+                          handleSearch(searchQuery, activeTab, selectedSeries, 0, newSize);
                         }}
                       />
                     )}
@@ -859,10 +885,18 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                         pageSize={qrRowsPerPage}
                         totalCount={displayQrCodes.length}
                         pageSizeOptions={[5, 10, 25, 50]}
-                        onPageChange={(newPage) => setQrPage(newPage)}
+                        onPageChange={(newPage) => {
+                          setQrPage(newPage);
+                          if (selectedBomRowIndex !== null && bomItems[selectedBomRowIndex]) {
+                            fetchAvailableComponents(bomItems[selectedBomRowIndex], newPage, qrRowsPerPage);
+                          }
+                        }}
                         onPageSizeChange={(newSize) => {
                           setQrRowsPerPage(newSize);
                           setQrPage(0);
+                          if (selectedBomRowIndex !== null && bomItems[selectedBomRowIndex]) {
+                            fetchAvailableComponents(bomItems[selectedBomRowIndex], 0, newSize);
+                          }
                         }}
                       />
                     )}

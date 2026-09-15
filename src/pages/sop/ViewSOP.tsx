@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -72,8 +72,25 @@ interface FormData {
 
 const ViewSOP: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
-  const [activeTab, setActiveTab] = useState<"sop" | "bom">("sop");
+  const [activeTab, setActiveTab] = useState<"sop" | "bom">(
+    location.pathname.includes("viewBOM") ||
+      location.state?.tab === "bom" ||
+      location.state?.drawingNumber
+      ? "bom"
+      : "sop"
+  );
+
+  useEffect(() => {
+    if (
+      location.pathname.includes("viewBOM") ||
+      location.state?.tab === "bom" ||
+      location.state?.drawingNumber
+    ) {
+      setActiveTab("bom");
+    }
+  }, [location.pathname, location.state]);
 
   // Redux state
   const { assemblyData, isLoading, isExporting, error } = useSelector(

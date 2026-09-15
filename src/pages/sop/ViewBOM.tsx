@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store/store";
 import { useForm } from "react-hook-form";
 import debounce from "lodash/debounce";
@@ -51,6 +51,7 @@ interface AssemblyOption {
 const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Redux state
   const {
@@ -79,6 +80,32 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
       assemblyNumber: "",
     },
   });
+
+  // Restore/auto-search selected drawing number when returning or mounted
+  React.useEffect(() => {
+    const passedDwg = location.state?.drawingNumber || selectedAssemblyNumber;
+    const passedLn = location.state?.lnItemCode;
+    if (passedDwg && typeof passedDwg === "string" && passedDwg.trim()) {
+      const dwgTrimmed = passedDwg.trim();
+      setAssemblyInputValue(dwgTrimmed);
+      setSelectedAssembly((prev) => {
+        if (!prev || prev.drawingNumber !== dwgTrimmed) {
+          return {
+            id: 0,
+            drawingNumber: dwgTrimmed,
+            nomenclature: "",
+            lnItemCode: passedLn || "",
+          };
+        }
+        return prev;
+      });
+      setValue("assemblyNumber", dwgTrimmed);
+      dispatch(setSelectedAssemblyNumber(dwgTrimmed));
+      if (!bomData || bomData.length === 0 || bomData[0]?.parentDrawingNumber !== dwgTrimmed) {
+        dispatch(getBomDetails(dwgTrimmed));
+      }
+    }
+  }, [location.state, selectedAssemblyNumber, dispatch, setValue, bomData]);
 
   // Column configuration
   const columns = [
@@ -348,13 +375,19 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
                   assemblyInputValue ||
                   (bomData && bomData.length > 0
                     ? bomData[0]?.parentDrawingNumber ||
-                      bomData[0]?.assemblyNumber ||
-                      bomData[0]?.childDrawingNumber ||
-                      ""
+                    bomData[0]?.assemblyNumber ||
+                    bomData[0]?.childDrawingNumber ||
+                    ""
+                    : "");
+                const activeLn =
+                  selectedAssembly?.lnItemCode ||
+                  (bomData && bomData.length > 0
+                    ? bomData[0]?.lnItemCode || ""
                     : "");
                 navigate("/components/assembly", {
                   state: {
                     drawingNumber: activeDwg,
+                    lnItemCode: activeLn,
                   },
                 });
               }}
