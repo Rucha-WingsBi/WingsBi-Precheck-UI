@@ -166,6 +166,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const [bomItems, setBomItems] = useState<any[]>([]);
   const [results, setResults] = useState<any[]>([]);
   const [selectedBomRowIndex, setSelectedBomRowIndex] = useState<number | null>(null);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [isServerPaginated, setIsServerPaginated] = useState<boolean>(false);
 
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,9 +191,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   }, [results, bomItems, selectedBomRowIndex]);
 
   const paginatedBomItems = useMemo(() => {
+    if (isServerPaginated) {
+      return bomItems;
+    }
     const startIndex = bomPage * bomRowsPerPage;
     return bomItems.slice(startIndex, startIndex + bomRowsPerPage);
-  }, [bomItems, bomPage, bomRowsPerPage]);
+  }, [bomItems, bomPage, bomRowsPerPage, isServerPaginated]);
 
   const displayQrCodes = useMemo(() => {
     if (overrideQrCodes !== null) {
@@ -259,10 +264,25 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         searchPayload
       );
 
-      const data = response.data;
-      const qrCodesList = Array.isArray(data)
-        ? data
-        : (data && Array.isArray(data.qrCodes) ? data.qrCodes : null);
+      const responseData = response.data;
+      let qrCodesList: any[] | null = null;
+      let totalCount = 0;
+
+      if (Array.isArray(responseData)) {
+        qrCodesList = responseData;
+        totalCount = responseData.length;
+        setIsServerPaginated(false);
+      } else if (responseData && typeof responseData === "object") {
+        if (Array.isArray(responseData.data)) {
+          qrCodesList = responseData.data;
+        } else if (Array.isArray(responseData.qrCodes)) {
+          qrCodesList = responseData.qrCodes;
+        }
+        totalCount = responseData.totalRecords ?? (responseData.totalCount ?? (qrCodesList ? qrCodesList.length : 0));
+        setIsServerPaginated(responseData.totalRecords !== undefined || responseData.totalPages !== undefined);
+      }
+
+      setTotalRecords(totalCount);
 
       if (qrCodesList) {
         setResults(qrCodesList);
@@ -271,29 +291,34 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         // Group by drawing/LN code to generate BOM items
         const map = new Map<string, any>();
         qrCodesList.forEach((item: any) => {
-          const key = `${item.drawingNumber || ""}-${item.lnItemCode || ""}`.toLowerCase();
+          const drawingNum = item.drawingNumber || item.drawingnumber || "N/A";
+          const lnCode = item.lnItemCode || item.lnitemcode || "N/A";
+          const key = `${drawingNum}-${lnCode}`.toLowerCase();
+
           if (!map.has(key)) {
             map.set(key, {
-              id: item.drawingnumberId || item.id || 0,
+              id: item.drawingnumberId || item.drawingNumberId || item.id || 0,
               drawingnumberId: item.drawingnumberId || item.drawingNumberId || item.id || 0,
-              prodSeriesId: item.prodSeriesId || item.prodSeries || item.productionSeriesId || item.productionSeries || 0,
-              drawingNumber: item.drawingNumber || "N/A",
-              lnitemcode: item.lnItemCode || "N/A",
-              unit: item.unit || "ECH",
+              prodSeriesId: item.prodseriesid || item.prodSeriesId || item.prodSeries || item.productionSeriesId || item.productionSeries || 0,
+              productionSeries: item.productionSeries || item.prodSeries || "N/A",
+              drawingNumber: drawingNum,
+              lnitemcode: lnCode,
+              lnItemCode: lnCode,
+              unit: item.unit || "NOS",
               totalQuantity: 0,
               availableQuantity: 0,
-              totalQrQuantity: item.totalQrQuantity !== undefined ? item.totalQrQuantity : 0,
-              totalQrNumber: item.totalQrNumber !== undefined ? item.totalQrNumber : 0,
+              totalQrQuantity: item.totalQrQuantity !== undefined && item.totalQrQuantity !== null ? item.totalQrQuantity : 0,
+              totalQrNumber: item.totalQrNumber !== undefined && item.totalQrNumber !== null ? item.totalQrNumber : 0,
             });
           }
           const component = map.get(key);
           component.totalQuantity += Number(item.quantity) || 0;
           component.availableQuantity += Number(item.remainingQuantity) || 0;
 
-          if (item.totalQrQuantity !== undefined) {
+          if (item.totalQrQuantity !== undefined && item.totalQrQuantity !== null) {
             component.totalQrQuantity = item.totalQrQuantity;
           }
-          if (item.totalQrNumber !== undefined) {
+          if (item.totalQrNumber !== undefined && item.totalQrNumber !== null) {
             component.totalQrNumber = item.totalQrNumber;
           }
         });
@@ -307,6 +332,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         setResults([]);
         setMasterData(null);
         setBomItems([]);
+        setTotalRecords(0);
       }
     } catch (err: any) {
       console.error("API error fetching available QR codes:", err);
@@ -318,6 +344,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       setResults([]);
       setMasterData(null);
       setBomItems([]);
+      setTotalRecords(0);
     } finally {
       setIsSearchLoading(false);
     }
@@ -618,7 +645,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
                     }}
                   >
-                    {isSearchLoading ? <CircularProgress size={16} color="inherit" /> : "Apply"}
+                    Apply
                   </Button>
 
                   {/* Clear Button */}
@@ -766,8 +793,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   </TableCell>
                                   <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
                                   <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
-                                  <TableCell align="center">{row.totalQrQuantity}</TableCell>
-                                  <TableCell align="center">{row.totalQrNumber}</TableCell>
+                                  <TableCell align="center">
+                                    {formatQuantity(row.totalQrQuantity !== undefined && row.totalQrQuantity > 0 ? row.totalQrQuantity : row.totalQuantity)}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {row.totalQrNumber !== undefined && row.totalQrNumber > 0 ? row.totalQrNumber : (row.totalQrCount || 0)}
+                                  </TableCell>
                                 </TableRow>
                               );
                             })
@@ -782,7 +813,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       <CustomPagination
                         page={bomPage}
                         pageSize={bomRowsPerPage}
-                        totalCount={bomItems.length}
+                        totalCount={isServerPaginated && totalRecords > 0 ? totalRecords : bomItems.length}
                         pageSizeOptions={[5, 10, 25, 50]}
                         onPageChange={(newPage) => {
                           setBomPage(newPage);

@@ -337,3 +337,38 @@ export interface UpdatePageAccessRequest {
   modifiedBy: number;
   pageId: number;
 }
+
+export interface AvailableQrItem {
+  id: number;
+  drawingnumberId: number;
+  drawingNumber: string;
+  lnItemCode: string;
+  prodseriesid?: number | null;
+  productionSeries: string;
+  location: string;
+  qrCodeNumber: string;
+  expiryDate?: string | null;
+  manufacturingDate?: string | null;
+  idNumber: string;
+  quantity: number;
+  projectNumber: string;
+  productionOrderNumber?: string | null;
+  status: string;
+  remainingQuantity: number;
+  unit: string;
+  remarks?: string | null;
+  fanManNo?: string | null;
+  totalQrQuantity: number;
+  totalQrNumber: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  totalRecords: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
