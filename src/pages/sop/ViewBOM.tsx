@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store/store";
 import { useForm } from "react-hook-form";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import debounce from "lodash/debounce";
 import {
   Box,
@@ -19,6 +20,7 @@ import {
   Alert,
   IconButton,
   Button,
+  Tooltip,
 } from "@mui/material";
 import {
   TableChart as TableIcon,
@@ -52,6 +54,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
+  const hasEditBomAccess = useHasPermission("Components");
 
   // Redux state
   const {
@@ -355,49 +358,56 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
                 }}
               />
             )}
-            <Button
-              variant="contained"
-              size="small"
-              disabled={!bomData || bomData.length === 0}
-              startIcon={<EditIcon sx={{ fontSize: "0.95rem" }} />}
-              onClick={() => {
-                const activeDwg =
-                  selectedAssembly?.drawingNumber ||
-                  selectedAssemblyNumber ||
-                  assemblyInputValue ||
-                  (bomData && bomData.length > 0
-                    ? bomData[0]?.parentDrawingNumber ||
-                    bomData[0]?.assemblyNumber ||
-                    bomData[0]?.childDrawingNumber ||
-                    ""
-                    : "");
-                const activeLn =
-                  selectedAssembly?.lnItemCode ||
-                  (bomData && bomData.length > 0
-                    ? bomData[0]?.lnItemCode || ""
-                    : "");
-                navigate("/components/assembly", {
-                  state: {
-                    drawingNumber: activeDwg,
-                    lnItemCode: activeLn,
-                  },
-                });
-              }}
-              sx={{
-                height: 32,
-                borderRadius: "6px",
-                backgroundColor: "primary.main",
-                color: "#ffffff",
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.8rem",
-                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-                "&:hover": { backgroundColor: "primary.dark" },
-                "&:disabled": { backgroundColor: "grey.300", color: "grey.500" },
-              }}
+            <Tooltip
+              title={!hasEditBomAccess ? "You do not have access to edit BOM" : ""}
+              arrow
             >
-              Edit BOM
-            </Button>
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={!hasEditBomAccess || !bomData || bomData.length === 0}
+                  startIcon={<EditIcon sx={{ fontSize: "0.95rem" }} />}
+                  onClick={() => {
+                    const activeDwg =
+                      selectedAssembly?.drawingNumber ||
+                      selectedAssemblyNumber ||
+                      assemblyInputValue ||
+                      (bomData && bomData.length > 0
+                        ? bomData[0]?.parentDrawingNumber ||
+                        bomData[0]?.assemblyNumber ||
+                        bomData[0]?.childDrawingNumber ||
+                        ""
+                        : "");
+                    const activeLn =
+                      selectedAssembly?.lnItemCode ||
+                      (bomData && bomData.length > 0
+                        ? bomData[0]?.lnItemCode || ""
+                        : "");
+                    navigate("/components/assembly", {
+                      state: {
+                        drawingNumber: activeDwg,
+                        lnItemCode: activeLn,
+                      },
+                    });
+                  }}
+                  sx={{
+                    height: 32,
+                    borderRadius: "6px",
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                    "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
+                  }}
+                >
+                  Edit BOM
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         </Box>
 

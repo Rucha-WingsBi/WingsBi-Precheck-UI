@@ -56,6 +56,10 @@ import {
   People as PeopleIcon,
   AdminPanelSettings as AdminPanelSettingsIcon,
   Storage as StorageIcon,
+  PlayArrow as PlayArrowIcon,
+  Warehouse as WarehouseIcon,
+  MoveToInbox as MoveToInboxIcon,
+  Inventory as InventoryIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -264,13 +268,28 @@ export default function Layout() {
           path: "/precheck/view",
         },
         {
+          text: "Run Precheck",
+          pageName: "Make Precheck",
+          icon: <PlayArrowIcon />,
+          path: "/precheck/make",
+        },
+      ],
+    },
+    {
+      text: "Store",
+      icon: <StoreIcon />,
+      path: "/store",
+      subItems: [
+        {
           text: "Store In",
-          icon: <StoreIcon />,
+          pageName: "Store In",
+          icon: <MoveToInboxIcon />,
           path: "/precheck/store-in",
         },
         {
           text: "Available In Store",
-          icon: <StoreIcon />,
+          pageName: "Available In Store",
+          icon: <InventoryIcon />,
           path: "/precheck/available-in-store",
         },
       ],
@@ -286,21 +305,14 @@ export default function Layout() {
           icon: <AccountTreeIcon />,
           path: "/sop/view",
         },
-      ],
-    },
-    {
-      text: "Components",
-      icon: <CategoryIcon />,
-      path: "/components",
-      subItems: [
         {
-          text: "View Components",
+          text: "Components",
+          pageName: "View Components",
           icon: <ExtensionIcon />,
           path: "/components",
         },
       ],
     },
-    
     {
       text: "Admin",
       icon: <AdminPanelSettingsIcon />,
@@ -345,7 +357,6 @@ export default function Layout() {
     const isAccessible = (pageName: string): boolean => {
       const entry = accessMap[pageName.trim().toLowerCase()];
       if (!entry) return false;
-      // Accessible when NOT explicitly denied (noAccess !== true)
       return entry.noAccess !== true;
     };
 
@@ -363,7 +374,7 @@ export default function Layout() {
         const filteredSubItems = item.subItems.filter(
           (subItem) =>
             isAccessible(subItem.text) ||
-            (subItem.pageName ? isAccessible(subItem.pageName) : false),
+            (subItem.pageName ? isAccessible(subItem.pageName) : false)
         );
 
         // Show parent ONLY if at least one child is accessible
@@ -382,6 +393,23 @@ export default function Layout() {
       setMobileOpen(false);
     }
   }, [location.pathname, isMobile]);
+
+  // Auto-expand active parent menu item based on current route
+  useEffect(() => {
+    menuItems.forEach((item) => {
+      if (
+        item.subItems?.some(
+          (sub) =>
+            location.pathname === sub.path ||
+            location.pathname.startsWith(sub.path + "/")
+        )
+      ) {
+        setExpandedItems((prev) =>
+          prev.includes(item.text) ? prev : [...prev, item.text]
+        );
+      }
+    });
+  }, [location.pathname]);
 
   const handleDrawerToggle = () => {
     if (isDesktop) {

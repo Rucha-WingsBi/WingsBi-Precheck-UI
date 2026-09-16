@@ -27,6 +27,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
@@ -41,10 +42,12 @@ import { EmptyState } from "../../components/EmptyState";
 import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 import { SortableTableHeader } from "../../components/SortableTableHeader";
 import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
+import { useHasPermission } from "../../hooks/useHasPermission";
 
 const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hasEditAccess = useHasPermission("Components");
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "N/A";
@@ -793,49 +796,56 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               >
                 Search
               </Button>
-              <Button
-                type="button"
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                disabled={!selectedDrawing}
-                onClick={() => {
-                  setChildDrawingInput("");
-                  setChildLnInput("");
-                  setSelectedChildDwg(null);
-                  setFilteredChildDrawingOptions([]);
-
-                  const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
-                  const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
-
-                  setParentDrawingInput(parentDwg);
-                  setParentLnInput(parentLn);
-                  setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
-                  setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
-
-                  setFindNo("");
-                  setConsumedProdSeriesId("");
-                  setQuantity(0);
-                  setOpenAddDialog(true);
-                }}
-                sx={{
-                  height: 40,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                  minWidth: "fit-content",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  backgroundColor: "primary.main",
-                  color: "#ffffff",
-                  borderRadius: "6px",
-                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-                  "&:hover": { backgroundColor: "primary.dark" },
-                  "&:disabled": { backgroundColor: "grey.300" },
-                }}
+              <Tooltip
+                title={!hasEditAccess ? "You do not have access to manage assembly mappings" : ""}
+                arrow
               >
-                Add
-              </Button>
+                <span>
+                  <Button
+                    type="button"
+                    variant="contained"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    disabled={!hasEditAccess || !selectedDrawing}
+                    onClick={() => {
+                      setChildDrawingInput("");
+                      setChildLnInput("");
+                      setSelectedChildDwg(null);
+                      setFilteredChildDrawingOptions([]);
+
+                      const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
+                      const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
+
+                      setParentDrawingInput(parentDwg);
+                      setParentLnInput(parentLn);
+                      setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
+                      setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
+
+                      setFindNo("");
+                      setConsumedProdSeriesId("");
+                      setQuantity(0);
+                      setOpenAddDialog(true);
+                    }}
+                    sx={{
+                      height: 40,
+                      flexGrow: 1,
+                      whiteSpace: "nowrap",
+                      minWidth: "fit-content",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      textTransform: "none",
+                      backgroundColor: "primary.main",
+                      color: "#ffffff",
+                      borderRadius: "6px",
+                      boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                      "&:hover": { backgroundColor: "primary.dark" },
+                      "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
+                    }}
+                  >
+                    Add
+                  </Button>
+                </span>
+              </Tooltip>
             </Grid>
           </Grid>
         </form>

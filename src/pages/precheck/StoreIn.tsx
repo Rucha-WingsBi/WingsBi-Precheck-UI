@@ -55,6 +55,7 @@ import type { AppDispatch, RootState } from "../../store/store";
 import { Html5Qrcode } from "html5-qrcode";
 import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -110,7 +111,7 @@ const StoreIn: React.FC = () => {
   const { data: pageAccessData } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null
   );
-  const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+  const hasMakeAccess = useHasPermission("Run Precheck");
 
   // Production Series hook for filter
   const { data: productionSeriesData = [] } = useProductionSeries();

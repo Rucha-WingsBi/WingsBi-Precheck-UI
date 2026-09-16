@@ -62,6 +62,7 @@ import {
   usePageAccess,
 } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import type { RootState, AppDispatch } from "../../store/store";
 import { useNavigate } from "react-router-dom";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
@@ -97,20 +98,7 @@ const ViewIRMSN: React.FC = () => {
   const hasRestored = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const user = useSelector((state: RootState) => state.auth.user);
-  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
-    user?.roleid ? Number(user.roleid) : null
-  );
-
-  const hasCreateAccess = useMemo(() => {
-    if (!user?.roleid) return true;
-    if (isAccessLoading || pageAccessData === undefined) return true;
-    return (
-      isPageAccessible(pageAccessData, "Create") ||
-      isPageAccessible(pageAccessData, "Create IR/MSN") ||
-      isPageAccessible(pageAccessData, "Generate IR/MSN")
-    );
-  }, [user, pageAccessData, isAccessLoading]);
+  const hasCreateAccess = useHasPermission("New IR/MSN");
 
   // Local state - Unified Search Bar
   const [drawingOrLnSearch, setDrawingOrLnSearch] = useState<string>("");

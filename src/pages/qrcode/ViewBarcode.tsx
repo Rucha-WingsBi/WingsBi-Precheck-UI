@@ -50,8 +50,8 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 import { getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
-import { useProductionSeries, useUsers, usePageAccess } from '../../hooks/useMasterData';
-import { isPageAccessible } from '../../utils/accessUtils';
+import { useProductionSeries, useUsers } from '../../hooks/useMasterData';
+import { useHasPermission } from '../../hooks/useHasPermission';
 import { useDebounce } from '../../hooks/useDebounce';
 import { type RootState } from '../../store/store';
 import { useDispatch, useSelector } from "react-redux";
@@ -64,10 +64,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { MultiSelectFilter } from '../../components/MultiSelectFilter';
 import { EmptyState } from '../../components/EmptyState';
-import { StatusChip } from "../../components/StatusChip";
 import { ComponentTypeChip } from "../../components/ComponentTypeChip";
-import { SortableTableHeader } from "../../components/SortableTableHeader";
-import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 const ALL_EXPORTABLE_COLUMNS = [
   { key: "qrCodeNumber", label: "QRCode ID" },
@@ -486,20 +483,8 @@ const ViewBarcode: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const location = useLocation();
   const navigate = useNavigate();
-  const user = useSelector((state: any) => state.auth?.user);
-  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
-    user?.roleid ? Number(user.roleid) : null
-  );
-
-  const hasGenerateAccess = React.useMemo(() => {
-    if (!user?.roleid) return true;
-    if (isAccessLoading || pageAccessData === undefined) return true;
-    return (
-      isPageAccessible(pageAccessData, "Generate QR Code") ||
-      isPageAccessible(pageAccessData, "Generate") ||
-      isPageAccessible(pageAccessData, "QR Code")
-    );
-  }, [user, pageAccessData, isAccessLoading]);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const hasGenerateAccess = useHasPermission("New QR Code");
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1234,12 +1219,7 @@ const ViewBarcode: React.FC = () => {
     sortedBarcodeDetails.length > 0
   );
 
-  const hasActiveChips =
-    appliedProductionSeries.length > 0 ||
-    appliedStatus.length > 0 ||
-    appliedGeneratedBy.length > 0 ||
-    !!appliedFromDate ||
-    !!appliedToDate;
+
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>

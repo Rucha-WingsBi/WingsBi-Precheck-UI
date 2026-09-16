@@ -39,8 +39,8 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { useFetchAllDrawingNumbers, useProductionSeries, useUnits, usePageAccess } from "../../hooks/useMasterData";
-import { isPageAccessible } from "../../utils/accessUtils";
+import { useFetchAllDrawingNumbers, useProductionSeries, useUnits } from "../../hooks/useMasterData";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import { useDebounce } from "../../hooks/useDebounce";
 import api from "../../services/api";
 import * as XLSX from "xlsx";
@@ -273,20 +273,7 @@ const ComponentTypesList = ["ID", "BATCH", "FIM", "SI"];
 
 const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
-  const user = useSelector((state: RootState) => state.auth.user);
-  const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
-    user?.roleid ? Number(user.roleid) : null
-  );
-
-  const hasAddComponentAccess = useMemo(() => {
-    if (!user?.roleid) return true;
-    if (isAccessLoading || pageAccessData === undefined) return true;
-    return (
-      isPageAccessible(pageAccessData, "Add Components") ||
-      isPageAccessible(pageAccessData, "Update Components") ||
-      isPageAccessible(pageAccessData, "View Components")
-    );
-  }, [user, pageAccessData, isAccessLoading]);
+  const hasAddComponentAccess = useHasPermission("Components");
 
   // ─── Persist filter state across navigation ───────────────────────────────
   // Key scoped to this page so other pages are not affected.

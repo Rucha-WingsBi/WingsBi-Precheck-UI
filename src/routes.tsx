@@ -112,13 +112,14 @@ export default function AppRoutes() {
             {/* Precheck Module */}
             <Route path="precheck">
               <Route index element={<MakePrecheck />} />
-            
+              <Route path="make" element={<MakePrecheck />} />
+              <Route path="pending" element={<MakePrecheck />} />
+              <Route path="pending/*" element={<MakePrecheck />} />
               <Route path="available-store" element={<AvailableInStore />} />
               <Route path="available-in-store" element={<AvailableInStore />} />
               <Route path="view" element={<ViewPrecheck />} />
               <Route path="consumed" element={<ViewConsumedIn />} />
               <Route path="view-consumed" element={<ViewConsumedIn />} />
-              <Route path="make" element={<MakePrecheck />} />
               <Route path="store-in" element={<StoreIn />} />
               <Route path="stored-components" element={<StoredInComponents />} />
             </Route>

@@ -68,6 +68,7 @@ import api from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import { getAutosizedColumns } from "../../utils/gridUtils";
 
 // --- Sub-components imported from modular directory ---
@@ -193,8 +194,8 @@ const RowActionsMenu: React.FC<{
     }, 0);
   };
 
-  const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
-  const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+  const hasViewAccess = useHasPermission("Manage Orders");
+  const hasMakeAccess = useHasPermission("Run Precheck");
   const isConfirming = deleteConfirmId === row.id;
   const canDeleteOrEdit = row.precheckStatus === 1 || row.precheckStatus === 4;
 
