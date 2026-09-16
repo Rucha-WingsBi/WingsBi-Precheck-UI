@@ -1393,7 +1393,7 @@ const UpdateBarcode: React.FC = () => {
                     return option.id === value?.id;
                   }}
                   renderInput={(params) => (
-                    <TextField {...params} label="Shape" fullWidth />
+                    <TextField {...params} label="Material" fullWidth />
                   )}
                 />
               </Grid>

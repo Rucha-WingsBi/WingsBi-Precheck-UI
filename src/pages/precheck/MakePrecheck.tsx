@@ -12,8 +12,6 @@ import {
   Alert,
   useMediaQuery,
   useTheme,
-  Stack,
-  Collapse,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -28,7 +26,6 @@ import {
   Typography,
   IconButton,
   Button,
-  CircularProgress,
 } from "@mui/material";
 import { Close as CloseIcon, FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import {
@@ -40,7 +37,6 @@ import {
   exportPrecheckDetails,
   remainingPrecheck,
   setHasPendingScans,
-  resetQrQuantity,
   deletePrecheckDetails,
   removePrecheckDetails,
 } from "../../store/slices/precheckSlice";
@@ -60,15 +56,13 @@ import {
   type ProductionOrderMaster,
 } from "../../hooks/usePONumbers";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Html5Qrcode } from "html5-qrcode";
-import * as XLSX from "xlsx";
 
 import type { RootState, AppDispatch } from "../../store/store";
 import debounce from "lodash.debounce";
 
 // Sub-component imports
 import type { GridItem } from "./make-precheck/types";
-import { formatDate } from "./make-precheck/utils";
+
 import QuantityDialog from "./make-precheck/QuantityDialog";
 import RejectDialog from "./make-precheck/RejectDialog";
 import AddQrCodeDialog from "./make-precheck/AddQrCodeDialog";
@@ -295,8 +289,7 @@ const MakePrecheck: React.FC = () => {
   // Selected row state
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
-  // Form Controls Toggle State
-  const [showFormControls, setShowFormControls] = useState(false);
+
 
   // Button states
   const [isMakePrecheckEnabled, setIsMakePrecheckEnabled] = useState(false);
@@ -307,15 +300,12 @@ const MakePrecheck: React.FC = () => {
     quantityDialogOpen,
     maxQuantity,
     selectedQuantity,
-    pendingBarcodeData,
-    selectedQuantityItem,
     openScanner,
     scannerError,
     uploadInProgress,
     uploadError,
     facingMode,
     scannerReady,
-    cameraPermissionStatus,
     showPermissionDialog,
     excelUploadResult,
     excelResultDialogOpen,
@@ -338,7 +328,7 @@ const MakePrecheck: React.FC = () => {
     handleScanFileUpload,
     handleExcelUpload,
     handleQuantityConfirm,
-    processBarcodeAsync,
+  
     handleDownloadTemplate,
   } = usePrecheckScanning({
     searchResults,
@@ -355,6 +345,15 @@ const MakePrecheck: React.FC = () => {
         executeMakePrecheck();
       }
     },
+    // Form-level context forwarded to usePrecheckScanning for the ViewPrecheck
+    // duplicate-QR check on BATCH / FIM / SI scans
+    selectedDrawingId: selectedDrawing?.id ?? selectedDrawing?.drawingNumberId,
+    selectedProductionSeriesId:
+      selectedProductionSeries?.id ??
+      selectedProductionSeries?.prodSeriesId ??
+      selectedProductionSeries?.productionSeriesId,
+    selectedIdNumber: idNumber,
+    selectedProductionOrderNumber: selectedPO?.productionOrderNumber,
   });
 
   // Debounced search functions
@@ -990,16 +989,7 @@ const MakePrecheck: React.FC = () => {
     }
   };
 
-  const handleConfirmReload = () => {
-    setShowReloadConfirmation(false);
-    if (pendingAction === "reset") {
-      resetAllData();
-    } else if (pendingAction === "reload") {
-      executeMakePrecheck();
-    }
-    setPendingAction(null);
-  };
-
+ 
 
 
   // Handle row expansion
@@ -1019,16 +1009,7 @@ const MakePrecheck: React.FC = () => {
     setSelectedRow(selectedRow === actualIndex ? null : actualIndex);
   };
 
-  // Handle plus button click
-  const handlePlusClick = (item: GridItem) => {
-    setSelectedRowForAdd(item);
-    setAddQrFormData({
-      prodSeriesId: selectedProductionSeries?.id?.toString() || "",
-      idNumber: "",
-      qrCodeNumber: "",
-    });
-    setAddQrDialogOpen(true);
-  };
+
   const handleAddRow = async (item: GridItem) => {
     try {
       setIsLoadingLocal(true);
@@ -1594,41 +1575,8 @@ const MakePrecheck: React.FC = () => {
     handleOpenExportDialog();
   };
 
-  //handle next 
-  const handleNextId = () => {
-    const currentIndex = idOptions.findIndex(
-      (id) => id === idNumber
-    );
-
-    if (currentIndex !== -1 && currentIndex < idOptions.length - 1) {
-      const nextId = idOptions[currentIndex + 1];
-
-      setIdNumber(nextId);
-
-      // Automatically reload BOM data
-      executeMakePrecheck(nextId);
-    } else {
-      showAlertMessage("No more ID numbers available", "info");
-    }
-  };
-
-  //handle previous
-  const handlePrevId = () => {
-    const currentIndex = idOptions.findIndex(
-      (id) => id === idNumber
-    );
-
-    if (currentIndex !== -1 && currentIndex > 0) {
-      const prevId = idOptions[currentIndex - 1];
-
-      setIdNumber(prevId);
-
-      // Automatically reload BOM data
-      executeMakePrecheck(prevId);
-    } else {
-      showAlertMessage("No previous ID numbers available", "info");
-    }
-  };
+  
+ 
 
   // Handle remarks change for any row
   const handleRemarksChange = (item: GridItem, newRemarks: string) => {
@@ -1692,8 +1640,15 @@ const MakePrecheck: React.FC = () => {
       return;
     }
 
-    // Map the response to objects and assign sequential SRs based on the API response sequence
-    const finalItems = rawList.map((item: any, index: number) => ({
+    // Sort API response by drawingNumber in ascending order (grouping same drawing numbers together)
+    const sortedRawList = [...rawList].sort((a: any, b: any) => {
+      const dwgA = String(a.drawingNumber || a.drawingNo || "").trim().toLowerCase();
+      const dwgB = String(b.drawingNumber || b.drawingNo || "").trim().toLowerCase();
+      return dwgA.localeCompare(dwgB, undefined, { numeric: true, sensitivity: "base" });
+    });
+
+    // Map the response to objects and assign sequential SRs based on sorted order
+    const finalItems = sortedRawList.map((item: any, index: number) => ({
       drawingNumber: item.drawingNumber,
       nomenclature: item.nomenclature,
       quantity: item.quantity,

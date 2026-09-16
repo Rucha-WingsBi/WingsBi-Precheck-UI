@@ -1594,10 +1594,10 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Shape"
+                    label="Material"
                     size="small"
                     fullWidth
-                    placeholder="Select Shape"
+                    placeholder="Select Material"
                     onClick={() => setOpenShape(true)}
                     onFocus={(e) => {
                       setOpenShape(true);

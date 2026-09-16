@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
@@ -25,7 +25,6 @@ import {
   DialogContent,
   DialogActions,
   MenuItem,
-  Select,
   Chip,
   Menu,
   ListItemText,
@@ -40,11 +39,6 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import DownloadIcon from "@mui/icons-material/Download";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useFetchAllDrawingNumbers, useProductionSeries, useUnits, usePageAccess } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -55,8 +49,6 @@ import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
 import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 import { SortableTableHeader } from "../../components/SortableTableHeader";
-import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
-
 
 interface DrawingNumberRow {
   parentDrawingNumbers?: string[];
@@ -116,12 +108,16 @@ const DrawingNumberRowComponent = ({
     setMenuAnchorEl(null);
   };
 
-  // Edit Row
+  // Edit Row — close menu first, then navigate on next tick so MUI Menu
+  // close animation completes before the component unmounts (prevents menu
+  // briefly staying visible during the route transition).
   const handleEdit = () => {
-    handleCloseMenu();
-    navigate(`/adminmaster/updatecomponents/${drawingData.id}`, {
-      state: { editRow: drawingData, fromView: true },
-    });
+    setMenuAnchorEl(null);
+    setTimeout(() => {
+      navigate(`/adminmaster/updatecomponents/${drawingData.id}`, {
+        state: { editRow: drawingData, fromView: true },
+      });
+    }, 0);
   };
 
   const handleDelete = () => {
@@ -219,9 +215,30 @@ const DrawingNumberRowComponent = ({
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
           <Collapse in={openDetails} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main", display: "block", mb: 0.75 }}>
-                Additional Details
-              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 0.75,
+                }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
+                  Additional Details
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={handleToggleDetails}
+                  title="Close Additional Details"
+                  sx={{
+                    p: 0.25,
+                    color: "#667085",
+                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
+                  }}
+                >
+                  <KeyboardArrowUpIcon fontSize="small" />
+                </IconButton>
+              </Box>
               <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "grey.100" }}>
@@ -271,19 +288,50 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     );
   }, [user, pageAccessData, isAccessLoading]);
 
-  // Filter state (Initial state BLANK / EMPTY)
-  const [searchQuery, setSearchQuery] = useState("");
+  // ─── Persist filter state across navigation ───────────────────────────────
+  // Key scoped to this page so other pages are not affected.
+  const FILTER_STORAGE_KEY = "viewComponents_filters";
+
+  // Initialise state from sessionStorage if available so filters survive
+  // navigating to the edit page and coming back.
+  const getInitialFilters = () => {
+    try {
+      const saved = sessionStorage.getItem(FILTER_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      /* ignore */
+    }
+    return null;
+  };
+
+  const savedFilters = useRef(getInitialFilters());
+
+  // Filter state – restored from sessionStorage on first render
+  const [searchQuery, setSearchQuery] = useState(savedFilters.current?.searchQuery ?? "");
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
-  const [selectedSeries, setSelectedSeries] = useState<string[]>([]);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<string[]>(savedFilters.current?.selectedSeries ?? []);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(savedFilters.current?.selectedTypes ?? []);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>(savedFilters.current?.selectedUnits ?? []);
 
-  // Pagination & sorting state
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortColumn, setSortColumn] = useState<string>("modifiedDate");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // Pagination & sorting state – also restored
+  const [page, setPage] = useState(savedFilters.current?.page ?? 0);
+  const [rowsPerPage, setRowsPerPage] = useState(savedFilters.current?.rowsPerPage ?? 10);
+  const [sortColumn, setSortColumn] = useState<string>(savedFilters.current?.sortColumn ?? "modifiedDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(savedFilters.current?.sortOrder ?? "desc");
+
+  // Persist to sessionStorage whenever any filter changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        FILTER_STORAGE_KEY,
+        JSON.stringify({ searchQuery, selectedSeries, selectedTypes, selectedUnits, page, rowsPerPage, sortColumn, sortOrder })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [searchQuery, selectedSeries, selectedTypes, selectedUnits, page, rowsPerPage, sortColumn, sortOrder]);
+  // ──────────────────────────────────────────────────────────────────────────
 
   const handleSort = (columnKey: string) => {
     if (sortColumn === columnKey) {

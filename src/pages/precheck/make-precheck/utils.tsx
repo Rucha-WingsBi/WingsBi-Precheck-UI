@@ -1,4 +1,4 @@
-import React from "react";
+
 import {
   Chip,
 } from "@mui/material";
@@ -136,11 +136,12 @@ export const getStatusBadgeChip = (item: any) => {
     !isRej &&
     (item.isPrecheckComplete ||
       statusLower === "verified" ||
-      statusLower === "completed" ||
-      statusLower === "updated" ||
-      item.isUpdated ||
-      (item.precheckDetailsId !== undefined && item.precheckDetailsId > 0 && statusLower !== "pending") ||
-      (Boolean(item.qrCode) && (item.remainingQuantity === 0 || item.remainingQuantity === null || item.remainingQuantity === undefined)));
+      statusLower === "completed");
+
+  const isUpdated =
+    !isRej &&
+    !isComplete &&
+    (statusLower === "updated" || item.isUpdated || Boolean(item.qrCode));
 
   const scannedQty = item.scannedQuantity ?? (item.qrCode ? item.quantity : 0);
   const totalQty = item.quantity ?? 1;
@@ -157,6 +158,24 @@ export const getStatusBadgeChip = (item: any) => {
           fontWeight: 600,
           fontSize: "0.75rem",
           height: 24,
+          border: "1px solid #6EE7B7",
+        }}
+      />
+    );
+  }
+
+  if (isUpdated) {
+    return (
+      <Chip
+        label="Updated"
+        size="small"
+        sx={{
+          backgroundColor: "#FFF7ED",
+          color: "#B45309",
+          fontWeight: 600,
+          fontSize: "0.75rem",
+          height: 24,
+          border: "1px solid #D97706",
         }}
       />
     );

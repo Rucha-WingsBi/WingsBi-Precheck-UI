@@ -40,23 +40,16 @@ import {
   Logout as LogoutIcon,
   ViewList as ViewListIcon,
   QrCode as QrCodeIcon,
-  QrCode2 as QrCode2Icon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Add as AddIcon,
-  AddCircleOutline as AddCircleOutlineIcon,
-  Visibility as VisibilityIcon,
   Store as StoreIcon,
   ShoppingCart as ShoppingCartIcon,
-  Terminal as TerminalIcon,
   FactCheck as FactCheckIcon,
   MenuBook as MenuBookIcon,
   Category as CategoryIcon,
-  FileUpload as FileUploadIcon,
   ListAlt as ListAltIcon,
-  PostAdd as PostAddIcon,
   History as HistoryIcon,
-  Warehouse as WarehouseIcon,
   AccountTree as AccountTreeIcon,
   Extension as ExtensionIcon,
   CloudUpload as CloudUploadIcon,
@@ -215,7 +208,7 @@ export default function Layout() {
       subItems: [
         {
           text: "Manage Orders",
-          pageName: "Upload Orders",
+          pageName: "Manage Orders",
           icon: <AssignmentIcon />,
           path: "/production-order/upload",
         },
@@ -351,12 +344,9 @@ export default function Layout() {
 
     const isAccessible = (pageName: string): boolean => {
       const entry = accessMap[pageName.trim().toLowerCase()];
-
       if (!entry) return false;
-      // Always explicitly return boolean
-      if (!entry) return false;
-
-      return entry.fullAccess === true;
+      // Accessible when NOT explicitly denied (noAccess !== true)
+      return entry.noAccess !== true;
     };
 
     return menuItems

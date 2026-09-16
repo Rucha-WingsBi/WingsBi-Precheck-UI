@@ -217,6 +217,7 @@ function RoleRowActionMenu({ row, onEdit, onDelete }: RoleRowActionMenuProps) {
 
 const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
   const { data: userRoles = [], isLoading, error } = useUserRoles();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddUserRole();
   const updateMutation = useUpdateUserRole();
   const deleteMutation = useDeleteUserRole();
@@ -294,7 +295,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
     {
       field: "srNo",
       headerName: "Sr No",
-      width: 110,
+      width: 100,
       type: "number",
       headerAlign: "left",
       align: "left",
@@ -303,27 +304,40 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
       field: "role",
       headerName: "Role Name",
       flex: 1,
-      minWidth: 190,
+      minWidth: 150,
     },
     {
       field: "description",
       headerName: "Description",
-      flex: 1.5,
+      flex: 1.2,
       minWidth: 160,
       renderCell: (params) => params.value || "-",
     },
     {
+      field: "createdBy",
+      headerName: "Created By",
+      flex: 1,
+      minWidth: 130,
+      renderCell: (params) => getUserName(params.row.createdBy, users),
+    },
+    {
       field: "createdDate",
-      headerName: "Last Active",
-      width: 170,
-      renderCell: (params) => {
-        if (!params.value) return "-";
-        return new Date(params.value).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
-      },
+      headerName: "Created Date",
+      width: 135,
+      renderCell: (params) => formatDate(params.row.createdDate),
+    },
+    {
+      field: "modifiedBy",
+      headerName: "Modified By",
+      flex: 1,
+      minWidth: 130,
+      renderCell: (params) => getUserName(params.row.modifiedBy, users),
+    },
+    {
+      field: "modifiedDate",
+      headerName: "Modified Date",
+      width: 135,
+      renderCell: (params) => formatDate(params.row.modifiedDate),
     },
     {
       field: "actions",

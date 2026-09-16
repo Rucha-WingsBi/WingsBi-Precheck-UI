@@ -1309,9 +1309,9 @@ const MaterialRequisition: React.FC = () => {
             sx: {
               width: { xs: "100%", sm: 500, md: 600 },
               padding: 0,
-              maxHeight: "calc(100vh - 64px)",
-              height: "calc(100vh - 64px)",
-              marginTop: "64px",
+              maxHeight: "calc(100vh - 56px)",
+              height: "calc(100vh - 56px)",
+              marginTop: "56px",
               display: "flex",
               flexDirection: "column",
               borderLeft: "1px solid #eaecf0",

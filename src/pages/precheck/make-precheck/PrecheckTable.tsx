@@ -11,15 +11,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Button,
   IconButton,
   Chip,
   Collapse,
   CircularProgress,
-
-  Tooltip,
-  TableSortLabel,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -33,18 +29,12 @@ import {
 import { CustomPagination } from "../../../components/CustomPagination";
 
 import {
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  Edit as EditIcon,
   Cancel as CancelIcon,
   Undo as UndoIcon,
-  Check as CheckIcon,
-  Close as CloseIcon,
   Delete as DeleteIcon,
-  ViewColumn as ViewColumnIcon,
   MoreVert as MoreVertIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
 } from "@mui/icons-material";
 import type { GridItem } from "./types";
 import { formatDate, formatQuantity, getStatusBadgeChip } from "./utils";
@@ -88,15 +78,12 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
   rowsPerPage,
   selectedRow,
   expandedRows,
-  maxPrecheckDetailsIdMap,
   onChangePage,
   onChangeRowsPerPage,
   onRowExpand,
   onRowDoubleClick,
-  onAddRow,
   onEditClick,
   onUndoScan,
-  onRemarksChange,
   onUndoPrecheck,
   onDeletePrecheck,
   orderBy,
@@ -192,20 +179,74 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
               <SortableTableHeader label="MSN" columnKey="msn" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={55} />
               <SortableTableHeader label="MRIR Number" columnKey="mrirNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
               <SortableTableHeader label="Type" columnKey="componentType" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
-              <SortableTableHeader label="Remarks" columnKey="remarks" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
               <TableCell align="center" sx={{ fontWeight: 700, backgroundColor: COLOUR_ROLES.headerBg, color: COLOUR_ROLES.textSecondary, fontSize: "0.75rem", borderBottom: `1px solid ${COLOUR_ROLES.hairline}`, py: 0.5, px: 1, minWidth: 75 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={15} align="center" sx={{ height: 150 }}>
+                <TableCell colSpan={14} align="center" sx={{ height: 150 }}>
                   <CircularProgress size={30} />
                 </TableCell>
               </TableRow>
             ) : paginatedResults.length > 0 ? (
               paginatedResults.map((item, index) => {
                 const itemKey = `${item.drawingNumber}-${item.lnItemCode || ""}`;
+                const isSelected = selectedRow === page * rowsPerPage + index;
+                const statusLower = (item.precheckStatus || "").toLowerCase();
+                const isRej = item.isRejected || statusLower === "rejected";
+
+                const remQtyNum =
+                  item.remainingQuantity !== undefined && item.remainingQuantity !== null
+                    ? Number(item.remainingQuantity)
+                    : null;
+                const isZeroRemQty = remQtyNum !== null && remQtyNum === 0;
+
+                const isComplete =
+                  !isRej &&
+                  (statusLower === "completed" ||
+                    statusLower === "verified" ||
+                    isZeroRemQty ||
+                    (item.isPrecheckComplete && (remQtyNum === null || remQtyNum === 0)));
+
+                const isUpdated =
+                  !isRej &&
+                  !isComplete &&
+                  (statusLower === "updated" ||
+                    item.isUpdated ||
+                    Boolean(item.qrCode));
+
+                let rowBg = "#FFFFFF";
+                let rowHoverBg = "#F8FAFC";
+
+                if (isSelected) {
+                  rowBg = "#E3F2FD";
+                  rowHoverBg = "#E3F2FD";
+                } else if (isRej) {
+                  rowBg = "#FDE8E8";
+                  rowHoverBg = "#FDE8E8";
+                } else if (isComplete) {
+                  rowBg = "#ECFDF5";
+                  rowHoverBg = "#ECFDF5";
+                } else if (isUpdated) {
+                  rowBg = "#FFF7ED";
+                  rowHoverBg = "#FFF7ED";
+                } else {
+                  const scannedQty = item.scannedQuantity ?? 0;
+                  const totalQty = item.quantity ?? 1;
+                  const remQty = item.remainingQuantity;
+                  if (
+                    (scannedQty > 0 && scannedQty < totalQty) ||
+                    (remQty !== undefined &&
+                      remQty !== null &&
+                      remQty > 0 &&
+                      remQty < totalQty)
+                  ) {
+                    rowBg = "#FFFBEB";
+                    rowHoverBg = "#FFFBEB";
+                  }
+                }
+
                 return (
                   <React.Fragment
                     key={`${item.sr}-${item.drawingNumber}-${item.isRejected ? "rejected" : "normal"}-${item.duplicateRowId || item.originalRowId || "none"}-${index}`}
@@ -217,50 +258,20 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                         ...commonTableRowStyle,
                         height: 24,
                         maxHeight: 24,
-                        backgroundColor: item.isRejected
-                          ? "#e0e0e0"
-                          : item.isPrecheckComplete ||
-                            item.precheckStatus?.toLowerCase() ===
-                            "completed"
-                            ? "#f0f0f0"
-                            : selectedRow === page * rowsPerPage + index
-                              ? "#e3f2fd"
-                              : "inherit",
-                        opacity: item.isRejected
-                          ? 0.6
-                          : item.precheckStatus?.toLowerCase() === "pending"
-                            ? 1
-                            : item.precheckStatus?.toLowerCase() ===
-                              "updated" || item.isUpdated
-                              ? item.drawingNumber &&
-                                maxPrecheckDetailsIdMap[itemKey] &&
-                                item.precheckDetailsId ===
-                                maxPrecheckDetailsIdMap[itemKey]
-                                ? 1
-                                : 0.4
-                              : item.isPrecheckComplete ||
-                                item.precheckStatus?.toLowerCase() ===
-                                "completed"
-                                ? 1
-                                : 1,
+                        backgroundColor: rowBg,
+                        opacity: isRej ? 0.7 : 1,
                         transition:
-                          "opacity 0.6s ease-out, background-color 0.3s ease",
+                          "opacity 0.4s ease-out, background-color 0.2s ease",
                         cursor: "pointer",
                         "&:hover": {
-                          backgroundColor: item.isRejected
-                            ? "#d0d0d0"
-                            : item.isPrecheckComplete
-                              ? "#f0f0f0"
-                              : selectedRow === page * rowsPerPage + index
-                                ? "#bbdefb"
-                                : `${COLOUR_ROLES.rowHover} !important`,
+                          backgroundColor: `${rowHoverBg} !important`,
                         },
                         "& .MuiTableCell-root": {
                           py: "1px !important",
                           px: 0.5,
                           height: 24,
                           fontSize: "0.72rem",
-                          color: item.isRejected ? "error.main" : "inherit",
+                          color: isRej ? "error.main" : "inherit",
                         },
                       }}
                     >
@@ -319,62 +330,18 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                             fontSize: "0.72rem",
                           }}
                         >
-                          {item.componentType?.toUpperCase() === "BATCH" || item.componentType?.toUpperCase() === "FIM" ? (
+                          {["BATCH", "FIM", "SI"].includes(item.componentType?.toUpperCase() || "") ? (
                             <>
-                              {formatQuantity(item.remainingQuantity) !== "-" && (
+                              {formatQuantity(item.remainingQuantity) !== "-" ? (
                                 <Typography
                                   variant="caption"
                                   sx={{ fontSize: "0.72rem" }}
                                 >
                                   {formatQuantity(item.remainingQuantity)}
                                 </Typography>
+                              ) : (
+                                "-"
                               )}
-                              {item.componentType?.toUpperCase() === "BATCH" &&
-                                item.precheckDetailsId !== undefined &&
-                                item.precheckDetailsId ===
-                                maxPrecheckDetailsIdMap[itemKey] &&
-                                !(
-                                  item.isRejected &&
-                                  (item.remainingQuantity ??
-                                    item.quantity ??
-                                    0) === 0
-                                ) &&
-                                !item.isAddDisabled &&
-                                (item.remainingQuantity ??
-                                  item.quantity ??
-                                  0) > 0 && (
-                                  <Button
-                                    sx={{
-                                      color: "primary.main",
-                                      fontWeight: "bold",
-                                      cursor: "pointer",
-                                      minWidth: "auto",
-                                      padding: "0 4px",
-                                      fontSize: "0.72rem",
-                                    }}
-                                    size="small"
-                                    onClick={() => onAddRow(item)}
-                                  >
-                                    Add
-                                  </Button>
-                                )}
-                              {formatQuantity(item.remainingQuantity) === "-" &&
-                                !(
-                                  item.componentType?.toUpperCase() === "BATCH" &&
-                                  item.precheckDetailsId !== undefined &&
-                                  item.precheckDetailsId ===
-                                  maxPrecheckDetailsIdMap[itemKey] &&
-                                  !(
-                                    item.isRejected &&
-                                    (item.remainingQuantity ??
-                                      item.quantity ??
-                                      0) === 0
-                                  ) &&
-                                  !item.isAddDisabled &&
-                                  (item.remainingQuantity ??
-                                    item.quantity ??
-                                    0) > 0
-                                ) && "-"}
                             </>
                           ) : (
                             "-"
@@ -415,47 +382,6 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                         align="center"
                         sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
-                        <TextField
-                          size="small"
-                          value={item.remarks || ""}
-                          onChange={(e) =>
-                            onRemarksChange(item, e.target.value)
-                          }
-                          placeholder="Add remarks"
-                          variant="outlined"
-                          multiline
-                          maxRows={2}
-                          sx={{
-                            width: "100%",
-                            "& .MuiOutlinedInput-root": {
-                              fontSize: "0.68rem",
-                              py: "0 !important",
-                              px: 0.5,
-                              minHeight: "20px !important",
-                              height: "20px",
-                              color: item.isRejected
-                                ? "error.main"
-                                : "inherit",
-                              "& .MuiInputBase-input": {
-                                py: "0 !important",
-                                color: item.isRejected
-                                  ? "error.main"
-                                  : "inherit",
-                                WebkitTextFillColor: item.isRejected
-                                  ? "#d32f2f"
-                                  : "inherit",
-                              },
-                            },
-                          }}
-                          disabled={
-                            item.isPrecheckComplete || item.isSubmitted
-                          }
-                        />
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
-                      >
                         <IconButton
                           size="small"
                           onClick={(e) => {
@@ -476,7 +402,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                     <TableRow sx={{ height: 'auto' }}>
                       <TableCell
                         style={{ paddingBottom: 0, paddingTop: 0 }}
-                        colSpan={15}
+                        colSpan={14}
                       >
                         <Collapse
                           in={expandedRows.has(index)}
@@ -493,18 +419,37 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                               borderColor: "grey.200",
                             }}
                           >
-                            <Typography
-                              variant="caption"
+                            <Box
                               sx={{
-                                fontWeight: 700,
-                                color: "primary.main",
-                                display: "block",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
                                 mb: 0.75,
-                                fontSize: "0.8rem",
                               }}
                             >
-                              Additional Details
-                            </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: "primary.main",
+                                  fontSize: "0.8rem",
+                                }}
+                              >
+                                Additional Details
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => onRowExpand(index)}
+                                title="Close Additional Details"
+                                sx={{
+                                  p: 0.25,
+                                  color: "#667085",
+                                  "&:hover": { color: "#101828", backgroundColor: "grey.200" },
+                                }}
+                              >
+                                <KeyboardArrowUpIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
                             <Table
                               size="small"
                               aria-label="additional-details"
@@ -622,18 +567,38 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                         label={item.precheckStatus}
                                         size="small"
                                         variant="outlined"
-                                        color={
-                                          item.precheckStatus.toLowerCase() ===
-                                            "completed"
-                                            ? "success"
-                                            : item.precheckStatus.toLowerCase() ===
-                                              "updated"
-                                              ? "warning"
-                                              : "default"
-                                        }
                                         sx={{
                                           fontSize: "0.7rem",
                                           height: 20,
+                                          fontWeight: 600,
+                                          borderRadius: "12px",
+                                          backgroundColor:
+                                            item.precheckStatus.toLowerCase() === "completed" ||
+                                            item.precheckStatus.toLowerCase() === "verified"
+                                              ? "#ECFDF5"
+                                              : item.precheckStatus.toLowerCase() === "updated"
+                                              ? "#FFF7ED"
+                                              : item.precheckStatus.toLowerCase() === "rejected"
+                                              ? "#FEF2F2"
+                                              : "#F3F4F6",
+                                          color:
+                                            item.precheckStatus.toLowerCase() === "completed" ||
+                                            item.precheckStatus.toLowerCase() === "verified"
+                                              ? "#027A48"
+                                              : item.precheckStatus.toLowerCase() === "updated"
+                                              ? "#B45309"
+                                              : item.precheckStatus.toLowerCase() === "rejected"
+                                              ? "#B42318"
+                                              : "#374151",
+                                          borderColor:
+                                            item.precheckStatus.toLowerCase() === "completed" ||
+                                            item.precheckStatus.toLowerCase() === "verified"
+                                              ? "#A7F3D0"
+                                              : item.precheckStatus.toLowerCase() === "updated"
+                                              ? "#D97706"
+                                              : item.precheckStatus.toLowerCase() === "rejected"
+                                              ? "#FCA5A5"
+                                              : "#E5E7EB",
                                         }}
                                       />
                                     ) : (
@@ -652,14 +617,14 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
               })
             ) : showResults ? (
               <TableRow>
-                <TableCell colSpan={15} align="center" sx={{ height: 150 }}>
+                <TableCell colSpan={14} align="center" sx={{ height: 150 }}>
                   No records found
                 </TableCell>
               </TableRow>
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={15}
+                  colSpan={14}
                   align="center"
                   sx={{ height: 350, color: "text.secondary" }}
                 >
@@ -716,9 +681,9 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
             >
               <ListItemIcon sx={{ minWidth: 28 }}>
                 {expandedRows.has(activeMenuRow.index) ? (
-                  <VisibilityOffIcon fontSize="small" color="action" />
+                  <KeyboardArrowUpIcon fontSize="small" color="primary" />
                 ) : (
-                  <VisibilityIcon fontSize="small" color="primary" />
+                  <KeyboardArrowDownIcon fontSize="small" color="primary" />
                 )}
               </ListItemIcon>
               <ListItemText

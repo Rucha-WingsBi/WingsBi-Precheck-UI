@@ -234,8 +234,8 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
       PaperProps={{
         sx: {
           width: { xs: "100%", sm: 440 },
-          mt: { xs: "56px", sm: "64px" },
-          height: { xs: "calc(100vh - 56px)", sm: "calc(100vh - 64px)" },
+          mt: "56px",
+          height: "calc(100vh - 56px)",
           display: "flex",
           flexDirection: "column",
         },

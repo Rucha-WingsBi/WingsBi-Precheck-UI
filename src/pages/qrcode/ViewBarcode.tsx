@@ -59,7 +59,7 @@ import type { AppDispatch } from '../../store/store';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CustomPagination } from '../../components/CustomPagination';
 
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { MultiSelectFilter } from '../../components/MultiSelectFilter';
@@ -410,9 +410,30 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={showBatchId ? 11 : 10}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main", display: "block", mb: 0.75 }}>
-                Additional Details
-              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 0.75,
+                }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
+                  Additional Details
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setOpen(false)}
+                  title="Close Additional Details"
+                  sx={{
+                    p: 0.25,
+                    color: "#667085",
+                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
+                  }}
+                >
+                  <KeyboardArrowUpIcon fontSize="small" />
+                </IconButton>
+              </Box>
               <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "grey.100" }}>

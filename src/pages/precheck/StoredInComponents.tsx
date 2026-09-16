@@ -56,8 +56,6 @@ import { getStoredComponentsByDate, exportStoredComponents, clearStoredComponent
 import { format } from 'date-fns';
 import api from '../../services/api';
 import debounce from 'lodash/debounce';
-import { StatusChip } from '../../components/StatusChip';
-import { ComponentTypeChip } from '../../components/ComponentTypeChip';
 import { SortableTableHeader } from '../../components/SortableTableHeader';
 import { commonTableHeaderStyle, commonTableRowStyle } from '../../components/tableStyles';
 
@@ -274,18 +272,37 @@ const Row = ({ component, sr }: { component: StoredComponent; sr: number }) => {
                 borderColor: 'grey.200',
               }}
             >
-              <Typography
-                variant="caption"
+              <Box
                 sx={{
-                  fontWeight: 700,
-                  color: 'primary.main',
-                  display: 'block',
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   mb: 0.75,
-                  fontSize: '0.8rem',
                 }}
               >
-                Additional Details
-              </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 700,
+                    color: "primary.main",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  Additional Details
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={handleToggleDetails}
+                  title="Close Additional Details"
+                  sx={{
+                    p: 0.25,
+                    color: "#667085",
+                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
+                  }}
+                >
+                  <KeyboardArrowUpIcon fontSize="small" />
+                </IconButton>
+              </Box>
               <Table size="small" sx={{ width: '100%' }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: 'grey.100' }}>

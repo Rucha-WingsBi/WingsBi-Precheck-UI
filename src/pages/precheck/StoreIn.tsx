@@ -46,6 +46,7 @@ import {
   FlashOff as FlashOffIcon,
   CropFree as CropFreeIcon,
   Search as SearchIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
 } from "@mui/icons-material";
 import { getStoreInData } from "../../store/slices/precheckSlice";
 import { format } from "date-fns";
@@ -990,18 +991,37 @@ const StoreIn: React.FC = () => {
                               border: "1px solid #EAECF0",
                             }}
                           >
-                            <Typography
-                              variant="caption"
+                            <Box
                               sx={{
-                                fontWeight: 700,
-                                color: "primary.main",
-                                display: "block",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
                                 mb: 0.75,
-                                fontSize: "0.75rem",
                               }}
                             >
-                              Additional Details
-                            </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: "primary.main",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                Additional Details
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleExpandClick(row.qrCodeNumber)}
+                                title="Close Additional Details"
+                                sx={{
+                                  p: 0.25,
+                                  color: "#667085",
+                                  "&:hover": { color: "#101828", backgroundColor: "#EAECF0" },
+                                }}
+                              >
+                                <KeyboardArrowUpIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
                             <Table size="small" sx={{ width: "100%" }}>
                               <TableHead>
                                 <TableRow sx={{ backgroundColor: "#F2F4F7" }}>

@@ -787,7 +787,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             "&:hover": { backgroundColor: "grey.100", color: "#101828" },
           }}
         >
-          {isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <MoreVertIcon fontSize="small" />}
+          {isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
         </IconButton>
       );
     }
@@ -1638,6 +1638,47 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   const rowKey = row.id ?? row.sr;
                   const isExpanded = activeTab === "precheck" && expandedRows.has(rowKey);
 
+                  const statusLower = (row.precheckStatus || row.status || "").toLowerCase();
+                  const isRej = row.isRejected || statusLower === "rejected";
+
+                  const remQtyNum =
+                    row.remainingQuantity !== undefined && row.remainingQuantity !== null
+                      ? Number(row.remainingQuantity)
+                      : null;
+                  const isZeroRemQty = remQtyNum !== null && remQtyNum === 0;
+
+                  const isComplete =
+                    !isRej &&
+                    (statusLower === "completed" ||
+                      statusLower === "verified" ||
+                      isZeroRemQty ||
+                      (row.isPrecheckComplete && (remQtyNum === null || remQtyNum === 0)));
+
+                  const isUpdated =
+                    !isRej &&
+                    !isComplete &&
+                    (statusLower === "updated" ||
+                      row.isUpdated ||
+                      Boolean(row.qrCode));
+                  const isShort =
+                    !isRej &&
+                    !isComplete &&
+                    !isUpdated &&
+                    (statusLower === "short" || statusLower === "partial");
+
+                  let rowBg = "#FFFFFF";
+                  let rowHoverBg = "#F8FAFC";
+                  if (isRej) {
+                    rowBg = "#FDE8E8";
+                    rowHoverBg = "#FDE8E8";
+                  } else if (isUpdated) {
+                    rowBg = "#FFF7ED";
+                    rowHoverBg = "#FFF7ED";
+                  } else if (isShort) {
+                    rowBg = "#FFFBEB";
+                    rowHoverBg = "#FFFBEB";
+                  }
+
                   return (
                     <React.Fragment key={rowKey ?? idx}>
                       {/* Main row */}
@@ -1645,6 +1686,12 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         hover
                         sx={{
                           ...commonTableRowStyle,
+                          backgroundColor: rowBg,
+                          opacity: isRej ? 0.7 : 1,
+                          transition: "background-color 0.2s ease, opacity 0.4s ease",
+                          "&:hover": {
+                            backgroundColor: `${rowHoverBg} !important`,
+                          },
                         }}
                       >
                         {visibleColumns.map((col) => (
