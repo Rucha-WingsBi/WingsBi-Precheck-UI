@@ -745,6 +745,7 @@ export const useUpdateDepartment = () => {
     mutationFn: async (data: {
       id: number;
       departmentName: string;
+      description?: string | null;
       modifiedBy: number;
     }) => {
       const response = await api.post("/api/Auth/UpdateDepartment", data);
@@ -772,7 +773,11 @@ export const useDeleteDepartment = () => {
 export const useAddDepartment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { departmentName: string; createdBy: number }) => {
+    mutationFn: async (data: {
+      departmentName: string;
+      description?: string | null;
+      createdBy: number;
+    }) => {
       const response = await api.post("/api/User/AddDepartment", data);
       return response.data;
     },

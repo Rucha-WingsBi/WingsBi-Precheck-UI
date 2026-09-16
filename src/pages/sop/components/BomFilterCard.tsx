@@ -31,10 +31,10 @@ interface BomFilterCardProps {
   isSearchingAssembly: boolean;
   handleSearch: () => void;
   handleReset: () => void;
-  handleExport: () => void;
+  handleExport?: () => void;
   isBomLoading: boolean;
-  isExporting: boolean;
-  hasBomData: boolean;
+  isExporting?: boolean;
+  hasBomData?: boolean;
 }
 
 export const BomFilterCard: React.FC<BomFilterCardProps> = ({
@@ -46,10 +46,8 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
   isSearchingAssembly,
   handleSearch,
   handleReset,
-  handleExport,
   isBomLoading,
-  isExporting,
-  hasBomData,
+  hasBomData = false,
 }) => {
   return (
     <Paper
@@ -178,36 +176,10 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
               {isBomLoading ? "Searching..." : "Search"}
             </Button>
             <Button
-              variant="outlined"
-              size="small"
-              startIcon={
-                isExporting ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <ExportIcon sx={{ fontSize: 18 }} />
-                )
-              }
-              onClick={handleExport}
-              disabled={isExporting || !hasBomData}
-              sx={{
-                height: 38,
-                px: 2,
-                borderRadius: "6px",
-                borderColor: "#D0D5DD",
-                color: "#344054",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "none",
-                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
-              }}
-            >
-              Export
-            </Button>
-            <Button
               variant="text"
               size="small"
               onClick={handleReset}
-              disabled={!selectedAssembly && !hasBomData}
+              disabled={!selectedAssembly && !hasBomData && !assemblyInputValue}
               sx={{
                 height: 38,
                 px: 1.5,

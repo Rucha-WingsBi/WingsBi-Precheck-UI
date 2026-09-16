@@ -162,11 +162,8 @@ const DrawingNumberRowComponent = ({
         <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 100, whiteSpace: "nowrap" }}>
           {drawingData?.unitName || "N/A"}
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 80, whiteSpace: "nowrap" }}>
-          {drawingData?.qty ?? (drawingData?.assemblyNumber || "N/A")}
-        </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.muted", fontSize: "0.8rem", minWidth: 130, whiteSpace: "nowrap" }}>
-          {formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 110, whiteSpace: "nowrap" }}>
+          {drawingData?.productionSeries || drawingData?.availableFor || "N/A"}
         </TableCell>
 
         <TableCell sx={{ textAlign: "center", minWidth: 65 }}>
@@ -219,7 +216,7 @@ const DrawingNumberRowComponent = ({
       </TableRow>
 
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
           <Collapse in={openDetails} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
               <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main", display: "block", mb: 0.75 }}>
@@ -230,20 +227,20 @@ const DrawingNumberRowComponent = ({
                   <TableRow sx={{ backgroundColor: "grey.100" }}>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Assembly Number</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Component Code</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Available For</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Rack Location</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Has Expiry</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Created Date</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Updated On</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   <TableRow>
                     <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.parentDrawingNumbers?.join(", ") || drawingData?.assemblyNumber || "N/A"}</TableCell>
                     <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.componentCode || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.availableFor || "N/A"}</TableCell>
                     <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.location || "N/A"}</TableCell>
                     <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.isExpiry ? "Yes" : "No"}</TableCell>
                     <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{formatDate(drawingData?.createdDate)}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -282,10 +279,6 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
-  const [appliedSeries, setAppliedSeries] = useState<string[]>([]);
-  const [appliedTypes, setAppliedTypes] = useState<string[]>([]);
-  const [appliedUnits, setAppliedUnits] = useState<string[]>([]);
-
   // Pagination & sorting state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -301,13 +294,13 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     }
   };
 
-  // Reset page when search query changes
+  // Reset page when search query or filter states change
   React.useEffect(() => {
     setPage(0);
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, selectedSeries, selectedTypes, selectedUnits]);
 
-  // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage), componentType, prodSeries, and unit filters to FetchAllDrawingNumbers API
-  const componentTypeFilter = appliedTypes.length > 0 ? appliedTypes.join(",") : "";
+  // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage), componentType, prodSeries, and unit filters directly to FetchAllDrawingNumbers API
+  const componentTypeFilter = selectedTypes.length > 0 ? selectedTypes.join(",") : "";
   const {
     data: drawingNumbersData = [],
     isLoading,
@@ -318,8 +311,8 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     page + 1,
     rowsPerPage,
     componentTypeFilter,
-    appliedSeries,
-    appliedUnits
+    selectedSeries,
+    selectedUnits
   );
 
   const { data: seriesList = [] } = useProductionSeries();
@@ -338,8 +331,6 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
   React.useEffect(() => {
     refetch();
   }, [refetch]);
-
-
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -388,10 +379,8 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
   };
 
   const handleApplyFilters = () => {
-    setAppliedSeries(selectedSeries);
-    setAppliedTypes(selectedTypes);
-    setAppliedUnits(selectedUnits);
     setPage(0);
+    refetch();
   };
 
   const handleClearFilters = () => {
@@ -399,9 +388,6 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     setSelectedSeries([]);
     setSelectedTypes([]);
     setSelectedUnits([]);
-    setAppliedSeries([]);
-    setAppliedTypes([]);
-    setAppliedUnits([]);
     setPage(0);
   };
 
@@ -510,7 +496,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Button
+            {/* <Button
               variant="outlined"
               size="small"
               onClick={handleExport}
@@ -528,7 +514,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
               }}
             >
               Export
-            </Button>
+            </Button> */}
 
             <Tooltip
               title={!hasAddComponentAccess ? "You do not have access to add component page" : ""}
@@ -745,7 +731,10 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                     <Chip
                       key={`series-${s}`}
                       label={`Series: ${s}`}
-                      onDelete={() => setSelectedSeries((prev) => prev.filter((x) => x !== s))}
+                      onDelete={() => {
+                        setSelectedSeries((prev) => prev.filter((x) => x !== s));
+                        setPage(0);
+                      }}
                       size="small"
                       sx={{
                         backgroundColor: "#F2F4F7",
@@ -767,7 +756,10 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                     <Chip
                       key={`type-${t}`}
                       label={`Type: ${t}`}
-                      onDelete={() => setSelectedTypes((prev) => prev.filter((x) => x !== t))}
+                      onDelete={() => {
+                        setSelectedTypes((prev) => prev.filter((x) => x !== t));
+                        setPage(0);
+                      }}
                       size="small"
                       sx={{
                         backgroundColor: "#F2F4F7",
@@ -789,7 +781,10 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                     <Chip
                       key={`unit-${u}`}
                       label={`Unit: ${u}`}
-                      onDelete={() => setSelectedUnits((prev) => prev.filter((x) => x !== u))}
+                      onDelete={() => {
+                        setSelectedUnits((prev) => prev.filter((x) => x !== u));
+                        setPage(0);
+                      }}
                       size="small"
                       sx={{
                         backgroundColor: "#F2F4F7",
@@ -850,15 +845,14 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                 <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={220} />
                 <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={95} />
                 <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={100} />
-                <SortableTableHeader label="Qty" columnKey="qty" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={80} />
-                <SortableTableHeader label="Updated On" columnKey="modifiedDate" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={130} />
+                <SortableTableHeader label="Prod. Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={110} />
                 <SortableTableHeader label="Actions" columnKey="actions" align="center" minWidth={65} isSortable={false} />
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ height: 280, borderBottom: "none" }}>
+                  <TableCell colSpan={8} align="center" sx={{ height: 280, borderBottom: "none" }}>
                     <CircularProgress size={32} color="primary" />
                     <Typography variant="body2" sx={{ color: "#667085", mt: 1 }}>
                       Loading components...
@@ -866,7 +860,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                   </TableCell>
                 </TableRow>
               ) : displayData.length === 0 ? (
-                <EmptyState colSpan={9} />
+                <EmptyState colSpan={8} />
               ) : (
                 displayData.map((drawing, index) => (
                   <DrawingNumberRowComponent

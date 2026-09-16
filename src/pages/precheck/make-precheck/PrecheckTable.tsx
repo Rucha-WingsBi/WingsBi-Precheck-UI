@@ -789,7 +789,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                 sx={{ py: 0.75, px: 1.5 }}
               >
                 <ListItemIcon sx={{ minWidth: 28 }}>
-                  <EditIcon fontSize="small" color="error" />
+                  <CancelIcon fontSize="small" color="error" />
                 </ListItemIcon>
                 <ListItemText
                   primary="Reject Component"

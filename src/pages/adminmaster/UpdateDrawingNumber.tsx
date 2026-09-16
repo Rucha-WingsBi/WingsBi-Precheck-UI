@@ -380,9 +380,14 @@ export default function UpdateDrawingNumber() {
         >
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h4" sx={{ fontWeight: "bold", color: "#A8005A" }}>
-          {isEditMode ? "Update Drawing Number" : "Add Drawing Number"}
-        </Typography>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.main" }}>
+            {isEditMode ? "Update Drawing Number" : "Add Drawing Number"}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            Create or modify component drawing numbers, LN item codes, and assembly relations.
+          </Typography>
+        </Box>
       </Box>
 
       {successMessage && (

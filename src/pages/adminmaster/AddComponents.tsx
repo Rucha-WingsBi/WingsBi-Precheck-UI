@@ -26,6 +26,10 @@ import {
   ClickAwayListener,
   Popper,
   InputAdornment,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Check as CheckIcon, Close as CloseIcon, Search as SearchIcon, MoreVert as MoreVertIcon } from "@mui/icons-material";
@@ -272,12 +276,27 @@ function AddEditDialog({
   );
 }
 
+const getUserName = (userId: any, usersList: any[]) => {
+  if (userId === null || userId === undefined || userId === "") return "-";
+  const found = (usersList || []).find(
+    (u: any) => String(u.id) === String(userId) || String(u.userId) === String(userId)
+  );
+  return found?.userName || found?.username || found?.name || String(userId);
+};
+
+const formatDate = (val?: string | null) => {
+  if (!val) return "-";
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? "-" : d.toLocaleDateString();
+};
+
 //unit tab
 const UnitTab = forwardRef<
   TabHandle,
   { createdBy: number; showSnackbar: (msg: string, severity?: "success" | "error") => void }
 >(function UnitTab({ createdBy, showSnackbar }, ref) {
   const { data: units = [], isLoading: loading, error: fetchError } = useUnits();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddUnit();
   const updateMutation = useUpdateUnit();
   const deleteMutation = useDeleteUnit();
@@ -357,19 +376,36 @@ const UnitTab = forwardRef<
       {
         field: "srNo",
         headerName: "Sr No",
-        width: 80,
+        width: 100,
         valueGetter: (params) =>
           rows.findIndex((r) => r.id === params.row.id) + 1,
       },
-      { field: "unitName", headerName: "Unit Name", flex: 1, minWidth: 140 },
+      { field: "unitName", headerName: "Unit", flex: 1, minWidth: 120 },
+      {
+        field: "createdBy",
+        headerName: "Created By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
+      },
+      {
+        field: "modifiedBy",
+        headerName: "Modified By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
+      },
       {
         field: "modifiedDate",
-        headerName: "Last Active ↑",
-        width: 170,
-        renderCell: (params) => {
-          const val = params.row.modifiedDate || params.row.createdDate;
-          return val ? new Date(val).toLocaleDateString() : "-";
-        },
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
@@ -446,9 +482,10 @@ const STAGE_TYPES = ["IR", "MSN"] as const;
 
 const StageTab = forwardRef<
   TabHandle,
-  { createdBy: number; showSnackbar: (msg: string, severity?: "success" | "error") => void }
->(function StageTab({ createdBy, showSnackbar }, ref) {
+  { createdBy: number; stageFilter?: string; showSnackbar: (msg: string, severity?: "success" | "error") => void }
+>(function StageTab({ createdBy, stageFilter = "IR", showSnackbar }, ref) {
   const { data: allStages = [], isLoading: loading, error: fetchError } = useAllStages();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddStage();
   const updateMutation = useUpdateStage();
   const deleteMutation = useDeleteStage();
@@ -462,7 +499,7 @@ const StageTab = forwardRef<
   const handleOpen = (row?: StageRow) => {
     setError(null);
     setEditing(row ?? null);
-    setStageType(row?.stageType ?? "IR");
+    setStageType(row?.stageType ?? stageFilter);
     setDialogOpen(true);
   };
 
@@ -470,7 +507,9 @@ const StageTab = forwardRef<
     openAdd: () => handleOpen(),
   }));
 
-  const rows = allStages.filter((item: any) => item.isActive === 1 || item.isActive === true);
+  const rows = allStages
+    .filter((item: any) => item.isActive === 1 || item.isActive === true)
+    .filter((item: any) => (item.stageType || "").toUpperCase() === stageFilter.toUpperCase());
 
   const handleAddStage = async (stageName: string, type: string) => {
     setError(null);
@@ -531,7 +570,7 @@ const StageTab = forwardRef<
       {
         field: "srNo",
         headerName: "Sr No",
-        width: 80,
+        width: 100,
         valueGetter: (params) =>
           rows.findIndex((r) => r.id === params.row.id) + 1,
       },
@@ -540,16 +579,34 @@ const StageTab = forwardRef<
         headerName: "Stage Name",
         flex: 1,
         minWidth: 160,
+        valueGetter: (params) => params.row.stageName || params.row.stage || "-",
       },
-      { field: "stageType", headerName: "Stage Type", width: 120 },
+      { field: "stageType", headerName: "Stage Type", width: 110 },
+      {
+        field: "createdBy",
+        headerName: "Created By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
+      },
+      {
+        field: "modifiedBy",
+        headerName: "Modified By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
+      },
       {
         field: "modifiedDate",
-        headerName: "Last Active ↑",
-        width: 170,
-        renderCell: (params) => {
-          const val = params.row.modifiedDate || params.row.createdDate;
-          return val ? new Date(val).toLocaleDateString() : "-";
-        },
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
@@ -636,12 +693,13 @@ const StageTab = forwardRef<
   );
 });
 
-// shape tab
-const ShapeTab = forwardRef<
+// material tab
+const MaterialTab = forwardRef<
   TabHandle,
   { createdBy: number; showSnackbar: (msg: string, severity?: "success" | "error") => void }
->(function ShapeTab({ createdBy, showSnackbar }, ref) {
+>(function MaterialTab({ createdBy, showSnackbar }, ref) {
   const { data: shapes = [], isLoading: loading, error: fetchError } = useShapes();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddShape();
   const updateMutation = useUpdateShape();
   const deleteMutation = useDeleteShape();
@@ -663,22 +721,22 @@ const ShapeTab = forwardRef<
 
   const rows = shapes.filter((item: any) => item.isActive === 1 || item.isActive === true);
 
-  const handleAddShape = async (shapeName: string) => {
+  const handleAddMaterial = async (shapeName: string) => {
     setError(null);
     try {
       await addMutation.mutateAsync({
         shapeName,
         createdBy,
       });
-      showSnackbar("Shape added successfully");
+      showSnackbar("Material added successfully");
       setDialogOpen(false);
       setEditing(null);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? "Failed to add shape.");
+      setError(err?.response?.data?.message ?? err?.message ?? "Failed to add material.");
     }
   };
 
-  const handleUpdateShape = async (id: number, shapeName: string) => {
+  const handleUpdateMaterial = async (id: number, shapeName: string) => {
     setError(null);
     try {
       await updateMutation.mutateAsync({
@@ -686,30 +744,30 @@ const ShapeTab = forwardRef<
         shapeName,
         modifiedBy: createdBy,
       });
-      showSnackbar("Shape updated successfully");
+      showSnackbar("Material updated successfully");
       setDialogOpen(false);
       setEditing(null);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? "Failed to update shape.");
+      setError(err?.response?.data?.message ?? err?.message ?? "Failed to update material.");
     }
   };
 
-  const handleDeleteShape = async (id: number) => {
+  const handleDeleteMaterial = async (id: number) => {
     try {
       await deleteMutation.mutateAsync(id);
-      showSnackbar("Shape deleted successfully");
+      showSnackbar("Material deleted successfully");
       setDeleteConfirmId(null);
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message ?? err?.message ?? "Failed to delete shape.";
+      const errMsg = err?.response?.data?.message ?? err?.message ?? "Failed to delete material.";
       showSnackbar(errMsg, "error");
     }
   };
 
   const handleSave = ({ name }: { name: string }) => {
     if (editing) {
-      handleUpdateShape(editing.id, name);
+      handleUpdateMaterial(editing.id, name);
     } else {
-      handleAddShape(name);
+      handleAddMaterial(name);
     }
   };
 
@@ -721,25 +779,42 @@ const ShapeTab = forwardRef<
       {
         field: "srNo",
         headerName: "Sr No",
-        width: 80,
+        width: 100,
         valueGetter: (params) =>
           rows.findIndex((r) => r.id === params.row.id) + 1,
       },
       {
-        field: "shapeName",
-        headerName: "Shape Name",
+        field: "materialName",
+        headerName: "Material",
         flex: 1,
         minWidth: 140,
-        valueGetter: (params) => params.row.materialName || "-",
+        valueGetter: (params) => params.row.materialName || params.row.shapeName || "-",
+      },
+      {
+        field: "createdBy",
+        headerName: "Created By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
+      },
+      {
+        field: "modifiedBy",
+        headerName: "Modified By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
       },
       {
         field: "modifiedDate",
-        headerName: "Last Active ↑",
-        width: 170,
-        renderCell: (params) => {
-          const val = params.row.modifiedDate || params.row.createdDate;
-          return val ? new Date(val).toLocaleDateString() : "-";
-        },
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
@@ -756,7 +831,7 @@ const ShapeTab = forwardRef<
                     <IconButton
                       size="small"
                       color="success"
-                      onClick={() => handleDeleteShape(params.row.id)}
+                      onClick={() => handleDeleteMaterial(params.row.id)}
                     >
                       <CheckIcon fontSize="small" />
                     </IconButton>
@@ -793,7 +868,7 @@ const ShapeTab = forwardRef<
       )}
       <GenericTable rows={rows} columns={columns} loading={loading} />
       <AddEditDialog
-        key={editing ? `shape-edit-${editing.id}` : "shape-add"}
+        key={editing ? `material-edit-${editing.id}` : "material-add"}
         open={dialogOpen}
         onClose={() => {
           setDialogOpen(false);
@@ -801,9 +876,9 @@ const ShapeTab = forwardRef<
           setError(null);
         }}
         onSave={handleSave}
-        title={editing ? "Edit Shape" : "Add Shape"}
-        nameLabel="Shape Name"
-        initialName={editing?.shapeName || editing?.materialName || ""}
+        title={editing ? "Edit Material" : "Add Material"}
+        nameLabel="Material Name"
+        initialName={editing?.materialName || editing?.shapeName || ""}
         saving={saving}
         error={error}
       />
@@ -819,6 +894,7 @@ const ProductionSeriesTab = forwardRef<
 
   const { data: productionSeries = [], isLoading: loading, error: fetchError } =
     useProductionSeries();
+  const { data: users = [] } = useUsers();
 
   const addMutation = useAddProductionSeries();
   const updateMutation = useUpdateProductionSeries();
@@ -924,7 +1000,7 @@ const ProductionSeriesTab = forwardRef<
       {
         field: "srNo",
         headerName: "Sr No",
-        width: 80,
+        width: 100,
         valueGetter: (params) =>
           rows.findIndex((r: any) => r.id === params.row.id) + 1,
       },
@@ -932,18 +1008,35 @@ const ProductionSeriesTab = forwardRef<
         field: "productionSeries",
         headerName: "Production Series",
         flex: 1,
-        minWidth: 180,
+        minWidth: 160,
         valueGetter: (params) =>
           params.row.productionSeries || "-",
       },
       {
+        field: "createdBy",
+        headerName: "Created By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
+      },
+      {
+        field: "modifiedBy",
+        headerName: "Modified By",
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
+      },
+      {
         field: "modifiedDate",
-        headerName: "Last Active ↑",
-        width: 170,
-        renderCell: (params) => {
-          const val = params.row.modifiedDate || params.row.createdDate;
-          return val ? new Date(val).toLocaleDateString() : "-";
-        },
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
@@ -1378,11 +1471,12 @@ const SignatureTab = forwardRef<
 
 
 // tab labels
-const TAB_LABELS = ["Unit", "Stage", "Shape", "Production Series", "Upload Signature"] as const;
+const TAB_LABELS = ["Unit", "Stage", "Material", "Production Series", "Upload Signature"] as const;
 
 // main page
 export default function AddComponents({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [activeTab, setActiveTab] = useState(0);
+  const [selectedStageFilter, setSelectedStageFilter] = useState<string>("IR");
   const unitRef = useRef<TabHandle>(null);
   const stageRef = useRef<TabHandle>(null);
   const shapeRef = useRef<TabHandle>(null);
@@ -1431,7 +1525,11 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
   const { data: signatures = [] } = useUsersWithSignatures();
 
   const activeUnitsCount = units.filter((u: any) => u.isActive === 1 || u.isActive === true).length;
-  const activeStagesCount = stages.filter((s: any) => s.isActive === 1 || s.isActive === true).length;
+  const activeStagesCount = stages.filter(
+    (s: any) =>
+      (s.isActive === 1 || s.isActive === true) &&
+      (s.stageType || "").toUpperCase() === selectedStageFilter.toUpperCase()
+  ).length;
   const activeShapesCount = shapes.filter((s: any) => s.isActive === 1 || s.isActive === true).length;
   const activeSeriesCount = productionSeries.filter((p: any) => p.isActive === 1 || p.isActive === true).length;
   const activeSignaturesCount = (signatures || []).length;
@@ -1457,6 +1555,9 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
               }}
             >
               Master Data
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Manage system units, stages, materials, production series, and user signatures.
             </Typography>
           </Box>
         </Stack>
@@ -1523,7 +1624,7 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
             id="tab-shape"
             label={
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <span>Shapes</span>
+                <span>Materials</span>
                 <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 2 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 2 ? "primary.main" : "#667085" }}>
                   {activeShapesCount}
                 </Typography>
@@ -1566,19 +1667,66 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
           mb: 2,
         }}
       >
-        {/* Inside Container Toolbar: Search on Left, Add Button on Right */}
+        {/* Inside Container Toolbar: Stage Type Filter on Left, Add Button on Right */}
         <Box
           sx={{
             p: 1.5,
             px: 2,
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: activeTab === 1 ? "space-between" : "flex-end",
             alignItems: "center",
             flexWrap: "wrap",
             gap: 2,
             borderBottom: "1px solid #EAECF0",
           }}
         >
+          {activeTab === 1 && (
+            <FormControl component="fieldset">
+              <RadioGroup
+                row
+                value={selectedStageFilter}
+                onChange={(e) => setSelectedStageFilter(e.target.value)}
+                sx={{ gap: 1.5, alignItems: "center" }}
+              >
+                <FormControlLabel
+                  value="IR"
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: selectedStageFilter === "IR" ? "primary.main" : "#D1D5DB",
+                        "&.Mui-checked": { color: "primary.main" },
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#344054" }}>
+                      IR
+                    </Typography>
+                  }
+                  sx={{ mr: 0.5 }}
+                />
+                <FormControlLabel
+                  value="MSN"
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: selectedStageFilter === "MSN" ? "primary.main" : "#D1D5DB",
+                        "&.Mui-checked": { color: "primary.main" },
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#344054" }}>
+                      MSN
+                    </Typography>
+                  }
+                  sx={{ mr: 0 }}
+                />
+              </RadioGroup>
+            </FormControl>
+          )}
 
           <Button
             id="btn-add-tab-item"
@@ -1615,11 +1763,12 @@ export default function AddComponents({ hideHeader = false }: { hideHeader?: boo
             <StageTab
               ref={stageRef}
               createdBy={createdBy}
+              stageFilter={selectedStageFilter}
               showSnackbar={showSnackbar}
             />
           </TabPanel>
           <TabPanel value={activeTab} index={2}>
-            <ShapeTab
+            <MaterialTab
               ref={shapeRef}
               createdBy={createdBy}
               showSnackbar={showSnackbar}

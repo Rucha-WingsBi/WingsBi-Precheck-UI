@@ -447,6 +447,7 @@ const StoreIn: React.FC = () => {
       filterDate?: Date | null;
       pageNumber?: number;
       pageSize?: number;
+      isInitialQrScan?: boolean;
     }) => {
       const queryVal = overrides?.searchQuery !== undefined ? overrides.searchQuery : searchTerm;
       const seriesVal = overrides?.prodSeries !== undefined ? overrides.prodSeries : selectedSeries;
@@ -503,7 +504,7 @@ const StoreIn: React.FC = () => {
             : storeInResult?.data || storeInResult?.items || [];
           if (rawList && rawList.length > 0) {
             setStoreInList(rawList);
-            if (activeQrCode) {
+            if (activeQrCode && overrides?.isInitialQrScan) {
               setAlertMessage({
                 message: `QR Code ${activeQrCode} processed successfully. ${rawList.length} awaiting pending precheck record(s) found.`,
                 type: "success",
@@ -511,7 +512,7 @@ const StoreIn: React.FC = () => {
             }
           } else {
             setStoreInList([]);
-            if (activeQrCode) {
+            if (activeQrCode && overrides?.isInitialQrScan) {
               setAlertMessage({
                 message: `QR Code ${activeQrCode} processed successfully. No awaiting pending precheck found for QR Code ${activeQrCode}.`,
                 type: "info",
@@ -543,8 +544,11 @@ const StoreIn: React.FC = () => {
   );
 
   // Initial fetch when active QR code changes or component mounts
+  const prevQrCodeRef = useRef<string>("");
   useEffect(() => {
-    fetchStoreInData();
+    const isNewScan = !!activeQrCode && activeQrCode !== prevQrCodeRef.current;
+    prevQrCodeRef.current = activeQrCode;
+    fetchStoreInData({ isInitialQrScan: isNewScan });
   }, [activeQrCode]);
 
   // Direct API call when typing in Search bar (debounced 400ms)
@@ -675,12 +679,12 @@ const StoreIn: React.FC = () => {
           >
             Store In
           </Typography>
-          {/* <Typography
+          <Typography
             variant="body2"
-            sx={{ color: "#667085", fontSize: "0.85rem", mt: 0.5 }}
+            sx={{ color: "#667085", mt: 0.5 }}
           >
-            Scan verified components to receive them into store. Each scan records one QR code.
-          </Typography> */}
+            Scan verified components to receive them into store inventory locations.
+          </Typography>
         </Box>
 
         {/* <Button

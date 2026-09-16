@@ -25,8 +25,6 @@ import {
   Tabs,
   Tab,
   Stack,
-  InputAdornment,
-
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
 
@@ -35,12 +33,12 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
   Download as DownloadIcon,
-  ChevronRight as ChevronRightIcon,
   SwapHoriz as SwapHorizIcon,
   Add as AddIcon,
   Cancel as CancelIcon,
-  Search as SearchIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store/store";
@@ -239,6 +237,7 @@ const formatDate = (dateString: string | null | undefined) => {
 };
 
 const MaterialRequisition: React.FC = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const {
     records,
@@ -375,12 +374,10 @@ const MaterialRequisition: React.FC = () => {
   const { data: drawingNumbersData = [], isLoading: drawingLoading } =
     useDrawingNumbers("", debouncedDrawingSearch);
   // Separate hook for assembly drawing numbers to avoid conflict with rejected drawing search
-  const {
-    data: assemblyDrawingNumbersData = [],
-    isLoading: assemblyDrawingLoading,
-  } = useDrawingNumbers("", debouncedAssemblyDrawingSearch);
+  const { data: assemblyDrawingNumbersData = [], isLoading: assemblyDrawingLoading } =
+    useDrawingNumbers("", debouncedAssemblyDrawingSearch);
 
-  const { data: allDrawingNumbers = [] } = useAllDrawingNumbers();
+  useAllDrawingNumbers();
   const { data: productionSeriesData = [], isLoading: prodSeriesLoading } =
     useProductionSeries();
   const { data: poNumbersData = [], isLoading: poLoading } =
@@ -393,8 +390,6 @@ const MaterialRequisition: React.FC = () => {
     usePONumbers(debouncedSwapToPoSearch);
   const { data: swapDrawingNumbersData = [], isLoading: swapDrawingLoading } =
     useDrawingNumbers("", debouncedSwapDrawingSearch);
-
-
 
   // Memoize selected drawing to prevent unnecessary re-renders
   const selectedDrawing = useMemo(() => {
@@ -426,7 +421,6 @@ const MaterialRequisition: React.FC = () => {
     handleSubmit,
     reset,
     setValue,
-    formState: { errors },
   } = useForm<MaterialRequest>({
     defaultValues: {
       requestNo: "",
@@ -481,18 +475,6 @@ const MaterialRequisition: React.FC = () => {
     setSelectedFilter(newFilter);
     setPage(0);
     dispatch(setStatusFilter(newFilter));
-  };
-
-  // Pagination handlers
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
   };
 
   // Slice requestList for current page
@@ -893,16 +875,38 @@ const MaterialRequisition: React.FC = () => {
           mb: 1,
         }}
       >
-        <Typography
-          variant="h5"
-          sx={{
-            fontWeight: 700,
-            color: "primary.main",
-            fontSize: { xs: "1.15rem", sm: "1.35rem" },
-          }}
-        >
-          Material Requisition
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <IconButton
+            onClick={() => navigate("/precheck/make")}
+            size="small"
+            sx={{
+              color: "primary.main",
+              border: "1px solid #D0D5DD",
+              borderRadius: "8px",
+              p: 0.5,
+              backgroundColor: "#FFFFFF",
+              "&:hover": { backgroundColor: "#F2F4F7", borderColor: "#98A2B3" },
+            }}
+            title="Back to Make Precheck"
+          >
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.15rem", sm: "1.35rem" },
+              }}
+            >
+              Material Requisition
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
+              Create, track, swap, and manage material requisition requests.
+            </Typography>
+          </Box>
+        </Stack>
 
         <Stack direction="row" spacing={1}>
           <Button

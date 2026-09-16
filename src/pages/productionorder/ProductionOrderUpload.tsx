@@ -148,7 +148,6 @@ const statusOptions = [
 ];
 
 const ALL_EXPORTABLE_COLUMNS = [
-  { key: "sr", label: "Sr No" },
   { key: "productionOrderNumber", label: "PO Number" },
   { key: "projectNumber", label: "Project" },
   { key: "projectDescription", label: "Project Description" },
@@ -1574,11 +1573,11 @@ const ProductionOrderUpload: React.FC = () => {
           >
             {view === "upload" ? "Upload Production Orders" : "Production Order History"}
           </Typography>
-          {view === "upload" && (
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-              Import production orders from an Excel sheet.
-            </Typography>
-          )}
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            {view === "upload"
+              ? "Import and validate production orders from an Excel sheet."
+              : "Track, filter, and view uploaded production orders."}
+          </Typography>
         </Box>
 
         <Stack direction="row" spacing={1.5} alignItems="center">

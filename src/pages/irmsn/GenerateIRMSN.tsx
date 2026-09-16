@@ -657,7 +657,7 @@ export default function GenerateIRMSN() {
           New IR/MSN
         </Typography>
         <Typography variant="body2" sx={{ color: "#667085", mt: 0.15, fontSize: "0.825rem" }}>
-          Inspection Report or Memo Stage Number on order line.
+          Generate a new Inspection Report (IR) or Memo Stage Number (MSN) for an order line.
         </Typography>
       </Box>
 

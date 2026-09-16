@@ -36,6 +36,9 @@ import type { RootState, AppDispatch } from "../../store/store";
 import {
   getSopAssemblyData,
   exportSopAssemblyData,
+  getBomDetails,
+  exportBomDetails,
+  setSelectedAssemblyNumber,
   clearAssemblyData,
   clearError,
   setSearchCriteria,
@@ -62,6 +65,22 @@ const ALL_SOP_EXPORT_COLUMNS = [
   { key: "build", label: "Build Number" },
   { key: "snag_Sheet_No", label: "Snag Sheet Number" },
   { key: "mrirNumber", label: "MRIR Number" },
+];
+
+const ALL_BOM_EXPORT_COLUMNS = [
+  { key: "level", label: "Level" },
+  { key: "childDrawingNumber", label: "Drawing Number" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "componentType", label: "Component Type" },
+  { key: "quantity", label: "Qty" },
+  { key: "findNo", label: "Position No" },
+  { key: "parentDrawingNumber", label: "Assembly No" },
+  { key: "idNumber", label: "ID No" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "unit", label: "Unit" },
+  { key: "remarks", label: "Remarks" },
 ];
 
 interface FormData {
@@ -93,9 +112,15 @@ const ViewSOP: React.FC = () => {
   }, [location.pathname, location.state]);
 
   // Redux state
-  const { assemblyData, isLoading, isExporting, error } = useSelector(
-    (state: RootState) => state.sop
-  );
+  const {
+    assemblyData,
+    bomData,
+    searchCriteria,
+    selectedAssemblyNumber,
+    isLoading,
+    isExporting,
+    error,
+  } = useSelector((state: RootState) => state.sop);
 
   // Local state
   const [drwDisplayText, setDrwDisplayText] = useState("");
@@ -566,19 +591,29 @@ const ViewSOP: React.FC = () => {
   // Export Options Dialog State
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+
+  const activeExportColumns = useMemo(() => {
+    return activeTab === "sop" ? ALL_SOP_EXPORT_COLUMNS : ALL_BOM_EXPORT_COLUMNS;
+  }, [activeTab]);
+
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
     ALL_SOP_EXPORT_COLUMNS.map((c) => c.key)
   );
 
   const handleOpenExportDialog = useCallback(() => {
-    if (!assemblyData || assemblyData.length === 0) {
+    const hasData =
+      activeTab === "sop"
+        ? Boolean(assemblyData && assemblyData.length > 0)
+        : Boolean(bomData && bomData.length > 0);
+
+    if (!hasData) {
       setSuccessMessage("No data available to export. Please perform a search first.");
       return;
     }
     setExportMode("all");
-    setSelectedExportColumns(ALL_SOP_EXPORT_COLUMNS.map((c) => c.key));
+    setSelectedExportColumns(activeExportColumns.map((c) => c.key));
     setExportDialogOpen(true);
-  }, [assemblyData]);
+  }, [activeTab, assemblyData, bomData, activeExportColumns]);
 
   const handleToggleColumn = (colKey: string) => {
     if (selectedExportColumns.includes(colKey)) {
@@ -589,10 +624,10 @@ const ViewSOP: React.FC = () => {
   };
 
   const handleToggleSelectAllColumns = () => {
-    if (selectedExportColumns.length === ALL_SOP_EXPORT_COLUMNS.length) {
+    if (selectedExportColumns.length === activeExportColumns.length) {
       setSelectedExportColumns([]);
     } else {
-      setSelectedExportColumns(ALL_SOP_EXPORT_COLUMNS.map((c) => c.key));
+      setSelectedExportColumns(activeExportColumns.map((c) => c.key));
     }
   };
 
@@ -600,9 +635,27 @@ const ViewSOP: React.FC = () => {
     setExportDialogOpen(false);
     const colsToExport =
       exportMode === "custom"
-        ? ALL_SOP_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
-        : ALL_SOP_EXPORT_COLUMNS.map((c) => c.key);
-    await executeExport(colsToExport);
+        ? activeExportColumns.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+        : activeExportColumns.map((c) => c.key);
+
+    if (activeTab === "sop") {
+      await executeExport(colsToExport);
+    } else {
+      const activeBomDrawing =
+        selectedDrawingNumber?.drawingNumber ||
+        selectedAssemblyNumber ||
+        (bomData && bomData.length > 0
+          ? bomData[0]?.parentDrawingNumber || bomData[0]?.assemblyNumber || bomData[0]?.childDrawingNumber
+          : "");
+
+      const request = {
+        assemblyNumber: activeBomDrawing || drwDisplayText || "",
+        selectedColumn: colsToExport,
+      };
+
+      await dispatch(exportBomDetails(request) as any);
+      setSuccessMessage("BOM export completed successfully!");
+    }
   };
 
   const executeReset = useCallback(() => {
@@ -639,6 +692,75 @@ const ViewSOP: React.FC = () => {
     },
     [setValue]
   );
+
+  // Trigger API call according to tab change
+  useEffect(() => {
+    if (activeTab === "bom") {
+      const targetDwg =
+        selectedDrawingNumber?.drawingNumber ||
+        selectedAssemblyNumber ||
+        location.state?.drawingNumber;
+
+      if (targetDwg) {
+        dispatch(setSelectedAssemblyNumber(targetDwg));
+        if (!bomData || bomData.length === 0 || (bomData[0]?.parentDrawingNumber !== targetDwg && bomData[0]?.assemblyNumber !== targetDwg)) {
+          dispatch(getBomDetails(targetDwg));
+        }
+      }
+    } else if (activeTab === "sop") {
+      const values = getValues();
+      if (searchCriteria) {
+        dispatch(getSopAssemblyData(searchCriteria));
+      } else if (values.drawingNumberId > 0 && values.prodSeriesId > 0) {
+        executeSearch();
+      }
+    }
+  }, [activeTab]);
+
+  const handleTabChange = useCallback(
+    (_: React.SyntheticEvent, newValue: "sop" | "bom") => {
+      setActiveTab(newValue);
+      if (newValue === "bom") {
+        const targetDwg =
+          selectedDrawingNumber?.drawingNumber ||
+          selectedAssemblyNumber ||
+          location.state?.drawingNumber;
+
+        if (targetDwg) {
+          dispatch(setSelectedAssemblyNumber(targetDwg));
+          dispatch(getBomDetails(targetDwg));
+        }
+      } else if (newValue === "sop") {
+        const values = getValues();
+        if (searchCriteria) {
+          dispatch(getSopAssemblyData(searchCriteria));
+        } else if (values.drawingNumberId > 0 && values.prodSeriesId > 0) {
+          executeSearch();
+        }
+      }
+    },
+    [
+      selectedDrawingNumber,
+      selectedAssemblyNumber,
+      location.state,
+      searchCriteria,
+      getValues,
+      executeSearch,
+      dispatch,
+    ]
+  );
+
+  const isExportDisabled = useMemo(() => {
+    if (isExporting) return true;
+    if (activeTab === "sop") {
+      return !assemblyData || assemblyData.length === 0;
+    }
+    return !bomData || bomData.length === 0;
+  }, [isExporting, activeTab, assemblyData, bomData]);
+
+  const handleHeaderExportClick = useCallback(() => {
+    handleOpenExportDialog();
+  }, [handleOpenExportDialog]);
 
   // Compute stats for current tree summary
   const rootNode = treeData.length > 0 ? treeData[0] : null;
@@ -693,8 +815,8 @@ const ViewSOP: React.FC = () => {
           <Button
             variant="outlined"
             size="small"
-            onClick={handleOpenExportDialog}
-            disabled={isExporting || !assemblyData || assemblyData.length === 0}
+            onClick={handleHeaderExportClick}
+            disabled={isExportDisabled}
             startIcon={
               isExporting ? (
                 <CircularProgress size={16} color="inherit" />
@@ -723,7 +845,7 @@ const ViewSOP: React.FC = () => {
       <Box sx={{ borderBottom: "1px solid #EAECF0", mb: 1.25 }}>
         <Tabs
           value={activeTab}
-          onChange={(_, newValue) => setActiveTab(newValue)}
+          onChange={handleTabChange}
           textColor="primary"
           indicatorColor="primary"
           sx={{
@@ -950,7 +1072,7 @@ const ViewSOP: React.FC = () => {
             pb: 1,
           }}
         >
-          Export Assembly Tree
+          {activeTab === "sop" ? "Export Assembly Tree (SOP)" : "Export BOM Details"}
           <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isExporting}>
             <CloseIcon />
           </IconButton>
@@ -968,7 +1090,7 @@ const ViewSOP: React.FC = () => {
                 const newMode = e.target.value as "all" | "custom";
                 setExportMode(newMode);
                 if (newMode === "custom") {
-                  setSelectedExportColumns(ALL_SOP_EXPORT_COLUMNS.map((c) => c.key));
+                  setSelectedExportColumns(activeExportColumns.map((c) => c.key));
                 }
               }}
               sx={{ mb: 2 }}
@@ -999,10 +1121,10 @@ const ViewSOP: React.FC = () => {
                     control={
                       <Checkbox
                         size="small"
-                        checked={selectedExportColumns.length === ALL_SOP_EXPORT_COLUMNS.length}
+                        checked={selectedExportColumns.length === activeExportColumns.length}
                         indeterminate={
                           selectedExportColumns.length > 0 &&
-                          selectedExportColumns.length < ALL_SOP_EXPORT_COLUMNS.length
+                          selectedExportColumns.length < activeExportColumns.length
                         }
                         onChange={handleToggleSelectAllColumns}
                         sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
@@ -1010,12 +1132,12 @@ const ViewSOP: React.FC = () => {
                     }
                     label={
                       <Typography variant="body2" fontWeight="700">
-                        {selectedExportColumns.length === ALL_SOP_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                        {selectedExportColumns.length === activeExportColumns.length ? "Deselect All" : "Select All Columns"}
                       </Typography>
                     }
                   />
                   <Chip
-                    label={`${selectedExportColumns.length} / ${ALL_SOP_EXPORT_COLUMNS.length} selected`}
+                    label={`${selectedExportColumns.length} / ${activeExportColumns.length} selected`}
                     size="small"
                     variant="outlined"
                     sx={{ borderColor: "primary.main", color: "primary.main" }}
@@ -1023,7 +1145,7 @@ const ViewSOP: React.FC = () => {
                 </Box>
 
                 <Grid container spacing={1}>
-                  {ALL_SOP_EXPORT_COLUMNS.map((col) => (
+                  {activeExportColumns.map((col) => (
                     <Grid item xs={6} sm={4} key={col.key}>
                       <FormControlLabel
                         control={

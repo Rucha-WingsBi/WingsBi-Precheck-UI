@@ -130,6 +130,9 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
         >
           Run Precheck
         </Typography>
+        <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
+          Scan items, verify component quality, and complete precheck inspection logs.
+        </Typography>
       </Box>
 
       {/* Top Right "More v" Action Button */}

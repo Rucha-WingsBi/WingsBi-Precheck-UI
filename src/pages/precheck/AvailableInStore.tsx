@@ -761,6 +761,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Sr</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">LN Item Code</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Drawing Number</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Prod. Series</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total Qty</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Code</TableCell>
@@ -769,7 +770,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                         <TableBody>
                           {isSearchLoading ? (
                             <TableRow>
-                              <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                              <TableCell colSpan={7} align="center" sx={{ py: 6, borderBottom: "none" }}>
                                 <CircularProgress size={28} color="primary" />
                               </TableCell>
                             </TableRow>
@@ -803,6 +804,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                     {row.lnitemcode || row.lnItemCode || "N/A"}
                                   </TableCell>
                                   <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
+                                  <TableCell align="center">{row.productionSeries || row.prodSeries || "N/A"}</TableCell>
                                   <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
                                   <TableCell align="center">
                                     {formatQuantity(row.totalQrQuantity !== undefined && row.totalQrQuantity > 0 ? row.totalQrQuantity : row.totalQuantity)}
@@ -814,7 +816,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                               );
                             })
                           ) : (
-                            <EmptyState colSpan={6} />
+                            <EmptyState colSpan={7} />
                           )}
                         </TableBody>
                       </Table>

@@ -13,9 +13,14 @@ import {
   CircularProgress,
   Alert,
   Chip,
-  Divider,
+  Collapse,
 } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import {
+  Close as CloseIcon,
+  SubdirectoryArrowRight as SubdirectoryArrowRightIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  ChevronRight as ChevronRightIcon,
+} from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store/store";
 import {
@@ -47,6 +52,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
   const [activeTab, setActiveTab] = useState(1);
   const [formData, setFormData] = useState({ role: "", description: "" });
   const [accessState, setAccessState] = useState<Record<number, "full" | "none">>({});
+  const [expandedParents, setExpandedParents] = useState<Record<number, boolean>>({});
   const [saving, setSaving] = useState(false);
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
@@ -100,36 +106,78 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
     ).length;
   }, [users, role]);
 
-  // Flatten page items for display
-  const flatPageItems = useMemo(() => {
-    if (!pageAccessData) return [];
-    const list: { item: PageAccessItem; category: string }[] = [];
-    const traverse = (items: PageAccessItem[], parentCategory: string) => {
+  // Calculate total pages count and active permissions count
+  const { totalPagesCount, activeAccessCount } = useMemo(() => {
+    if (!pageAccessData) return { totalPagesCount: 0, activeAccessCount: 0 };
+    let total = 0;
+    const countItems = (items: PageAccessItem[]) => {
       items.forEach((item) => {
-        const cat = parentCategory || "-";
-        list.push({ item, category: cat });
+        total++;
         if (item.children && item.children.length > 0) {
-          traverse(item.children, item.pageName);
+          countItems(item.children);
         }
       });
     };
-    traverse(pageAccessData, "");
-    return list;
-  }, [pageAccessData]);
+    countItems(pageAccessData);
 
-  // Count full access items
-  const activeAccessCount = useMemo(() => {
-    return Object.values(accessState).filter((val) => val === "full").length;
-  }, [accessState]);
+    const active = Object.values(accessState).filter((val) => val === "full").length;
+    return { totalPagesCount: total, activeAccessCount: active };
+  }, [pageAccessData, accessState]);
 
-  const totalPagesCount = flatPageItems.length;
-
-  const handleToggleAccess = (pageId: number, currentAccess: "full" | "none") => {
-    const newAccess = currentAccess === "full" ? "none" : "full";
-    setAccessState((prev) => ({
+  const toggleExpandParent = (parentId: number) => {
+    setExpandedParents((prev) => ({
       ...prev,
-      [pageId]: newAccess,
+      [parentId]: prev[parentId] !== undefined ? !prev[parentId] : false,
     }));
+  };
+
+  const handleToggleAccess = (targetItem: PageAccessItem, currentAccess: "full" | "none") => {
+    const nextAccess = currentAccess === "full" ? "none" : "full";
+
+    setAccessState((prev) => {
+      const nextState = { ...prev };
+
+      // Recursively set target item and all nested children
+      const setRecursive = (item: PageAccessItem, access: "full" | "none") => {
+        nextState[item.id] = access;
+        if (item.children && item.children.length > 0) {
+          item.children.forEach((child) => setRecursive(child, access));
+        }
+      };
+
+      setRecursive(targetItem, nextAccess);
+
+      // If turning ON a child page, automatically turn ON its parent page
+      if (nextAccess === "full" && targetItem.parentId) {
+        nextState[targetItem.parentId] = "full";
+      }
+
+      // If turning OFF a child page, turn parent OFF if no active children remain
+      if (nextAccess === "none" && targetItem.parentId && pageAccessData) {
+        const findParent = (items: PageAccessItem[], id: number): PageAccessItem | undefined => {
+          for (const item of items) {
+            if (item.id === id) return item;
+            if (item.children) {
+              const found = findParent(item.children, id);
+              if (found) return found;
+            }
+          }
+          return undefined;
+        };
+
+        const parent = findParent(pageAccessData, targetItem.parentId);
+        if (parent && parent.children) {
+          const hasActiveChild = parent.children.some(
+            (c) => nextState[c.id] === "full"
+          );
+          if (!hasActiveChild) {
+            nextState[parent.id] = "none";
+          }
+        }
+      }
+
+      return nextState;
+    });
   };
 
   const handleSave = async () => {
@@ -326,44 +374,221 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
               </Box>
             ) : accessError ? (
               <Alert severity="error">Failed to load page access data.</Alert>
-            ) : flatPageItems.length === 0 ? (
+            ) : !pageAccessData || pageAccessData.length === 0 ? (
               <Typography variant="body2" color="text.secondary" textAlign="center" py={3}>
                 No pages available
               </Typography>
             ) : (
-              <Stack divider={<Divider flexItem sx={{ borderColor: "neutral.chipBg" }} />}>
-                {flatPageItems.map(({ item, category }) => {
-                  const isFull = accessState[item.id] === "full";
+              <Stack spacing={1.2}>
+                {pageAccessData.map((parent) => {
+                  const hasChildren = Boolean(parent.children && parent.children.length > 0);
+                  const isParentFull = accessState[parent.id] === "full";
+                  const isExpanded = expandedParents[parent.id] ?? true;
+
+                  const activeChildrenCount = hasChildren
+                    ? parent.children.filter((c) => accessState[c.id] === "full").length
+                    : 0;
+                  const totalChildrenCount = hasChildren ? parent.children.length : 0;
+
                   return (
                     <Box
-                      key={item.id}
+                      key={parent.id}
                       sx={{
-                        py: 1,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
+                        border: "1px solid",
+                        borderColor: isParentFull ? "rgba(109, 42, 143, 0.3)" : "neutral.border",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        backgroundColor: "background.paper",
+                        boxShadow: "0px 1px 3px rgba(0,0,0,0.04)",
+                        transition: "all 0.15s ease",
                       }}
                     >
-                      <Box>
-                        <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ fontSize: "0.85rem" }}>
-                          {item.pageName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-                          {category}
-                        </Typography>
+                      {/* Parent Header */}
+                      <Box
+                        sx={{
+                          py: 1.2,
+                          px: 1.5,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          cursor: hasChildren ? "pointer" : "default",
+                          backgroundColor: isParentFull
+                            ? "rgba(109, 42, 143, 0.04)"
+                            : "background.paper",
+                          "&:hover": {
+                            backgroundColor: "action.hover",
+                          },
+                        }}
+                        onClick={() => {
+                          if (hasChildren) toggleExpandParent(parent.id);
+                        }}
+                      >
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {hasChildren ? (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleExpandParent(parent.id);
+                              }}
+                              sx={{
+                                p: 0.25,
+                                color: "primary.main",
+                              }}
+                            >
+                              {isExpanded ? (
+                                <KeyboardArrowDownIcon fontSize="small" />
+                              ) : (
+                                <ChevronRightIcon fontSize="small" />
+                              )}
+                            </IconButton>
+                          ) : (
+                            <Box sx={{ width: 24 }} />
+                          )}
+
+                          <Box>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                color="text.primary"
+                                sx={{ fontSize: "0.88rem" }}
+                              >
+                                {parent.pageName}
+                              </Typography>
+
+                              {hasChildren && (
+                                <Chip
+                                  label={`${activeChildrenCount}/${totalChildrenCount} active`}
+                                  size="small"
+                                  sx={{
+                                    height: 18,
+                                    fontSize: "0.68rem",
+                                    fontWeight: 600,
+                                    backgroundColor:
+                                      activeChildrenCount > 0
+                                        ? "rgba(109, 42, 143, 0.12)"
+                                        : "neutral.chipBg",
+                                    color:
+                                      activeChildrenCount > 0
+                                        ? "primary.main"
+                                        : "text.secondary",
+                                  }}
+                                />
+                              )}
+                            </Stack>
+                          </Box>
+                        </Box>
+
+                        {/* Master Switch for Parent */}
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.5}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Switch
+                            size="small"
+                            color="primary"
+                            checked={isParentFull}
+                            onChange={() =>
+                              handleToggleAccess(parent, accessState[parent.id] || "none")
+                            }
+                          />
+                          <Typography
+                            variant="caption"
+                            fontWeight={600}
+                            color={isParentFull ? "primary.main" : "text.secondary"}
+                            sx={{ minWidth: 22 }}
+                          >
+                            {isParentFull ? "On" : "Off"}
+                          </Typography>
+                        </Stack>
                       </Box>
 
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <Switch
-                          size="small"
-                          color="primary"
-                          checked={isFull}
-                          onChange={() => handleToggleAccess(item.id, accessState[item.id] || "none")}
-                        />
-                        <Typography variant="caption" fontWeight={600} color={isFull ? "text.primary" : "text.secondary"}>
-                          {isFull ? "On" : "Off"}
-                        </Typography>
-                      </Stack>
+                      {/* Collapsible Children Section */}
+                      {hasChildren && (
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit={false}>
+                          <Box
+                            sx={{
+                              bgcolor: "rgba(109, 42, 143, 0.02)",
+                              borderTop: "1px solid",
+                              borderColor: "neutral.border",
+                              p: 1.2,
+                              pl: 2.5,
+                            }}
+                          >
+                            <Stack spacing={0.8}>
+                              {parent.children.map((child) => {
+                                const isChildFull = accessState[child.id] === "full";
+                                return (
+                                  <Box
+                                    key={child.id}
+                                    sx={{
+                                      py: 0.8,
+                                      px: 1.5,
+                                      borderRadius: 1.5,
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      backgroundColor: isChildFull ? "white" : "transparent",
+                                      border: isChildFull ? "1px solid" : "1px dashed",
+                                      borderColor: isChildFull
+                                        ? "rgba(109, 42, 143, 0.3)"
+                                        : "neutral.border",
+                                      boxShadow: isChildFull
+                                        ? "0px 1px 3px rgba(109, 42, 143, 0.06)"
+                                        : "none",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                  >
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                      <SubdirectoryArrowRightIcon
+                                        sx={{
+                                          fontSize: 16,
+                                          color: isChildFull
+                                            ? "primary.main"
+                                            : "text.disabled",
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={isChildFull ? 600 : 500}
+                                        color={isChildFull ? "text.primary" : "text.secondary"}
+                                        sx={{ fontSize: "0.82rem" }}
+                                      >
+                                        {child.pageName}
+                                      </Typography>
+                                    </Box>
+
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                      <Switch
+                                        size="small"
+                                        color="primary"
+                                        checked={isChildFull}
+                                        onChange={() =>
+                                          handleToggleAccess(
+                                            child,
+                                            accessState[child.id] || "none"
+                                          )
+                                        }
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        fontWeight={600}
+                                        color={isChildFull ? "primary.main" : "text.secondary"}
+                                        sx={{ minWidth: 22 }}
+                                      >
+                                        {isChildFull ? "On" : "Off"}
+                                      </Typography>
+                                    </Stack>
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          </Box>
+                        </Collapse>
+                      )}
                     </Box>
                   );
                 })}

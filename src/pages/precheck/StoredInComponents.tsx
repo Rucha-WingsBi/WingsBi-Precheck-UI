@@ -110,7 +110,6 @@ interface StoredComponent {
 }
 
 const ALL_STORED_IN_EXPORT_COLUMNS = [
-  { key: "sr", label: "Sr.No" },
   { key: "qrCodeNumber", label: "QRCode ID" },
   { key: "productionOrderNumber", label: "PO Number" },
   { key: "projectNumber", label: "Project Number" },

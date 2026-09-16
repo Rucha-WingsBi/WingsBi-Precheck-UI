@@ -245,6 +245,7 @@ function DrawingDetailsStep({
                   openOnFocus={true}
                   selectOnFocus={true}
                   forcePopupIcon={true}
+                  ListboxProps={{ style: { maxHeight: "300px" } }}
                   options={Array.isArray(poNumbers) ? poNumbers : []}
                   getOptionLabel={(option) =>
                     typeof option === "string"
@@ -411,6 +412,7 @@ function DrawingDetailsStep({
                   openOnFocus={true}
                   selectOnFocus={true}
                   forcePopupIcon={true}
+                  ListboxProps={{ style: { maxHeight: "300px" } }}
                   getOptionLabel={(option) =>
                     typeof option === "string" ? option : option.lnItemCode || ""
                   }
@@ -541,6 +543,7 @@ function DrawingDetailsStep({
                   openOnFocus={true}
                   selectOnFocus={true}
                   forcePopupIcon={true}
+                  ListboxProps={{ style: { maxHeight: "300px" } }}
                   getOptionLabel={(option) =>
                     typeof option === "string" ? option : option.drawingNumber || ""
                   }
@@ -603,7 +606,7 @@ function DrawingDetailsStep({
                     const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
 
                     const details = [
-                      lnCode ? `LN Code: ${lnCode}` : null,
+                      lnCode ? `LN: ${lnCode}` : null,
                       nomenclature,
                       compType,
                     ].filter(Boolean).join(" | ");
@@ -909,6 +912,7 @@ function DrawingDetailsStep({
                     if (searchLower === selectedDrw) return options;
                     return options.filter((option) =>
                       option.drawingNumber?.toLowerCase().includes(searchLower) ||
+                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
                       option.nomenclature?.toLowerCase().includes(searchLower),
                     );
                   }}
@@ -939,6 +943,49 @@ function DrawingDetailsStep({
                       setValue("partAssemblyId", "");
                     }
                   }}
+                  renderOption={(props, option) => {
+                    const { key, ...optionProps } = props;
+                    const drawingNo = typeof option === "string" ? option : (option.drawingNumber || option.lnItemCode || "");
+                    const lnCode = typeof option === "string" ? "" : option.lnItemCode;
+                    const nomenclature = typeof option === "string" ? "" : option.nomenclature;
+                    const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
+
+                    const details = [
+                      lnCode ? `LN: ${lnCode}` : null,
+                      nomenclature,
+                      compType,
+                    ].filter(Boolean).join(" | ");
+
+                    return (
+                      <li {...optionProps} key={key}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            py: 0.5,
+                            width: "100%",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight="700"
+                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                          >
+                            {drawingNo}
+                          </Typography>
+                          {details && (
+                            <Typography
+                              variant="caption"
+                              sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: "#64748B" }}
+                            >
+                              {details}
+                            </Typography>
+                          )}
+                        </Box>
+                      </li>
+                    );
+                  }}
+                  ListboxProps={{ style: { maxHeight: "300px" } }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -1235,6 +1282,7 @@ function DrawingDetailsStep({
                     if (searchLower === selectedDrw) return options;
                     return options.filter((option) =>
                       option.drawingNumber?.toLowerCase().includes(searchLower) ||
+                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
                       option.nomenclature?.toLowerCase().includes(searchLower),
                     );
                   }}
@@ -1265,6 +1313,49 @@ function DrawingDetailsStep({
                       setValue("partAssemblyId", "");
                     }
                   }}
+                  renderOption={(props, option) => {
+                    const { key, ...optionProps } = props;
+                    const drawingNo = typeof option === "string" ? option : (option.drawingNumber || option.lnItemCode || "");
+                    const lnCode = typeof option === "string" ? "" : option.lnItemCode;
+                    const nomenclature = typeof option === "string" ? "" : option.nomenclature;
+                    const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
+
+                    const details = [
+                      lnCode ? `LN: ${lnCode}` : null,
+                      nomenclature,
+                      compType,
+                    ].filter(Boolean).join(" | ");
+
+                    return (
+                      <li {...optionProps} key={key}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            py: 0.5,
+                            width: "100%",
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight="700"
+                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                          >
+                            {drawingNo}
+                          </Typography>
+                          {details && (
+                            <Typography
+                              variant="caption"
+                              sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: "#64748B" }}
+                            >
+                              {details}
+                            </Typography>
+                          )}
+                        </Box>
+                      </li>
+                    );
+                  }}
+                  ListboxProps={{ style: { maxHeight: "300px" } }}
                   renderInput={(params) => (
                     <TextField
                       {...params}

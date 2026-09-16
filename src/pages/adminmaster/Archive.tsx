@@ -212,10 +212,15 @@ const Archive: React.FC = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="h4" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <ArchiveIcon />
-        Archive - Historical Precheck Data
-      </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.main", display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ArchiveIcon />
+          Archive - Historical Precheck Data
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+          Search, filter, and inspect historical precheck inspection records and archived component data.
+        </Typography>
+      </Box>
 
       {/* Filter Controls */}
       <Card sx={{ mb: 3 }}>

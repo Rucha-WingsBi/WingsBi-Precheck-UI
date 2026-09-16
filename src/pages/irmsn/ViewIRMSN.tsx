@@ -547,6 +547,9 @@ const ViewIRMSN: React.FC = () => {
             >
               IR/MSN List
             </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Search, filter, export, and manage Inspection Report (IR) and Memo Stage Number (MSN) records.
+            </Typography>
           </Box>
 
           <Stack direction="row" spacing={1.5} alignItems="center">

@@ -1234,16 +1234,21 @@ const ViewBarcode: React.FC = () => {
             mb: 2,
           }}
         >
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 700,
-              color: 'primary.main',
-              fontSize: { xs: '1.25rem', sm: '1.5rem' },
-            }}
-          >
-            QR Code List
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: 'primary.main',
+                fontSize: { xs: '1.25rem', sm: '1.5rem' },
+              }}
+            >
+              QR Code List
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Search, filter, export, and manage generated QR code numbers.
+            </Typography>
+          </Box>
 
           <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
             <Button
@@ -1341,19 +1346,6 @@ const ViewBarcode: React.FC = () => {
                   setSearchQuery(e.target.value);
                 }}
                 onKeyDown={handleQueryKeyDown}
-                error={!!error && !!searchQuery.trim()}
-                helperText={(searchQuery.trim() && (typeof error === 'string' ? error : error?.message)) || ''}
-                FormHelperTextProps={{
-                  sx: {
-                    position: 'absolute',
-                    top: '100%',
-                    left: 4,
-                    margin: 0,
-                    fontSize: '0.72rem',
-                    lineHeight: 1.2,
-                    whiteSpace: 'nowrap',
-                  },
-                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">

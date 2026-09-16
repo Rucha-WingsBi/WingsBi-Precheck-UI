@@ -21,7 +21,14 @@ export interface UserRole {
 }
 export interface Department {
   id: number;
-  name: string;
+  name?: string;
+  departmentName?: string;
+  description?: string | null;
+  createdBy?: number | null;
+  createdDate?: string | null;
+  modifiedBy?: number | null;
+  modifiedDate?: string | null;
+  isActive?: boolean;
 }
 
 export interface User {

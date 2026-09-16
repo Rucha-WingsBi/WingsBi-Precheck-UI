@@ -44,11 +44,33 @@ import {
   useDeleteDepartment,
   useAddDepartment,
   usePageAccess,
+  useUsers,
 } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import EditRoleDrawer from "./components/EditRoleDrawer";
+
+const getUserName = (userId: number | null | undefined, usersList: any[]) => {
+  if (!userId) return "-";
+  const found = usersList.find((u: any) => u.id === userId || u.userId === String(userId));
+  return found ? found.userName || found.email || `User #${userId}` : `User #${userId}`;
+};
+
+const formatDate = (dateStr: string | null | undefined) => {
+  if (!dateStr || dateStr.startsWith("0001-01-01")) return "-";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "-";
+  }
+};
 
 interface UserRoleInput {
   id?: number;
@@ -427,12 +449,14 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
 
 const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
   const { data: departments = [], isLoading, error } = useDepartments();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddDepartment();
   const updateMutation = useUpdateDepartment();
   const deleteMutation = useDeleteDepartment();
 
   const [open, setOpen] = useState(false);
   const [departmentName, setDepartmentName] = useState("");
+  const [description, setDescription] = useState("");
   const [editingDepartment, setEditingDepartment] = useState<any>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -443,9 +467,11 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
     if (dept) {
       setEditingDepartment(dept);
       setDepartmentName(dept.name || dept.departmentName || "");
+      setDescription(dept.description || "");
     } else {
       setEditingDepartment(null);
       setDepartmentName("");
+      setDescription("");
     }
     setApiError(null);
     setOpen(true);
@@ -467,12 +493,14 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
         await updateMutation.mutateAsync({
           id: editingDepartment.id,
           departmentName,
+          description: description || null,
           modifiedBy: currentUserId,
         });
         showSnackbar("Department updated successfully");
       } else {
         await addMutation.mutateAsync({
           departmentName,
+          description: description || null,
           createdBy: currentUserId,
         });
         showSnackbar("Department added successfully");
@@ -512,7 +540,7 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
     {
       field: "srNo",
       headerName: "Sr No",
-      width: 110,
+      width: 100,
       type: "number",
       headerAlign: "left",
       align: "left",
@@ -521,22 +549,41 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
       field: "name",
       headerName: "Department Name",
       flex: 1,
-      minWidth: 180,
+      minWidth: 150,
       renderCell: (params) => params.row.name || params.row.departmentName || "-",
     },
     {
+      field: "description",
+      headerName: "Description",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => params.row.description || "-",
+    },
+    {
+      field: "createdBy",
+      headerName: "Created By",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => getUserName(params.row.createdBy, users),
+    },
+    {
       field: "createdDate",
-      headerName: "Last Active",
-      width: 170,
-      renderCell: (params) => {
-        if (!params.row.createdDate && !params.row.modifiedDate) return "-";
-        const dateVal = params.row.modifiedDate || params.row.createdDate;
-        return new Date(dateVal).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
-      },
+      headerName: "Created Date",
+      width: 135,
+      renderCell: (params) => formatDate(params.row.createdDate),
+    },
+    {
+      field: "modifiedBy",
+      headerName: "Modified By",
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => getUserName(params.row.modifiedBy, users),
+    },
+    {
+      field: "modifiedDate",
+      headerName: "Modified Date",
+      width: 135,
+      renderCell: (params) => formatDate(params.row.modifiedDate),
     },
     {
       field: "actions",
@@ -609,14 +656,25 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
           {editingDepartment ? "Edit Department" : "Add Department"}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Department Name"
-            fullWidth
-            value={departmentName}
-            onChange={(e) => setDepartmentName(e.target.value)}
-          />
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Department Name"
+              fullWidth
+              value={departmentName}
+              onChange={(e) => setDepartmentName(e.target.value)}
+            />
+            <TextField
+              label="Description (Optional)"
+              fullWidth
+              multiline
+              rows={2}
+              size="small"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
@@ -712,6 +770,9 @@ export default function RoleManagement() {
             }}
           >
             Role Management
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            Configure user roles, department structures and page access permissions.
           </Typography>
         </Box>
 

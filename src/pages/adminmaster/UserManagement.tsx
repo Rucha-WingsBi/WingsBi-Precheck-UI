@@ -646,6 +646,9 @@ export default function UserManagement() {
           >
             Users Management
           </Typography>
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            Manage system users, credentials, role assignments, and permissions.
+          </Typography>
         </Box>
 
         {userRole === "Admin" && (

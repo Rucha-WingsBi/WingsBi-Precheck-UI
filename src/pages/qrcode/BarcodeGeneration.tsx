@@ -1722,7 +1722,9 @@ export default function BarcodeGeneration() {
           >
             New QR Code
           </Typography>
-
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            Generate, preview, and print QR codes and barcodes for components and materials.
+          </Typography>
         </Box>
 
         <>

@@ -48,7 +48,7 @@ interface AssemblyOption {
   lnItemCode?: string;
 }
 
-const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
+const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,7 +59,6 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
     assemblySearchResults,
     isBomLoading,
     isSearchingAssembly,
-    isExporting,
     error,
     selectedAssemblyNumber,
   } = useSelector((state: RootState) => state.sop);
@@ -100,12 +99,11 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
         return prev;
       });
       setValue("assemblyNumber", dwgTrimmed);
-      dispatch(setSelectedAssemblyNumber(dwgTrimmed));
-      if (!bomData || bomData.length === 0 || bomData[0]?.parentDrawingNumber !== dwgTrimmed) {
+      if (!bomData || bomData.length === 0) {
         dispatch(getBomDetails(dwgTrimmed));
       }
     }
-  }, [location.state, selectedAssemblyNumber, dispatch, setValue, bomData]);
+  }, [location.state?.drawingNumber, selectedAssemblyNumber, dispatch, setValue]);
 
   // Column configuration
   const columns = [
@@ -282,26 +280,22 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
     }
   };
 
-  const handleExport = () => {
-    const assemblyNumber =
-      selectedAssembly?.drawingNumber || selectedAssemblyNumber;
-    if (assemblyNumber) {
-      dispatch(exportBomDetails(assemblyNumber));
-    }
-  };
-
   const handleReset = () => {
     reset();
     setSelectedAssembly(null);
     setAssemblyInputValue("");
     dispatch(clearBomData());
     dispatch(clearAssemblySearchResults());
+    dispatch(setSelectedAssemblyNumber(null));
+    if (location.state?.drawingNumber) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
   };
 
   return (
     <Box sx={{ width: "100%" }}>
       {/* Error Alert */}
-      {error && (
+      {!hideHeader && error && (
         <Alert severity="error" sx={{ mb: 1.5, borderRadius: "8px" }} onClose={() => dispatch(clearError())}>
           {error}
         </Alert>
@@ -317,9 +311,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = () => {
         isSearchingAssembly={isSearchingAssembly}
         handleSearch={handleSearch}
         handleReset={handleReset}
-        handleExport={handleExport}
         isBomLoading={isBomLoading}
-        isExporting={isExporting}
         hasBomData={bomData && bomData.length > 0}
       />
 

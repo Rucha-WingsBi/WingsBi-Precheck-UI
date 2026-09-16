@@ -37,6 +37,8 @@ import {
   RadioGroup,
   Radio,
   Checkbox,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Visibility as VisibilityIcon,
@@ -120,7 +122,6 @@ const CONSUMED_IN_COLUMNS: ColumnDef[] = [
 ];
 
 const ALL_PRECHECK_EXPORT_COLUMNS = [
-  { key: "sr", label: "SR" },
   { key: "productionOrderNumber", label: "PO Number" },
   { key: "lnItemCode", label: "LN Item Code" },
   { key: "drawingNumber", label: "Drawing No." },
@@ -136,7 +137,6 @@ const ALL_PRECHECK_EXPORT_COLUMNS = [
 ];
 
 const ALL_CONSUMED_EXPORT_COLUMNS = [
-  { key: "sr", label: "Sr No" },
   { key: "idNumber", label: "ID Number" },
   { key: "consumedInDrawingNumber", label: "Consumed IN Drawing" },
   { key: "quantity", label: "Quantity" },
@@ -163,6 +163,16 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   const { loading: isConsumedLoading, isDownloading } = useSelector((state: RootState) => state.qrcode);
   const [isExportLoading, setIsExportLoading] = useState(false);
   const isExporting = isExportLoading || isDownloading;
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
   // ── Precheck tab filter states ─────────────────────────────────────────────
   const [combinedSearch, setCombinedSearch] = useState("");        // PO / Drawing / LN search
@@ -200,13 +210,35 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   }, [productionSeriesData]);
 
   const drawingOptions = useMemo(() => {
-    if (!allDrawingNumbers) return [];
-    return allDrawingNumbers
-      .map((item: any) => (typeof item === "string" ? item : item.drawingNumber || item.lnItemCode))
-      .filter(Boolean);
+    if (!allDrawingNumbers || !Array.isArray(allDrawingNumbers)) return [];
+    return allDrawingNumbers;
   }, [allDrawingNumbers]);
 
-  const poOptions = drawingOptions;
+  const lnOptions = drawingOptions;
+
+  const poOptions = useMemo(() => {
+    if (poNumbers && Array.isArray(poNumbers) && poNumbers.length > 0) return poNumbers;
+    return drawingOptions;
+  }, [poNumbers, drawingOptions]);
+
+  const consumedAssemblyOptions = useMemo(() => {
+    if (selectedDrawing.length > 0) {
+      const selectedStr = selectedDrawing[0].trim().toLowerCase();
+      const matchedDrawing = (allDrawingNumbers || []).find(
+        (d: any) =>
+          d.drawingNumber?.trim().toLowerCase() === selectedStr ||
+          d.lnItemCode?.trim().toLowerCase() === selectedStr
+      );
+      if (
+        matchedDrawing?.parentDrawingNumbers &&
+        Array.isArray(matchedDrawing.parentDrawingNumbers) &&
+        matchedDrawing.parentDrawingNumbers.length > 0
+      ) {
+        return matchedDrawing.parentDrawingNumbers;
+      }
+    }
+    return poOptions;
+  }, [selectedDrawing, allDrawingNumbers, poOptions]);
 
   // ── Row expansion (precheck tab) ───────────────────────────────────────────
   const [expandedRows, setExpandedRows] = useState<Set<number | string>>(new Set());
@@ -337,9 +369,17 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           setTotalRecords(0);
         }
       })
-      .catch(() => {
+      .catch((err: any) => {
         setPrecheckResults([]);
         setTotalRecords(0);
+        const msg = err?.message || err?.response?.data?.message;
+        if (msg) {
+          setSnackbar({
+            open: true,
+            message: msg,
+            severity: "error",
+          });
+        }
       });
   };
 
@@ -374,6 +414,27 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
       }
     }
   }, [debouncedIdNumber]);
+
+  // Auto-populate parent drawing in Assembly No dropdown for Consumed In tab when a drawing is selected
+  useEffect(() => {
+    if (activeTab === "consumed" && selectedDrawing.length > 0) {
+      const selectedStr = selectedDrawing[0].trim().toLowerCase();
+      const matchedDrawing = (allDrawingNumbers || []).find(
+        (d: any) =>
+          d.drawingNumber?.trim().toLowerCase() === selectedStr ||
+          d.lnItemCode?.trim().toLowerCase() === selectedStr
+      );
+      if (
+        matchedDrawing?.parentDrawingNumbers &&
+        Array.isArray(matchedDrawing.parentDrawingNumbers) &&
+        matchedDrawing.parentDrawingNumbers.length > 0
+      ) {
+        if (selectedPO.length === 0 || !matchedDrawing.parentDrawingNumbers.includes(selectedPO[0])) {
+          setSelectedPO([matchedDrawing.parentDrawingNumbers[0]]);
+        }
+      }
+    }
+  }, [selectedDrawing, allDrawingNumbers, activeTab]);
 
   const isPrecheckDropdownSelected = selectedProductionSeries.length > 0 || selectedStatus.length > 0 || !!dateFrom || !!dateTo;
   const isConsumedDropdownSelected = selectedLnItemCode.length > 0 && selectedDrawing.length > 0 && selectedProductionSeries.length > 0;
@@ -415,7 +476,17 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           setConsumedResults([]);
         }
       })
-      .catch(() => setConsumedResults([]));
+      .catch((err: any) => {
+        setConsumedResults([]);
+        const msg = err?.message || err?.response?.data?.message;
+        if (msg) {
+          setSnackbar({
+            open: true,
+            message: msg,
+            severity: "error",
+          });
+        }
+      });
   };
 
   const handleExport = () => {
@@ -438,7 +509,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
-        .catch((err) => alert(err.message || "Failed to export precheck details"))
+        .catch((err: any) => {
+          setSnackbar({
+            open: true,
+            message: err?.message || err?.response?.data?.message || "Failed to export precheck details",
+            severity: "error",
+          });
+        })
         .finally(() => setIsExportLoading(false));
     } else {
       const selectedCols =
@@ -458,7 +535,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
 
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
-        .catch((err) => alert(err.message || "Failed to export consumed details"))
+        .catch((err: any) => {
+          setSnackbar({
+            open: true,
+            message: err?.message || err?.response?.data?.message || "Failed to export consumed details",
+            severity: "error",
+          });
+        })
         .finally(() => setIsExportLoading(false));
     }
   };
@@ -735,6 +818,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         boxSizing: "border-box",
       }}
     >
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
       {/* 1. Page Header */}
       {!hideHeader && (
         <Stack
@@ -756,28 +853,35 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             >
               Precheck History
             </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              {activeTab === "consumed"
+                ? "Search, filter, and inspect past precheck inspection records and status reports."
+                : "Search, filter, and inspect precheck inspection records and status reports."}
+            </Typography>
           </Box>
 
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={isExporting ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
-            onClick={handleOpenExportDialog}
-            disabled={isExporting || !hasAppliedFilters}
-            sx={{
-              height: 32,
-              borderRadius: "6px",
-              borderColor: "grey.300",
-              color: "text.secondary",
-              textTransform: "none",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              backgroundColor: "background.paper",
-              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
-            }}
-          >
-            Export
-          </Button>
+          {activeTab === "precheck" && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={isExporting ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
+              onClick={handleOpenExportDialog}
+              disabled={isExporting || !hasAppliedFilters}
+              sx={{
+                height: 32,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                backgroundColor: "background.paper",
+                "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
+              }}
+            >
+              Export
+            </Button>
+          )}
         </Stack>
       )}
 
@@ -1032,10 +1136,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               {/* 1. LN Item Code (Searchable Autocomplete) */}
               <Autocomplete
                 size="small"
-                options={lnItemCodeOptions}
+                options={lnOptions}
                 value={selectedLnItemCode.length > 0 ? selectedLnItemCode[0] : null}
                 onChange={(_, newValue) => {
-                  setSelectedLnItemCode(newValue ? [newValue] : []);
+                  if (newValue && typeof newValue !== "string") {
+                    const lnVal = newValue.lnItemCode || newValue.drawingNumber;
+                    setSelectedLnItemCode(lnVal ? [String(lnVal)] : []);
+                    if (newValue.drawingNumber) {
+                      setSelectedDrawing([String(newValue.drawingNumber)]);
+                    }
+                  } else if (typeof newValue === "string") {
+                    setSelectedLnItemCode([newValue]);
+                  } else {
+                    setSelectedLnItemCode([]);
+                  }
                   setPage(0);
                 }}
                 onInputChange={(_, newInputValue, reason) => {
@@ -1043,12 +1157,49 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     setLnSearchText(newInputValue);
                   }
                 }}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.lnItemCode || option?.drawingNumber || ""
+                }
                 filterOptions={(options, { inputValue }) => {
                   if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
                   const searchLower = inputValue.toLowerCase().trim();
                   return options
-                    .filter((opt) => String(opt).toLowerCase().includes(searchLower))
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.lnItemCode || opt?.drawingNumber || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
                     .slice(0, 100);
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const lnCode = typeof option === "string" || typeof option === "number" ? String(option) : option?.lnItemCode || option?.drawingNumber || "";
+                  const dwgNum = typeof option === "object" ? option?.drawingNumber : "";
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
+                          {lnCode}
+                        </Typography>
+                        {dwgNum ? (
+                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
+                            Drawing: {dwgNum}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "28px !important",
+                      py: "3px !important",
+                      px: "10px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -1067,7 +1218,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     }}
                   />
                 )}
-                sx={{ flex: "0 0 210px", minWidth: 170 }}
+                sx={{ flex: "1 1 140px", minWidth: 110 }}
               />
 
               {/* 2. Drawing Number (Searchable Autocomplete) */}
@@ -1076,8 +1227,17 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 options={drawingOptions}
                 value={selectedDrawing.length > 0 ? selectedDrawing[0] : null}
                 onChange={(_, newValue) => {
-                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
-                  setSelectedDrawing(val ? [String(val)] : []);
+                  if (newValue && typeof newValue !== "string") {
+                    const dwgVal = newValue.drawingNumber || newValue.lnItemCode;
+                    setSelectedDrawing(dwgVal ? [String(dwgVal)] : []);
+                    if (newValue.lnItemCode || newValue.lnitemcode) {
+                      setSelectedLnItemCode([String(newValue.lnItemCode || newValue.lnitemcode)]);
+                    }
+                  } else if (typeof newValue === "string") {
+                    setSelectedDrawing([newValue]);
+                  } else {
+                    setSelectedDrawing([]);
+                  }
                   setPage(0);
                 }}
                 getOptionLabel={(option: any) =>
@@ -1092,6 +1252,37 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                       return label.toLowerCase().includes(searchLower);
                     })
                     .slice(0, 100);
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const dwgNum = typeof option === "string" || typeof option === "number" ? String(option) : option?.drawingNumber || option?.lnItemCode || "";
+                  const lnCode = typeof option === "object" ? option?.lnItemCode : "";
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
+                          {dwgNum}
+                        </Typography>
+                        {lnCode ? (
+                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
+                            LN: {lnCode}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "28px !important",
+                      py: "3px !important",
+                      px: "10px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -1110,7 +1301,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     }}
                   />
                 )}
-                sx={{ flex: "0 0 230px", minWidth: 180 }}
+                sx={{ flex: "1 1 145px", minWidth: 115 }}
               />
 
               {/* 3. Production Series (Searchable Autocomplete) */}
@@ -1136,6 +1327,28 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     })
                     .slice(0, 100);
                 }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const label = typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionSeries || "";
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: "#101828", fontSize: "0.82rem" }}>
+                        {label}
+                      </Typography>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "26px !important",
+                      py: "2px !important",
+                      px: "8px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -1153,13 +1366,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     }}
                   />
                 )}
-                sx={{ flex: "0 0 180px", minWidth: 140 }}
+                sx={{ flex: "1 1 115px", minWidth: 90 }}
               />
 
               {/* 4. Assembly No (Searchable Autocomplete) */}
               <Autocomplete
                 size="small"
-                options={poOptions}
+                options={consumedAssemblyOptions}
                 value={selectedPO.length > 0 ? selectedPO[0] : null}
                 onChange={(_, newValue) => {
                   const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
@@ -1184,6 +1397,41 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     })
                     .slice(0, 100);
                 }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const poNum = typeof option === "string" || typeof option === "number" ? String(option) : option?.productionOrderNumber || option?.drawingNumber || "";
+                  const lnCode = typeof option === "object" ? option?.lnItemCode : "";
+                  const dwgNum = typeof option === "object" ? option?.drawingNumber : "";
+                  const nom = typeof option === "object" ? option?.nomenclature : "";
+                  const compType = typeof option === "object" ? option?.componentType : "";
+                  const sub = [lnCode ? `LN: ${lnCode}` : null, dwgNum && dwgNum !== poNum ? `Drawing: ${dwgNum}` : null, nom, compType].filter(Boolean).join(" | ");
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
+                          {poNum}
+                        </Typography>
+                        {sub ? (
+                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
+                            {sub}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "28px !important",
+                      py: "3px !important",
+                      px: "10px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -1201,7 +1449,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     }}
                   />
                 )}
-                sx={{ flex: "0 0 190px", minWidth: 150 }}
+                sx={{ flex: "1 1 125px", minWidth: 100 }}
               />
 
               {/* 5. ID Number */}
@@ -1226,8 +1474,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   ) : null,
                 }}
                 sx={{
-                  flex: "0 0 150px",
-                  minWidth: 120,
+                  flex: "1 1 95px",
+                  minWidth: 75,
                   "& .MuiOutlinedInput-root": {
                     borderRadius: "8px",
                     fontSize: "0.825rem",
@@ -1245,7 +1493,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 onClick={handleApplyFilters}
                 disabled={!isConsumedDropdownSelected || isConsumedLoading}
                 sx={{
-                  flex: "0 0 auto",
+                  flexShrink: 0,
                   backgroundColor: "primary.main",
                   color: "#fff",
                   fontWeight: 600,
@@ -1268,7 +1516,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 variant="text"
                 onClick={handleClearAll}
                 sx={{
-                  flex: "0 0 auto",
+                  flexShrink: 0,
                   color: "#667085",
                   fontWeight: 600,
                   fontSize: "0.85rem",

@@ -95,9 +95,14 @@ export default function Settings() {
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography variant="h4" gutterBottom component="h2">
-        Settings
-      </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.main" }}>
+          Settings
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+          Manage your user profile details and security credentials.
+        </Typography>
+      </Box>
 
       <Grid container spacing={3}>
         {/* User Profile Section */}

@@ -5,45 +5,45 @@ import type { RootState } from '../store/store';
 import { usePageAccess } from '../hooks/useMasterData';
 import { isPageAccessible } from '../utils/accessUtils';
 
-// Map routes to API page names
-const routeToPageMap: Record<string, string> = {
-  '/irmsn/generate': 'New IR/MSN',
-  '/irmsn/view': 'IR/MSN List',
-  '/qrcode/generate': 'New QR Code',
-  '/qrcode/generate-new': 'Generate STD QR Code',
-  '/qrcode/view': 'QR Code List',
-  '/precheck/view': 'Precheck History',
-  '/precheck/make': 'Make Precheck',
-  '/precheck/store-in': 'Store In',
-  '/precheck/stored-components': 'Stored In Components',
-  '/precheck/available-in-store': 'Available In Store',
-  '/precheck/available-store': 'Available In Store',
-  '/precheck/consumed': 'View Consumed In',
-  '/precheck/view-consumed': 'View Consumed In',
+// Map routes to API page names (supports multiple page name aliases)
+const routeToPageMap: Record<string, string | string[]> = {
+  '/irmsn/generate': ['New IR/MSN', 'Create'],
+  '/irmsn/view': ['IR/MSN List', 'View All IR/MSN'],
+  '/qrcode/generate': ['New QR Code', 'Generate QR Code'],
+  '/qrcode/generate-new': ['Generate STD QR Code', 'Generate QR Code'],
+  '/qrcode/view': ['QR Code List', 'View QR Code'],
+  '/precheck/view': ['Precheck History', 'View Precheck'],
+  '/precheck/make': ['Make Precheck'],
+  '/precheck/store-in': ['Store In'],
+  '/precheck/stored-components': ['Stored In Components'],
+  '/precheck/available-in-store': ['Available In Store'],
+  '/precheck/available-store': ['Available In Store'],
+  '/precheck/consumed': ['View Consumed In'],
+  '/precheck/view-consumed': ['View Consumed In'],
 
-  '/precheck/pending': 'Pending For Precheck',
-  '/production-order/upload': 'Production Order Management',
-  '/production-order/view': 'View Order Details',
-  '/production-order/edit': 'Production Order Management',
-  '/production-order': 'Production Order Management',
-  '/adminmaster/archive': 'Archive',
-  '/adminmaster/updatecomponents': 'Update Components',
-  '/adminmaster/update-components': 'Update Components',
-  '/adminmaster/usermanagement': 'User Management',
-  '/adminmaster/user-management': 'User Management',
-  '/adminmaster/rolemanagement': 'Role Management',
-  '/adminmaster/role-management': 'Role Management',
-  '/adminmaster/addcomponents': 'Master Data',
-  '/adminmaster/add-components': 'Master Data',
-  '/materialrequisition': 'Material Requisition',
-  '/material-requisition': 'Material Requisition',
-  '/scriptexecutor': 'Bulk Import',
-  '/script-executor': 'Bulk Import',
-  '/sop/view': 'Assembly Explorer',
-  '/sop/viewBOM': 'View BOM Details',
-  '/components/view-assembly': 'View Components',
-  '/components/assembly': 'View Components',
-  '/components': 'View Components',
+  '/precheck/pending': ['Pending For Precheck'],
+  '/production-order/upload': ['Upload Orders', 'Production Order Management', 'Manage Orders', 'Production Order'],
+  '/production-order/view': ['View Order Details', 'Upload Orders', 'Production Order Management', 'Manage Orders', 'Production Order'],
+  '/production-order/edit': ['Upload Orders', 'Production Order Management', 'Manage Orders', 'Production Order', 'Pending For Precheck'],
+  '/production-order': ['Upload Orders', 'Production Order Management', 'Manage Orders', 'Production Order'],
+  '/adminmaster/archive': ['Archive'],
+  '/adminmaster/updatecomponents': ['Update Components'],
+  '/adminmaster/update-components': ['Update Components'],
+  '/adminmaster/usermanagement': ['User Management'],
+  '/adminmaster/user-management': ['User Management'],
+  '/adminmaster/rolemanagement': ['Role Management'],
+  '/adminmaster/role-management': ['Role Management'],
+  '/adminmaster/addcomponents': ['Master Data', 'Add Components'],
+  '/adminmaster/add-components': ['Master Data', 'Add Components'],
+  '/materialrequisition': ['Material Requisition'],
+  '/material-requisition': ['Material Requisition'],
+  '/scriptexecutor': ['Bulk Import', 'Script Executor'],
+  '/script-executor': ['Bulk Import', 'Script Executor'],
+  '/sop/view': ['Assembly Explorer', 'View SOP'],
+  '/sop/viewBOM': ['View BOM Details'],
+  '/components/view-assembly': ['View Components'],
+  '/components/assembly': ['View Components'],
+  '/components': ['View Components'],
 };
 
 interface ProtectedRouteProps {
@@ -92,8 +92,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     .sort((a, b) => b.length - a.length)[0];
 
   if (matchingRoute) {
-    const pageName = routeToPageMap[matchingRoute];
-    let hasAccess = isPageAccessible(pageAccessData, pageName);
+    const rawPageNames = routeToPageMap[matchingRoute];
+    const pageNames = Array.isArray(rawPageNames) ? rawPageNames : [rawPageNames];
+    let hasAccess = pageNames.some((pName) => isPageAccessible(pageAccessData, pName));
 
     // Bypass page access for Update Components page
     if (matchingRoute === '/adminmaster/updatecomponents') {

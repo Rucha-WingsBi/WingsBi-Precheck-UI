@@ -1311,17 +1311,21 @@ const PendingForPrecheck: React.FC = () => {
             gap: 2,
           }}
         >
-          {/* Heading */}
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 600,
-              color: "primary.main",
-              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-            }}
-          >
-            Pending For Precheck
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              }}
+            >
+              Pending For Precheck
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Review production orders and component lists awaiting precheck clearance.
+            </Typography>
+          </Box>
 
           {/* Toggle Buttons */}
           <ToggleButtonGroup

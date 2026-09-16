@@ -296,7 +296,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
 
       const response = await api.post("/api/Common/GetAllAssemblyDrawingMappings", payload);
       const data = response.data || [];
-      const containsInactive = data.some((m: any) => m.drawingNumberStatus === false);
+      const containsInactive = data.some((m: any) => m.isActive === false);
       if (containsInactive) {
         setSnackbar({
           open: true,
@@ -304,7 +304,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           severity: "warning",
         });
       }
-      const filteredData = data.filter((m: any) => m.drawingNumberStatus !== false);
+      const filteredData = data.filter((m: any) => m.isActive !== false);
       setSearchResults(filteredData);
 
       // 2. Resolve drawing details locally for expand view
@@ -350,7 +350,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
 
       const response = await api.post("/api/Common/GetAllAssemblyDrawingMappings", payload);
       const data = response.data || [];
-      const containsInactive = data.some((m: any) => m.drawingNumberStatus === false);
+      const containsInactive = data.some((m: any) => m.isActive === false);
       if (containsInactive) {
         setSnackbar({
           open: true,
@@ -358,7 +358,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           severity: "warning",
         });
       }
-      const filteredData = data.filter((m: any) => m.drawingNumberStatus !== false);
+      const filteredData = data.filter((m: any) => m.isActive !== false);
       setSearchResults(filteredData);
 
       // Refresh details locally
@@ -399,6 +399,20 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       delete: "/api/Common/RemoveChildDrawing",
     };
     return await api.post(paths[action], payload);
+  };
+
+  const getFriendlyErrorMessage = (rawMessage?: string, fallbackMessage: string = "An error occurred"): string => {
+    if (!rawMessage) return fallbackMessage;
+    if (typeof rawMessage === "string") {
+      if (rawMessage.toLowerCase().includes("no active mapping found for the given drawing")) {
+        return "No active mapping found for the specified drawing, parent drawing, and position number.";
+      }
+      if (rawMessage.startsWith("Error executing scalar query:")) {
+        const cleaned = rawMessage.replace(/^Error executing scalar query:\s*/i, "").trim();
+        return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : fallbackMessage;
+      }
+    }
+    return rawMessage;
   };
 
   // Actions
@@ -474,7 +488,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     } catch (err: any) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to add parent assembly.",
+        message: getFriendlyErrorMessage(err.response?.data?.message, "Failed to add parent assembly."),
         severity: "error",
       });
     } finally {
@@ -512,7 +526,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     } catch (err: any) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to update parent assembly.",
+        message: getFriendlyErrorMessage(err.response?.data?.message, "Failed to update parent assembly."),
         severity: "error",
       });
     } finally {
@@ -543,7 +557,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     } catch (err: any) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to delete parent assembly.",
+        message: getFriendlyErrorMessage(err.response?.data?.message, "Failed to delete parent assembly."),
         severity: "error",
       });
     } finally {
@@ -635,14 +649,19 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography
-            variant="h5"
-            color="primary.main"
-            fontWeight={700}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
-          >
-            Edit BOM Details
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              color="primary.main"
+              fontWeight={700}
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+            >
+              Edit BOM Details
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              View, search, and manage component assembly mappings and bill of materials.
+            </Typography>
+          </Box>
         </Box>
       )}
 
@@ -1054,6 +1073,12 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 }
               }}
               filterOptions={(options) => options}
+              loading={isSearchingParent}
+              noOptionsText={
+                (parentDrawingInput || "").trim().length < 3
+                  ? "Type at least 3 characters to search"
+                  : "No drawings found"
+              }
               renderOption={(props, option) => {
                 const opt = option as any;
                 const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
@@ -1072,8 +1097,17 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 <TextField
                   {...params}
                   label="Parent Drawing Number"
-                  placeholder="Select parent drawing"
+                  placeholder="Select or search parent drawing"
                   required
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingParent ? <CircularProgress color="inherit" size={18} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
                 />
               )}
             />
@@ -1105,6 +1139,12 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 }
               }}
               filterOptions={(options) => options}
+              loading={isSearchingChild}
+              noOptionsText={
+                (childDrawingInput || "").trim().length < 3
+                  ? "Type at least 3 characters to search"
+                  : "No drawings found"
+              }
               renderOption={(props, option) => {
                 const opt = option as any;
                 const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
@@ -1123,8 +1163,17 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 <TextField
                   {...params}
                   label="Child Drawing Number"
-                  placeholder="Select child drawing"
+                  placeholder="Type at least 3 characters..."
                   required
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingChild ? <CircularProgress color="inherit" size={18} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
                 />
               )}
             />

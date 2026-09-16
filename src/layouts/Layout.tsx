@@ -203,12 +203,18 @@ export default function Layout() {
       path: "/dashboard",
     },
     {
+      text: "Bulk Import",
+      pageName: "Script Executor",
+      icon: <CloudUploadIcon />,
+      path: "/scriptexecutor",
+    },
+    {
       text: "Production Order",
       icon: <ShoppingCartIcon />,
       path: "/production-order",
       subItems: [
         {
-          text: "Production Order Management",
+          text: "Manage Orders",
           pageName: "Upload Orders",
           icon: <AssignmentIcon />,
           path: "/production-order/upload",
@@ -277,7 +283,7 @@ export default function Layout() {
       ],
     },
     {
-      text: "SOP",
+      text: "Assembly",
       icon: <MenuBookIcon />,
       path: "/sop",
       subItems: [
@@ -301,12 +307,7 @@ export default function Layout() {
         },
       ],
     },
-    {
-      text: "Bulk Import",
-      pageName: "Script Executor",
-      icon: <CloudUploadIcon />,
-      path: "/scriptexecutor",
-    },
+    
     {
       text: "Admin",
       icon: <AdminPanelSettingsIcon />,
@@ -563,6 +564,9 @@ export default function Layout() {
                         color: location.pathname.startsWith(item.path)
                           ? "#6D2A8F"
                           : "text.primary",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       },
                     }}
                   />
@@ -638,8 +642,9 @@ export default function Layout() {
                               location.pathname === subItem.path
                                 ? "#6D2A8F"
                                 : "text.secondary",
-                            whiteSpace: "normal",
-                            wordBreak: "break-word",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                           },
                         }}
                       />

@@ -86,7 +86,6 @@ import ExcelUploadResultDialog from "./make-precheck/ExcelUploadResultDialog";
 import AddBomDrawingDialog from "./make-precheck/AddBomDrawingDialog";
 
 const MAKE_PRECHECK_EXPORT_COLUMNS = [
-  { key: "sr", label: "SR" },
   { key: "lnItemCode", label: "LN Item Code" },
   { key: "drawingNumber", label: "Drawing No." },
   { key: "nomenclature", label: "Nomenclature" },
@@ -102,6 +101,41 @@ const MAKE_PRECHECK_EXPORT_COLUMNS = [
   { key: "precheckStatus", label: "Precheck Status" },
   { key: "remarks", label: "Remarks" },
 ];
+
+const findMatchingDrawingInList = (
+  allDrawings: any[],
+  target: { drawingNumberId?: number; drawingNumber?: string; lnItemCode?: string }
+) => {
+  if (!allDrawings || allDrawings.length === 0 || !target) return null;
+
+  // 1. First priority: match by drawingNumberId / id
+  if (target.drawingNumberId) {
+    const byId = allDrawings.find(
+      (d: any) => d.id === target.drawingNumberId || d.drawingNumberId === target.drawingNumberId
+    );
+    if (byId) return byId;
+  }
+
+  // 2. Second priority: match by drawingNumber (exact string match, case-insensitive)
+  if (target.drawingNumber && String(target.drawingNumber).trim()) {
+    const targetDwgLower = String(target.drawingNumber).trim().toLowerCase();
+    const byDwg = allDrawings.find(
+      (d: any) => d.drawingNumber && String(d.drawingNumber).trim().toLowerCase() === targetDwgLower
+    );
+    if (byDwg) return byDwg;
+  }
+
+  // 3. Third priority: fallback to lnItemCode ONLY if drawingNumber is NOT specified
+  if (!target.drawingNumber && target.lnItemCode && String(target.lnItemCode).trim()) {
+    const targetLnLower = String(target.lnItemCode).trim().toLowerCase();
+    const byLn = allDrawings.find(
+      (d: any) => d.lnItemCode && String(d.lnItemCode).trim().toLowerCase() === targetLnLower
+    );
+    if (byLn) return byLn;
+  }
+
+  return null;
+};
 
 const MakePrecheck: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -493,13 +527,8 @@ const MakePrecheck: React.FC = () => {
 
       // Wait for master data to load
       if (allDrawingNumbers.length > 0 && productionSeriesData.length > 0) {
-        // Find matching drawing number (case-insensitive and trimmed)
-        const matchingDrawing = allDrawingNumbers.find(
-          (d: any) =>
-            d.drawingNumber &&
-            navigationState.drawingNumber &&
-            d.drawingNumber.trim().toLowerCase() === navigationState.drawingNumber.trim().toLowerCase(),
-        );
+        // Find matching drawing number using precise matching
+        const matchingDrawing = findMatchingDrawingInList(allDrawingNumbers, navigationState);
 
         // Find matching production series (case-insensitive and trimmed)
         const matchingProdSeries = productionSeriesData.find(
@@ -588,20 +617,19 @@ const MakePrecheck: React.FC = () => {
     dispatch,
   ]);
 
-  // Handle PO details from navigation state when fetched via usePODetails
+  // Handle PO details when fetched via usePODetails (for both navigation and manual selection)
   useEffect(() => {
-    const navState = location.state as any;
-    if (poDetailsData && !isClearedRef.current && navState?.productionOrderNumber) {
+    if (poDetailsData && !isClearedRef.current) {
       if (!selectedPO || selectedPO.productionOrderNumber === poDetailsData.productionOrderNumber) {
         setSelectedPO((prev) => (prev ? { ...poDetailsData, ...prev } : poDetailsData));
       }
 
-      // Map Production Series if not set yet
+      // Map Production Series if not set yet or lacks id
       if ((poDetailsData.productionSeries || poDetailsData.prodSeriesId) && (!selectedProductionSeries || !selectedProductionSeries.id)) {
         let matchingProdSeries = null;
         if (productionSeriesData && productionSeriesData.length > 0) {
           matchingProdSeries = productionSeriesData.find(
-            (ps) =>
+            (ps: any) =>
               (poDetailsData.prodSeriesId && ps.id === poDetailsData.prodSeriesId) ||
               (ps.productionSeries && poDetailsData.productionSeries && String(ps.productionSeries).trim().toLowerCase() === String(poDetailsData.productionSeries).trim().toLowerCase()),
           );
@@ -617,27 +645,20 @@ const MakePrecheck: React.FC = () => {
       }
 
       // Map ID Number if not set yet
+      const navState = location.state as any;
       const poStartId = poDetailsData.startIdNumber ?? poDetailsData.endIdNumber;
-      const targetId = navigationState?.startIdNumber ?? navigationState?.idNumber ?? poStartId;
+      const targetId = navState?.startIdNumber ?? navState?.idNumber ?? poStartId;
       if (targetId !== undefined && targetId !== null && !idNumber) {
         setIdNumber(targetId.toString());
       }
 
       // Map Drawing if not set yet or lacks id
-      if ((poDetailsData.drawingNumber || poDetailsData.lnItemCode) && (!selectedDrawing || !selectedDrawing.id)) {
-        let matchingDrawing = null;
-        if (allDrawingNumbers && allDrawingNumbers.length > 0) {
-          matchingDrawing = allDrawingNumbers.find(
-            (drawing) =>
-              (poDetailsData.drawingNumberId && drawing.id === poDetailsData.drawingNumberId) ||
-              (drawing.drawingNumber && poDetailsData.drawingNumber && drawing.drawingNumber.trim().toLowerCase() === poDetailsData.drawingNumber.trim().toLowerCase()) ||
-              (drawing.lnItemCode && poDetailsData.lnItemCode && drawing.lnItemCode.trim().toLowerCase() === poDetailsData.lnItemCode.trim().toLowerCase()),
-          );
-        }
+      if (poDetailsData.drawingNumber || poDetailsData.drawingNumberId || poDetailsData.lnItemCode) {
+        const matchingDrawing = findMatchingDrawingInList(allDrawingNumbers, poDetailsData);
 
         if (matchingDrawing) {
           setSelectedDrawing(matchingDrawing);
-        } else if (!selectedDrawing) {
+        } else if (!selectedDrawing || !selectedDrawing.id) {
           setSelectedDrawing({
             id: poDetailsData.drawingNumberId,
             drawingNumber: poDetailsData.drawingNumber || "",
@@ -661,17 +682,14 @@ const MakePrecheck: React.FC = () => {
 
   const validateFields = () => {
     // Check if mandatory fields are filled
-    const mandatoryFieldsFilled =
-      selectedDrawing?.drawingNumber &&
-      selectedProductionSeries?.id &&
-      idNumber;
-
-    // Check if the current combination is different from the previously loaded one
-    const hasDifferentCombination =
-      !hasLoadedData ||
-      selectedDrawing?.drawingNumber !== originalDrawingNumber ||
-      selectedProductionSeries?.id !== originalProdSeries ||
-      idNumber !== originalAssemblyNumber;
+    const drawingVal = selectedDrawing?.drawingNumber || (typeof selectedDrawing === "string" ? selectedDrawing : null);
+    const prodSeriesVal =
+      selectedProductionSeries?.id ||
+      selectedProductionSeries?.prodSeriesId ||
+      selectedProductionSeries?.productionSeriesId ||
+      selectedProductionSeries?.productionSeries ||
+      (typeof selectedProductionSeries === "string" ? selectedProductionSeries : null);
+    const mandatoryFieldsFilled = Boolean(drawingVal && prodSeriesVal && idNumber);
 
     // Check if ID Number is within valid range for the selected PO
     const isIdWithinRange =
@@ -679,12 +697,8 @@ const MakePrecheck: React.FC = () => {
       !idNumber ||
       parseInt(idNumber) <= selectedPO.endIdNumber;
 
-    // Enable button only if mandatory fields are filled AND
-    // either we haven't loaded data yet OR the combination is different AND
-    // the ID number is within valid range
-    setIsMakePrecheckEnabled(
-      mandatoryFieldsFilled && hasDifferentCombination && isIdWithinRange,
-    );
+    // Enable button whenever mandatory fields are filled and within range
+    setIsMakePrecheckEnabled(Boolean(mandatoryFieldsFilled && isIdWithinRange));
   };
 
   const handleMakePrecheck = async () => {
@@ -721,17 +735,25 @@ const MakePrecheck: React.FC = () => {
 
     try {
       setIsLoadingLocal(true);
-      // Disable the button immediately
       setHasLoadedData(true);
-      setOriginalDrawingNumber(selectedDrawing?.drawingNumber);
-      setOriginalProdSeries(selectedProductionSeries?.id);
+      setOriginalDrawingNumber(selectedDrawing?.drawingNumber || null);
+      setOriginalProdSeries(
+        selectedProductionSeries?.id ||
+        selectedProductionSeries?.prodSeriesId ||
+        selectedProductionSeries?.productionSeriesId ||
+        null
+      );
       setOriginalAssemblyNumber(activeIdNumber);
 
-      setIsMakePrecheckEnabled(false);
+      const drawingIdVal = selectedDrawing?.id ?? selectedDrawing?.drawingNumberId;
+      const prodSeriesIdVal =
+        selectedProductionSeries?.id ??
+        selectedProductionSeries?.prodSeriesId ??
+        selectedProductionSeries?.productionSeriesId;
 
       const payload = {
-        DrawingNumberId: selectedDrawing?.id,
-        ProductionSeriesId: selectedProductionSeries?.id,
+        DrawingNumberId: drawingIdVal,
+        ProductionSeriesId: prodSeriesIdVal,
         Id: activeIdNumber ? parseInt(activeIdNumber) : undefined,
         ProductionOrderNumber: selectedPO?.productionOrderNumber,
       };
@@ -740,16 +762,17 @@ const MakePrecheck: React.FC = () => {
       await updateGridItems(response);
 
       setShowResults(true);
-      // Submit button will be enabled automatically by useEffect when showResults becomes true
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in LoadGridData:", error);
+      setSearchResults([]);
+      setShowResults(true);
       showAlertMessage(
-        "Error loading data: " + (error as Error).message,
+        "Error loading data: " + (error?.message || error || "Failed to fetch precheck details"),
         "error",
       );
     } finally {
       setIsLoadingLocal(false);
-      setIsMakePrecheckEnabled(false);
+      validateFields();
     }
   };
 
@@ -1658,11 +1681,19 @@ const MakePrecheck: React.FC = () => {
     return searchResults.every((item) => item.isPrecheckComplete);
   }, [searchResults]);
 
-  const updateGridItems = async (response: any[]) => {
-    if (!response?.length) return;
+  const updateGridItems = async (response: any) => {
+    const rawList = Array.isArray(response)
+      ? response
+      : (response?.data || response?.items || response?.$values || []);
+
+    if (!rawList || rawList.length === 0) {
+      setSearchResults([]);
+      showAlertMessage("No precheck records found for the selected filter.", "warning");
+      return;
+    }
 
     // Map the response to objects and assign sequential SRs based on the API response sequence
-    const finalItems = response.map((item, index) => ({
+    const finalItems = rawList.map((item: any, index: number) => ({
       drawingNumber: item.drawingNumber,
       nomenclature: item.nomenclature,
       quantity: item.quantity,
@@ -1750,19 +1781,11 @@ const MakePrecheck: React.FC = () => {
           isClearedRef.current = false;
           if (newValue) {
             setSelectedPO(newValue);
-            // Auto-fill form fields from PO
-            let matchingDrawing = null;
-            if (allDrawingNumbers && allDrawingNumbers.length > 0) {
-              matchingDrawing = allDrawingNumbers.find(
-                (d: any) =>
-                  (newValue.drawingNumberId && d.id === newValue.drawingNumberId) ||
-                  (d.drawingNumber && newValue.drawingNumber && d.drawingNumber.trim().toLowerCase() === newValue.drawingNumber.trim().toLowerCase()) ||
-                  (d.lnItemCode && newValue.lnItemCode && d.lnItemCode.trim().toLowerCase() === newValue.lnItemCode.trim().toLowerCase()),
-              );
-            }
+            // Auto-fill form fields from PO using precise drawing matching
+            const matchingDrawing = findMatchingDrawingInList(allDrawingNumbers, newValue);
             if (matchingDrawing) {
               setSelectedDrawing(matchingDrawing);
-            } else if (newValue.drawingNumber || newValue.lnItemCode) {
+            } else if (newValue.drawingNumberId || newValue.drawingNumber || newValue.lnItemCode) {
               setSelectedDrawing({
                 id: newValue.drawingNumberId,
                 drawingNumber: newValue.drawingNumber || "",
