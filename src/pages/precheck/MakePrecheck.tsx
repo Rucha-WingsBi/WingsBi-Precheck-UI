@@ -59,6 +59,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 
 import type { RootState, AppDispatch } from "../../store/store";
 import debounce from "lodash.debounce";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 // Sub-component imports
 import type { GridItem } from "./make-precheck/types";
@@ -596,7 +597,7 @@ const MakePrecheck: React.FC = () => {
               .catch((error) => {
                 console.error("Error auto-loading BOM:", error);
                 showAlertMessage(
-                  "Error loading BOM: " + (error as Error).message,
+                  getErrorMessage(error, "Error loading BOM data"),
                   "error",
                 );
               })
@@ -766,7 +767,7 @@ const MakePrecheck: React.FC = () => {
       setSearchResults([]);
       setShowResults(true);
       showAlertMessage(
-        "Error loading data: " + (error?.message || error || "Failed to fetch precheck details"),
+        getErrorMessage(error, "Failed to fetch precheck details"),
         "error",
       );
     } finally {
@@ -899,25 +900,7 @@ const MakePrecheck: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error submitting precheck:", error);
-
-      // Extract user-friendly error message
-      let errorMessage = "Error submitting precheck";
-
-      if (error?.payload) {
-        // Redux rejected action with payload
-        errorMessage = error.payload;
-      } else if (error?.response?.data?.message) {
-        // API returned a structured error response
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        // Standard error object
-        errorMessage = error.message;
-      } else if (typeof error === "string") {
-        // String error
-        errorMessage = error;
-      }
-
-      showAlertMessage(`Error submitting precheck: ${errorMessage}`, "error");
+      showAlertMessage(getErrorMessage(error, "Error submitting precheck"), "error");
     } finally {
       setIsLoadingLocal(false);
     }

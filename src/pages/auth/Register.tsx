@@ -162,7 +162,7 @@ const Register = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        background: "linear-gradient(135deg, #F4EBFF 0%, #F9FAFB 50%, #FCF5F9 100%)",
+        background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -174,9 +174,9 @@ const Register = () => {
           maxWidth: 680,
           width: "100%",
           mx: 2,
-          boxShadow: "0px 12px 32px rgba(16, 24, 40, 0.08), 0px 4px 12px rgba(16, 24, 40, 0.04)",
+          boxShadow: "0px 20px 50px rgba(0, 0, 0, 0.3)",
           borderRadius: "16px",
-          border: "1px solid #EAECF0",
+          border: "none",
           backgroundColor: "#ffffff",
           overflow: "hidden",
         }}
@@ -184,7 +184,7 @@ const Register = () => {
         {/* Header */}
         <Box
           sx={{
-            background: "linear-gradient(135deg, #6D2A8F 0%, #8E35B7 100%)",
+            background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
             p: 3,
             display: "flex",
             flexDirection: "row",

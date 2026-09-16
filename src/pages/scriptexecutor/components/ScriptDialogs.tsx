@@ -34,6 +34,7 @@ interface ResultDialogProps {
   totalNewRecords: number;
   assemblyStats: AssemblyStats;
   onDone: () => void;
+  onDownloadErrorReport?: () => void;
 }
 
 export const ResultDialog: React.FC<ResultDialogProps> = ({
@@ -46,6 +47,7 @@ export const ResultDialog: React.FC<ResultDialogProps> = ({
   totalNewRecords,
   assemblyStats,
   onDone,
+  onDownloadErrorReport,
 }) => {
   const dialogSeverity = executionStats.errors > 0 ? (executionStats.success > 0 ? "warning" : "error") : "success";
 
@@ -182,12 +184,24 @@ export const ResultDialog: React.FC<ResultDialogProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 2, display: "flex", justifyContent: "space-between" }}>
+        {executionStats.errors > 0 && onDownloadErrorReport ? (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
+            onClick={onDownloadErrorReport}
+            sx={{ fontWeight: 600, borderRadius: 2, textTransform: "none" }}
+          >
+            Download Error Report (PDF)
+          </Button>
+        ) : <Box />}
         <Button
           variant="contained"
+          size="small"
           color="primary"
           onClick={onDone}
-          sx={{ px: 3, fontWeight: 700 }}
+          sx={{ minWidth: 90, height: 32, fontSize: "0.8rem", fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
         >
           Done
         </Button>
@@ -379,6 +393,7 @@ interface ScriptErrorDialogProps {
   onErrorDialogTabChange: (val: number) => void;
   copied: boolean;
   onCopyLog: () => void;
+  onDownloadErrorReport?: () => void;
 }
 
 export const ScriptErrorDialog: React.FC<ScriptErrorDialogProps> = ({
@@ -389,7 +404,14 @@ export const ScriptErrorDialog: React.FC<ScriptErrorDialogProps> = ({
   onErrorDialogTabChange,
   copied,
   onCopyLog,
+  onDownloadErrorReport,
 }) => {
+  const errorMessage = scriptErrorDetails?.message || "Execution encountered an error.";
+  const displayLog =
+    errorDialogTab === 0
+      ? (scriptErrorDetails?.output || scriptErrorDetails?.error || errorMessage)
+      : (scriptErrorDetails?.error || scriptErrorDetails?.output || errorMessage);
+
   return (
     <Dialog
       open={open}
@@ -422,17 +444,33 @@ export const ScriptErrorDialog: React.FC<ScriptErrorDialogProps> = ({
             <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, color: "white" }}>
               Script Execution Failed
             </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8, fontSize: "0.75rem" }}>
-              {scriptErrorDetails?.message || "Execution encountered an error."}
+            <Typography variant="caption" sx={{ opacity: 0.9, fontSize: "0.775rem" }}>
+              Execution encountered an error. See details below:
             </Typography>
           </Box>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: "white" }}>
-          <CloseIcon />
+        <IconButton size="small" onClick={onClose} sx={{ color: "white", p: 0.5 }}>
+          <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
 
       <DialogContent sx={{ p: 0, display: "flex", flexDirection: "column", bgcolor: "grey.50" }}>
+        {/* Prominent Red Alert Box */}
+        <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
+          <Alert
+            severity="error"
+            sx={{
+              borderRadius: 2.5,
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              lineHeight: 1.5,
+              "& .MuiAlert-message": { whiteSpace: "pre-wrap", wordBreak: "break-word" },
+            }}
+          >
+            {errorMessage}
+          </Alert>
+        </Box>
+
         {scriptErrorDetails?.output && scriptErrorDetails?.error && (
           <Tabs
             value={errorDialogTab}
@@ -461,9 +499,9 @@ export const ScriptErrorDialog: React.FC<ScriptErrorDialogProps> = ({
           </Tabs>
         )}
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 1.5, bgcolor: "background.paper" }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-            {errorDialogTab === 0 ? "OUTPUT REPORT" : "DEVELOPER STACKTRACE"}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, py: 1.25, bgcolor: "background.paper" }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
+            {errorDialogTab === 0 ? "ERROR LOG & OUTPUT DETAILS" : "DEVELOPER STACKTRACE"}
           </Typography>
           <Button
             size="small"
@@ -480,11 +518,11 @@ export const ScriptErrorDialog: React.FC<ScriptErrorDialogProps> = ({
           </Button>
         </Box>
 
-        <Box sx={{ px: 3, pb: 3, pt: 0 }}>
+        <Box sx={{ px: 3, pb: 2.5, pt: 0 }}>
           <Box
             sx={{
               bgcolor: "grey.900",
-              color: "grey.300",
+              color: "#F87171",
               p: 2.5,
               borderRadius: 2.5,
               border: "1px solid",
@@ -494,24 +532,33 @@ export const ScriptErrorDialog: React.FC<ScriptErrorDialogProps> = ({
               lineHeight: 1.5,
               whiteSpace: "pre-wrap",
               wordBreak: "break-all",
-              maxHeight: "420px",
+              maxHeight: "350px",
               overflowY: "auto",
             }}
           >
-            {errorDialogTab === 0
-              ? (scriptErrorDetails?.output || "No output report available.")
-              : (scriptErrorDetails?.error || "No traceback available.")
-            }
+            {displayLog}
           </Box>
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2, bgcolor: "background.paper", borderTop: "1px solid", borderColor: "neutral.border" }}>
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: "background.paper", borderTop: "1px solid", borderColor: "neutral.border", display: "flex", justifyContent: "space-between" }}>
+        {onDownloadErrorReport ? (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
+            onClick={onDownloadErrorReport}
+            sx={{ fontWeight: 600, borderRadius: 2, textTransform: "none" }}
+          >
+            Download Error Report (PDF)
+          </Button>
+        ) : <Box />}
         <Button
           variant="contained"
+          size="small"
           color="primary"
           onClick={onClose}
-          sx={{ px: 4, fontWeight: 700 }}
+          sx={{ minWidth: 90, height: 32, fontSize: "0.8rem", fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
         >
           Close
         </Button>
@@ -569,9 +616,10 @@ export const WrongFileDialog: React.FC<WrongFileDialogProps> = ({
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button
           variant="contained"
+          size="small"
           color="primary"
           onClick={onClose}
-          sx={{ px: 3, fontWeight: 700 }}
+          sx={{ minWidth: 90, height: 32, fontSize: "0.8rem", fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
         >
           Okay
         </Button>

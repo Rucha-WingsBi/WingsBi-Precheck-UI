@@ -29,7 +29,7 @@ interface UploadSummaryCardProps {
   attentionRows?: (UploadAttentionRow | string)[];
 }
 
-const parseErrorString = (errStr: any, idx: number) => {
+export const parseErrorString = (errStr: any, idx: number) => {
   if (typeof errStr === "object" && errStr !== null) {
     return {
       row: errStr.row ?? idx + 1,
@@ -407,7 +407,7 @@ export const UploadSummaryCard: React.FC<UploadSummaryCardProps> = ({
                   Field
                 </Typography>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: "#475467", fontSize: "0.75rem" }}>
-                  Issue
+                  Issue Description
                 </Typography>
               </Box>
 

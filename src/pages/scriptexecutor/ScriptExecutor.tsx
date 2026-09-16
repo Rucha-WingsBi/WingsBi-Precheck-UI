@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, type MouseEvent } from "react";
 import { Box, Snackbar, Alert } from "@mui/material";
 import { useSelector } from "react-redux";
 import * as XLSX from "xlsx";
+import { format } from "date-fns";
 import type { RootState } from "../../store/store";
 import api from "../../services/api";
 
@@ -129,21 +130,274 @@ export default function ScriptExecutor() {
   };
 
   const handleDownloadErrorReport = () => {
-    if (executionOutput || scriptErrorDetails?.output) {
-      const content = executionOutput || scriptErrorDetails?.output || "Error report";
-      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `error_report_${Date.now()}.txt`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      showSnackbar("Error report downloaded successfully!", "success");
-    } else {
-      showSnackbar("No error details available to download.", "info");
+    const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+    const title = "SCRIPT EXECUTOR ERROR REPORT";
+
+    const fileNames = selectedFiles.map((f) => f.name).join(", ") || "Uploaded Script File";
+    const summaryItems = [
+      { label: "Date & Time", value: new Date().toLocaleString() },
+      { label: "File(s)", value: fileNames.length > 35 ? fileNames.slice(0, 32) + "..." : fileNames },
+      { label: "Total Rows", value: String(executionStats.total) },
+      { label: "Imported", value: String(executionStats.success) },
+      { label: "Errors", value: String(executionStats.errors) },
+      { label: "Skipped", value: String(executionStats.warnings) },
+    ];
+    if (executionMessage) {
+      summaryItems.unshift({ label: "Summary", value: executionMessage.length > 40 ? executionMessage.slice(0, 37) + "..." : executionMessage });
     }
+
+    let errorItems: { row: any; key: string; field: string; issue: string }[] = [];
+
+    if (attentionRows.length > 0) {
+      errorItems = attentionRows.map((r) => ({
+        row: r.row,
+        key: r.key,
+        field: r.field,
+        issue: r.issue,
+      }));
+    } else {
+      const rawOutput = executionOutput || scriptErrorDetails?.output || scriptErrorDetails?.message || "Execution error encountered";
+      const lines = rawOutput.split("\n").filter((l) => l.trim().length > 0);
+      errorItems = lines.slice(0, 50).map((line, idx) => ({
+        row: idx + 1,
+        key: "-",
+        field: "Execution",
+        issue: line.trim(),
+      }));
+    }
+
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
+    const margin = 40;
+    const contentWidth = pageWidth - margin * 2;
+
+    const sanitize = (str: string) =>
+      String(str || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/\(/g, "\\(")
+        .replace(/\)/g, "\\)")
+        .replace(/[^\x20-\x7E]/g, "?");
+
+    const pageStreams: string[] = [];
+    let currentStream: string[] = [];
+    let y = pageHeight - 45;
+
+    const startNewPage = (isFirstPage = false) => {
+      if (currentStream.length > 0) {
+        pageStreams.push(currentStream.join("\n"));
+        currentStream = [];
+      }
+      y = pageHeight - 45;
+
+      currentStream.push(
+        "0.43 0.16 0.56 rg",
+        "BT",
+        `/F1 ${isFirstPage ? 15 : 11} Tf`,
+        `${margin} ${y} Td`,
+        `(${sanitize(isFirstPage ? title : title + " (Continued)")}) Tj`,
+        "ET"
+      );
+      y -= isFirstPage ? 20 : 16;
+
+      currentStream.push(
+        "0.8 0.8 0.8 RG",
+        "0.75 w",
+        `${margin} ${y} m`,
+        `${margin + contentWidth} ${y} l`,
+        "S"
+      );
+      y -= 18;
+    };
+
+    startNewPage(true);
+
+    if (summaryItems.length > 0) {
+      const rowCount = Math.ceil(summaryItems.length / 2);
+      const boxHeight = rowCount * 18 + 14;
+      const boxY = y - boxHeight;
+
+      currentStream.push(
+        "0.96 0.97 0.98 rg",
+        "0.88 0.90 0.92 RG",
+        "0.75 w",
+        `${margin} ${boxY} ${contentWidth} ${boxHeight} re`,
+        "B"
+      );
+
+      let itemY = y - 16;
+      summaryItems.forEach((item, idx) => {
+        const col = idx % 2;
+        if (idx > 0 && col === 0) itemY -= 18;
+
+        const xPos = margin + 12 + col * 245;
+        currentStream.push(
+          "0.3 0.35 0.4 rg",
+          "BT",
+          "/F2 8.5 Tf",
+          `${xPos} ${itemY} Td`,
+          `(${sanitize(item.label)}: ) Tj`,
+          "ET",
+          "0.1 0.1 0.1 rg",
+          "BT",
+          "/F1 8.5 Tf",
+          `${xPos + 75} ${itemY} Td`,
+          `(${sanitize(item.value)}) Tj`,
+          "ET"
+        );
+      });
+
+      y = boxY - 20;
+    }
+
+    currentStream.push(
+      "0.1 0.1 0.1 rg",
+      "BT",
+      "/F1 11 Tf",
+      `${margin} ${y} Td`,
+      "(Detailed Error List:) Tj",
+      "ET"
+    );
+    y -= 16;
+
+    const colX = [margin, margin + 45, margin + 165, margin + 285];
+    let currentIdx = 0;
+
+    while (currentIdx < errorItems.length) {
+      const availableHeight = y - 50;
+      const maxRowsOnPage = Math.max(1, Math.floor((availableHeight - 22) / 20));
+      const pageChunk = errorItems.slice(currentIdx, currentIdx + maxRowsOnPage);
+
+      const headerHeight = 22;
+      const rowHeight = 20;
+      const tableHeight = headerHeight + pageChunk.length * rowHeight;
+      const tableTopY = y;
+      const tableBottomY = tableTopY - tableHeight;
+
+      currentStream.push(
+        "0.8 0.82 0.85 RG",
+        "0.75 w",
+        `${margin} ${tableBottomY} ${contentWidth} ${tableHeight} re`,
+        "S"
+      );
+
+      currentStream.push(
+        "0.93 0.94 0.96 rg",
+        `${margin + 0.5} ${tableTopY - headerHeight + 0.5} ${contentWidth - 1} ${headerHeight - 1} re`,
+        "f",
+        "0.8 0.82 0.85 RG",
+        "0.75 w",
+        `${margin} ${tableTopY - headerHeight} m`,
+        `${margin + contentWidth} ${tableTopY - headerHeight} l`,
+        "S"
+      );
+
+      currentStream.push(
+        "0.2 0.25 0.3 rg BT /F1 8.5 Tf",
+        `${colX[0] + 6} ${tableTopY - 15} Td (Row) Tj ET`,
+        `BT /F1 8.5 Tf ${colX[1] + 6} ${tableTopY - 15} Td (Key) Tj ET`,
+        `BT /F1 8.5 Tf ${colX[2] + 6} ${tableTopY - 15} Td (Field) Tj ET`,
+        `BT /F1 8.5 Tf ${colX[3] + 6} ${tableTopY - 15} Td (Issue Description) Tj ET`
+      );
+
+      pageChunk.forEach((item, rIdx) => {
+        const rowTopY = tableTopY - headerHeight - rIdx * rowHeight;
+        const rowBottomY = rowTopY - rowHeight;
+
+        if (rIdx % 2 === 1) {
+          currentStream.push(
+            "0.98 0.98 0.99 rg",
+            `${margin + 0.5} ${rowBottomY + 0.5} ${contentWidth - 1} ${rowHeight - 1} re`,
+            "f"
+          );
+        }
+
+        if (rIdx < pageChunk.length - 1) {
+          currentStream.push(
+            "0.88 0.9 0.92 RG",
+            "0.5 w",
+            `${margin} ${rowBottomY} m`,
+            `${margin + contentWidth} ${rowBottomY} l`,
+            "S"
+          );
+        }
+
+        currentStream.push(
+          "0.3 0.3 0.3 rg BT /F2 8 Tf",
+          `${colX[0] + 6} ${rowTopY - 14} Td (${sanitize(String(item.row))}) Tj ET`,
+          "0.1 0.1 0.1 rg BT /F1 8 Tf",
+          `${colX[1] + 6} ${rowTopY - 14} Td (${sanitize(String(item.key))}) Tj ET`,
+          "0.3 0.3 0.3 rg BT /F2 8 Tf",
+          `${colX[2] + 6} ${rowTopY - 14} Td (${sanitize(String(item.field))}) Tj ET`,
+          "0.85 0.18 0.13 rg BT /F2 8 Tf",
+          `${colX[3] + 6} ${rowTopY - 14} Td (${sanitize(String(item.issue).slice(0, 60))}) Tj ET`
+        );
+      });
+
+      currentIdx += pageChunk.length;
+      y = tableBottomY - 20;
+
+      if (currentIdx < errorItems.length) {
+        startNewPage(false);
+      }
+    }
+
+    if (currentStream.length > 0) {
+      pageStreams.push(currentStream.join("\n"));
+    }
+
+    const numPages = pageStreams.length;
+    const pdfObjects: string[] = [];
+
+    pdfObjects.push("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj");
+
+    const pageObjectIds = Array.from({ length: numPages }, (_, i) => `${3 + i * 2} 0 R`).join(" ");
+    pdfObjects.push(`2 0 obj\n<< /Type /Pages /Kids [${pageObjectIds}] /Count ${numPages} >>\nendobj`);
+
+    pageStreams.forEach((streamText, i) => {
+      const pageObjId = 3 + i * 2;
+      const contentObjId = 4 + i * 2;
+      const streamLength = streamText.length;
+
+      pdfObjects.push(
+        `${pageObjId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${3 + numPages * 2} 0 R /F2 ${4 + numPages * 2} 0 R >> >> /Contents ${contentObjId} 0 R >>\nendobj`
+      );
+
+      pdfObjects.push(
+        `${contentObjId} 0 obj\n<< /Length ${streamLength} >>\nstream\n${streamText}\nendstream\nendobj`
+      );
+    });
+
+    const f1Id = 3 + numPages * 2;
+    const f2Id = 4 + numPages * 2;
+    pdfObjects.push(`${f1Id} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj`);
+    pdfObjects.push(`${f2Id} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj`);
+
+    let pdf = "%PDF-1.4\n";
+    const offsets: number[] = [];
+
+    pdfObjects.forEach((obj) => {
+      offsets.push(pdf.length);
+      pdf += obj + "\n";
+    });
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${pdfObjects.length + 1}\n0000000000 65535 f \n`;
+    offsets.forEach((off) => {
+      pdf += `${off.toString().padStart(10, "0")} 00000 n \n`;
+    });
+
+    pdf += `trailer\n<< /Size ${pdfObjects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    const blob = new Blob([pdf], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Script_Error_Report_${timestamp}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    showSnackbar("PDF Error report downloaded successfully!", "success");
   };
 
   const attentionRows = useMemo(() => {
@@ -708,7 +962,6 @@ export default function ScriptExecutor() {
 
       if (responseData.success === false) {
         addLog(`Execution Error: ${responseData.message || "Script execution failed."}`, "error");
-        showSnackbar(responseData.message || "Script execution failed.", "error");
         openErrorDialog({
           message: responseData.message || "Script execution failed.",
           output: responseData.output,
@@ -733,7 +986,8 @@ export default function ScriptExecutor() {
 
       if (errorsCount > 0) {
         addLog(`Server transaction completed with ${errorsCount} error(s).`, "warning");
-        showSnackbar(`Script completed with ${errorsCount} error(s).`, "warning");
+        showSnackbar(`Script completed with ${errorsCount} error(s). PDF error report downloaded.`, "warning");
+        handleDownloadErrorReport();
       } else {
         addLog("Server transaction executed successfully.", "success");
         showSnackbar(responseData.message || "Script executed successfully!", "success");
@@ -754,15 +1008,12 @@ export default function ScriptExecutor() {
       const resData = apiErr.response?.data;
       const errMsg = resData?.message || apiErr.message || "Failed to execute script on server.";
       addLog(`Execution Error: ${errMsg}`, "error");
-      showSnackbar(`Execution Error: ${errMsg}`, "error");
 
-      if (resData && (resData.output || resData.error || resData.message)) {
-        openErrorDialog({
-          message: resData.message || "Script execution failed.",
-          output: resData.output,
-          error: resData.error,
-        });
-      }
+      openErrorDialog({
+        message: resData?.message || apiErr.message || "Failed to execute script on server.",
+        output: resData?.output,
+        error: resData?.error,
+      });
     } finally {
       setIsExecuting(false);
     }
@@ -792,34 +1043,35 @@ export default function ScriptExecutor() {
         onDownloadTemplate={handleDownloadTemplate}
       />
 
-      {/* 4. Dropzone vs Post-Upload Summary Card */}
-      {!isUploaded ? (
-        <UploadDropzone
-          selectedFiles={selectedFiles}
-          fileValidationStatuses={fileValidationStatuses}
-          isFileUploadedToServer={isFileUploadedToServer}
-          isUploading={isUploading}
-          isExecuting={isExecuting}
-          isFileValid={isFileValid}
-          hasInvalidFile={hasInvalidFile}
-          isDragOver={isDragOver}
-          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleFileDrop}
-          onInputChange={handleInputChange}
-          onRemoveFile={(fileName) => {
-            setSelectedFiles((prev) => prev.filter((f) => f.name !== fileName));
-            setFileValidationStatuses((prev) => {
-              const next = { ...prev };
-              delete next[fileName];
-              return next;
-            });
-          }}
-          onConfirmUpload={handleConfirmUpload}
-          onExecuteScript={handleExecuteScript}
-          onCancel={handleResetUpload}
-        />
-      ) : (
+      {/* 4. Dropzone */}
+      <UploadDropzone
+        selectedFiles={selectedFiles}
+        fileValidationStatuses={fileValidationStatuses}
+        isFileUploadedToServer={isFileUploadedToServer}
+        isUploading={isUploading}
+        isExecuting={isExecuting}
+        isFileValid={isFileValid}
+        hasInvalidFile={hasInvalidFile}
+        isDragOver={isDragOver}
+        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleFileDrop}
+        onInputChange={handleInputChange}
+        onRemoveFile={(fileName) => {
+          setSelectedFiles((prev) => prev.filter((f) => f.name !== fileName));
+          setFileValidationStatuses((prev) => {
+            const next = { ...prev };
+            delete next[fileName];
+            return next;
+          });
+        }}
+        onConfirmUpload={handleConfirmUpload}
+        onExecuteScript={handleExecuteScript}
+        onCancel={handleResetUpload}
+      />
+
+      {/* Post-Upload Summary Card */}
+      {(isUploaded || executionStats.total > 0) && (
         <PostUploadSummaryCard
           fileName={uploadedFileNamesFromServer[0] || selectedFiles[0]?.name || "uploaded_template.xlsx"}
           totalRows={executionStats.total}
@@ -850,6 +1102,7 @@ export default function ScriptExecutor() {
         totalNewRecords={totalNewRecords}
         assemblyStats={assemblyStats}
         onDone={() => setShowResultDialog(false)}
+        onDownloadErrorReport={handleDownloadErrorReport}
       />
 
       <ValidationErrorDialog
@@ -873,6 +1126,7 @@ export default function ScriptExecutor() {
         onErrorDialogTabChange={setErrorDialogTab}
         copied={copied}
         onCopyLog={handleCopyErrorLog}
+        onDownloadErrorReport={handleDownloadErrorReport}
       />
 
       <WrongFileDialog

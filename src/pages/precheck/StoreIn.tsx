@@ -54,6 +54,7 @@ import { updateQrCodeDetails } from "../../store/slices/qrcodeSlice";
 import type { AppDispatch, RootState } from "../../store/store";
 import { Html5Qrcode } from "html5-qrcode";
 import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
+import { getErrorMessage } from "../../utils/errorUtils";
 import { isPageAccessible } from "../../utils/accessUtils";
 import { useHasPermission } from "../../hooks/useHasPermission";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -525,6 +526,10 @@ const StoreIn: React.FC = () => {
         .catch((error) => {
           console.error("Error fetching store-in data:", error);
           setStoreInList([]);
+          setAlertMessage({
+            message: getErrorMessage(error, "Error fetching store-in data"),
+            type: "error",
+          });
         })
         .finally(() => {
           setIsLoading(false);

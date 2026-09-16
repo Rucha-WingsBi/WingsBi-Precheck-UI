@@ -794,15 +794,6 @@ export default function Layout() {
                   },
                 }}
               >
-                <MenuItem onClick={() => navigate("/settings")}>
-                  <ListItemIcon>
-                    <SettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Settings"
-                    secondary={`User: ${user?.username}`}
-                  />
-                </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />
