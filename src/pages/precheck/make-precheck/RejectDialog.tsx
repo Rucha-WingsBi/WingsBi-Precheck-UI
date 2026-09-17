@@ -45,8 +45,8 @@ const RejectDialog: React.FC<RejectDialogProps> = ({
         Reject Component
         {selectedRow && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Drawing Number: {selectedRow.drawingNumber} |
-            Nomenclature: {selectedRow.nomenclature}
+            Part Number: {selectedRow.drawingNumber} |
+            Item Description: {selectedRow.nomenclature}
           </Typography>
         )}
       </DialogTitle>

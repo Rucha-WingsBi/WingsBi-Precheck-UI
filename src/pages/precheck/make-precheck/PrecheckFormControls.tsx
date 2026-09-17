@@ -241,11 +241,11 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
                     PO: {option.productionOrderNumber}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {option.lnItemCode && `LN: ${option.lnItemCode}`}
+                    {option.lnItemCode && `Item Code: ${option.lnItemCode}`}
                     {option.drawingNumber &&
-                      ` | Drawing: ${option.drawingNumber}`}
+                      ` | Part Number: ${option.drawingNumber}`}
                     {option.nomenclature &&
-                      ` | Nomenclature: ${option.nomenclature}`}
+                      ` | Item Description: ${option.nomenclature}`}
                     {option.componentType &&
                       ` | Component Type: ${option.componentType}`}
                   </Typography>
@@ -330,7 +330,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
                     fontWeight="500"
                     sx={{ fontSize: "0.85rem", color: "text.primary" }}
                   >
-                    Drawing: {option.drawingNumber}
+                    Part Number: {option.drawingNumber}
                   </Typography>
                   <Typography
                     variant="caption"
@@ -357,7 +357,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
                   letterSpacing: "0.5px",
                 }}
               >
-                LN CODE: {params.group}
+                ITEM CODE: {params.group}
               </Typography>
               <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
             </li>
@@ -368,7 +368,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           renderInput={(params) => (
             <TextField
               {...params}
-              label="LN Item Code"
+              label="Item Code"
               placeholder="Type to search..."
               InputProps={{
                 ...params.InputProps,
@@ -441,7 +441,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           renderInput={(params: any) => (
             <TextField
               {...params}
-              label="Drawing Number *"
+              label="Part Number *"
               InputProps={{
                 ...params.InputProps,
                 endAdornment: (

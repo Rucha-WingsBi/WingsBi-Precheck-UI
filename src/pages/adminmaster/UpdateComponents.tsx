@@ -536,11 +536,11 @@ export default function InsertMappings() {
                     <Controller
                       name="lnItemCode"
                       control={control}
-                      rules={{ required: "LN Item Code is required" }}
+                      rules={{ required: "Item Code is required" }}
                       render={({ field }) => (
                         <TextField
                           {...field}
-                          label="LN Item Code *"
+                          label="Item Code *"
                           fullWidth
                           size="small"
                           error={!!errors.lnItemCode}
@@ -601,7 +601,7 @@ export default function InsertMappings() {
                                     variant="caption"
                                     color="text.secondary"
                                   >
-                                    DWG:{" "}
+                                    Part Number:{" "}
                                     {typeof option === "string"
                                       ? ""
                                       : option.drawingNumber}{" "}
@@ -621,7 +621,7 @@ export default function InsertMappings() {
                           renderInput={(params) => (
                             <TextField
                               {...params}
-                              label="LN Item Code *"
+                              label="Item Code *"
                               InputProps={{
                                 ...params.InputProps,
                                 endAdornment: (
@@ -651,11 +651,11 @@ export default function InsertMappings() {
                     <Controller
                       name="drawingNumber"
                       control={control}
-                      rules={{ required: "Drawing Number is required" }}
+                      rules={{ required: "Part Number is required" }}
                       render={({ field }) => (
                         <TextField
                           {...field}
-                          label="Drawing Number *"
+                          label="Part Number *"
                           fullWidth
                           size="small"
                           error={!!errors.drawingNumber}
@@ -667,7 +667,7 @@ export default function InsertMappings() {
                     <Controller
                       name="drawingNumber"
                       control={control}
-                      rules={{ required: "Drawing Number is required" }}
+                      rules={{ required: "Part Number is required" }}
                       render={({ field }) => (
                         <Autocomplete
                           fullWidth
@@ -727,7 +727,7 @@ export default function InsertMappings() {
                                     variant="caption"
                                     color="text.secondary"
                                   >
-                                    LN:{" "}
+                                    Item Code:{" "}
                                     {typeof option === "string"
                                       ? ""
                                       : option.lnItemCode}{" "}
@@ -747,7 +747,7 @@ export default function InsertMappings() {
                           renderInput={(params) => (
                             <TextField
                               {...params}
-                              label="Drawing Number *"
+                              label="Part Number *"
                               fullWidth
                               error={!!errors.drawingNumber}
                               helperText={errors.drawingNumber?.message || ""}
@@ -781,7 +781,7 @@ export default function InsertMappings() {
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Nomenclature"
+                        label="Item Description"
                         fullWidth
                         size="small"
                       //disabled={!selectedDrawing}
@@ -911,7 +911,7 @@ export default function InsertMappings() {
                                   {typeof option === "string" ? option : option.drawingNumber}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  LN: {typeof option === "string" ? "" : option.lnItemCode}
+                                  Item Code: {typeof option === "string" ? "" : option.lnItemCode}
                                   {option.nomenclature ? ` | ${option.nomenclature}` : ""}
                                 </Typography>
                               </Box>
@@ -984,7 +984,7 @@ export default function InsertMappings() {
                                   {typeof option === "string" ? option : option.lnItemCode}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  DWG: {typeof option === "string" ? "" : option.drawingNumber}
+                                  Part Number: {typeof option === "string" ? "" : option.drawingNumber}
                                   {option.nomenclature ? ` | ${option.nomenclature}` : ""}
                                 </Typography>
                               </Box>

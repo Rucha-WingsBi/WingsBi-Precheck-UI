@@ -81,9 +81,9 @@ import ExcelUploadResultDialog from "./make-precheck/ExcelUploadResultDialog";
 import AddBomDrawingDialog from "./make-precheck/AddBomDrawingDialog";
 
 const MAKE_PRECHECK_EXPORT_COLUMNS = [
-  { key: "lnItemCode", label: "LN Item Code" },
-  { key: "drawingNumber", label: "Drawing No." },
-  { key: "nomenclature", label: "Nomenclature" },
+  { key: "lnItemCode", label: "Item Code" },
+  { key: "drawingNumber", label: "Part Number" },
+  { key: "nomenclature", label: "Item Description" },
   { key: "quantity", label: "Qty" },
   { key: "scannedQuantity", label: "Scanned Qty" },
   { key: "remainingQuantity", label: "Remaining Qty" },
@@ -779,7 +779,7 @@ const MakePrecheck: React.FC = () => {
   const validateInputs = () => {
     const missingFields = [];
 
-    if (!selectedDrawing) missingFields.push("Drawing Number");
+    if (!selectedDrawing) missingFields.push("Part Number");
     if (!selectedProductionSeries) missingFields.push("Production Series");
     if (!idNumber) missingFields.push("Assembly Number");
 

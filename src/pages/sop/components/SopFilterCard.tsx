@@ -199,7 +199,7 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Assembly No / LItem Code *"
+                label="Assembly No / Item Code *"
                 placeholder="Type 3+ chars (e.g. CK310)..."
                 InputProps={{
                   ...params.InputProps,

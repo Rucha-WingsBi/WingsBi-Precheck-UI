@@ -684,8 +684,8 @@ const UpdateBarcode: React.FC = () => {
                       typeof option === "string" ? "" : option.componentType;
 
                     const details = [
-                      drawingNo ? `Drawing: ${drawingNo}` : null,
-                      nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                      drawingNo ? `Part No: ${drawingNo}` : null,
+                      nomenclature ? `Item Description: ${nomenclature}` : null,
                       compType ? `Component Type: ${compType}` : null,
                     ]
                       .filter(Boolean)
@@ -708,7 +708,7 @@ const UpdateBarcode: React.FC = () => {
                           >
                             {lnCode.startsWith("LN:")
                               ? lnCode
-                              : `LN: ${lnCode}`}
+                              : `Item Code: ${lnCode}`}
                           </Typography>
                           {details && (
                             <Typography
@@ -729,7 +729,7 @@ const UpdateBarcode: React.FC = () => {
                   renderInput={(params: any) => (
                     <TextField
                       {...params}
-                      label="LN Item Code"
+                      label="Item Code"
                       onClick={() => setOpenLN(true)}
                       onFocus={(e) => {
                         setOpenLN(true);
@@ -811,8 +811,8 @@ const UpdateBarcode: React.FC = () => {
                       typeof option === "string" ? "" : option.componentType;
 
                     const details = [
-                      lnCode ? `LN: ${lnCode}` : null,
-                      nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                      lnCode ? `Item Code: ${lnCode}` : null,
+                      nomenclature ? `Item Description: ${nomenclature}` : null,
                       compType ? `Component Type: ${compType}` : null,
                     ]
                       .filter(Boolean)
@@ -833,9 +833,9 @@ const UpdateBarcode: React.FC = () => {
                             fontWeight="600"
                             sx={{ fontSize: "0.875rem", color: "primary.main" }}
                           >
-                            {drawingNo.startsWith("Drawing:")
+                            {drawingNo.startsWith("Part No:")
                               ? drawingNo
-                              : `Drawing: ${drawingNo}`}
+                              : `Part No: ${drawingNo}`}
                           </Typography>
                           {details && (
                             <Typography
@@ -856,7 +856,7 @@ const UpdateBarcode: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Drawing Number"
+                      label="Part Number"
                       fullWidth
                       onClick={() => setOpenDrawing(true)}
                       onFocus={(e) => {
@@ -869,7 +869,7 @@ const UpdateBarcode: React.FC = () => {
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
-                  label="Nomenclature"
+                  label="Item Description"
                   name="nomenclature"
                   value={formData.nomenclature || ""}
                   onChange={handleChange}
@@ -916,7 +916,7 @@ const UpdateBarcode: React.FC = () => {
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={4}>
                 <TextField
-                  label="Consumed In Drawing"
+                  label="Consumed In Part"
                   name="consumedInDrawing"
                   value={formData.consumedInDrawing || ""}
                   onChange={handleChange}
@@ -1210,7 +1210,7 @@ const UpdateBarcode: React.FC = () => {
                         }
                       }
 
-                      // Auto-select LN Item Code
+                      // Auto-select Item Code
                       if (newValue.lnItemCodeId) {
                         const matchingDrawing = allDrawingNumbers.find(
                           (d) => d.lnItemCodeId === newValue.lnItemCodeId,
@@ -1257,11 +1257,11 @@ const UpdateBarcode: React.FC = () => {
                             PO: {option.productionOrderNumber}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {option.lnItemCode && `LN: ${option.lnItemCode}`}
+                            {option.lnItemCode && `Item Code: ${option.lnItemCode}`}
                             {option.drawingNumber &&
                               ` | Drawing: ${option.drawingNumber}`}
                             {option.nomenclature &&
-                              ` | Nomenclature: ${option.nomenclature}`}
+                              ` | Item Description: ${option.nomenclature}`}
                             {option.componentType &&
                               ` | Component Type: ${option.componentType}`}
                           </Typography>

@@ -622,7 +622,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                 setSearchQuery(e.target.value);
                 setPage(0);
               }}
-              placeholder="Search component, Drawing No., LN Item Code, nomenclature..."
+              placeholder="Search component, Part Number, Item Code, Item Description..."
               sx={{
                 flex: "1 1 240px",
                 minWidth: 200,
@@ -875,9 +875,9 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
             <TableHead>
               <TableRow sx={{ height: 36 }}>
                 <SortableTableHeader label="Sr.No" columnKey="srNo" align="center" minWidth={55} isSortable={false} />
-                <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={160} />
-                <SortableTableHeader label="LN Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={150} />
-                <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={220} />
+                <SortableTableHeader label="Part Number" columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={160} />
+                <SortableTableHeader label="Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={150} />
+                <SortableTableHeader label="Item Description" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={220} />
                 <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={95} />
                 <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={100} />
                 <SortableTableHeader label="Prod. Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={110} />
@@ -929,8 +929,8 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
         <DialogTitle sx={{ fontWeight: 700, color: "#101828", fontSize: "1rem" }}>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ color: "#475467" }}>
-            Are you sure you want to delete component with drawing number{" "}
-            <strong>{deletingDrawing?.drawingNumber || "N/A"}</strong> and LN item code{" "}
+            Are you sure you want to delete component with Part Number{" "}
+            <strong>{deletingDrawing?.drawingNumber || "N/A"}</strong> and Item Code{" "}
             <strong>{deletingDrawing?.lnItemCode || "N/A"}</strong>?
           </Typography>
         </DialogContent>

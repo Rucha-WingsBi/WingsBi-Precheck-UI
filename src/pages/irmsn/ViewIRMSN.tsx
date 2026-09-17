@@ -78,8 +78,8 @@ const ALL_IRMSN_EXPORT_COLUMNS = [
   { key: "displayNumber", label: "IR/MSN No." },
   { key: "recordType", label: "Type" },
   { key: "orderNumber", label: "PO Number" },
-  { key: "lnItemCode", label: "LN Item Code" },
-  { key: "drawingNumberIdName", label: "Drawing No." },
+  { key: "lnItemCode", label: "Item code" },
+  { key: "drawingNumberIdName", label: "Part Number." },
   { key: "idNumberRange", label: "ID Number" },
   { key: "mrirNumber", label: "MRIR" },
   { key: "createdDate", label: "Date" },
@@ -707,7 +707,7 @@ const ViewIRMSN: React.FC = () => {
               {/* Search Bar */}
               <TextField
                 size="small"
-                placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
+                placeholder="Search IR/MSN No., PO Number, Item code, Dr..."
                 value={drawingOrLnSearch}
                 onChange={(e) => setDrawingOrLnSearch(e.target.value)}
                 InputProps={{
@@ -769,7 +769,7 @@ const ViewIRMSN: React.FC = () => {
                     if (!selected || selected === "All") {
                       return (
                         <Box component="span" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>
-                          Document Type
+                          Doc Type
                         </Box>
                       );
                     }
@@ -1188,7 +1188,7 @@ const ViewIRMSN: React.FC = () => {
                     minWidth={120}
                   />
                   <SortableTableHeader
-                    label="LN Item Code"
+                    label="Item code"
                     sortKey="lineItemCode"
                     activeSortColumn={sortColumn}
                     sortDirection={sortDirection}
@@ -1197,8 +1197,8 @@ const ViewIRMSN: React.FC = () => {
                     minWidth={130}
                   />
                   <SortableTableHeader
-                    label="Drawing No."
-                    sortKey="drawingNumber"
+                    label="Part Number"
+                    sortKey="partNumber"
                     activeSortColumn={sortColumn}
                     sortDirection={sortDirection}
                     onSort={handleSort}

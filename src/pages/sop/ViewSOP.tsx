@@ -52,8 +52,8 @@ import { EmptyState } from "../../components/EmptyState";
 const ALL_SOP_EXPORT_COLUMNS = [
   { key: "level", label: "Level" },
   { key: "findNo", label: "Position No" },
-  { key: "drawingNumber", label: "Drawing Number" },
-  { key: "nomenclature", label: "Nomenclature" },
+  { key: "drawingNumber", label: "Part Number" },
+  { key: "nomenclature", label: "Item Description" },
   { key: "quantity", label: "Qty/Assy" },
   { key: "unit", label: "Unit" },
   { key: "componentType", label: "Component Type" },
@@ -69,9 +69,9 @@ const ALL_SOP_EXPORT_COLUMNS = [
 
 const ALL_BOM_EXPORT_COLUMNS = [
   { key: "level", label: "Level" },
-  { key: "childDrawingNumber", label: "Drawing Number" },
-  { key: "nomenclature", label: "Nomenclature" },
-  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "childDrawingNumber", label: "Part Number" },
+  { key: "nomenclature", label: "Item Description" },
+  { key: "lnItemCode", label: "Item Code" },
   { key: "componentType", label: "Component Type" },
   { key: "quantity", label: "Qty" },
   { key: "findNo", label: "Position No" },
@@ -199,7 +199,7 @@ const ViewSOP: React.FC = () => {
     },
     {
       id: "drawingNumber",
-      label: "Drawing Number",
+      label: "Part Number",
       minWidth: 220,
       align: "left" as const,
       format: (value: any, row: any) => (
@@ -220,7 +220,7 @@ const ViewSOP: React.FC = () => {
     },
     {
       id: "nomenclature",
-      label: "Nomenclature",
+      label: "Item Description",
       minWidth: 220,
       align: "left" as const,
       format: (value: any, row: any) => (
@@ -513,7 +513,7 @@ const ViewSOP: React.FC = () => {
   const validateRequiredFields = useCallback((): string[] => {
     const values = getValues();
     const missingFields: string[] = [];
-    if (!values.drawingNumberId || values.drawingNumberId <= 0) missingFields.push("Drawing Number");
+    if (!values.drawingNumberId || values.drawingNumberId <= 0) missingFields.push("Part Number");
     if (!values.prodSeriesId || values.prodSeriesId <= 0) missingFields.push("Series Number");
     return missingFields;
   }, [getValues]);
@@ -1029,7 +1029,7 @@ const ViewSOP: React.FC = () => {
                   ) : (
                     <EmptyState
                       title="Apply filters to search"
-                      subtitle="Search for Series and Drawing Number to explore the tree."
+                      subtitle="Search for Series and Part Number to explore the tree."
                       height={260}
                     />
                   )}

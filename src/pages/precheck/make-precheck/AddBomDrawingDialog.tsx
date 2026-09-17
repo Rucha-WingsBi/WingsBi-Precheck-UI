@@ -111,7 +111,7 @@ const AddBomDrawingDialog: React.FC<AddBomDrawingDialogProps> = ({
       fullWidth
       disableEnforceFocus
     >
-      <DialogTitle>Add Drawing Number</DialogTitle>
+      <DialogTitle>Add Part Number</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1.5 }}>
           {error && (
@@ -120,7 +120,7 @@ const AddBomDrawingDialog: React.FC<AddBomDrawingDialogProps> = ({
             </Alert>
           )}
           <TextField
-            label="Assembly LN Item Code"
+            label="Assembly Item Code"
             value={assemblyItemCode}
             disabled
             fullWidth
@@ -159,7 +159,7 @@ const AddBomDrawingDialog: React.FC<AddBomDrawingDialogProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Drawing Number *"
+                label="Part Number *"
                 variant="outlined"
                 size="small"
                 InputProps={{

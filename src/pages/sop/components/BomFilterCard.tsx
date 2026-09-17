@@ -82,8 +82,8 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Assembly Number / LN Item Code"
-                placeholder="Type 3+ chars to search Assembly Number or LN item code..."
+                label="Assembly Number / Item Code"
+                placeholder="Type 3+ chars to search Assembly Number or  item code..."
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (

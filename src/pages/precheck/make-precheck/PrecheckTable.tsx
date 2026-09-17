@@ -168,9 +168,9 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
             <TableRow sx={{ backgroundColor: COLOUR_ROLES.headerBg }}>
               <SortableTableHeader label="Sr. No." columnKey="sr" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={45} />
               <SortableTableHeader label="Position No" columnKey="findNo" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={20} />
-              <SortableTableHeader label="Line Item Code" columnKey="lnItemCode" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
-              <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={140} />
-              <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={95} />
+              <SortableTableHeader label="Item Code" columnKey="lnItemCode" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
+              <SortableTableHeader label="Part Number" columnKey="drawingNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={140} />
+              <SortableTableHeader label="Item Description" columnKey="nomenclature" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={95} />
               <SortableTableHeader label="Unit" columnKey="unit" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={90} />
               <SortableTableHeader label="Qty" columnKey="quantity" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={40} />
               <SortableTableHeader label="Rem Qty" columnKey="remainingQuantity" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={75} />
@@ -798,7 +798,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
         <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem" }}>Confirm Undo Precheck</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ fontSize: "0.875rem", color: "#344054" }}>
-            Are you sure you want to undo precheck for Drawing No: <strong>{confirmUndoItem?.drawingNumber}</strong>?
+            Are you sure you want to undo precheck for Part Number: <strong>{confirmUndoItem?.drawingNumber}</strong>?
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -831,7 +831,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
         <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem", color: "error.main" }}>Confirm Delete Precheck</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ fontSize: "0.875rem", color: "#344054" }}>
-            Are you sure you want to delete precheck for Drawing No: <strong>{confirmDeleteItem?.drawingNumber}</strong>? This action cannot be undone.
+            Are you sure you want to delete precheck for Part Number: <strong>{confirmDeleteItem?.drawingNumber}</strong>? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

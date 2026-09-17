@@ -860,8 +860,8 @@ export default function GenerateIRMSN() {
 
             <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>
               {formMode === "ManufacturingItem"
-                ? "Pick the order line — drawing, item code, nomenclature, production series and project fill in automatically."
-                : "Pick the drawing number — item description, LN item code, project, production series, operation and build no. fill in automatically."}
+                ? "Pick the order line — Part Number, Item Code, Item description, production series and project fill in automatically."
+                : "Pick the Part Number — item description, Item Code, project, production series, operation and build no. fill in automatically."}
             </Typography>
           </Box>
 
@@ -925,7 +925,7 @@ export default function GenerateIRMSN() {
           {formMode === "ManufacturingItem" ? (
             /* Manufacturing Item Fields */
             <Grid container spacing={1.5}>
-              {/* Row 1: PO Number *, Drawing No. auto-filled, LN Item Code auto-filled */}
+              {/* Row 1: PO Number *, Part NumberNo. auto-filled, Item Code auto-filled */}
               <Grid item xs={12} sm={6} md={4}>
                 <Controller
                   name="poNumber"
@@ -1110,7 +1110,7 @@ export default function GenerateIRMSN() {
 
               <Grid item xs={12} sm={6} md={4}>
                 <TextField
-                  label="Drawing No."
+                  label="Part Number."
                   value={watchedDrawingNumber || ""}
                   fullWidth
                   size="small"
@@ -1122,7 +1122,7 @@ export default function GenerateIRMSN() {
 
               <Grid item xs={12} sm={6} md={4}>
                 <TextField
-                  label="LN Item Code"
+                  label="Item Code"
                   value={watchedLnItemCode || ""}
                   fullWidth
                   size="small"
@@ -1135,7 +1135,7 @@ export default function GenerateIRMSN() {
               {/* Row 2: Nomenclature, Production Series & Project No. */}
               <Grid item xs={12} sm={6} md={4}>
                 <TextField
-                  label="Nomenclature"
+                  label="Item Description"
                   value={watchedNomenclature || ""}
                   fullWidth
                   size="small"
@@ -1172,12 +1172,12 @@ export default function GenerateIRMSN() {
           ) : (
             /* Purchase Item Fields (Matching Screenshot) */
             <Grid container spacing={1.5}>
-              {/* Row 1: Drawing Number *, Item Description, LN Item Code */}
+              {/* Row 1: Part NumberNumber *, Item Description, Item Code */}
               <Grid item xs={12} sm={6} md={4}>
                 <Controller
                   name="drawingNumber"
                   control={control}
-                  rules={{ required: "Drawing number is required" }}
+                  rules={{ required: "Part Number is required" }}
                   render={({ field: { onChange }, fieldState: { error } }) => (
                     <Autocomplete
                       size="small"
@@ -1249,7 +1249,7 @@ export default function GenerateIRMSN() {
                       }}
                       renderOption={(props, option) => {
                         const { key, ...optionProps } = props;
-                        const lnPart = option.lnItemCode ? `LN: ${option.lnItemCode}` : "";
+                        const lnPart = option.lnItemCode ? `Item Code: ${option.lnItemCode}` : "";
                         const nomPart = option.nomenclature || "";
                         const subtitle1 = [lnPart, nomPart].filter(Boolean).join(" | ");
                         const projectPart = option.project || (option as any).projectNumber || "";
@@ -1325,7 +1325,7 @@ export default function GenerateIRMSN() {
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="Drawing Number *"
+                          label="Part Number *"
                           error={!!error}
                           helperText={error?.message}
                           sx={standardInputStyle}
@@ -1350,7 +1350,7 @@ export default function GenerateIRMSN() {
 
               <Grid item xs={12} sm={6} md={4}>
                 <TextField
-                  label="LN Item Code"
+                  label="Item Code"
                   value={watchedLnItemCode || ""}
                   fullWidth
                   size="small"

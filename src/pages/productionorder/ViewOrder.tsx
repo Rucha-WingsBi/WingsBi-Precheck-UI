@@ -413,8 +413,8 @@ const ViewOrder: React.FC = () => {
         <TableHead>
           <TableRow>
             <SortableTableHeader label="Sr" sortKey="sr" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-            <SortableTableHeader label="LN Item Code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-            <SortableTableHeader label="Drawing Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="Item code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
             <TableCell sx={{ ...commonTableHeaderStyle, width: 55 }}>Unit</TableCell>
             <TableCell sx={{ ...commonTableHeaderStyle, width: 70 }} align="center">Qty / <br /> Assm</TableCell>
             <TableCell sx={{ ...commonTableHeaderStyle, width: 75 }} align="center">Total <br /> Req Qty</TableCell>
@@ -553,7 +553,7 @@ const ViewOrder: React.FC = () => {
         </Alert>
       )}
 
-      {/* Form Controls Bar (PO Number, Drawing Number, LN Item Code, Prod Series dropdowns & ID Number text field) */}
+      {/* Form Controls Bar (PO Number, Part Number, Item code, Prod Series dropdowns & ID Number text field) */}
       <Paper
         elevation={0}
         sx={{
@@ -615,8 +615,8 @@ const ViewOrder: React.FC = () => {
                       </Typography>
                       {(lnCode || dwgNum || nom || compType) && (
                         <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
-                          {lnCode ? `LN: ${lnCode}` : ""}
-                          {dwgNum ? `${lnCode ? " | " : ""}Drawing: ${dwgNum}` : ""}
+                          {lnCode ? `Item Code: ${lnCode}` : ""}
+                          {dwgNum ? `${lnCode ? " | " : ""}Part No: ${dwgNum}` : ""}
                           {nom ? ` | ${nom}` : ""}
                           {compType ? ` | ${compType}` : ""}
                         </Typography>
@@ -632,7 +632,7 @@ const ViewOrder: React.FC = () => {
             />
           </FormControl>
 
-          {/* Drawing Number Dropdown */}
+          {/* Part Number Dropdown */}
           <FormControl
             size="small"
             sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
@@ -665,7 +665,7 @@ const ViewOrder: React.FC = () => {
                       </Typography>
                       {(lnCode || nom || compType) && (
                         <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
-                          {lnCode ? `LN: ${lnCode}` : ""}
+                          {lnCode ? `Item Code: ${lnCode}` : ""}
                           {nom ? `${lnCode ? " | " : ""}${nom}` : ""}
                           {compType ? ` | ${compType}` : ""}
                         </Typography>
@@ -676,12 +676,12 @@ const ViewOrder: React.FC = () => {
               }}
               ListboxProps={{ style: { maxHeight: "300px" } }}
               renderInput={(params) => (
-                <TextField {...params} label="Drawing Number *" size="small" placeholder="Select Drawing" />
+                <TextField {...params} label="Part Number *" size="small" placeholder="Select Part Number" />
               )}
             />
           </FormControl>
 
-          {/* LN Item Code Dropdown */}
+          {/* Item code Dropdown */}
           <FormControl
             size="small"
             sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
@@ -716,7 +716,7 @@ const ViewOrder: React.FC = () => {
                       </Typography>
                       {(dwgNum || nom || compType) && (
                         <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
-                          {dwgNum ? `Drawing: ${dwgNum}` : ""}
+                          {dwgNum ? `Part Number: ${dwgNum}` : ""}
                           {nom ? `${dwgNum ? " | " : ""}${nom}` : ""}
                           {compType ? ` | ${compType}` : ""}
                         </Typography>
@@ -727,7 +727,7 @@ const ViewOrder: React.FC = () => {
               }}
               ListboxProps={{ style: { maxHeight: "300px" } }}
               renderInput={(params) => (
-                <TextField {...params} label="LN Item Code *" size="small" placeholder="Select LN Code" />
+                <TextField {...params} label="Item code *" size="small" placeholder="Select Item Code" />
               )}
             />
           </FormControl>
