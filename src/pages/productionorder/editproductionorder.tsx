@@ -486,8 +486,9 @@ export default function EditProductionOrder() {
               onClick={handleBack}
               disabled={loading}
               sx={{
-                height: 34,
-                minWidth: 100,
+                height: 32,
+                minWidth: 75,
+                px: 2,
                 borderRadius: "6px",
                 borderColor: "grey.300",
                 color: "text.secondary",
@@ -506,14 +507,13 @@ export default function EditProductionOrder() {
               startIcon={
                 loading ? (
                   <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <SaveIcon fontSize="small" />
-                )
+                ) : undefined
               }
               disabled={loading}
               sx={{
-                height: 34,
-                minWidth: 120,
+                height: 32,
+                minWidth: 75,
+                px: 2,
                 borderRadius: "6px",
                 backgroundColor: "primary.main",
                 color: "primary.contrastText",
@@ -524,7 +524,7 @@ export default function EditProductionOrder() {
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
             >
-              {loading ? "Updating..." : "Update Order"}
+              {loading ? "Saving..." : "Save"}
             </Button>
           </Stack>
         </form>

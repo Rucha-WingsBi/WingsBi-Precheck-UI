@@ -52,6 +52,7 @@ import {
   Search as SearchIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
+  CalendarToday as CalendarTodayIcon,
 } from "@mui/icons-material";
 import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
@@ -179,6 +180,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);    // Pending | Partial | Completed
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [fromDateFocused, setFromDateFocused] = useState(false);
+  const [toDateFocused, setToDateFocused] = useState(false);
 
   // ── Consumed tab / shared filter states ───────────────────────────────────
   const [selectedLnItemCode, setSelectedLnItemCode] = useState<string[]>([]);
@@ -295,9 +298,12 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
   };
 
   const handleToggleColumn = (key: string) => {
-    setSelectedExportColumns((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key];
+      return activeExportColumns.map((c) => c.key).filter((k) => updated.includes(k));
+    });
   };
 
   // ── Format date helper ─────────────────────────────────────────────────────
@@ -806,7 +812,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
     handleExport();
   };
 
-  // ── JSX ────────────────────────────────────────────────────────────────────
+
   return (
     <Box
       sx={{
@@ -930,7 +936,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         }}
       >
         {/* Section 1: Filter Bar & Active Chips */}
-        <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+        <Box sx={{ pt: 1, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
           {/* ── Precheck Tab Filters ─────────────────────────────────────────── */}
           {activeTab === "precheck" && (
             <Box
@@ -977,6 +983,13 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "1 1 340px",
                   minWidth: 260,
+                  "& .MuiOutlinedInput-root": {
+                    fontSize: "0.825rem",
+                    height: 38,
+                    backgroundColor: "background.paper",
+                    borderRadius: "6px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                  },
                 }}
               />
 
@@ -1009,24 +1022,71 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               {/* Date From */}
               <TextField
                 size="small"
-                type="date"
+                type={fromDateFocused || Boolean(dateFrom) ? "date" : "text"}
                 label="From Date"
-                InputLabelProps={{ shrink: true }}
-                placeholder="From Date"
+                InputLabelProps={{ shrink: Boolean(fromDateFocused || dateFrom) }}
                 value={dateFrom}
+                onFocus={() => setFromDateFocused(true)}
+                onBlur={() => setFromDateFocused(false)}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
                 inputProps={{ title: "From Date" }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                      <CalendarTodayIcon
+                        sx={{ fontSize: 16, color: "#667085" }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setFromDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch { }
+                              }
+                            }, 10);
+                          }
+                        }}
+                        onClick={(e) => {
+                          setFromDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch { }
+                              }
+                            }, 10);
+                          }
+                        }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   flex: "0 0 148px",
                   minWidth: 140,
+                  position: "relative",
                   "& .MuiOutlinedInput-root": {
                     height: 38,
+                    backgroundColor: "background.paper",
+                    borderRadius: "6px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                   },
                   "& .MuiInputLabel-root": {
-                    fontSize: "0.75rem",
+                    fontSize: "0.82rem",
                     bgcolor: "#ffffff",
                     px: 0.5,
-                    color: "#667085",
+                    color: "#98A2B3",
+                    "&.MuiInputLabel-shrink": {
+                      fontSize: "0.75rem",
+                      color: "#667085",
+                    },
                     "&.Mui-focused": { color: "primary.main" },
                   },
                   "& .MuiOutlinedInput-input": {
@@ -1035,30 +1095,86 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     fontSize: "0.82rem",
                     color: dateFrom ? "#344054" : "#98A2B3",
                   },
+                  "& input::-webkit-calendar-picker-indicator": {
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    width: 24,
+                    height: 24,
+                    opacity: 0,
+                    cursor: "pointer",
+                  },
                 }}
               />
 
               {/* Date To */}
               <TextField
                 size="small"
-                type="date"
+                type={toDateFocused || Boolean(dateTo) ? "date" : "text"}
                 label="To Date"
-                InputLabelProps={{ shrink: true }}
-                placeholder="To Date"
+                InputLabelProps={{ shrink: Boolean(toDateFocused || dateTo) }}
                 value={dateTo}
+                onFocus={() => setToDateFocused(true)}
+                onBlur={() => setToDateFocused(false)}
                 onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
                 inputProps={{ title: "To Date" }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                      <CalendarTodayIcon
+                        sx={{ fontSize: 16, color: "#667085" }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setToDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch { }
+                              }
+                            }, 10);
+                          }
+                        }}
+                        onClick={(e) => {
+                          setToDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch { }
+                              }
+                            }, 10);
+                          }
+                        }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   flex: "0 0 148px",
                   minWidth: 140,
+                  position: "relative",
                   "& .MuiOutlinedInput-root": {
                     height: 38,
+                    backgroundColor: "background.paper",
+                    borderRadius: "6px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                   },
                   "& .MuiInputLabel-root": {
-                    fontSize: "0.75rem",
+                    fontSize: "0.82rem",
                     bgcolor: "#ffffff",
                     px: 0.5,
-                    color: "#667085",
+                    color: "#98A2B3",
+                    "&.MuiInputLabel-shrink": {
+                      fontSize: "0.75rem",
+                      color: "#667085",
+                    },
                     "&.Mui-focused": { color: "primary.main" },
                   },
                   "& .MuiOutlinedInput-input": {
@@ -1066,6 +1182,15 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                     px: 1.5,
                     fontSize: "0.82rem",
                     color: dateTo ? "#344054" : "#98A2B3",
+                  },
+                  "& input::-webkit-calendar-picker-indicator": {
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    width: 24,
+                    height: 24,
+                    opacity: 0,
+                    cursor: "pointer",
                   },
                 }}
               />
@@ -1079,7 +1204,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 auto",
                   backgroundColor: "primary.main",
-                  color: "#fff",
+                  color: "#FFFFFF",
                   fontWeight: 600,
                   fontSize: "0.82rem",
                   borderRadius: "6px",
@@ -1089,6 +1214,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   boxShadow: "none",
                   minWidth: 65,
                   "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#EAECF0",
+                    color: "#98A2B3",
+                  },
                 }}
               >
                 Apply
@@ -1097,18 +1226,25 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               {/* Clear Button */}
               <Button
                 size="small"
-                variant="text"
+                variant="outlined"
                 onClick={handleClearAll}
                 sx={{
                   flex: "0 0 auto",
                   color: "#667085",
+                  borderColor: "#D0D5DD",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "6px",
                   fontWeight: 600,
                   fontSize: "0.82rem",
                   height: 38,
-                  px: 1,
+                  px: 1.5,
                   minWidth: 55,
                   textTransform: "none",
-                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                  "&:hover": {
+                    borderColor: "#98A2B3",
+                    backgroundColor: "#F9FAFB",
+                    color: "#101828",
+                  },
                 }}
               >
                 Clear
@@ -1129,7 +1265,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 overflowY: "hidden",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
-                py: 0.25,
+                pt: 1.5,
+                pb: 0.5,
                 "&::-webkit-scrollbar": { display: "none" },
               }}
             >
@@ -1212,7 +1349,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         fontSize: "0.825rem",
                         height: 38,
                         backgroundColor: "background.paper",
-                        borderRadius: "8px",
+                        borderRadius: "6px",
                         "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                       },
                     }}
@@ -1295,7 +1432,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         fontSize: "0.825rem",
                         height: 38,
                         backgroundColor: "background.paper",
-                        borderRadius: "8px",
+                        borderRadius: "6px",
                         "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                       },
                     }}
@@ -1360,7 +1497,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         fontSize: "0.825rem",
                         height: 38,
                         backgroundColor: "background.paper",
-                        borderRadius: "8px",
+                        borderRadius: "6px",
                         "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                       },
                     }}
@@ -1369,87 +1506,47 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{ flex: "1 1 115px", minWidth: 90 }}
               />
 
-              {/* 4. Assembly No (Searchable Autocomplete) */}
-              <Autocomplete
+              {/* 4. Assembly No (Text Input) */}
+              <TextField
+                placeholder="Assembly No"
                 size="small"
-                options={consumedAssemblyOptions}
-                value={selectedPO.length > 0 ? selectedPO[0] : null}
-                onChange={(_, newValue) => {
-                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
-                  setSelectedPO(val ? [String(val)] : []);
+                variant="outlined"
+                value={selectedPO.length > 0 ? selectedPO[0] : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedPO(val ? [val] : []);
+                  setPOSearchText(val);
                   setPage(0);
                 }}
-                onInputChange={(_, newInputValue, reason) => {
-                  if (reason === "input") {
-                    setPOSearchText(newInputValue);
-                  }
-                }}
-                getOptionLabel={(option: any) =>
-                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionOrderNumber || ""
-                }
-                filterOptions={(options, { inputValue }) => {
-                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
-                  const searchLower = inputValue.toLowerCase().trim();
-                  return options
-                    .filter((opt: any) => {
-                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.productionOrderNumber || "";
-                      return label.toLowerCase().includes(searchLower);
-                    })
-                    .slice(0, 100);
-                }}
-                renderOption={(props: any, option: any) => {
-                  const { key, ...optionProps } = props;
-                  const poNum = typeof option === "string" || typeof option === "number" ? String(option) : option?.productionOrderNumber || option?.drawingNumber || "";
-                  const lnCode = typeof option === "object" ? option?.lnItemCode : "";
-                  const dwgNum = typeof option === "object" ? option?.drawingNumber : "";
-                  const nom = typeof option === "object" ? option?.nomenclature : "";
-                  const compType = typeof option === "object" ? option?.componentType : "";
-                  const sub = [lnCode ? `LN: ${lnCode}` : null, dwgNum && dwgNum !== poNum ? `Drawing: ${dwgNum}` : null, nom, compType].filter(Boolean).join(" | ");
+                InputProps={{
+                  endAdornment: selectedPO.length > 0 && selectedPO[0] ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSelectedPO([]);
+                          setPOSearchText("");
+                          setPage(0);
+                        }}
+                        edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                      >
 
-                  return (
-                    <li {...optionProps} key={key}>
-                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
-                          {poNum}
-                        </Typography>
-                        {sub ? (
-                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
-                            {sub}
-                          </Typography>
-                        ) : null}
-                      </Box>
-                    </li>
-                  );
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
                 }}
-                ListboxProps={{
-                  style: { maxHeight: "260px" },
-                  sx: {
-                    "& .MuiAutocomplete-option": {
-                      minHeight: "28px !important",
-                      py: "3px !important",
-                      px: "10px !important",
-                      fontSize: "0.82rem",
-                    },
+                sx={{
+                  flex: "1 1 125px",
+                  minWidth: 100,
+                  "& .MuiOutlinedInput-root": {
+                    fontSize: "0.825rem",
+                    height: 38,
+                    backgroundColor: "background.paper",
+                    borderRadius: "6px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                   },
                 }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="Assembly No"
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        fontSize: "0.825rem",
-                        height: 38,
-                        backgroundColor: "background.paper",
-                        borderRadius: "8px",
-                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-                      },
-                    }}
-                  />
-                )}
-                sx={{ flex: "1 1 125px", minWidth: 100 }}
               />
 
               {/* 5. ID Number */}
@@ -1474,10 +1571,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   ) : null,
                 }}
                 sx={{
-                  flex: "1 1 95px",
+                  flex: "1 1 10px",
                   minWidth: 75,
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
+                    borderRadius: "6px",
                     fontSize: "0.825rem",
                     height: 38,
                     backgroundColor: "background.paper",
@@ -1493,18 +1590,22 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 onClick={handleApplyFilters}
                 disabled={!isConsumedDropdownSelected || isConsumedLoading}
                 sx={{
-                  flexShrink: 0,
+                  flex: "0 0 auto",
                   backgroundColor: "primary.main",
-                  color: "#fff",
+                  color: "#FFFFFF",
                   fontWeight: 600,
-                  fontSize: "0.85rem",
-                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  borderRadius: "6px",
                   px: 2,
                   height: 38,
                   textTransform: "none",
                   boxShadow: "none",
                   minWidth: 65,
                   "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#EAECF0",
+                    color: "#98A2B3",
+                  },
                 }}
               >
                 Apply
@@ -1513,17 +1614,25 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               {/* Clear Button */}
               <Button
                 size="small"
-                variant="text"
+                variant="outlined"
                 onClick={handleClearAll}
                 sx={{
-                  flexShrink: 0,
+                  flex: "0 0 auto",
                   color: "#667085",
+                  borderColor: "#D0D5DD",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "6px",
                   fontWeight: 600,
-                  fontSize: "0.85rem",
+                  fontSize: "0.82rem",
                   height: 38,
+                  px: 1.5,
                   minWidth: 55,
                   textTransform: "none",
-                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                  "&:hover": {
+                    borderColor: "#98A2B3",
+                    backgroundColor: "#F9FAFB",
+                    color: "#101828",
+                  },
                 }}
               >
                 Clear

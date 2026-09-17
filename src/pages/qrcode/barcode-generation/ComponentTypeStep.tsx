@@ -51,9 +51,10 @@ interface ComponentTypeStepProps {
   handleEnterKey: (
     e: React.KeyboardEvent,
     rowIndex: number,
-    isLastColumn: boolean,
+    fieldName: "idNo" | "quantity" | "size" | "mirir" | "heatLotBatchNo",
   ) => void;
   addNewQrRow: () => void;
+  onOpenAddRowsDialog: () => void;
 }
 
 function ComponentTypeStep({
@@ -72,6 +73,7 @@ function ComponentTypeStep({
   handleQrTableChange,
   handleEnterKey,
   addNewQrRow,
+  onOpenAddRowsDialog,
 }: ComponentTypeStepProps) {
   return (
     <Card
@@ -514,7 +516,7 @@ function ComponentTypeStep({
           <TableContainer
             component={Paper}
             variant="outlined"
-            sx={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}
+            sx={{ width: "100%", maxHeight:"295px", overflowY: "auto" }}
           >
             <Table size="small">
               <TableHead>
@@ -545,17 +547,19 @@ function ComponentTypeStep({
                     <TableCell>{row.srNo}</TableCell>
                     <TableCell>
                       <TextField
+                        id={`qr-matrix-idNo-${index}`}
                         value={row.idNo}
                         size="small"
                         fullWidth
                         onChange={(e) =>
                           handleQrTableChange(index, "idNo", e.target.value)
                         }
-                        onKeyDown={(e) => handleEnterKey(e, index, false)}
+                        onKeyDown={(e) => handleEnterKey(e, index, "idNo")}
                       />
                     </TableCell>
                     <TableCell>
                       <TextField
+                        id={`qr-matrix-quantity-${index}`}
                         value={row.quantity}
                         type="number"
                         size="small"
@@ -564,33 +568,36 @@ function ComponentTypeStep({
                         onChange={(e) =>
                           handleQrTableChange(index, "quantity", e.target.value)
                         }
-                        onKeyDown={(e) => handleEnterKey(e, index, false)}
+                        onKeyDown={(e) => handleEnterKey(e, index, "quantity")}
                       />
                     </TableCell>
                     <TableCell>
                       <TextField
+                        id={`qr-matrix-size-${index}`}
                         value={row.size}
                         size="small"
                         fullWidth
                         onChange={(e) =>
                           handleQrTableChange(index, "size", e.target.value)
                         }
-                        onKeyDown={(e) => handleEnterKey(e, index, false)}
+                        onKeyDown={(e) => handleEnterKey(e, index, "size")}
                       />
                     </TableCell>
                     <TableCell>
                       <TextField
+                        id={`qr-matrix-mirir-${index}`}
                         value={row.mirir}
                         size="small"
                         fullWidth
                         onChange={(e) =>
                           handleQrTableChange(index, "mirir", e.target.value)
                         }
-                        onKeyDown={(e) => handleEnterKey(e, index, false)}
+                        onKeyDown={(e) => handleEnterKey(e, index, "mirir")}
                       />
                     </TableCell>
                     <TableCell>
                       <TextField
+                        id={`qr-matrix-heatLotBatchNo-${index}`}
                         value={row.heatLotBatchNo}
                         size="small"
                         fullWidth
@@ -601,7 +608,7 @@ function ComponentTypeStep({
                             e.target.value,
                           )
                         }
-                        onKeyDown={(e) => handleEnterKey(e, index, true)}
+                        onKeyDown={(e) => handleEnterKey(e, index, "heatLotBatchNo")}
                       />
                     </TableCell>
                   </TableRow>
@@ -617,9 +624,9 @@ function ComponentTypeStep({
               alignItems: "center",
             }}
           >
-            <Tooltip title="Add Row" arrow>
+            <Tooltip title="Add Rows" arrow>
               <IconButton
-                onClick={addNewQrRow}
+                onClick={onOpenAddRowsDialog}
                 sx={{
                   backgroundColor: "primary.main",
                   color: "#fff",

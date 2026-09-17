@@ -70,13 +70,7 @@ const Dashboard: React.FC = () => {
       description: "Upload and view Production Order details and status",
       icon: <ShoppingCartIcon sx={{ fontSize: 40 }} />,
       color: "#df2e78ff",
-      route: isAccessible("Production Order Management") || isAccessible("Upload Orders")
-        ? "/production-order/upload"
-        : isAccessible("Pending For Precheck")
-          ? user?.role === "Store"
-            ? "/precheck/pending/store"
-            : "/precheck/pending/qc"
-          : "/dashboard",
+      route: "/production-order/upload",
 
     },
     {
@@ -154,20 +148,20 @@ const Dashboard: React.FC = () => {
     //   route:"/testing/offering",
     // },
     {
-      title:"Components",
-      pageName:"Components",
-      description:"Access and manage Components related tasks",
-      icon:<CategoryIcon sx={{fontSize: 40 }}/>,
-      color:"#f1b40bff",
-      route:"/components/assembly",
+      title: "Components",
+      pageName: "Components",
+      description: "Access and manage Components related tasks",
+      icon: <CategoryIcon sx={{ fontSize: 40 }} />,
+      color: "#f1b40bff",
+      route: "/components/assembly",
     },
     {
-      title:"Admin Master",
-      pageName:"Role Management",
-      description:"Access and manage Admin  related tasks",
-      icon:<SettingIcon  sx={{fontSize:40}}/>,
-      color:"#3F51B5",
-      route:"/adminmaster/rolemanagement",
+      title: "Admin Master",
+      pageName: "Role Management",
+      description: "Access and manage Admin  related tasks",
+      icon: <SettingIcon sx={{ fontSize: 40 }} />,
+      color: "#3F51B5",
+      route: "/adminmaster/rolemanagement",
     }
   ];
 

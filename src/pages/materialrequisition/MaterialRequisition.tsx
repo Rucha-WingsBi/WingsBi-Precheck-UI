@@ -25,13 +25,17 @@ import {
   Tabs,
   Tab,
   Stack,
+  Checkbox,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
 
 import {
   Save as SaveIcon,
   Close as CloseIcon,
-  Refresh as RefreshIcon,
   Download as DownloadIcon,
   SwapHoriz as SwapHorizIcon,
   Add as AddIcon,
@@ -50,6 +54,23 @@ import {
   swapComponents,
   cancelMaterialRequisition,
 } from "../../store/slices/materialRequisitionSlice";
+import api from "../../services/api";
+
+
+const ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS = [
+  { key: "requestId", label: "Request ID" },
+  { key: "poNumber", label: "PO Number" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "materialCode", label: "LN Item Code" },
+  { key: "quantity", label: "Quantity" },
+  { key: "itemDescription", label: "Item Description" },
+  { key: "status", label: "Status" },
+  { key: "outPONo", label: "Out PO No." },
+  { key: "minDate", label: "MIN Date" },
+  { key: "reasonForRejection", label: "Reason / Remarks" },
+  { key: "createdDate", label: "Created Date" },
+];
+
 import type {
   MaterialRequisitionRecord,
   CreateMaterialRequisitionRequest,
@@ -62,11 +83,10 @@ import {
 } from "../../hooks/useMasterData";
 import { usePONumbers } from "../../hooks/usePONumbers";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import type { ProductionOrderMaster } from "../../hooks/usePONumbers";
 
 import type { DrawingNumber } from "../../types";
-
-import api from "../../services/api";
 
 // Interface for Material Request data (for update form)
 interface MaterialRequest {
@@ -168,7 +188,7 @@ const renderStatusBadge = (statusStr: string | undefined) => {
       sx={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 0.75,
+        justifyContent: "center",
         px: 1.25,
         py: 0.25,
         borderRadius: "12px",
@@ -180,14 +200,6 @@ const renderStatusBadge = (statusStr: string | undefined) => {
         whiteSpace: "nowrap",
       }}
     >
-      <Box
-        sx={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          bgcolor: color,
-        }}
-      />
       {statusStr || "N/A"}
     </Box>
   );
@@ -199,6 +211,35 @@ const STATUS_FILTERS = {
   PENDING_PLANNER: "Pending-Planner",
   PENDING_STORE: "Pending-Store",
   COMPLETED: "Completed",
+};
+
+// Helper function to get status colors for filter chips (matching table status badges)
+const getStatusChipColors = (filterValue: string) => {
+  const val = (filterValue || "").toLowerCase();
+  if (val.includes("completed")) {
+    return {
+      bg: "#ecfdf5",
+      color: "#047857",
+      borderColor: "#a7f3d0",
+    };
+  } else if (val.includes("planner")) {
+    return {
+      bg: "#fffbeb",
+      color: "#d97706",
+      borderColor: "#fde68a",
+    };
+  } else if (val.includes("store")) {
+    return {
+      bg: "#eff6ff",
+      color: "#2563eb",
+      borderColor: "#bfdbfe",
+    };
+  }
+  return {
+    bg: "#f4f5f7",
+    color: "#344054",
+    borderColor: "#d0d5dd",
+  };
 };
 
 interface TabPanelProps {
@@ -248,10 +289,10 @@ const MaterialRequisition: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: users = [] } = useUsers();
 
-  // Get user role
-  const userRole = user?.role?.toLowerCase() || "";
-  const isPlanner = userRole === "planner" || userRole === "admin";
-  const isStore = userRole === "store" || userRole === "admin";
+  // Get user access permissions dynamically
+  const hasRequisitionPermission = useHasPermission("Material Requisition");
+  const isPlanner = hasRequisitionPermission || Boolean(user);
+  const isStore = hasRequisitionPermission || Boolean(user);
 
   const [activeTab, setActiveTab] = useState(0);
   const [requestList, setRequestList] = useState<RequestListItem[]>([]);
@@ -276,6 +317,14 @@ const MaterialRequisition: React.FC = () => {
   const [cancelErrorMessage, setCancelErrorMessage] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // ── Row Selection & Export Options State ────────────────────────────────
+  const [selectedRowIds, setSelectedRowIds] = useState<(string | number)[]>([]);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
+    ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((c) => c.key)
+  );
 
   const fetchSwapHistory = async () => {
     setSwapHistoryLoading(true);
@@ -637,19 +686,7 @@ const MaterialRequisition: React.FC = () => {
     }
   };
 
-  // Handle refresh
-  const handleRefresh = () => {
-    setErrorMessage("");
-    setSuccessMessage("");
-    dispatch(fetchMaterialRequisitions(selectedFilter || undefined))
-      .then(() => {
-        setSuccessMessage("Data refreshed successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
-      })
-      .catch(() => {
-        setErrorMessage("Failed to refresh data");
-      });
-  };
+
 
   // Handle close/reset
   const handleClose = () => {
@@ -792,20 +829,100 @@ const MaterialRequisition: React.FC = () => {
   };
 
 
+  const handleSelectAllRows = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const allIds = paginatedRequestList.map((item) => item.id);
+      setSelectedRowIds(allIds);
+    } else {
+      setSelectedRowIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string | number) => {
+    setSelectedRowIds((prev) =>
+      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const isAllRowsSelected =
+    paginatedRequestList.length > 0 &&
+    paginatedRequestList.every((item) => selectedRowIds.includes(item.id));
+  const isSomeRowsSelected =
+    paginatedRequestList.some((item) => selectedRowIds.includes(item.id)) &&
+    !isAllRowsSelected;
+
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(colKey)
+        ? prev.filter((k) => k !== colKey)
+        : [...prev, colKey];
+      return ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((c) => c.key).filter((k) =>
+        updated.includes(k)
+      );
+    });
+  };
+
   // Handle download data
   const handleDownloadData = async () => {
     setIsDownloading(true);
     setErrorMessage("");
     setSuccessMessage("");
 
+    const selectedKeys =
+      exportMode === "custom"
+        ? selectedExportColumns
+        : ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((col) => col.key);
+
+    const columnsToExport = ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map(
+      (col) => col.key
+    ).filter((key) => selectedKeys.includes(key));
+
+    const payload = {
+
+      selectedColumns: columnsToExport,
+      selectedIds: selectedRowIds.length > 0 ? selectedRowIds : undefined,
+      ids: selectedRowIds.length > 0 ? selectedRowIds : undefined,
+      status: selectedFilter !== STATUS_FILTERS.ALL ? selectedFilter : undefined,
+    };
+
     try {
-      const response = await api.get("/api/MaterialRequisition/export", {
-        responseType: "blob",
-        headers: {
-          accept:
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        },
-      });
+      let response;
+      try {
+        response = await api.post("/api/MaterialRequisition/export", payload, {
+          responseType: "blob",
+          headers: {
+            accept:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+        });
+      } catch (postErr) {
+        response = await api.get("/api/MaterialRequisition/export", {
+          params: {
+            ...payload,
+            columns: columnsToExport.join(","),
+            selectedIds: selectedRowIds.join(","),
+          },
+          responseType: "blob",
+          headers: {
+            accept:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+        });
+      }
 
       if (response.data && response.data.size > 0) {
         const now = new Date();
@@ -827,6 +944,7 @@ const MaterialRequisition: React.FC = () => {
 
         setSuccessMessage("File downloaded successfully!");
         setTimeout(() => setSuccessMessage(""), 3000);
+        setExportDialogOpen(false);
       } else {
         throw new Error("No file content received from the API");
       }
@@ -878,18 +996,14 @@ const MaterialRequisition: React.FC = () => {
         <Stack direction="row" alignItems="center" spacing={1}>
           <IconButton
             onClick={() => navigate("/precheck/make")}
-            size="small"
             sx={{
               color: "primary.main",
-              border: "1px solid #D0D5DD",
-              borderRadius: "8px",
               p: 0.5,
-              backgroundColor: "#FFFFFF",
-              "&:hover": { backgroundColor: "#F2F4F7", borderColor: "#98A2B3" },
+              "&:hover": { backgroundColor: "grey.100" },
             }}
             title="Back to Make Precheck"
           >
-            <ArrowBackIcon fontSize="small" />
+            <ArrowBackIcon />
           </IconButton>
           <Box>
             <Typography
@@ -919,7 +1033,7 @@ const MaterialRequisition: React.FC = () => {
                 <DownloadIcon fontSize="small" />
               )
             }
-            onClick={handleDownloadData}
+            onClick={handleOpenExportDialog}
             disabled={isDownloading || apiLoading}
             sx={{
               height: 32,
@@ -933,7 +1047,7 @@ const MaterialRequisition: React.FC = () => {
               "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
             }}
           >
-            {isDownloading ? "Downloading..." : "Download"}
+            {isDownloading ? "Exporting..." : "Export"}
           </Button>
 
           {activeTab === 0 && (
@@ -1067,6 +1181,7 @@ const MaterialRequisition: React.FC = () => {
                 { label: "Completed", value: STATUS_FILTERS.COMPLETED },
               ].map((filter) => {
                 const isActive = (selectedFilter || "") === filter.value;
+                const colors = getStatusChipColors(filter.value);
                 return (
                   <Chip
                     key={filter.value}
@@ -1075,16 +1190,18 @@ const MaterialRequisition: React.FC = () => {
                     onClick={() => handleFilterChange(filter.value || null)}
                     sx={{
                       borderRadius: "14px",
-                      fontWeight: 600,
                       fontSize: "0.75rem",
                       height: "26px",
                       cursor: "pointer",
-                      border: isActive ? "1.5px solid" : "1px solid #e4e7ec",
-                      borderColor: isActive ? "primary.main" : "#e4e7ec",
-                      bgcolor: isActive ? "rgba(107, 40, 138, 0.08)" : "#f9fafb",
-                      color: isActive ? "primary.main" : "#667085",
+                      border: isActive
+                        ? `2.5px solid ${colors.color}`
+                        : `1px solid ${colors.borderColor}`,
+                      bgcolor: colors.bg,
+                      color: colors.color,
+                      fontWeight: isActive ? 700 : 600,
                       "&:hover": {
-                        bgcolor: isActive ? "rgba(107, 40, 138, 0.12)" : "#f2f4f7",
+                        bgcolor: colors.bg,
+                        filter: "brightness(0.96)",
                       },
                     }}
                   />
@@ -1093,28 +1210,7 @@ const MaterialRequisition: React.FC = () => {
 
               <Box sx={{ flex: 1 }} />
 
-              {/* Refresh Button */}
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<RefreshIcon sx={{ fontSize: "16px !important" }} />}
-                onClick={handleRefresh}
-                disabled={apiLoading}
-                sx={{
-                  flex: "0 0 auto",
-                  height: 26,
-                  borderRadius: "6px",
-                  borderColor: "grey.300",
-                  color: "text.secondary",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  px: 1.25,
-                  "&:hover": { borderColor: "grey.400", bgcolor: "grey.50" },
-                }}
-              >
-                Refresh
-              </Button>
+
             </Box>
 
             {/* Results Count Row */}
@@ -1134,12 +1230,23 @@ const MaterialRequisition: React.FC = () => {
               >
                 {getTableHeader()}
               </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
-              >
-                {requestList.length} {requestList.length === 1 ? "result" : "results"}
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                {selectedRowIds.length > 0 && (
+                  <Chip
+                    label={`${selectedRowIds.length} row(s) selected`}
+                    size="small"
+                    color="primary"
+                    onDelete={() => setSelectedRowIds([])}
+                    sx={{ height: 22, fontSize: "0.72rem", fontWeight: 600 }}
+                  />
+                )}
+                <Typography
+                  variant="body2"
+                  sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
+                >
+                  {requestList.length} {requestList.length === 1 ? "result" : "results"}
+                </Typography>
+              </Box>
             </Box>
           </Box>
 
@@ -1164,19 +1271,28 @@ const MaterialRequisition: React.FC = () => {
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox" sx={{ backgroundColor: "#F9FAFB !important", borderBottom: "1px solid #EAECF0", py: 0.6, px: 1 }}>
+                      <Checkbox
+                        size="small"
+                        checked={isAllRowsSelected}
+                        indeterminate={isSomeRowsSelected}
+                        onChange={handleSelectAllRows}
+                        sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "primary.main" }, "&.MuiCheckbox-indeterminate": { color: "primary.main" } }}
+                      />
+                    </TableCell>
                     {[
-                      { label: "Request ID", width: 120 },
-                      { label: "PO Number", width: 130 },
-                      { label: "Drawing Number", width: 140 },
-                      { label: "LN Item Code", width: 120 },
-                      { label: "Quantity", width: 80 },
-                      { label: "Item Description", width: 180 },
-                      { label: "Status", width: 140 },
-                      { label: "Action", width: 90 },
+                      { label: "Request ID", width: 120, align: "left" },
+                      { label: "PO Number", width: 130, align: "left" },
+                      { label: "Drawing Number", width: 140, align: "left" },
+                      { label: "LN Item Code", width: 120, align: "left" },
+                      { label: "Quantity", width: 90, align: "center" },
+                      { label: "Item Description", width: 180, align: "left" },
+                      { label: "Status", width: 140, align: "center" },
+                      { label: "Action", width: 100, align: "center" },
                     ].map((col) => (
                       <TableCell
                         key={col.label}
-                        align="left"
+                        align={(col.align as any) || "left"}
                         sx={{
                           fontWeight: 700,
                           backgroundColor: "#F9FAFB !important",
@@ -1212,8 +1328,8 @@ const MaterialRequisition: React.FC = () => {
                               : "inherit",
                           "&:hover": isPendingPlanner
                             ? {
-                                backgroundColor: "#f9fafb",
-                              }
+                              backgroundColor: "#f9fafb",
+                            }
                             : {},
                           "& td": {
                             borderBottom: "1px solid #F2F4F7",
@@ -1224,7 +1340,15 @@ const MaterialRequisition: React.FC = () => {
                           },
                         }}
                       >
-                        <TableCell>
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            size="small"
+                            checked={selectedRowIds.includes(item.id)}
+                            onChange={() => handleSelectRow(item.id)}
+                            sx={{ color: "#d0d5dd", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        </TableCell>
+                        <TableCell align="left">
                           <Typography
                             variant="body2"
                             sx={{ fontWeight: 600, color: "#101828", fontSize: "0.8rem" }}
@@ -1232,13 +1356,13 @@ const MaterialRequisition: React.FC = () => {
                             {item.requestId}
                           </Typography>
                         </TableCell>
-                        <TableCell>{item.poNumber || "N/A"}</TableCell>
-                        <TableCell>{item.drawingNumber || "N/A"}</TableCell>
-                        <TableCell>{item.materialCode}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.itemDescription}</TableCell>
-                        <TableCell>{renderStatusBadge(item.status)}</TableCell>
-                        <TableCell>
+                        <TableCell align="left">{item.poNumber || "N/A"}</TableCell>
+                        <TableCell align="left">{item.drawingNumber || "N/A"}</TableCell>
+                        <TableCell align="left">{item.materialCode}</TableCell>
+                        <TableCell align="center">{item.quantity}</TableCell>
+                        <TableCell align="left">{item.itemDescription}</TableCell>
+                        <TableCell align="center">{renderStatusBadge(item.status)}</TableCell>
+                        <TableCell align="center">
                           <Button
                             variant="text"
                             color="error"
@@ -1272,7 +1396,7 @@ const MaterialRequisition: React.FC = () => {
                   })}
                   {requestList.length === 0 && !apiLoading && (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4, borderBottom: "none" }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4, borderBottom: "none" }}>
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
                           No data available
                         </Typography>
@@ -1614,9 +1738,7 @@ const MaterialRequisition: React.FC = () => {
                   startIcon={
                     apiLoading ? (
                       <CircularProgress size={16} />
-                    ) : (
-                      <SaveIcon fontSize="small" />
-                    )
+                    ) : undefined
                   }
                   disabled={apiLoading || !isStore}
                   sx={{
@@ -1785,17 +1907,18 @@ const MaterialRequisition: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     {[
-                      "Sr. No.",
-                      "From PO Number",
-                      "From ID Number",
-                      "To PO Number",
-                      "To ID Number",
-                      "Drawing Number",
-                      "Created By",
-                      "Created Date",
-                    ].map((label) => (
+                      { label: "Sr. No.", align: "center" },
+                      { label: "From PO Number", align: "left" },
+                      { label: "From ID Number", align: "left" },
+                      { label: "To PO Number", align: "left" },
+                      { label: "To ID Number", align: "left" },
+                      { label: "Drawing Number", align: "left" },
+                      { label: "Created By", align: "left" },
+                      { label: "Created Date", align: "center" },
+                    ].map((col) => (
                       <TableCell
-                        key={label}
+                        key={col.label}
+                        align={(col.align as any) || "left"}
                         sx={{
                           fontWeight: 700,
                           backgroundColor: "#F9FAFB !important",
@@ -1807,7 +1930,7 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {label}
+                        {col.label}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1829,19 +1952,19 @@ const MaterialRequisition: React.FC = () => {
                         },
                       }}
                     >
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{item.swappedFromPONumber || "N/A"}</TableCell>
-                      <TableCell>{item.fromSwappedIdNumber || "N/A"}</TableCell>
-                      <TableCell>{item.swappedToPONumber || "N/A"}</TableCell>
-                      <TableCell>{item.toSwappedIdNumber || "N/A"}</TableCell>
-                      <TableCell>{item.swappedDrawingNumber || "N/A"}</TableCell>
-                      <TableCell>
+                      <TableCell align="center">{index + 1}</TableCell>
+                      <TableCell align="left">{item.swappedFromPONumber || "N/A"}</TableCell>
+                      <TableCell align="left">{item.fromSwappedIdNumber || "N/A"}</TableCell>
+                      <TableCell align="left">{item.swappedToPONumber || "N/A"}</TableCell>
+                      <TableCell align="left">{item.toSwappedIdNumber || "N/A"}</TableCell>
+                      <TableCell align="left">{item.swappedDrawingNumber || "N/A"}</TableCell>
+                      <TableCell align="left">
                         {(() => {
                           const u = users.find((user: any) => user.id === Number(item.createdBy));
                           return u ? u.userName : item.createdBy || "N/A";
                         })()}
                       </TableCell>
-                      <TableCell>{formatDate(item.createdDate)}</TableCell>
+                      <TableCell align="center">{formatDate(item.createdDate)}</TableCell>
                     </TableRow>
                   ))}
                   {swapHistory.length === 0 && !swapHistoryLoading && (
@@ -2577,11 +2700,169 @@ const MaterialRequisition: React.FC = () => {
             color="primary"
             disabled={apiLoading}
             startIcon={
-              apiLoading ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />
+              apiLoading ? <CircularProgress size={16} /> : undefined
             }
             sx={{ textTransform: "none", borderRadius: "6px", fontWeight: 600 }}
           >
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Export Options Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => !isDownloading && setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 700,
+            color: "#101828",
+            fontSize: "1.1rem",
+            pb: 1,
+          }}
+        >
+          Export Material Requisition Details
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isDownloading}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns(ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((c) => c.key));
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {selectedRowIds.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Chip
+                  label={`Exporting ${selectedRowIds.length} selected row(s)`}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isDownloading}
+            sx={{ minWidth: 100, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon fontSize="small" />}
+            onClick={handleDownloadData}
+            disabled={isDownloading || (exportMode === "custom" && selectedExportColumns.length === 0)}
+            sx={{
+              minWidth: 100,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {isDownloading ? "Exporting..." : "Export"}
           </Button>
         </DialogActions>
       </Dialog>

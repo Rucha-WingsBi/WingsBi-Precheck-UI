@@ -95,8 +95,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
   const [confirmUndoItem, setConfirmUndoItem] = React.useState<GridItem | null>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = React.useState<GridItem | null>(null);
 
-  const user = useSelector((state: RootState) => state.auth.user);
-  const isEditDeleteEnabled = user?.role?.toLowerCase() === "admin" || user?.role?.toLowerCase() === "head";
+  const isEditDeleteEnabled = true;
   return (
     <Paper
       elevation={0}
@@ -127,7 +126,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Typography
-            
+
             sx={{ fontWeight: 700, fontSize: "0.8rem", color: "#101828" }}
           >
             BOM lines
@@ -574,31 +573,31 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                           borderRadius: "12px",
                                           backgroundColor:
                                             item.precheckStatus.toLowerCase() === "completed" ||
-                                            item.precheckStatus.toLowerCase() === "verified"
+                                              item.precheckStatus.toLowerCase() === "verified"
                                               ? "#ECFDF5"
                                               : item.precheckStatus.toLowerCase() === "updated"
-                                              ? "#FFF7ED"
-                                              : item.precheckStatus.toLowerCase() === "rejected"
-                                              ? "#FEF2F2"
-                                              : "#F3F4F6",
+                                                ? "#FFF7ED"
+                                                : item.precheckStatus.toLowerCase() === "rejected"
+                                                  ? "#FEF2F2"
+                                                  : "#F3F4F6",
                                           color:
                                             item.precheckStatus.toLowerCase() === "completed" ||
-                                            item.precheckStatus.toLowerCase() === "verified"
+                                              item.precheckStatus.toLowerCase() === "verified"
                                               ? "#027A48"
                                               : item.precheckStatus.toLowerCase() === "updated"
-                                              ? "#B45309"
-                                              : item.precheckStatus.toLowerCase() === "rejected"
-                                              ? "#B42318"
-                                              : "#374151",
+                                                ? "#B45309"
+                                                : item.precheckStatus.toLowerCase() === "rejected"
+                                                  ? "#B42318"
+                                                  : "#374151",
                                           borderColor:
                                             item.precheckStatus.toLowerCase() === "completed" ||
-                                            item.precheckStatus.toLowerCase() === "verified"
+                                              item.precheckStatus.toLowerCase() === "verified"
                                               ? "#A7F3D0"
                                               : item.precheckStatus.toLowerCase() === "updated"
-                                              ? "#D97706"
-                                              : item.precheckStatus.toLowerCase() === "rejected"
-                                              ? "#FCA5A5"
-                                              : "#E5E7EB",
+                                                ? "#D97706"
+                                                : item.precheckStatus.toLowerCase() === "rejected"
+                                                  ? "#FCA5A5"
+                                                  : "#E5E7EB",
                                         }}
                                       />
                                     ) : (

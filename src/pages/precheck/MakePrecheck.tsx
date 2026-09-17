@@ -215,10 +215,7 @@ const MakePrecheck: React.FC = () => {
 
   const { user } = useSelector((state: RootState) => state.auth);
 
-  const isAdminOrHead = useMemo(() => {
-    const role = user?.role?.toLowerCase() || "";
-    return role === "admin" || role === "head";
-  }, [user]);
+  const isAdminOrHead = true;
 
   // Track original values for validation
   const [originalDrawingNumber, setOriginalDrawingNumber] = useState<
@@ -329,7 +326,7 @@ const MakePrecheck: React.FC = () => {
     handleScanFileUpload,
     handleExcelUpload,
     handleQuantityConfirm,
-  
+
     handleDownloadTemplate,
   } = usePrecheckScanning({
     searchResults,
@@ -972,7 +969,7 @@ const MakePrecheck: React.FC = () => {
     }
   };
 
- 
+
 
 
   // Handle row expansion
@@ -1510,9 +1507,12 @@ const MakePrecheck: React.FC = () => {
   };
 
   const handleToggleColumn = (key: string) => {
-    setSelectedExportColumns((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key];
+      return MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key).filter((k) => updated.includes(k));
+    });
   };
 
   const handleConfirmExportData = () => {
@@ -1558,8 +1558,8 @@ const MakePrecheck: React.FC = () => {
     handleOpenExportDialog();
   };
 
-  
- 
+
+
 
   // Handle remarks change for any row
   const handleRemarksChange = (item: GridItem, newRemarks: string) => {

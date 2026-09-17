@@ -58,12 +58,22 @@ export const commonDataGridSx = {
     maxHeight: "40px !important",
     lineHeight: "40px !important",
   },
+  "& .MuiDataGrid-columnHeader": {
+    paddingLeft: "16px !important",
+    paddingRight: "16px !important",
+  },
+  "& .MuiDataGrid-columnHeaderTitleContainer": {
+    padding: "0 !important",
+    marginLeft: "0 !important",
+  },
   "& .MuiDataGrid-cell": {
     fontSize: "0.775rem",
     color: COLOUR_ROLES.textMain,
     borderBottom: `1px solid ${COLOUR_ROLES.hairline}`,
     display: "flex",
     alignItems: "center",
+    paddingLeft: "16px !important",
+    paddingRight: "16px !important",
     py: "2px",
   },
   "& .MuiDataGrid-row": {
@@ -133,8 +143,14 @@ export const adminDataGridSx = {
     borderBottom: "1px solid #EAECF0 !important",
     minHeight: "40px !important",
     maxHeight: "40px !important",
+    paddingLeft: "16px !important",
+    paddingRight: "16px !important",
   },
-  "& .MuiDataGrid-columnHeadersInner, & .MuiDataGrid-columnHeaderRow, & .MuiDataGrid-columnHeaderTitleContainer, & .MuiDataGrid-columnHeaderTitleContainerContent": {
+  "& .MuiDataGrid-columnHeaderTitleContainer": {
+    padding: "0 !important",
+    marginLeft: "0 !important",
+  },
+  "& .MuiDataGrid-columnHeadersInner, & .MuiDataGrid-columnHeaderRow, & .MuiDataGrid-columnHeaderTitleContainerContent": {
     backgroundColor: "#F8FAFC !important",
   },
   "& .MuiDataGrid-columnHeaderTitle": {
@@ -153,7 +169,8 @@ export const adminDataGridSx = {
     borderBottom: "1px solid #F1F5F9",
     display: "flex",
     alignItems: "center",
-    px: 2,
+    paddingLeft: "16px !important",
+    paddingRight: "16px !important",
   },
   "& .MuiDataGrid-row": {
     minHeight: "42px !important",

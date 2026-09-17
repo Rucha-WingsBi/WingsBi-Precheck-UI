@@ -40,6 +40,7 @@ import {
   exportBomDetails,
   setSelectedAssemblyNumber,
   clearAssemblyData,
+  clearBomData,
   clearError,
   setSearchCriteria,
 } from "../../store/slices/sopSlice";
@@ -495,10 +496,12 @@ const ViewSOP: React.FC = () => {
     }
   }, [treeData, selectedNode]);
 
-  // Clear Redux assembly data on unmount
+  // Clear Redux assembly data & BOM data on unmount
   useEffect(() => {
     return () => {
       dispatch(clearAssemblyData());
+      dispatch(clearBomData());
+      dispatch(setSelectedAssemblyNumber(null));
     };
   }, [dispatch]);
 
@@ -616,11 +619,12 @@ const ViewSOP: React.FC = () => {
   }, [activeTab, assemblyData, bomData, activeExportColumns]);
 
   const handleToggleColumn = (colKey: string) => {
-    if (selectedExportColumns.includes(colKey)) {
-      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
-    } else {
-      setSelectedExportColumns([...selectedExportColumns, colKey]);
-    }
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(colKey)
+        ? prev.filter((k) => k !== colKey)
+        : [...prev, colKey];
+      return activeExportColumns.map((c) => c.key).filter((k) => updated.includes(k));
+    });
   };
 
   const handleToggleSelectAllColumns = () => {
@@ -693,61 +697,14 @@ const ViewSOP: React.FC = () => {
     [setValue]
   );
 
-  // Trigger API call according to tab change
-  useEffect(() => {
-    if (activeTab === "bom") {
-      const targetDwg =
-        selectedDrawingNumber?.drawingNumber ||
-        selectedAssemblyNumber ||
-        location.state?.drawingNumber;
-
-      if (targetDwg) {
-        dispatch(setSelectedAssemblyNumber(targetDwg));
-        if (!bomData || bomData.length === 0 || (bomData[0]?.parentDrawingNumber !== targetDwg && bomData[0]?.assemblyNumber !== targetDwg)) {
-          dispatch(getBomDetails(targetDwg));
-        }
-      }
-    } else if (activeTab === "sop") {
-      const values = getValues();
-      if (searchCriteria) {
-        dispatch(getSopAssemblyData(searchCriteria));
-      } else if (values.drawingNumberId > 0 && values.prodSeriesId > 0) {
-        executeSearch();
-      }
-    }
-  }, [activeTab]);
-
   const handleTabChange = useCallback(
     (_: React.SyntheticEvent, newValue: "sop" | "bom") => {
       setActiveTab(newValue);
-      if (newValue === "bom") {
-        const targetDwg =
-          selectedDrawingNumber?.drawingNumber ||
-          selectedAssemblyNumber ||
-          location.state?.drawingNumber;
-
-        if (targetDwg) {
-          dispatch(setSelectedAssemblyNumber(targetDwg));
-          dispatch(getBomDetails(targetDwg));
-        }
-      } else if (newValue === "sop") {
-        const values = getValues();
-        if (searchCriteria) {
-          dispatch(getSopAssemblyData(searchCriteria));
-        } else if (values.drawingNumberId > 0 && values.prodSeriesId > 0) {
-          executeSearch();
-        }
-      }
+      executeReset();
+      dispatch(clearBomData());
+      dispatch(setSelectedAssemblyNumber(null));
     },
-    [
-      selectedDrawingNumber,
-      selectedAssemblyNumber,
-      location.state,
-      searchCriteria,
-      getValues,
-      executeSearch,
-      dispatch,
-    ]
+    [executeReset, dispatch]
   );
 
   const isExportDisabled = useMemo(() => {

@@ -644,7 +644,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                     sx={{
                       flex: "0 0 auto",
                       backgroundColor: "primary.main",
-                      color: "#fff",
+                      color: "#FFFFFF",
                       fontWeight: 600,
                       fontSize: "0.82rem",
                       borderRadius: "6px",
@@ -654,6 +654,10 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       boxShadow: "none",
                       minWidth: 65,
                       "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                      "&.Mui-disabled": {
+                        backgroundColor: "#EAECF0",
+                        color: "#98A2B3",
+                      },
                     }}
                   >
                     Apply
@@ -662,18 +666,26 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                   {/* Clear Button */}
                   <Button
                     size="small"
-                    variant="text"
+                    variant="outlined"
                     onClick={handleReset}
                     sx={{
                       flex: "0 0 auto",
+                      borderColor: "#D0D5DD",
+                      backgroundColor: "#ffffff",
                       color: "#667085",
                       fontWeight: 600,
                       fontSize: "0.82rem",
                       height: 38,
-                      px: 1,
+                      px: 1.5,
                       minWidth: 55,
+                      borderRadius: "6px",
                       textTransform: "none",
-                      "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                      boxShadow: "none",
+                      "&:hover": {
+                        borderColor: "#98A2B3",
+                        backgroundColor: "#F9FAFB",
+                        color: "#101828",
+                      },
                     }}
                   >
                     Clear
