@@ -1510,9 +1510,12 @@ const MakePrecheck: React.FC = () => {
   };
 
   const handleToggleColumn = (key: string) => {
-    setSelectedExportColumns((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key];
+      return MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key).filter((k) => updated.includes(k));
+    });
   };
 
   const handleConfirmExportData = () => {

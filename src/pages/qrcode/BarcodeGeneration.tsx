@@ -12,6 +12,11 @@ import {
   Stack,
   CircularProgress,
   Backdrop,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from "@mui/material";
 
 import {
@@ -223,18 +228,57 @@ export default function BarcodeGeneration() {
     ]);
   };
 
+  // State & Handlers for Add Multiple Rows Dialog
+  const [addRowsDialogOpen, setAddRowsDialogOpen] = useState(false);
+  const [rowsToAddCount, setRowsToAddCount] = useState<number | string>(1);
+
+  const handleOpenAddRowsDialog = () => {
+    setRowsToAddCount(1);
+    setAddRowsDialogOpen(true);
+  };
+
+  const handleCloseAddRowsDialog = () => {
+    setAddRowsDialogOpen(false);
+  };
+
+  const handleAddMultipleRowsSubmit = () => {
+    const count = parseInt(String(rowsToAddCount), 10);
+    if (!isNaN(count) && count > 0) {
+      setQrTableRows((prev) => {
+        const currentLength = prev.length;
+        const newRows = Array.from({ length: count }, (_, i) => ({
+          srNo: currentLength + i + 1,
+          idNo: "",
+          quantity: "",
+          size: "",
+          mirir: "",
+          heatLotBatchNo: "",
+        }));
+        return [...prev, ...newRows];
+      });
+    }
+    setAddRowsDialogOpen(false);
+  };
+
   const handleEnterKey = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    isLastColumn: boolean,
+    fieldName: "idNo" | "quantity" | "size" | "mirir" | "heatLotBatchNo",
   ) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (isLastColumn && rowIndex === QrTableRows.length - 1) {
-        const currentRow = QrTableRows[rowIndex];
-        if (currentRow.idNo.trim() !== "") {
-          addNewQrRow();
-        }
+      const nextRowIndex = rowIndex + 1;
+      if (nextRowIndex < QrTableRows.length) {
+        setTimeout(() => {
+          const el = document.getElementById(`qr-matrix-${fieldName}-${nextRowIndex}`);
+          if (el) el.focus();
+        }, 0);
+      } else {
+        addNewQrRow();
+        setTimeout(() => {
+          const el = document.getElementById(`qr-matrix-${fieldName}-${nextRowIndex}`);
+          if (el) el.focus();
+        }, 50);
       }
     }
   };
@@ -1821,6 +1865,7 @@ export default function BarcodeGeneration() {
                   handleQrTableChange={handleQrTableChange}
                   handleEnterKey={handleEnterKey}
                   addNewQrRow={addNewQrRow}
+                  onOpenAddRowsDialog={handleOpenAddRowsDialog}
                 />
 
                 {/* Step 3: Disposition & Remarks */}
@@ -2007,6 +2052,55 @@ export default function BarcodeGeneration() {
             bulkLoading={bulkLoading}
             onSubmit={handleBulkUpdateSubmit}
           />
+
+          {/* Add Rows Dialog */}
+          <Dialog
+            open={addRowsDialogOpen}
+            onClose={handleCloseAddRowsDialog}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{
+              sx: { borderRadius: "12px", p: 1 },
+            }}
+          >
+            <DialogTitle sx={{ fontWeight: 600, fontSize: "1.1rem" }}>
+              Add Rows
+            </DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
+                Specify how many rows you would like to add to the table:
+              </Typography>
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                type="number"
+                label="Number of Rows"
+                value={rowsToAddCount}
+                onChange={(e) => setRowsToAddCount(e.target.value)}
+                inputProps={{ min: 1, max: 500 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddMultipleRowsSubmit();
+                  }
+                }}
+              />
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={handleCloseAddRowsDialog} color="inherit" size="small">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddMultipleRowsSubmit}
+                size="small"
+                variant="contained"
+                disableElevation
+              >
+                Add
+              </Button>
+            </DialogActions>
+          </Dialog>
         </>
       </Box>
     </LocalizationProvider>

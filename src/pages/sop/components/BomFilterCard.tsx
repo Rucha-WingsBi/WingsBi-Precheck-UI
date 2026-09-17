@@ -173,7 +173,7 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
             >
-              {isBomLoading ? "Searching..." : "Search"}
+              {isBomLoading ? "Applying..." : "Apply"}
             </Button>
             <Button
               variant="text"
@@ -190,7 +190,7 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
                 "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
               }}
             >
-              Reset
+              Clear
             </Button>
           </Box>
         </Grid>

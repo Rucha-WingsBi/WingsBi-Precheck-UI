@@ -378,9 +378,12 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
   };
 
   const handleToggleColumn = (key: string) => {
-    setSelectedExportColumns((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev, key];
+      return ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key).filter((k) => updated.includes(k));
+    });
   };
 
   // Pagination state

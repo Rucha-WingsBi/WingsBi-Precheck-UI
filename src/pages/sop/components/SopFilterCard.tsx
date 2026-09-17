@@ -199,7 +199,7 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Assembly No / LItem Code *"
+                label="Assembly No / LN Item Code *"
                 placeholder="Type 3+ chars (e.g. CK310)..."
                 InputProps={{
                   ...params.InputProps,
@@ -297,7 +297,7 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
             >
-              {isLoading ? "Searching..." : "Search"}
+              {isLoading ? "Applying..." : "Apply"}
             </Button>
             <Button
               variant="text"
@@ -314,7 +314,7 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                 "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
               }}
             >
-              Reset
+              Clear
             </Button>
           </Box>
         </Grid>

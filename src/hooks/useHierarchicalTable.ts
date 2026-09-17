@@ -74,10 +74,23 @@ export const useHierarchicalTable = <T extends HierarchicalRow>({
     return result;
   }, [data, expandedRowIds]);
 
+  // Expand all rows
+  const expandAll = useCallback(() => {
+    if (!data || data.length === 0) return;
+    setExpandedRowIds(new Set(data.map((d) => d.id)));
+  }, [data]);
+
+  // Collapse all rows
+  const collapseAll = useCallback(() => {
+    setExpandedRowIds(new Set());
+  }, []);
+
   return {
     visibleRows,
     expandedRowIds,
     toggleRow,
     setExpandedRowIds,
+    expandAll,
+    collapseAll,
   };
 };

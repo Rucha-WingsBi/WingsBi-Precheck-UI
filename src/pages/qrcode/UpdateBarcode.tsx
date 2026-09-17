@@ -1507,8 +1507,9 @@ const UpdateBarcode: React.FC = () => {
                 size="small"
                 onClick={handleCancel}
                 sx={{
-                  height: 34,
-                  minWidth: 100,
+                  height: 32,
+                  minWidth: 75,
+                  px: 2,
                   borderRadius: "6px",
                   borderColor: "grey.300",
                   color: "text.secondary",
@@ -1528,8 +1529,9 @@ const UpdateBarcode: React.FC = () => {
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
                 sx={{
-                  height: 34,
-                  minWidth: 120,
+                  height: 32,
+                  minWidth: 75,
+                  px: 2,
                   borderRadius: "6px",
                   backgroundColor: "primary.main",
                   color: "primary.contrastText",

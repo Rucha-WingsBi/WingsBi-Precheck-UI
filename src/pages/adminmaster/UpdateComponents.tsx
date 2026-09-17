@@ -1224,17 +1224,11 @@ export default function InsertMappings() {
                   startIcon={
                     loading ? (
                       <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <SaveIcon />
-                    )
+                    ) : undefined
                   }
                   sx={{ minWidth: 100, height: 32 }}
                 >
-                  {loading
-                    ? "Saving..."
-                    : isEditMode
-                      ? "Update"
-                      : "Save "}
+                  {loading ? "Saving..." : "Save"}
                 </Button>
               </Box>
             </form>

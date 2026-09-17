@@ -21,6 +21,7 @@ import {
   IconButton,
   Button,
   Tooltip,
+  Stack,
 } from "@mui/material";
 import {
   TableChart as TableIcon,
@@ -71,7 +72,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
   const [assemblyInputValue, setAssemblyInputValue] = useState("");
 
   // Hierarchical Table Hook
-  const { visibleRows, toggleRow, expandedRowIds } = useHierarchicalTable({
+  const { visibleRows, toggleRow, expandedRowIds, expandAll, collapseAll } = useHierarchicalTable({
     data: bomData || [],
     defaultExpanded: false,
   });
@@ -83,9 +84,9 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
     },
   });
 
-  // Restore/auto-search selected drawing number when returning or mounted
+  // Restore/auto-search selected drawing number when passed via navigation state
   React.useEffect(() => {
-    const passedDwg = location.state?.drawingNumber || selectedAssemblyNumber;
+    const passedDwg = location.state?.drawingNumber;
     const passedLn = location.state?.lnItemCode;
     if (passedDwg && typeof passedDwg === "string" && passedDwg.trim()) {
       const dwgTrimmed = passedDwg.trim();
@@ -106,7 +107,16 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
         dispatch(getBomDetails(dwgTrimmed));
       }
     }
-  }, [location.state?.drawingNumber, selectedAssemblyNumber, dispatch, setValue]);
+  }, [location.state?.drawingNumber, dispatch, setValue]);
+
+  // Clear BOM data on unmount
+  React.useEffect(() => {
+    return () => {
+      dispatch(clearBomData());
+      dispatch(clearAssemblySearchResults());
+      dispatch(setSelectedAssemblyNumber(null));
+    };
+  }, [dispatch]);
 
   // Column configuration
   const columns = [
@@ -200,7 +210,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
       format: (value: any) => (
         <Typography
           variant="body2"
-          sx={{ fontSize: "0.775rem", color: "primary.main", fontWeight: 500 }}
+          sx={{ fontSize: "0.775rem", fontWeight: 500 }}
         >
           {value || "-"}
         </Typography>
@@ -347,16 +357,54 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             {bomData && bomData.length > 0 && (
-              <Chip
-                label={`${bomData.length} items`}
-                size="small"
-                sx={{
-                  backgroundColor: "#ECFDF3",
-                  color: "#027A48",
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                }}
-              />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip
+                  label={`${bomData.length} items`}
+                  size="small"
+                  sx={{
+                    backgroundColor: "#ECFDF3",
+                    color: "#027A48",
+                    fontWeight: 600,
+                    fontSize: "0.75rem",
+                    mr: 0.5,
+                  }}
+                />
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={expandAll}
+                  sx={{
+                    fontSize: "0.775rem",
+                    fontWeight: 600,
+                    color: "primary.main",
+                    textTransform: "none",
+                    p: 0,
+                    minWidth: "auto",
+                    "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                  }}
+                >
+                  Expand all
+                </Button>
+                <Typography variant="caption" sx={{ color: "#D0D5DD" }}>
+                  ·
+                </Typography>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={collapseAll}
+                  sx={{
+                    fontSize: "0.775rem",
+                    fontWeight: 600,
+                    color: "#667085",
+                    textTransform: "none",
+                    p: 0,
+                    minWidth: "auto",
+                    "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                  }}
+                >
+                  Collapse
+                </Button>
+              </Stack>
             )}
             <Tooltip
               title={!hasEditBomAccess ? "You do not have access to edit BOM" : ""}

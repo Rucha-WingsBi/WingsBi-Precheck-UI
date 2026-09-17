@@ -147,11 +147,12 @@ const ViewIRMSN: React.FC = () => {
   };
 
   const handleToggleColumn = (colKey: string) => {
-    if (selectedExportColumns.includes(colKey)) {
-      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
-    } else {
-      setSelectedExportColumns([...selectedExportColumns, colKey]);
-    }
+    setSelectedExportColumns((prev) => {
+      const updated = prev.includes(colKey)
+        ? prev.filter((k) => k !== colKey)
+        : [...prev, colKey];
+      return ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key).filter((k) => updated.includes(k));
+    });
   };
 
   const handleToggleSelectAllColumns = () => {
