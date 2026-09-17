@@ -152,42 +152,53 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
             <Button
               variant="contained"
               size="small"
-              startIcon={
-                isBomLoading ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <SearchIcon sx={{ fontSize: 18 }} />
-                )
-              }
               onClick={handleSearch}
               disabled={isBomLoading || !selectedAssembly}
               sx={{
                 height: 38,
+                minWidth: 65,
                 px: 2,
                 borderRadius: "6px",
                 backgroundColor: "primary.main",
+                color: "#FFFFFF",
                 fontWeight: 600,
-                fontSize: "0.85rem",
+                fontSize: "0.82rem",
                 textTransform: "none",
                 boxShadow: "none",
-                "&:hover": { backgroundColor: "primary.dark" },
+                "&:hover": {
+                  backgroundColor: "primary.dark",
+                  boxShadow: "none",
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: "#EAECF0",
+                  color: "#98A2B3",
+                },
               }}
             >
               {isBomLoading ? "Applying..." : "Apply"}
             </Button>
             <Button
-              variant="text"
+              variant="outlined"
               size="small"
               onClick={handleReset}
               disabled={!selectedAssembly && !hasBomData && !assemblyInputValue}
               sx={{
                 height: 38,
+                minWidth: 55,
                 px: 1.5,
+                borderRadius: "6px",
+                borderColor: "#D0D5DD",
+                backgroundColor: "#ffffff",
                 color: "#667085",
                 fontWeight: 600,
-                fontSize: "0.85rem",
+                fontSize: "0.82rem",
                 textTransform: "none",
-                "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
+                boxShadow: "none",
+                "&:hover": {
+                  borderColor: "#98A2B3",
+                  backgroundColor: "#F9FAFB",
+                  color: "#101828",
+                },
               }}
             >
               Clear

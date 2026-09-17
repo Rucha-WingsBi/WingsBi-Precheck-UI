@@ -743,21 +743,28 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
 
                 <Button
                   variant="outlined"
-                  size='small'
+                  size="small"
                   onClick={handleClearFilter}
-                  startIcon={<ClearIcon fontSize="small" />}
                   sx={{
-                    height: 36,
+                    height: 38,
+                    minWidth: 55,
+                    px: 1.5,
                     borderRadius: "6px",
-                    borderColor: "#d0d5dd",
-                    color: "#344054",
+                    borderColor: "#D0D5DD",
+                    backgroundColor: "#ffffff",
+                    color: "#667085",
                     fontWeight: 600,
-                    fontSize: "0.8rem",
+                    fontSize: "0.82rem",
                     textTransform: "none",
-                    "&:hover": { borderColor: "#98a2b3", bgcolor: "#f9fafb" },
+                    boxShadow: "none",
+                    "&:hover": {
+                      borderColor: "#98A2B3",
+                      backgroundColor: "#F9FAFB",
+                      color: "#101828",
+                    },
                   }}
                 >
-                  Clear Filter
+                  Clear
                 </Button>
 
                 <Button

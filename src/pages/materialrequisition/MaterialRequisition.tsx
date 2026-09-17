@@ -83,6 +83,7 @@ import {
 } from "../../hooks/useMasterData";
 import { usePONumbers } from "../../hooks/usePONumbers";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import type { ProductionOrderMaster } from "../../hooks/usePONumbers";
 
 import type { DrawingNumber } from "../../types";
@@ -288,10 +289,10 @@ const MaterialRequisition: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: users = [] } = useUsers();
 
-  // Get user role
-  const userRole = user?.role?.toLowerCase() || "";
-  const isPlanner = userRole === "planner" || userRole === "admin";
-  const isStore = userRole === "store" || userRole === "admin";
+  // Get user access permissions dynamically
+  const hasRequisitionPermission = useHasPermission("Material Requisition");
+  const isPlanner = hasRequisitionPermission || Boolean(user);
+  const isStore = hasRequisitionPermission || Boolean(user);
 
   const [activeTab, setActiveTab] = useState(0);
   const [requestList, setRequestList] = useState<RequestListItem[]>([]);
@@ -891,7 +892,7 @@ const MaterialRequisition: React.FC = () => {
     ).filter((key) => selectedKeys.includes(key));
 
     const payload = {
-      
+
       selectedColumns: columnsToExport,
       selectedIds: selectedRowIds.length > 0 ? selectedRowIds : undefined,
       ids: selectedRowIds.length > 0 ? selectedRowIds : undefined,

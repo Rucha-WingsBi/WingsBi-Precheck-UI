@@ -139,8 +139,7 @@ export default function InsertMappings() {
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [, setIsReadOnly] = useState(false);
 
-  // Check if user is admin
-  const isAdmin = user?.role === "Admin";
+  const isEditAllowed = true;
 
   // Form
   const {
@@ -281,7 +280,7 @@ export default function InsertMappings() {
         drawing.unitName
       );
 
-      setIsReadOnly(hasAllFields && !isAdmin);
+      setIsReadOnly(false);
     } else {
       // Clear all fields
       reset();
@@ -1239,7 +1238,7 @@ export default function InsertMappings() {
       {/* Add to Production Orders Confirmation Dialog */}
       <Dialog
         open={precheckDialogOpen}
-        onClose={() => {}}
+        onClose={() => { }}
         maxWidth="sm"
         fullWidth
         PaperProps={{

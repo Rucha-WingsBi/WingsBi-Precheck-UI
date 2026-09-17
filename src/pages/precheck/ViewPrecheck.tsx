@@ -1045,7 +1045,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1059,7 +1059,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1133,7 +1133,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1147,7 +1147,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1204,7 +1204,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 auto",
                   backgroundColor: "primary.main",
-                  color: "#fff",
+                  color: "#FFFFFF",
                   fontWeight: 600,
                   fontSize: "0.82rem",
                   borderRadius: "6px",
@@ -1214,6 +1214,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   boxShadow: "none",
                   minWidth: 65,
                   "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#EAECF0",
+                    color: "#98A2B3",
+                  },
                 }}
               >
                 Apply
@@ -1588,7 +1592,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 sx={{
                   flex: "0 0 auto",
                   backgroundColor: "primary.main",
-                  color: "#fff",
+                  color: "#FFFFFF",
                   fontWeight: 600,
                   fontSize: "0.82rem",
                   borderRadius: "6px",
@@ -1598,6 +1602,10 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                   boxShadow: "none",
                   minWidth: 65,
                   "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#EAECF0",
+                    color: "#98A2B3",
+                  },
                 }}
               >
                 Apply

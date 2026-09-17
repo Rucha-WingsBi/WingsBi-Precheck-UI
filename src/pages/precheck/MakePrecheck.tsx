@@ -215,10 +215,7 @@ const MakePrecheck: React.FC = () => {
 
   const { user } = useSelector((state: RootState) => state.auth);
 
-  const isAdminOrHead = useMemo(() => {
-    const role = user?.role?.toLowerCase() || "";
-    return role === "admin" || role === "head";
-  }, [user]);
+  const isAdminOrHead = true;
 
   // Track original values for validation
   const [originalDrawingNumber, setOriginalDrawingNumber] = useState<
@@ -329,7 +326,7 @@ const MakePrecheck: React.FC = () => {
     handleScanFileUpload,
     handleExcelUpload,
     handleQuantityConfirm,
-  
+
     handleDownloadTemplate,
   } = usePrecheckScanning({
     searchResults,
@@ -972,7 +969,7 @@ const MakePrecheck: React.FC = () => {
     }
   };
 
- 
+
 
 
   // Handle row expansion
@@ -1561,8 +1558,8 @@ const MakePrecheck: React.FC = () => {
     handleOpenExportDialog();
   };
 
-  
- 
+
+
 
   // Handle remarks change for any row
   const handleRemarksChange = (item: GridItem, newRemarks: string) => {

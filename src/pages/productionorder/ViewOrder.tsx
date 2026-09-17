@@ -197,6 +197,10 @@ const ViewOrder: React.FC = () => {
     return Boolean(hasPo && hasDrawing && hasLn && hasSeries);
   }, [selectedPO, poSearchText, selectedDrawing, drawingSearchText, selectedLnCode, lnSearchText, selectedProdSeries]);
 
+  const isClearEnabled = useMemo(() => {
+    return Boolean(selectedPO || poSearchText || selectedDrawing || drawingSearchText || selectedLnCode || lnSearchText || selectedProdSeries || idNumber);
+  }, [selectedPO, poSearchText, selectedDrawing, drawingSearchText, selectedLnCode, lnSearchText, selectedProdSeries, idNumber]);
+
   const handleApplyFilters = () => {
     const poNumToFetch = selectedPO?.productionOrderNumber || poSearchText.trim();
     if (poNumToFetch) {
@@ -578,7 +582,30 @@ const ViewOrder: React.FC = () => {
           {/* PO Number Dropdown */}
           <FormControl
             size="small"
-            sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
+            sx={{
+              flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 },
+              minWidth: 150,
+              "& .MuiOutlinedInput-root": {
+                height: 38,
+                backgroundColor: "background.paper",
+                borderRadius: "6px",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: "0.82rem",
+                color: "#98A2B3",
+                bgcolor: "#ffffff",
+                px: 0.5,
+                "&.MuiInputLabel-shrink": {
+                  fontSize: "0.75rem",
+                  color: "#667085",
+                },
+                "&.Mui-focused": { color: "primary.main" },
+              },
+              "& .MuiOutlinedInput-input": {
+                fontSize: "0.82rem",
+              },
+            }}
           >
             <Autocomplete
               size="small"
@@ -635,7 +662,30 @@ const ViewOrder: React.FC = () => {
           {/* Drawing Number Dropdown */}
           <FormControl
             size="small"
-            sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
+            sx={{
+              flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 },
+              minWidth: 150,
+              "& .MuiOutlinedInput-root": {
+                height: 38,
+                backgroundColor: "background.paper",
+                borderRadius: "6px",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: "0.82rem",
+                color: "#98A2B3",
+                bgcolor: "#ffffff",
+                px: 0.5,
+                "&.MuiInputLabel-shrink": {
+                  fontSize: "0.75rem",
+                  color: "#667085",
+                },
+                "&.Mui-focused": { color: "primary.main" },
+              },
+              "& .MuiOutlinedInput-input": {
+                fontSize: "0.82rem",
+              },
+            }}
           >
             <Autocomplete
               size="small"
@@ -684,7 +734,30 @@ const ViewOrder: React.FC = () => {
           {/* LN Item Code Dropdown */}
           <FormControl
             size="small"
-            sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
+            sx={{
+              flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 },
+              minWidth: 150,
+              "& .MuiOutlinedInput-root": {
+                height: 38,
+                backgroundColor: "background.paper",
+                borderRadius: "6px",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: "0.82rem",
+                color: "#98A2B3",
+                bgcolor: "#ffffff",
+                px: 0.5,
+                "&.MuiInputLabel-shrink": {
+                  fontSize: "0.75rem",
+                  color: "#667085",
+                },
+                "&.Mui-focused": { color: "primary.main" },
+              },
+              "& .MuiOutlinedInput-input": {
+                fontSize: "0.82rem",
+              },
+            }}
           >
             <Autocomplete
               size="small"
@@ -735,7 +808,30 @@ const ViewOrder: React.FC = () => {
           {/* Prod Series Dropdown */}
           <FormControl
             size="small"
-            sx={{ flex: { xs: "1 1 100%", sm: "1 1 120px", md: 1.0 }, minWidth: 100 }}
+            sx={{
+              flex: { xs: "1 1 100%", sm: "1 1 120px", md: 1.0 },
+              minWidth: 100,
+              "& .MuiOutlinedInput-root": {
+                height: 38,
+                backgroundColor: "background.paper",
+                borderRadius: "6px",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: "0.82rem",
+                color: "#98A2B3",
+                bgcolor: "#ffffff",
+                px: 0.5,
+                "&.MuiInputLabel-shrink": {
+                  fontSize: "0.75rem",
+                  color: "#667085",
+                },
+                "&.Mui-focused": { color: "primary.main" },
+              },
+              "& .MuiOutlinedInput-input": {
+                fontSize: "0.82rem",
+              },
+            }}
           >
             <Autocomplete
               size="small"
@@ -758,7 +854,30 @@ const ViewOrder: React.FC = () => {
           {/* ID Number (TextField ONLY, matching Make Precheck) */}
           <FormControl
             size="small"
-            sx={{ flex: { xs: "1 1 100%", sm: "1 1 110px", md: 0.9 }, minWidth: 95 }}
+            sx={{
+              flex: { xs: "1 1 100%", sm: "1 1 110px", md: 0.9 },
+              minWidth: 95,
+              "& .MuiOutlinedInput-root": {
+                height: 38,
+                backgroundColor: "background.paper",
+                borderRadius: "6px",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+              },
+              "& .MuiInputLabel-root": {
+                fontSize: "0.82rem",
+                color: "#98A2B3",
+                bgcolor: "#ffffff",
+                px: 0.5,
+                "&.MuiInputLabel-shrink": {
+                  fontSize: "0.75rem",
+                  color: "#667085",
+                },
+                "&.Mui-focused": { color: "primary.main" },
+              },
+              "& .MuiOutlinedInput-input": {
+                fontSize: "0.82rem",
+              },
+            }}
           >
             <TextField
               size="small"
@@ -772,36 +891,56 @@ const ViewOrder: React.FC = () => {
           </FormControl>
 
           {/* Actions */}
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto", flex: "0 0 auto" }}>
             <Button
-              variant="contained"
-              color="primary"
               size="small"
+              variant="contained"
               onClick={handleApplyFilters}
               disabled={!isApplyEnabled || bomLoading}
               sx={{
                 height: 38,
+                minWidth: 70,
                 px: 2,
+                borderRadius: "6px",
+                backgroundColor: "primary.main",
+                color: "#FFFFFF",
                 fontWeight: 600,
-                borderRadius: "8px",
+                fontSize: "0.82rem",
                 textTransform: "none",
+                boxShadow: "none",
+                "&:hover": {
+                  backgroundColor: "primary.dark",
+                  boxShadow: "none",
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: "#EAECF0",
+                  color: "#98A2B3",
+                },
               }}
             >
               Apply
             </Button>
             <Button
-              variant="outlined"
-              color="inherit"
               size="small"
+              variant="outlined"
               onClick={handleClearFilters}
               sx={{
                 height: 38,
+                minWidth: 70,
                 px: 2,
-                fontWeight: 600,
-                borderRadius: "8px",
-                textTransform: "none",
-                color: "#667085",
+                borderRadius: "6px",
                 borderColor: "#D0D5DD",
+                backgroundColor: "#ffffff",
+                color: "#667085",
+                fontWeight: 600,
+                fontSize: "0.82rem",
+                textTransform: "none",
+                boxShadow: "none",
+                "&:hover": {
+                  borderColor: "#98A2B3",
+                  backgroundColor: "#F9FAFB",
+                  color: "#101828",
+                },
               }}
             >
               Clear

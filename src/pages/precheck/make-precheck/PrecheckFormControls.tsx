@@ -567,18 +567,29 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       {/* Apply Button */}
       <Button
         variant="contained"
-        color="primary"
-        sx={{
-          height: 40,
-          minWidth: 90,
-          px: 2,
-          fontWeight: 600,
-          borderRadius: "8px",
-          textTransform: "none",
-        }}
         size="small"
         onClick={onApply || onReset}
         disabled={!isApplyEnabled}
+        sx={{
+          height: 38,
+          minWidth: 65,
+          px: 2,
+          borderRadius: "6px",
+          backgroundColor: "primary.main",
+          color: "#FFFFFF",
+          fontWeight: 600,
+          fontSize: "0.82rem",
+          textTransform: "none",
+          boxShadow: "none",
+          "&:hover": {
+            backgroundColor: "primary.dark",
+            boxShadow: "none",
+          },
+          "&.Mui-disabled": {
+            backgroundColor: "#EAECF0",
+            color: "#98A2B3",
+          },
+        }}
       >
         Apply
       </Button>
@@ -586,17 +597,26 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       {/* Clear Button */}
       <Button
         variant="outlined"
-        sx={{
-          height: 40,
-          minWidth: 90,
-          px: 2,
-          fontWeight: 600,
-          borderRadius: "8px",
-          textTransform: "none",
-        }}
         size="small"
         onClick={onClear || onReset}
-        startIcon={<ClearIcon />}
+        sx={{
+          height: 38,
+          minWidth: 55,
+          px: 1.5,
+          borderRadius: "6px",
+          borderColor: "#D0D5DD",
+          backgroundColor: "#ffffff",
+          color: "#667085",
+          fontWeight: 600,
+          fontSize: "0.82rem",
+          textTransform: "none",
+          boxShadow: "none",
+          "&:hover": {
+            borderColor: "#98A2B3",
+            backgroundColor: "#F9FAFB",
+            color: "#101828",
+          },
+        }}
       >
         Clear
       </Button>

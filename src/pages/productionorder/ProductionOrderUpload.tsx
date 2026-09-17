@@ -48,6 +48,7 @@ import {
   MoreVert as MoreVertIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  CalendarToday as CalendarTodayIcon,
 } from "@mui/icons-material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -503,6 +504,8 @@ const ProductionOrderUpload: React.FC = () => {
   // Filter states: Draft (for dropdowns & dates before clicking Apply)
   const [draftFromDate, setDraftFromDate] = useState<Date | null>(null);
   const [draftToDate, setDraftToDate] = useState<Date | null>(null);
+  const [fromDateFocused, setFromDateFocused] = useState(false);
+  const [toDateFocused, setToDateFocused] = useState(false);
   const [draftProductionSeries, setDraftProductionSeries] = useState<any[]>([]);
   const [draftStatusList, setDraftStatusList] = useState<any[]>([]);
 
@@ -2098,7 +2101,7 @@ const ProductionOrderUpload: React.FC = () => {
             }}
           >
             {/* Top Filter Bar Section */}
-            <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+            <Box sx={{ pt: 0.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
               <Box
                 sx={{
                   display: "flex",
@@ -2170,27 +2173,74 @@ const ProductionOrderUpload: React.FC = () => {
                 {/* From Date */}
                 <TextField
                   size="small"
-                  type="date"
+                  type={fromDateFocused || Boolean(draftFromDate) ? "date" : "text"}
                   label="From Date"
-                  InputLabelProps={{ shrink: true }}
-                  placeholder="From Date"
+                  InputLabelProps={{ shrink: Boolean(fromDateFocused || draftFromDate) }}
                   value={draftFromDate ? format(draftFromDate, "yyyy-MM-dd") : ""}
+                  onFocus={() => setFromDateFocused(true)}
+                  onBlur={() => setFromDateFocused(false)}
                   onChange={(e) => {
                     const val = e.target.value;
                     setDraftFromDate(val ? new Date(val) : null);
                   }}
                   inputProps={{ title: "From Date" }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                        <CalendarTodayIcon
+                          sx={{ fontSize: 16, color: "#667085" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFromDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch {}
+                                }
+                              }, 10);
+                            }
+                          }}
+                          onClick={(e) => {
+                            setFromDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch {}
+                                }
+                              }, 10);
+                            }
+                          }}
+                        />
+                      </InputAdornment>
+                    ),
+                  }}
                   sx={{
                     flex: "0 0 148px",
                     minWidth: 140,
+                    position: "relative",
                     "& .MuiOutlinedInput-root": {
                       height: 38,
+                      backgroundColor: "background.paper",
+                      borderRadius: "6px",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                     },
                     "& .MuiInputLabel-root": {
-                      fontSize: "0.75rem",
+                      fontSize: "0.82rem",
                       bgcolor: "#ffffff",
                       px: 0.5,
-                      color: "#667085",
+                      color: "#98A2B3",
+                      "&.MuiInputLabel-shrink": {
+                        fontSize: "0.75rem",
+                        color: "#667085",
+                      },
                       "&.Mui-focused": { color: "primary.main" },
                     },
                     "& .MuiOutlinedInput-input": {
@@ -2199,33 +2249,89 @@ const ProductionOrderUpload: React.FC = () => {
                       fontSize: "0.82rem",
                       color: draftFromDate ? "#344054" : "#98A2B3",
                     },
+                    "& input::-webkit-calendar-picker-indicator": {
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      width: 24,
+                      height: 24,
+                      opacity: 0,
+                      cursor: "pointer",
+                    },
                   }}
                 />
 
                 {/* To Date */}
                 <TextField
                   size="small"
-                  type="date"
+                  type={toDateFocused || Boolean(draftToDate) ? "date" : "text"}
                   label="To Date"
-                  InputLabelProps={{ shrink: true }}
-                  placeholder="To Date"
+                  InputLabelProps={{ shrink: Boolean(toDateFocused || draftToDate) }}
                   value={draftToDate ? format(draftToDate, "yyyy-MM-dd") : ""}
+                  onFocus={() => setToDateFocused(true)}
+                  onBlur={() => setToDateFocused(false)}
                   onChange={(e) => {
                     const val = e.target.value;
                     setDraftToDate(val ? new Date(val) : null);
                   }}
                   inputProps={{ title: "To Date" }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                        <CalendarTodayIcon
+                          sx={{ fontSize: 16, color: "#667085" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setToDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch {}
+                                }
+                              }, 10);
+                            }
+                          }}
+                          onClick={(e) => {
+                            setToDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch {}
+                                }
+                              }, 10);
+                            }
+                          }}
+                        />
+                      </InputAdornment>
+                    ),
+                  }}
                   sx={{
                     flex: "0 0 148px",
                     minWidth: 140,
+                    position: "relative",
                     "& .MuiOutlinedInput-root": {
                       height: 38,
+                      backgroundColor: "background.paper",
+                      borderRadius: "6px",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                     },
                     "& .MuiInputLabel-root": {
-                      fontSize: "0.75rem",
+                      fontSize: "0.82rem",
                       bgcolor: "#ffffff",
                       px: 0.5,
-                      color: "#667085",
+                      color: "#98A2B3",
+                      "&.MuiInputLabel-shrink": {
+                        fontSize: "0.75rem",
+                        color: "#667085",
+                      },
                       "&.Mui-focused": { color: "primary.main" },
                     },
                     "& .MuiOutlinedInput-input": {
@@ -2233,6 +2339,15 @@ const ProductionOrderUpload: React.FC = () => {
                       px: 1.5,
                       fontSize: "0.82rem",
                       color: draftToDate ? "#344054" : "#98A2B3",
+                    },
+                    "& input::-webkit-calendar-picker-indicator": {
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      width: 24,
+                      height: 24,
+                      opacity: 0,
+                      cursor: "pointer",
                     },
                   }}
                 />
@@ -2255,6 +2370,10 @@ const ProductionOrderUpload: React.FC = () => {
                     boxShadow: "none",
                     minWidth: 65,
                     "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                    "&.Mui-disabled": {
+                      backgroundColor: "#EAECF0",
+                      color: "#98A2B3",
+                    },
                   }}
                 >
                   Apply
@@ -2268,13 +2387,20 @@ const ProductionOrderUpload: React.FC = () => {
                   sx={{
                     flex: "0 0 auto",
                     color: "#667085",
+                    borderColor: "#D0D5DD",
+                    backgroundColor: "#ffffff",
+                    borderRadius: "6px",
                     fontWeight: 600,
                     fontSize: "0.82rem",
                     height: 38,
-                    px: 1,
+                    px: 1.5,
                     minWidth: 55,
                     textTransform: "none",
-                    "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                    "&:hover": {
+                      borderColor: "#98A2B3",
+                      backgroundColor: "#F9FAFB",
+                      color: "#101828",
+                    },
                   }}
                 >
                   Clear
