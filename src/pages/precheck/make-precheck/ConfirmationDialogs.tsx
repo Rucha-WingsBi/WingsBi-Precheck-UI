@@ -7,8 +7,7 @@ import {
   DialogContentText,
   Button,
   Typography,
-  IconButton,
-  Box,
+  
 } from "@mui/material";
 import {
   PhotoCamera as PhotoCameraIcon,

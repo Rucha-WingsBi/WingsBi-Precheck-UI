@@ -17,13 +17,19 @@ import {
   Alert,
   CircularProgress,
   Autocomplete,
-  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Snackbar,
   debounce,
   IconButton,
+  Stack,
 } from "@mui/material";
+import api from "../../services/api";
 
 import { Save as SaveIcon, Refresh as RefreshIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -35,7 +41,7 @@ import {
   insertDrawingMappings,
   clearError,
 } from "../../store/slices/qrcodeSlice";
-import { useDrawingNumbers, useUnits } from "../../hooks/useMasterData";
+import { useFetchAllDrawingNumbers, useUnits } from "../../hooks/useMasterData";
 
 // Create typed versions of the hooks
 const useAppDispatch: () => AppDispatch = useDispatch;
@@ -82,8 +88,18 @@ export default function InsertMappings() {
   const { data: units = [] } = useUnits();
   const [searchQuery, setSearchQuery] = useState("");
   const { data: drawingNumbers = [], isLoading: loadingDrawings } =
-    useDrawingNumbers("", searchQuery);
+    useFetchAllDrawingNumbers(searchQuery, 1, 50);
   const user = useSelector((state: RootState) => state.auth.user);
+
+  // Add to production orders dialog state
+  const [precheckDialogOpen, setPrecheckDialogOpen] = useState(false);
+  const [precheckLoading, setPrecheckLoading] = useState(false);
+  const [savedFormData, setSavedFormData] = useState<InsertMappingsFormData | null>(null);
+  const [precheckSnackbar, setPrecheckSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Local state
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingNumber | null>(
@@ -91,14 +107,15 @@ export default function InsertMappings() {
   );
 
   // Manual fetch for edit mode if state is missing
-  const { data: allDrawings = [] } = useDrawingNumbers("", "");
+  const { data: allDrawings = [] } = useFetchAllDrawingNumbers("", 1, 100);
 
   const [selectedAssemblyDrawing, setSelectedAssemblyDrawing] = useState<DrawingNumber | null>(
     null
   );
   const [assemblySearchQuery, setAssemblySearchQuery] = useState("");
   const { data: assemblyDrawingNumbers = [], isLoading: loadingAssemblyDrawings } =
-    useDrawingNumbers("", assemblySearchQuery);
+    useFetchAllDrawingNumbers(assemblySearchQuery, 1, 50);
+
 
   const debouncedAssemblySearch = useMemo(
     () =>
@@ -120,7 +137,7 @@ export default function InsertMappings() {
     }
   }, [isEditMode, editRow, allDrawings, id]);
   const [successMessage, setSuccessMessage] = useState<string>("");
-  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [, setIsReadOnly] = useState(false);
 
   // Check if user is admin
   const isAdmin = user?.role === "Admin";
@@ -131,7 +148,6 @@ export default function InsertMappings() {
     handleSubmit,
     setValue,
     reset,
-    watch,
     formState: { errors },
   } = useForm<InsertMappingsFormData>({
     defaultValues: {
@@ -388,17 +404,25 @@ export default function InsertMappings() {
       await dispatch(insertDrawingMappings(payload)).unwrap();
       await queryClient.invalidateQueries({ queryKey: ["drawingNumbers"] });
       await queryClient.invalidateQueries({ queryKey: ["allDrawingNumbers"] });
+      await queryClient.invalidateQueries({ queryKey: ["fetchAllDrawingNumbers"] });
       await queryClient.refetchQueries({ queryKey: ["allDrawingNumbers"] });
+      await queryClient.refetchQueries({ queryKey: ["fetchAllDrawingNumbers"] });
       setSuccessMessage(
         isEditMode
           ? "Drawing mappings updated successfully!"
           : "Drawing mappings saved successfully!"
       );
 
-      // Delay navigation back
-      setTimeout(() => {
-        navigate("/components");
-      }, 1500);
+      if (!isEditMode) {
+        // In add mode, show the precheck dialog instead of navigating immediately
+        setSavedFormData(data);
+        setPrecheckDialogOpen(true);
+      } else {
+        // In edit mode, navigate back after delay
+        setTimeout(() => {
+          navigate("/components");
+        }, 1500);
+      }
     } catch (error: any) {
       console.error("Error saving/updating drawing mappings:", error);
     }
@@ -435,10 +459,51 @@ export default function InsertMappings() {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
+          py: { xs: 1, sm: 1.25 },
+          px: { xs: 1.5, sm: 2 },
           maxWidth: "100%",
           mx: "auto",
         }}
       >
+        {/* Header Section */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1 }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {fromView && (
+              <IconButton
+                onClick={() => navigate(-1)}
+                sx={{
+                  color: "primary.main",
+                  p: 0.5,
+                  "&:hover": { backgroundColor: "grey.100" },
+                }}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            )}
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: "primary.main",
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                {isEditMode ? "Update Component" : "Add Component"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+                {isEditMode ? "Update master component details and item mappings." : "Add a new component master to the system."}
+              </Typography>
+            </Box>
+          </Box>
+        </Stack>
+
         {/* Success/Error Messages */}
         {successMessage && (
           <Alert
@@ -460,27 +525,9 @@ export default function InsertMappings() {
           </Alert>
         )}
 
-
         {/* Main Form */}
         <Card elevation={2} sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>
-              {fromView && (
-                <IconButton
-                  onClick={() => navigate("/components")}
-                  sx={{ color: "primary.main", p: 0 }}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
-              )}
-              <Typography
-                variant="h6"
-                sx={{ color: "primary.main", fontWeight: 600 }}
-              >
-                {isEditMode ? "Update Component" : "Add Component"}
-              </Typography>
-            </Box>
-
             <form onSubmit={handleSubmit(onSubmit)}>
               {/* Ln item code , Drawing Number, Nomenclature*/}
               <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -545,7 +592,7 @@ export default function InsertMappings() {
                                     py: 0.5,
                                   }}
                                 >
-                                  <Typography variant="body2" fontWeight="bold">
+                                  <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                     {typeof option === "string"
                                       ? option
                                       : option.lnItemCode}
@@ -671,7 +718,7 @@ export default function InsertMappings() {
                                     py: 0.5,
                                   }}
                                 >
-                                  <Typography variant="body2" fontWeight="bold">
+                                  <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                     {typeof option === "string"
                                       ? option
                                       : option.drawingNumber}
@@ -860,7 +907,7 @@ export default function InsertMappings() {
                           return (
                             <li {...optionProps} key={key}>
                               <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                                <Typography variant="body2" fontWeight="bold">
+                                <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                   {typeof option === "string" ? option : option.drawingNumber}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
@@ -933,7 +980,7 @@ export default function InsertMappings() {
                           return (
                             <li {...optionProps} key={key}>
                               <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                                <Typography variant="body2" fontWeight="bold">
+                                <Typography variant="body2" fontWeight="bold" sx={{ color: "primary.main" }}>
                                   {typeof option === "string" ? option : option.lnItemCode}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
@@ -1194,6 +1241,112 @@ export default function InsertMappings() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Add to Production Orders Confirmation Dialog */}
+      <Dialog
+        open={precheckDialogOpen}
+        onClose={() => {}}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            p: 1,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            color: 'primary.main',
+            fontSize: '1.15rem',
+            pb: 0.5,
+          }}
+        >
+          Add to Existing Production Orders?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary', fontSize: '0.9rem', mt: 0.5 }}>
+            Do you want to add this component to all existing production orders?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setPrecheckDialogOpen(false);
+              setSavedFormData(null);
+              setTimeout(() => {
+                navigate("/components");
+              }, 500);
+            }}
+            variant="outlined"
+            size="small"
+            disabled={precheckLoading}
+            sx={{
+              minWidth: 80,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            No
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!savedFormData) return;
+              setPrecheckLoading(true);
+              try {
+                const res = await api.post('/api/Precheck/addPrecheckComponent', {
+                  assemblyLnItemCode: savedFormData.assemblyItemCode || '',
+                  childLnItemCode: savedFormData.lnItemCode || '',
+                  componentType: savedFormData.componentType || '',
+                  userInput: true,
+                });
+                const msg = res.data?.message || 'Component added to production orders successfully!';
+                setPrecheckSnackbar({ open: true, message: msg, severity: 'success' });
+              } catch (err: any) {
+                const errMsg = err.response?.data?.message || err.message || 'Failed to add component to production orders.';
+                setPrecheckSnackbar({ open: true, message: errMsg, severity: 'error' });
+              } finally {
+                setPrecheckLoading(false);
+                setPrecheckDialogOpen(false);
+                setSavedFormData(null);
+                setTimeout(() => {
+                  navigate("/components");
+                }, 1500);
+              }
+            }}
+            variant="contained"
+            size="small"
+            disabled={precheckLoading}
+            sx={{
+              minWidth: 80,
+              borderRadius: '6px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            {precheckLoading ? <CircularProgress size={18} color="inherit" /> : 'Yes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Precheck Snackbar */}
+      <Snackbar
+        open={precheckSnackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setPrecheckSnackbar({ ...precheckSnackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setPrecheckSnackbar({ ...precheckSnackbar, open: false })}
+          severity={precheckSnackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {precheckSnackbar.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 }

@@ -27,6 +27,7 @@ interface GetSopRequestDto {
   serielNumberId: number;
   prodSeriesId: number;
   assemblyDrawing?: string;
+  selectedColumns?: string[];
 }
 
 // BOM Types
@@ -249,22 +250,42 @@ export const searchAssemblyNumbers = createAsyncThunk(
   },
 );
 
+interface ExportBomRequestDto {
+  assemblyNumber: string;
+  selectedColumn: string[];
+}
+
 export const exportBomDetails = createAsyncThunk(
   "sop/exportBomDetails",
-  async (assemblyNumber: string, { rejectWithValue }) => {
+  async (request: any, { rejectWithValue }) => {
     try {
-      const response = await api.get(
-        `/api/Sop/ExportBom?assemblyNumber=${encodeURIComponent(assemblyNumber)}`,
-        {
-          responseType: "blob",
-        },
-      );
+      const dwgName =
+        typeof request === "string"
+          ? request
+          : request.assemblyNumber || request.assemblyDrawing || "Export";
+
+      const colsArray: string[] = Array.isArray(request?.selectedColumn)
+        ? request.selectedColumn
+        : Array.isArray(request?.selectedColumns)
+        ? request.selectedColumns
+        : typeof request?.selectedColumn === "string"
+        ? request.selectedColumn.split(",").filter(Boolean)
+        : [];
+
+      const payload: ExportBomRequestDto = {
+        assemblyNumber: typeof request === "string" ? request : (request.assemblyNumber || request.assemblyDrawing || ""),
+        selectedColumn: colsArray,
+      };
+
+      const response = await api.post("/api/Sop/ExportBom", payload, {
+        responseType: "blob",
+      });
 
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `BOM_${assemblyNumber}_${Date.now()}.xlsx`);
+      link.setAttribute("download", `BOM_${dwgName}_${Date.now()}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();

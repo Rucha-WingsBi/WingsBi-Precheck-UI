@@ -35,7 +35,7 @@ export const decodeJwt = (token: string): JwtPayload | null => {
 export const isTokenExpired = (token: string): boolean => {
   const decoded = decodeJwt(token);
   if (!decoded) return true;
-  
+
   const currentTime = Date.now() / 1000;
   return decoded.exp < currentTime;
 }; 

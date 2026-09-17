@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -17,10 +17,10 @@ import {
   Collapse,
   Chip,
   Alert,
+  Snackbar,
   CircularProgress,
   Button,
   Dialog,
-  Tooltip,
   DialogTitle,
   DialogContent,
   DialogContentText,
@@ -28,12 +28,10 @@ import {
   useMediaQuery,
   useTheme,
   Stack,
-  ToggleButtonGroup,
-  ToggleButton,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
+  Tooltip,
 } from "@mui/material";
 import {
   QrCodeScanner as QrCodeScannerIcon,
@@ -44,23 +42,28 @@ import {
   CameraFront as CameraFrontIcon,
   CameraRear as CameraRearIcon,
   UploadFile as UploadFileIcon,
-  Today as TodayIcon,
-  CalendarMonth as CalendarMonthIcon,
-  DateRange as DateRangeIcon,
   FlashOn as FlashOnIcon,
   FlashOff as FlashOffIcon,
-  PlaylistAddCheck as PlaylistAddCheckIcon
+  CropFree as CropFreeIcon,
+  Search as SearchIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
 } from "@mui/icons-material";
 import { getStoreInData } from "../../store/slices/precheckSlice";
 import { format } from "date-fns";
 import { updateQrCodeDetails } from "../../store/slices/qrcodeSlice";
 import type { AppDispatch, RootState } from "../../store/store";
 import { Html5Qrcode } from "html5-qrcode";
-import { usePageAccess } from "../../hooks/useMasterData";
+import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
+import { getErrorMessage } from "../../utils/errorUtils";
 import { isPageAccessible } from "../../utils/accessUtils";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { CustomPagination } from "../../components/CustomPagination";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { EmptyState } from "../../components/EmptyState";
+import { ClearIcon } from "@mui/x-date-pickers";
 
 interface QRCodeDetailsResponse {
   qrCodeNumber: string;
@@ -91,11 +94,11 @@ interface StoreInResponse {
   productionOrderNumber: string;
   createdByName: string;
   createdDate: string;
-  precheckStatusId: number
+  precheckStatusId: number;
 }
 
 const formatQuantity = (qty: any) => {
-  if (qty === undefined || qty === null || qty === '') return '-';
+  if (qty === undefined || qty === null || qty === "") return "-";
   const num = Number(qty);
   if (isNaN(num)) return String(qty);
   const match = String(qty).match(/^-?\d+(?:\.\d{0,4})?/);
@@ -109,49 +112,123 @@ const StoreIn: React.FC = () => {
   const { data: pageAccessData } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null
   );
-  const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+  const hasMakeAccess = useHasPermission("Run Precheck");
 
+  // Production Series hook for filter
+  const { data: productionSeriesData = [] } = useProductionSeries();
+  const seriesOptions = useMemo(() => {
+    return productionSeriesData.map((s: any) => ({
+      id: s.id || s.productionSeries,
+      label: s.productionSeries || String(s),
+    }));
+  }, [productionSeriesData]);
+
+  const scanInputRef = useRef<HTMLInputElement | null>(null);
   const [qrCodeInput, setQrCodeInput] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  const handleExpandClick = (qrCodeId: string) => {
+    setExpandedRow(expandedRow === qrCodeId ? null : qrCodeId);
+  };
+
   const [alertMessage, setAlertMessage] = useState<{
     message: string;
     type: "success" | "error" | "info";
   }>({ message: "", type: "info" });
+
   const [qrCodeList, setQrCodeList] = useState<QRCodeDetailsResponse[]>([]);
   const [storeInList, setStoreInList] = useState<StoreInResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Filter States
-  const [dateFilterMode, setDateFilterMode] = useState<"single" | "range">("range");
+  // Awaiting Precheck Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSeries, setSelectedSeries] = useState<(string | number)[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [dateFilterMode] = useState<"single" | "range">("range");
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
 
-  // Filtered Store In List
-  const filteredStoreInList = React.useMemo(() => {
-    let result = storeInList;
+  // Pagination State for Awaiting Precheck
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // Filter by Date
-    if (dateFilterMode === "single" && filterDate) {
-      const targetStr = new Date(filterDate).toDateString();
-      result = result.filter((row) => {
-        if (!row.createdDate) return false;
-        return new Date(row.createdDate).toDateString() === targetStr;
+  const isDropdownFilterSelected = selectedSeries.length > 0 || !!selectedStatus || !!fromDate || !!toDate || !!filterDate;
+  const hasAnyFilter = searchTerm.trim().length > 0 || isDropdownFilterSelected;
+
+  // Active Filter Chips for Awaiting Precheck Table
+  const activeChips = useMemo(() => {
+    const chips: Array<{ id: string; label: string; onRemove: () => void }> = [];
+
+    if (searchTerm.trim()) {
+      chips.push({
+        id: "search",
+        label: `Search: "${searchTerm.trim()}"`,
+        onRemove: () => {
+          setSearchTerm("");
+          setPage(0);
+          fetchStoreInData({ searchQuery: "", pageNumber: 0 });
+        },
       });
-    } else if (dateFilterMode === "range" && fromDate && toDate) {
-      const start = new Date(fromDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(toDate);
-      end.setHours(23, 59, 59, 999);
-      result = result.filter((row) => {
-        if (!row.createdDate) return false;
-        const d = new Date(row.createdDate);
-        return d >= start && d <= end;
+    }
+    selectedSeries.forEach((ser) => {
+      chips.push({
+        id: `series_${ser}`,
+        label: `Series: ${ser}`,
+        onRemove: () => {
+          const updated = selectedSeries.filter((s) => s !== ser);
+          setSelectedSeries(updated);
+          setPage(0);
+          fetchStoreInData({ prodSeries: updated, pageNumber: 0 });
+        },
+      });
+    });
+    if (selectedStatus) {
+      chips.push({
+        id: "status",
+        label: `Status: ${selectedStatus}`,
+        onRemove: () => {
+          setSelectedStatus("");
+          setPage(0);
+          fetchStoreInData({ status: "", pageNumber: 0 });
+        },
+      });
+    }
+    if (fromDate && toDate) {
+      chips.push({
+        id: "dateRange",
+        label: `From: ${format(fromDate, "dd/MM/yyyy")} - To: ${format(toDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setFromDate(null);
+          setToDate(null);
+          setPage(0);
+          fetchStoreInData({ fromDate: null, toDate: null, pageNumber: 0 });
+        },
+      });
+    } else if (fromDate) {
+      chips.push({
+        id: "fromDateChip",
+        label: `From: ${format(fromDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setFromDate(null);
+          setPage(0);
+          fetchStoreInData({ fromDate: null, pageNumber: 0 });
+        },
+      });
+    } else if (toDate) {
+      chips.push({
+        id: "toDateChip",
+        label: `To: ${format(toDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setToDate(null);
+          setPage(0);
+          fetchStoreInData({ toDate: null, pageNumber: 0 });
+        },
       });
     }
 
-    return result;
-  }, [storeInList, dateFilterMode, filterDate, fromDate, toDate]);
+    return chips;
+  }, [searchTerm, selectedSeries, selectedStatus, fromDate, toDate, filterDate]);
 
   // Camera QR Scanner state
   const theme = useTheme();
@@ -187,7 +264,6 @@ const StoreIn: React.FC = () => {
     }
   }, []);
 
-  // Proactive permission request
   const handleRequestPermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -210,13 +286,10 @@ const StoreIn: React.FC = () => {
     }
   };
 
-  // Torch toggle handler
   const handleTorchToggle = useCallback(async () => {
     const qr = html5QrCodeRef.current;
     if (!qr) return;
     try {
-      const track = (qr as any).getRunningTrackSettings?.();
-      if (!track) return;
       const capabilities = (qr as any).getRunningTrackCameraCapabilities?.();
       if (capabilities?.torchFeature?.isSupported?.()) {
         await capabilities.torchFeature.apply(!torchOn);
@@ -227,12 +300,10 @@ const StoreIn: React.FC = () => {
     }
   }, [torchOn]);
 
-  // Camera flip handler
   const handleCameraFlip = useCallback(() => {
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   }, []);
 
-  // Handle uploaded file scan
   const handleScanFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -284,7 +355,7 @@ const StoreIn: React.FC = () => {
 
     const timer = setTimeout(async () => {
       try {
-        const qr = new Html5Qrcode("qr-reader-video-store-in", /* verbose= */ false);
+        const qr = new Html5Qrcode("qr-reader-video-store-in", false);
         html5QrCodeRef.current = qr;
 
         await qr.start(
@@ -301,14 +372,13 @@ const StoreIn: React.FC = () => {
             }
             setOpenScanner(false);
           },
-          () => {
-            // Scan frame failure (normal behavior per-frame)
-          }
+          () => {}
         );
         setScannerReady(true);
       } catch (err: any) {
         console.error("Scanner initialization error:", err);
-        let detailedError = "Could not initialize camera. Please ensure camera permissions are granted and no other app is using it.";
+        let detailedError =
+          "Could not initialize camera. Please ensure camera permissions are granted and no other app is using it.";
         if (err?.message) detailedError = err.message;
         else if (typeof err === "string") detailedError = err;
         setScannerError(detailedError);
@@ -352,16 +422,13 @@ const StoreIn: React.FC = () => {
   useEffect(() => {
     if (!qrCodeInput) return;
 
-    // Only process if it's numeric and matches target lengths
     const isNumeric = /^\d+$/.test(qrCodeInput);
     if (!isNumeric) return;
 
     if (qrCodeInput.length === 15) {
-      // Process 15-digit codes immediately
       submitQRCode(qrCodeInput);
       setQrCodeInput("");
     } else if (qrCodeInput.length === 12) {
-      // Process 12-digit codes after a 2000ms delay to allow manual or fast 15-digit scanner completion
       const timer = setTimeout(() => {
         submitQRCode(qrCodeInput);
         setQrCodeInput("");
@@ -372,49 +439,157 @@ const StoreIn: React.FC = () => {
 
   const activeQrCode = qrCodeList[0]?.qrCodeNumber || "";
 
-  // Re-fetch store-in data when date filters or the active QR code changes
-  useEffect(() => {
-    if (!activeQrCode) return;
+  // Core function to fetch store-in data from API (/api/Precheck/GetStoreAvailablComponents)
+  const fetchStoreInData = useCallback(
+    (overrides?: {
+      searchQuery?: string;
+      prodSeries?: (string | number)[];
+      status?: string;
+      fromDate?: Date | null;
+      toDate?: Date | null;
+      filterDate?: Date | null;
+      pageNumber?: number;
+      pageSize?: number;
+      isInitialQrScan?: boolean;
+    }) => {
+      const queryVal = overrides?.searchQuery !== undefined ? overrides.searchQuery : searchTerm;
+      const seriesVal = overrides?.prodSeries !== undefined ? overrides.prodSeries : selectedSeries;
+      const statusVal = overrides?.status !== undefined ? overrides.status : selectedStatus;
+      const fromDateVal = overrides?.fromDate !== undefined ? overrides.fromDate : fromDate;
+      const toDateVal = overrides?.toDate !== undefined ? overrides.toDate : toDate;
+      const filterDateVal = overrides?.filterDate !== undefined ? overrides.filterDate : filterDate;
+      const pageVal = overrides?.pageNumber !== undefined ? overrides.pageNumber : page;
+      const sizeVal = overrides?.pageSize !== undefined ? overrides.pageSize : rowsPerPage;
 
-    const reqFromDate = fromDate ? format(fromDate, "yyyy-MM-dd") : undefined;
-    const reqToDate = toDate ? format(toDate, "yyyy-MM-dd") : undefined;
+      let reqFromDate: string | undefined = undefined;
+      let reqToDate: string | undefined = undefined;
 
-    setIsLoading(true);
-    dispatch(
-      getStoreInData({
-        qrCode: activeQrCode,
-        fromDate: reqFromDate,
-        toDate: reqToDate,
-      })
-    )
-      .unwrap()
-      .then((storeInResult) => {
-        if (storeInResult && storeInResult.length > 0) {
-          setStoreInList(storeInResult);
-          setAlertMessage({
-            message: `QR Code ${activeQrCode} processed successfully. ${storeInResult.length} awaiting pending precheck record(s) found.`,
-            type: "success",
-          });
-        } else {
+      if (fromDateVal) {
+        reqFromDate = format(fromDateVal, "yyyy-MM-dd");
+      }
+      if (toDateVal) {
+        reqToDate = format(toDateVal, "yyyy-MM-dd");
+      }
+
+      const seriesArray = seriesVal.map((s) => String(s));
+
+      const hasSearchOrFilter =
+        queryVal.trim().length > 0 ||
+        seriesArray.length > 0 ||
+        !!statusVal ||
+        !!fromDateVal ||
+        !!toDateVal ||
+        !!filterDateVal;
+
+      // Do not trigger API call with empty QR code if no search or filter criteria are applied
+      if (!activeQrCode && !hasSearchOrFilter) {
+        setStoreInList([]);
+        return;
+      }
+
+      setIsLoading(true);
+      dispatch(
+        getStoreInData({
+          qrCode: activeQrCode,
+          fromDate: reqFromDate,
+          toDate: reqToDate,
+          searchQuery: queryVal.trim(),
+          prodSeries: seriesArray,
+          status: statusVal,
+          pageNumber: pageVal + 1,
+          pageSize: sizeVal,
+        })
+      )
+        .unwrap()
+        .then((storeInResult) => {
+          const rawList = Array.isArray(storeInResult)
+            ? storeInResult
+            : storeInResult?.data || storeInResult?.items || [];
+          if (rawList && rawList.length > 0) {
+            setStoreInList(rawList);
+            if (activeQrCode && overrides?.isInitialQrScan) {
+              setAlertMessage({
+                message: `QR Code ${activeQrCode} processed successfully. ${rawList.length} awaiting pending precheck record(s) found.`,
+                type: "success",
+              });
+            }
+          } else {
+            setStoreInList([]);
+            if (activeQrCode && overrides?.isInitialQrScan) {
+              setAlertMessage({
+                message: `QR Code ${activeQrCode} processed successfully. No awaiting pending precheck found for QR Code ${activeQrCode}.`,
+                type: "info",
+              });
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching store-in data:", error);
           setStoreInList([]);
           setAlertMessage({
-            message: `QR Code ${activeQrCode} processed successfully. No awaiting pending precheck found for QR Code ${activeQrCode}.`,
-            type: "info",
+            message: getErrorMessage(error, "Error fetching store-in data"),
+            type: "error",
           });
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching store-in data:", error);
-        setStoreInList([]);
-        setAlertMessage({
-          message: `Error fetching store-in data: ${error.message || error}`,
-          type: "error",
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [fromDate, toDate, activeQrCode, dispatch]);
+    },
+    [
+      activeQrCode,
+      searchTerm,
+      selectedSeries,
+      selectedStatus,
+      fromDate,
+      toDate,
+      filterDate,
+      dateFilterMode,
+      page,
+      rowsPerPage,
+      dispatch,
+    ]
+  );
+
+  // Initial fetch when active QR code changes or component mounts
+  const prevQrCodeRef = useRef<string>("");
+  useEffect(() => {
+    const isNewScan = !!activeQrCode && activeQrCode !== prevQrCodeRef.current;
+    prevQrCodeRef.current = activeQrCode;
+    fetchStoreInData({ isInitialQrScan: isNewScan });
+  }, [activeQrCode]);
+
+  // Direct API call when typing in Search bar (debounced 400ms)
+  const isSearchMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isSearchMountedRef.current) {
+      isSearchMountedRef.current = true;
+      return;
+    }
+    const timer = setTimeout(() => {
+      setPage(0);
+      fetchStoreInData({ searchQuery: searchTerm, pageNumber: 0 });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedSeries([]);
+    setSelectedStatus("");
+    setFromDate(null);
+    setToDate(null);
+    setFilterDate(null);
+    setPage(0);
+    fetchStoreInData({
+      searchQuery: "",
+      prodSeries: [],
+      status: "",
+      fromDate: null,
+      toDate: null,
+      filterDate: null,
+      pageNumber: 0,
+    });
+  };
 
   const submitQRCode = async (qrCode: string) => {
     try {
@@ -428,11 +603,9 @@ const StoreIn: React.FC = () => {
         return;
       }
 
-      // Clear existing data before making new requests
       setQrCodeList([]);
       setStoreInList([]);
 
-      // Call the UpdateQrCodeDetails API
       const qrCodeResult = await dispatch(updateQrCodeDetails(qrCode)).unwrap();
 
       if (!qrCodeResult) {
@@ -443,7 +616,6 @@ const StoreIn: React.FC = () => {
         return;
       }
 
-      // Process QR code details
       const gridModel: QRCodeDetailsResponse = {
         qrCodeNumber: qrCodeResult.qrCodeNumber,
         productionSeries: qrCodeResult.productionSeries,
@@ -475,8 +647,7 @@ const StoreIn: React.FC = () => {
     } catch (error: any) {
       console.error("Error processing QR Code:", error);
       setAlertMessage({
-        message: `Error processing QR Code ${qrCode}: ${error.message || error
-          }`,
+        message: `Error processing QR Code ${qrCode}: ${error.message || error}`,
         type: "error",
       });
     } finally {
@@ -484,270 +655,443 @@ const StoreIn: React.FC = () => {
     }
   };
 
-  const handleExpandClick = (qrCodeId: string) => {
-    setExpandedRow(expandedRow === qrCodeId ? null : qrCodeId);
-  };
-
-  const reset = () => {
-    setQrCodeInput("");
-    setQrCodeList([]);
-    setStoreInList([]);
-    setAlertMessage({ message: "", type: "info" });
-  };
 
   return (
-    <Box sx={{ p: 1 }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          mb: 2,
-          gap: 2,
-        }}
+    <Box
+      sx={{
+        py: { xs: 1.5, sm: 2 },
+        px: { xs: 1.5, sm: 2.5 },
+        maxWidth: 1600,
+        mx: "auto",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* 1. Page Header */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        spacing={2}
+        sx={{ mb: 1 }}
       >
-        <Typography variant="h4" color="primary.main" fontWeight={600}>
-          Store In
-        </Typography>
-      </Box>
+        <Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            Store In
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "#667085", mt: 0.5 }}
+          >
+            Scan verified components to receive them into store inventory locations.
+          </Typography>
+        </Box>
 
-      {/* Alert Message */}
-      {alertMessage.message && (
+        {/* <Button
+          variant="outlined"
+          startIcon={<FileDownloadIcon fontSize="small" />}
+          sx={{
+            borderColor: "#D0D5DD",
+            color: "#344054",
+            fontWeight: 600,
+            fontSize: "0.85rem",
+            textTransform: "none",
+            borderRadius: "8px",
+            height: 38,
+            px: 2,
+            backgroundColor: "#ffffff",
+            boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+          }}
+        >
+          Export
+        </Button> */}
+      </Stack>
+
+      {/* Alert Message Toast */}
+      <Snackbar
+        open={Boolean(alertMessage.message)}
+        autoHideDuration={4000}
+        onClose={() => setAlertMessage({ message: "", type: "info" })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
         <Alert
           severity={alertMessage.type}
-          sx={{ mb: 2 }}
+          sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}
           onClose={() => setAlertMessage({ message: "", type: "info" })}
         >
           {alertMessage.message}
         </Alert>
-      )}
+      </Snackbar>
 
-      {/* QR Code Scanning Section */}
-      <Paper sx={{ p: 1.5, mt: 1.5 }}>
+      {/* 2. Hero Scan QR Panel */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          mb: 3,
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          boxShadow: "0 1px 3px rgba(16, 24, 40, 0.05)",
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 600, color: "#344054", fontSize: "0.8rem", display: "block", mb: 1 }}
+        >
+          Scan QR
+        </Typography>
+
         <Box
           sx={{
             display: "flex",
-            alignItems: { xs: "flex-start", sm: "center" },
-            flexDirection: { xs: "column", sm: "row" },
+            alignItems: "center",
             gap: 2,
-            mb: 3,
+            flexWrap: { xs: "wrap", md: "nowrap" },
           }}
         >
-          <Typography
-            variant="h6"
-            color="primary.main"
-            sx={{
-              fontWeight: 600,
-              minWidth: "fit-content",
-              whiteSpace: "nowrap",
-
-            }}
-          >
-            Scanned QR Code Details:
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              flexGrow: 1,
-              width: "100%",
-              flexDirection: { xs: "column", sm: "row" },
-            }}
-          >
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Scan QR Code"
-              value={qrCodeInput}
-              onChange={handleQRCodeScan}
-
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <IconButton
-                      onClick={handleOpenScanner}
-                      size="small"
-                      sx={{ p: 0.5 }}
-                      title="Scan QR Code"
-                    >
-                      <QrCodeScannerIcon color="primary" />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-                endAdornment: isLoading && (
-                  <InputAdornment position="end">
-                    <CircularProgress size={20} />
-                  </InputAdornment>
-                ),
-              }}
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1, width: "100%" }}>
+            {/* Thick Rounded Purple Border Input Box */}
+            <Box
               sx={{
-                maxWidth: { xs: "100%", sm: "300px" },
-                "& .MuiOutlinedInput-root": {
-                  height: 45,
-                }
+                flexGrow: 1,
+                display: "flex",
+                alignItems: "center",
+                borderRadius: "10px",
+                border: "2px solid",
+                borderColor: "primary.main",
+                backgroundColor: "#FFFFFF",
+                px: 1.5,
+                py: 0.75,
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
               }}
-            />
+            >
+              <CropFreeIcon sx={{ color: "primary.main", mr: 1.25, fontSize: 22 }} />
+              <TextField
+                inputRef={scanInputRef}
+                fullWidth
+                variant="standard"
+                value={qrCodeInput}
+                onChange={handleQRCodeScan}
+                placeholder="Enter QR code number (12 to 15) digit"
+                InputProps={{
+                  disableUnderline: true,
+                  endAdornment: isLoading && (
+                    <InputAdornment position="end">
+                      <CircularProgress size={18} sx={{ color: "primary.main" }} />
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    fontSize: "0.9375rem",
+                    color: "#1E293B",
+                    fontFamily: "monospace, Courier, monospace",
+                    "& input::placeholder": {
+                      color: "#94A3B8",
+                      opacity: 1,
+                    },
+                  },
+                }}
+                inputProps={{
+                  maxLength: 15,
+                }}
+              />
+            </Box>
+
+            {/* Scan QR Button with thick purple border and camera icon */}
             <Button
               variant="outlined"
-              color="primary"
               onClick={handleOpenScanner}
               startIcon={<QrCodeScannerIcon />}
-              size="small"
               sx={{
-                height: 45,
-                px: 2,
+                height: 48,
+                px: 2.5,
+                borderRadius: "10px",
+                border: "2px solid",
+                borderColor: "primary.main",
+                color: "primary.main",
+                fontWeight: 700,
+                fontSize: "0.9375rem",
                 textTransform: "none",
-                borderRadius: 1,
-                minWidth: "fit-content",
-                width: { xs: "100%", sm: "auto" },
+                backgroundColor: "#FFFFFF",
+                whiteSpace: "nowrap",
+                "&:hover": {
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  backgroundColor: "action.hover",
+                },
               }}
             >
               Scan QR
             </Button>
+          </Stack>
 
+          {/* Session Stat Box */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              pl: { xs: 0, md: 3 },
+              borderLeft: { xs: "none", md: "1px solid #EAECF0" },
+              minWidth: 170,
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ color: "#667085", fontSize: "0.775rem", fontWeight: 500 }}
+            >
+              Stored this session
+            </Typography>
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 700, color: "#101828", fontSize: "1.75rem", lineHeight: 1.1, my: 0.25 }}
+            >
+              {qrCodeList.length}
+            </Typography>
           </Box>
         </Box>
 
+        {/* Confirmation & Manual Link Bar */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mt: 1.5,
+            pt: 1,
+            borderTop: "1px solid #F2F4F7",
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{ color: "#475467", fontSize: "0.775rem" }}
+          >
+            Last scan: <strong>{activeQrCode}</strong> 
+          </Typography>
 
-        {/* QR Code Details Table */}
-        <TableContainer sx={{ p: 0.5 }}>
-          <Table size="small">
+        </Box>
+      </Paper>
+
+      {/* 3. "Scanned this session" Table Section */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 3,
+          boxShadow: "0 1px 3px rgba(16, 24, 40, 0.05)",
+        }}
+      >
+        <Box
+          sx={{
+            p: 2,
+            borderBottom: "1px solid #EAECF0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{ fontSize: "0.875rem", fontWeight: 600, color: "primary.main" }}
+          >
+            Scanned this session
+          </Typography>
+        </Box>
+
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ height: 50 }}>
-                <TableCell sx={{ textAlign: "center" }}>QRCode ID</TableCell>
-                <TableCell sx={{ textAlign: "center" }}>PO Number</TableCell>
-                <TableCell sx={{ textAlign: "center" }}>
-                  Project Number
-                </TableCell>
-                <TableCell sx={{ textAlign: "center" }}>Prod Series</TableCell>
-                <TableCell sx={{ textAlign: "center" }}>
-                  Drawing Number
-                </TableCell>
-                <TableCell sx={{ textAlign: "center" }}>ID</TableCell>
-                <TableCell sx={{ textAlign: "center" }}>Qty</TableCell>
-                <TableCell sx={{ textAlign: "center" }}>Nomenclature</TableCell>
-                <TableCell sx={{ textAlign: "center" }}>Details</TableCell>
+              <TableRow sx={{ height: 42 }}>
+                {[
+                  "QRCode ID",
+                  "PO Number",
+                  "Project Number",
+                  "Prod Series",
+                  "Drawing Number",
+                  "ID",
+                  "Qty",
+                  "Nomenclature",
+                  "Details",
+                ].map((col) => (
+                  <TableCell
+                    key={col}
+                    align={
+                      col === "Qty" || col === "Details"
+                        ? "center"
+                        : "left"
+                    }
+                    sx={{
+                      fontWeight: 700,
+                      backgroundColor: "#F9FAFB",
+                      color: "#475467",
+                      fontSize: "0.8rem",
+                      borderBottom: "1px solid #EAECF0",
+                      py: 1,
+                      px: 1.5,
+                    }}
+                  >
+                    {col}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {qrCodeList.length > 0 ? (
-                qrCodeList.map((details, index) => (
-                  <React.Fragment key={index}>
-                    <TableRow>
-                      <TableCell sx={{ textAlign: "left", minWidth: "150px" }}>
-                        {details.qrCodeNumber}
+                qrCodeList.map((row, idx) => (
+                  <React.Fragment key={idx}>
+                    <TableRow
+                      hover
+                      sx={{
+                        height: 42,
+                        "&:hover": { backgroundColor: "#F9FAFB" },
+                        "& td": { borderBottom: "1px solid #F2F4F7", fontSize: "0.825rem" },
+                      }}
+                    >
+                      <TableCell sx={{ fontWeight: 600, color: "#101828" }}>
+                        {row.qrCodeNumber}
                       </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {details.productionOrderNumber}
+                      <TableCell>{row.productionOrderNumber || "-"}</TableCell>
+                      <TableCell>{row.projectNumber || "-"}</TableCell>
+                      <TableCell>{row.productionSeries || "-"}</TableCell>
+                      <TableCell>{row.drawingNumber || "-"}</TableCell>
+                      <TableCell>{row.idNumber || "-"}</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 600 }}>
+                        {formatQuantity(row.quantity)}
                       </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {details.projectNumber}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {details.productionSeries}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {details.drawingNumber}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {details.idNumber}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {formatQuantity(details.quantity)}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {details.nomenclature}
-                      </TableCell>
+                      <TableCell>{row.nomenclature || "-"}</TableCell>
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={() =>
-                            handleExpandClick(details.qrCodeNumber)
-                          }
+                          onClick={() => handleExpandClick(row.qrCodeNumber)}
+                          sx={{ color: "#667085" }}
                         >
-                          {expandedRow === details.qrCodeNumber ? (
-                            <ExpandLessIcon />
+                          {expandedRow === row.qrCodeNumber ? (
+                            <ExpandLessIcon fontSize="small" />
                           ) : (
-                            <ExpandMoreIcon />
+                            <ExpandMoreIcon fontSize="small" />
                           )}
                         </IconButton>
                       </TableCell>
                     </TableRow>
-                    <TableRow sx={{ height: 'auto' }}>
-                      <TableCell
-                        style={{ paddingBottom: 0, paddingTop: 0 }}
-                        colSpan={9}
-                      >
-                        <Collapse
-                          in={expandedRow === details.qrCodeNumber}
-                          timeout="auto"
-                          unmountOnExit
-                        >
-                          <Box sx={{ margin: 0.5 }}>
-                            <Table size="small" aria-label="details">
+                    <TableRow sx={{ height: "auto" }}>
+                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+                        <Collapse in={expandedRow === row.qrCodeNumber} timeout="auto" unmountOnExit>
+                          <Box
+                            sx={{
+                              margin: 1,
+                              p: 1.5,
+                              backgroundColor: "#F9FAFB",
+                              borderRadius: "6px",
+                              border: "1px solid #EAECF0",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 0.75,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: "primary.main",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                Additional Details
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleExpandClick(row.qrCodeNumber)}
+                                title="Close Additional Details"
+                                sx={{
+                                  p: 0.25,
+                                  color: "#667085",
+                                  "&:hover": { color: "#101828", backgroundColor: "#EAECF0" },
+                                }}
+                              >
+                                <KeyboardArrowUpIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                            <Table size="small" sx={{ width: "100%" }}>
                               <TableHead>
-                                <TableRow sx={{ height: 50 }}>
-                                  <TableCell>Consumed in Drawing</TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    Status
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    IR Number
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    MSN Number
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    MRIR Number
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    Disposition
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    Username
-                                  </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    Created Date
-                                  </TableCell>
+                                <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
+                                  {[
+                                    "Consumed in Drawing",
+                                    "Status",
+                                    "IR Number",
+                                    "MSN Number",
+                                    "MRIR Number",
+                                    "Disposition",
+                                    "Username",
+                                    "Created Date",
+                                  ].map((subCol) => (
+                                    <TableCell
+                                      key={subCol}
+                                      align={subCol === "Consumed in Drawing" ? "left" : "center"}
+                                      sx={{
+                                        fontWeight: 600,
+                                        color: "#344054",
+                                        fontSize: "0.75rem",
+                                        py: 0.5,
+                                        borderBottom: "1px solid #EAECF0",
+                                      }}
+                                    >
+                                      {subCol}
+                                    </TableCell>
+                                  ))}
                                 </TableRow>
                               </TableHead>
                               <TableBody>
                                 <TableRow>
-                                  <TableCell>
-                                    {details.consumedInDrawing || "-"}
+                                  <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.consumedInDrawing || "-"}
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
+                                  <TableCell align="center" sx={{ py: 0.5 }}>
                                     <Chip
-                                      label={details.qrCodeStatus || "N/A"}
+                                      label={row.qrCodeStatus || "N/A"}
                                       size="small"
                                       color={
-                                        details.qrCodeStatus?.toLowerCase() ===
-                                          "available"
+                                        row.qrCodeStatus?.toLowerCase() === "available"
                                           ? "success"
                                           : "default"
                                       }
                                       variant="outlined"
+                                      sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600 }}
                                     />
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    {details.irNumber || "-"}
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.irNumber || "-"}
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    {details.msnNumber || "-"}
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.msnNumber || "-"}
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    {details.mrirNumber || "-"}
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.mrirNumber || "-"}
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    {details.desposition || "-"}
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.desposition || "-"}
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    {details.users || "-"}
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.users || "-"}
                                   </TableCell>
-                                  <TableCell sx={{ textAlign: "center" }}>
-                                    {details.createdDate
-                                      ? formatDate(details.createdDate)
-                                      : "-"}
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                    {row.createdDate ? formatDate(row.createdDate) : "-"}
                                   </TableCell>
                                 </TableRow>
                               </TableBody>
@@ -759,222 +1103,476 @@ const StoreIn: React.FC = () => {
                   </React.Fragment>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={9} align="center">
-                    No QR code scanned
-                  </TableCell>
-                </TableRow>
+                <EmptyState colSpan={9} title="Apply filter to see results" />
               )}
             </TableBody>
           </Table>
         </TableContainer>
       </Paper>
 
-      {/* Store In Dashboard Section */}
-      <Paper sx={{ p: 1.5, mt: 1.5 }}>
-        {/* Heading + Filters Row */}
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          flexWrap="wrap"
-          spacing={2}
-          mb={2}
+      {/* 4. "Awaiting precheck" Table Section */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 2,
+          boxShadow: "0 1px 3px rgba(16, 24, 40, 0.05)",
+        }}
+      >
+        {/* Card Header */}
+        <Box
+          sx={{
+            p: 2,
+            borderBottom: "1px solid #EAECF0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
-          {/* Heading */}
-          <Typography variant="h6" color="primary.main" fontWeight={600}>
-            Awaiting Pending Precheck
-          </Typography>
-
-          {/* Filters */}
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              flexWrap="wrap"
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+            <Typography
+              variant="h6"
+              sx={{ fontSize: "0.875rem", fontWeight: 600, color: "primary.main" }}
             >
-              {/* From Date */}
-              <DatePicker
-                label="From Date"
-                value={fromDate}
-                onChange={(newValue: Date | null) => setFromDate(newValue)}
-                disabled={!activeQrCode}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    sx: { width: 180 },
-                  },
-                }}
-              />
+              Awaiting precheck
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
+            >
+              {storeInList.length} orders
+            </Typography>
+          </Box>
+        </Box>
 
-              {/* To Date */}
-              <DatePicker
-                label="To Date"
-                value={toDate}
-                onChange={(newValue: Date | null) => setToDate(newValue)}
-                disabled={!activeQrCode}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    sx: { width: 180 },
-                  },
-                }}
-              />
+        {/* Filter Controls Bar */}
+        <Box
+          sx={{
+            pt: 1.5,
+            px: 1,
+            pb: 0.5,
+            borderBottom: "1px solid #EAECF0",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 1,
+              flexWrap: "nowrap",
+              width: "100%",
+              overflowX: "auto",
+              overflowY: "hidden",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              pt: 1.5,
+              pb: 0.5,
+              "&::-webkit-scrollbar": { display: "none" },
+            }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search PO, Drawing No., ID Number..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(0);
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setPage(0);
+                      }}
+                      edge="end"
+                      sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }}
+              sx={{
+                flex: "1 1 340px",
+                minWidth: 260,
+              }}
+            />
 
-              {/* Today Button */}
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<TodayIcon />}
-                disabled={!activeQrCode}
-                onClick={() => {
-                  const today = new Date();
-                  setFromDate(today);
-                  setToDate(today);
+            <MultiSelectFilter
+              label="Prod Series"
+              value={selectedSeries}
+              options={seriesOptions}
+              onChange={(newValue) => setSelectedSeries(newValue)}
+              flex="0 0 150px"
+              minWidth={120}
+            />
+
+            <FormControl size="small" sx={{ flex: "0 0 120px", minWidth: 100 }}>
+              <Select
+                displayEmpty
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setPage(0);
                 }}
+                sx={{ fontSize: "0.82rem", height: 38 }}
+                renderValue={(val) =>
+                  val ? (
+                    <Typography sx={{ fontSize: "0.82rem", color: "#344054", fontWeight: 600 }}>
+                      {val}
+                    </Typography>
+                  ) : (
+                    <Typography sx={{ fontSize: "0.82rem", color: "#98A2B3" }}>
+                      Status
+                    </Typography>
+                  )
+                }
               >
-                Today
-              </Button>
+                <MenuItem value="">
+                  <em style={{ fontSize: "0.82rem" }}>All Statuses</em>
+                </MenuItem>
+                <MenuItem value="Pending" sx={{ fontSize: "0.82rem" }}>
+                  Pending
+                </MenuItem>
+                <MenuItem value="Partial" sx={{ fontSize: "0.82rem" }}>
+                  Partial
+                </MenuItem>
+              </Select>
+            </FormControl>
 
-              {/* Clear Filters */}
+            {/* From Date */}
+            <TextField
+              size="small"
+              type="date"
+              label="From Date"
+              InputLabelProps={{ shrink: true }}
+              placeholder="From Date"
+              value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFromDate(val ? new Date(val) : null);
+                setPage(0);
+              }}
+              inputProps={{ title: "From Date" }}
+              sx={{
+                flex: "0 0 148px",
+                minWidth: 140,
+                "& .MuiOutlinedInput-root": {
+                  height: 38,
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: "0.75rem",
+                  bgcolor: "#ffffff",
+                  px: 0.5,
+                  color: "#667085",
+                  "&.Mui-focused": { color: "primary.main" },
+                },
+                "& .MuiOutlinedInput-input": {
+                  py: "8.5px",
+                  px: 1.5,
+                  fontSize: "0.82rem",
+                  color: fromDate ? "#344054" : "#98A2B3",
+                },
+              }}
+            />
+
+            {/* To Date */}
+            <TextField
+              size="small"
+              type="date"
+              label="To Date"
+              InputLabelProps={{ shrink: true }}
+              placeholder="To Date"
+              value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setToDate(val ? new Date(val) : null);
+                setPage(0);
+              }}
+              inputProps={{ title: "To Date" }}
+              sx={{
+                flex: "0 0 148px",
+                minWidth: 140,
+                "& .MuiOutlinedInput-root": {
+                  height: 38,
+                },
+                "& .MuiInputLabel-root": {
+                  fontSize: "0.75rem",
+                  bgcolor: "#ffffff",
+                  px: 0.5,
+                  color: "#667085",
+                  "&.Mui-focused": { color: "primary.main" },
+                },
+                "& .MuiOutlinedInput-input": {
+                  py: "8.5px",
+                  px: 1.5,
+                  fontSize: "0.82rem",
+                  color: toDate ? "#344054" : "#98A2B3",
+                },
+              }}
+            />
+
+            <Button
+              size="small"
+              variant="contained"
+              onClick={() => {
+                setPage(0);
+                fetchStoreInData({ pageNumber: 0 });
+              }}
+              disabled={!isDropdownFilterSelected || isLoading}
+              sx={{
+                flex: "0 0 auto",
+                backgroundColor: "primary.main",
+                color: "#ffffff",
+                fontWeight: 600,
+                fontSize: "0.82rem",
+                borderRadius: "6px",
+                px: 2,
+                height: 38,
+                textTransform: "none",
+                boxShadow: "none",
+                minWidth: 65,
+                "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+              }}
+            >
+              Apply
+            </Button>
+
+            <Button
+              size="small"
+              variant="text"
+              onClick={handleClearFilters}
+              sx={{
+                flex: "0 0 auto",
+                color: "#667085",
+                fontWeight: 600,
+                fontSize: "0.82rem",
+                height: 38,
+                px: 1,
+                minWidth: 55,
+                textTransform: "none",
+                "&:hover": { color: "#101828", backgroundColor: "transparent" },
+              }}
+            >
+              Clear
+            </Button>
+          </Box>
+
+          {/* Active Chips Row */}
+          {activeChips.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                mt: 1,
+                pt: 0.75,
+                borderTop: "1px solid #F2F4F7",
+                flexWrap: "wrap",
+                gap: 0.75,
+              }}
+            >
+              {activeChips.map((chip) => (
+                <Chip
+                  key={chip.id}
+                  label={chip.label}
+                  onDelete={chip.onRemove}
+                  size="small"
+                  sx={{
+                    backgroundColor: "#F2F4F7",
+                    color: "#344054",
+                    fontWeight: 600,
+                    fontSize: "0.775rem",
+                    height: 24,
+                    borderRadius: "14px",
+                    border: "1px solid #E9EAEB",
+                  }}
+                />
+              ))}
               <Button
-                size="small"
                 variant="text"
-                color="error"
-                disabled={!activeQrCode || (!fromDate && !toDate)}
-                onClick={() => {
-                  setFromDate(null);
-                  setToDate(null);
+                size="small"
+                onClick={handleClearFilters}
+                sx={{
+                  color: "#6D2A8F",
+                  fontWeight: 600,
+                  fontSize: "0.775rem",
+                  textTransform: "none",
+                  p: 0,
                 }}
               >
-                Clear
+                Clear all
               </Button>
-            </Stack>
-          </LocalizationProvider>
-        </Stack>
+            </Box>
+          )}
+        </Box>
 
         {/* Table */}
-        <TableContainer sx={{ maxHeight: { xs: 400, sm: 550, md: 650, lg: 750 } }}>
-          <Table size="small">
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ height: 50 }}>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  S.No.
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Drawing Number
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  PO Number
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Prod Series
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  ID Number
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Quantity
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Project Number
-                </TableCell>
-                
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Created By 
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Created Date
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Precheck Status
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  Action
-                </TableCell>
+              <TableRow sx={{ height: 42 }}>
+                {[
+                  "S.No.",
+                  "Drawing Number",
+                  "PO Number",
+                  "Prod Series",
+                  "ID Number",
+                  "Quantity",
+                  "Project Number",
+                  "Created By",
+                  "Created Date",
+                  "Precheck Status",
+                  "Action",
+                ].map((col) => (
+                  <TableCell
+                    key={col}
+                    align={
+                      col === "S.No." ||
+                      col === "Quantity" ||
+                      col === "Precheck Status" ||
+                      col === "Action"
+                        ? "center"
+                        : "left"
+                    }
+                    sx={{
+                      fontWeight: 700,
+                      backgroundColor: "#F9FAFB",
+                      color: "#475467",
+                      fontSize: "0.8rem",
+                      borderBottom: "1px solid #EAECF0",
+                      py: 1,
+                      px: 1.5,
+                    }}
+                  >
+                    {col}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
-
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center">
-                    <CircularProgress size={20} />
+                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
-              ) : filteredStoreInList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={11} align="center">
-                    No store-in records found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredStoreInList.map((row, index) => (
-                  <TableRow key={index} sx={{ height: 50 }}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell
-                      sx={{ textAlign: "left", minWidth: "200px" }}
-                    >
+              ) : storeInList.length > 0 ? (
+                storeInList.map((row, index) => (
+                  <TableRow
+                    key={index}
+                    hover
+                    sx={{
+                      height: 44,
+                      "&:hover": { backgroundColor: "#F9FAFB" },
+                      "& td": { borderBottom: "1px solid #F2F4F7", fontSize: "0.825rem" },
+                    }}
+                  >
+                    <TableCell align="center">
+                      {page * rowsPerPage + index + 1}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#101828" }}>
                       {row.drawingNumber}
                     </TableCell>
-                    <TableCell>{row.productionOrderNumber}</TableCell>
+                    <TableCell sx={{ fontWeight: 500 }}>
+                      {row.productionOrderNumber}
+                    </TableCell>
                     <TableCell>{row.productionSeries}</TableCell>
                     <TableCell>{row.idNumber}</TableCell>
-                    <TableCell>{formatQuantity(row.quantity)}</TableCell>
-                    <TableCell>{row.projectNumber}</TableCell>
-                    
-                    <TableCell>{row.createdByName}</TableCell>
-                    <TableCell>
-                      {formatDate(row.createdDate)}
+                    <TableCell align="center" sx={{ fontWeight: 600 }}>
+                      {formatQuantity(row.quantity)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell>{row.projectNumber}</TableCell>
+                    <TableCell>{row.createdByName}</TableCell>
+                    <TableCell>{formatDate(row.createdDate)}</TableCell>
+                    <TableCell align="center">
                       <Chip
-                        label={row.precheckStatus || "N/A"}
+                        label={row.precheckStatus || "Pending"}
                         size="small"
-                        color={
-                          row.precheckStatus?.toLowerCase() === "partial"
-                            ? "warning"
-                            : row.precheckStatus?.toLowerCase() === "pending"
-                              ? "info"
-                              : row.precheckStatus?.toLowerCase() === "pending-planner"
-                                ? "default"
-                                : "default"
-                        }
-                        variant="outlined"
+                        sx={{
+                          backgroundColor: "#F0F9FF",
+                          color: "#026AA2",
+                          fontWeight: 700,
+                          fontSize: "0.725rem",
+                          height: 22,
+                          borderRadius: "16px",
+                        }}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="center">
                       <Tooltip
-                        title={
-                          hasMakeAccess
-                            ? "Make Precheck"
-                            : "You do not have permission to perform precheck"
-                        }
-                        PopperProps={{ disablePortal: true }}
-                        disableFocusListener
+                        title={!hasMakeAccess ? "You do not have access to make precheck" : ""}
+                        arrow
                       >
                         <span>
-                          <IconButton
+                          <Button
+                            variant="outlined"
                             size="small"
-                            color="success"
                             onClick={() =>
                               navigate("/precheck/make", { state: row })
                             }
                             disabled={!hasMakeAccess}
+                            sx={{
+                              borderColor: "#6D2A8F",
+                              color: "#6D2A8F",
+                              fontWeight: 600,
+                              fontSize: "0.775rem",
+                              borderRadius: "6px",
+                              py: 0.25,
+                              px: 1.5,
+                              height: 28,
+                              textTransform: "none",
+                              "&:hover": {
+                                borderColor: "#551F6F",
+                                backgroundColor: "#F5EEF8",
+                              },
+                            }}
                           >
-                            <PlaylistAddCheckIcon fontSize="small" />
-                          </IconButton>
+                            Run Precheck
+                          </Button>
                         </span>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))
+              ) : (
+                <EmptyState
+                  colSpan={11}
+                  title={hasAnyFilter || storeInList.length > 0 ? "No Matching Records found" : "Apply filter to see results"}
+                />
               )}
             </TableBody>
           </Table>
         </TableContainer>
+
+        <CustomPagination
+          totalCount={storeInList.length}
+          page={page}
+          pageSize={rowsPerPage}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            fetchStoreInData({ pageNumber: newPage });
+          }}
+          onPageSizeChange={(newRpp) => {
+            setRowsPerPage(newRpp);
+            setPage(0);
+            fetchStoreInData({ pageNumber: 0, pageSize: newRpp });
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
       </Paper>
+
+     
 
       {/* Camera Permission Dialog */}
       <Dialog
@@ -986,20 +1584,15 @@ const StoreIn: React.FC = () => {
           sx: { borderRadius: 3, p: 1 },
         }}
       >
-        <DialogTitle
-          sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}
-        >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}>
           <PhotoCameraIcon color="primary" />
           <Typography variant="h6" fontWeight="600">
             Camera Access
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ pb: 2 }}>
-          <DialogContentText
-            sx={{ color: "text.primary", fontSize: "0.95rem" }}
-          >
-            To scan QR codes, we need your permission to access the camera.
-            Would you like to allow access?
+          <DialogContentText sx={{ color: "text.primary", fontSize: "0.95rem" }}>
+            To scan QR codes, we need your permission to access the camera. Would you like to allow access?
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
@@ -1044,11 +1637,11 @@ const StoreIn: React.FC = () => {
             ...(isMobile
               ? {}
               : {
-                width: 420,
-                height: 520,
-                borderRadius: 3,
-                maxHeight: "85vh",
-              }),
+                  width: 420,
+                  height: 520,
+                  borderRadius: 3,
+                  maxHeight: "85vh",
+                }),
           },
         }}
         TransitionProps={{ timeout: 300 }}
@@ -1081,7 +1674,6 @@ const StoreIn: React.FC = () => {
             }}
           />
 
-          {/* Dark overlay with transparent cutout */}
           {!scannerError && (
             <Box
               sx={{
@@ -1091,81 +1683,11 @@ const StoreIn: React.FC = () => {
                 zIndex: 2,
               }}
             >
-              {/* Top dark band */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: "calc(50% - 120px)",
-                  background: "rgba(0,0,0,0.55)",
-                }}
-              />
-              {/* Bottom dark band */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: "calc(50% - 120px)",
-                  background: "rgba(0,0,0,0.55)",
-                }}
-              />
-              {/* Left dark band */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "calc(50% - 120px)",
-                  left: 0,
-                  width: "calc(50% - 120px)",
-                  height: "240px",
-                  background: "rgba(0,0,0,0.55)",
-                }}
-              />
-              {/* Right dark band */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "calc(50% - 120px)",
-                  right: 0,
-                  width: "calc(50% - 120px)",
-                  height: "240px",
-                  background: "rgba(0,0,0,0.55)",
-                }}
-              />
-
-              {/* Scan frame corner brackets */}
               {[
-                {
-                  top: 0,
-                  left: 0,
-                  borderTop: "3px solid #4FC3F7",
-                  borderLeft: "3px solid #4FC3F7",
-                  borderRadius: "12px 0 0 0",
-                },
-                {
-                  top: 0,
-                  right: 0,
-                  borderTop: "3px solid #4FC3F7",
-                  borderRight: "3px solid #4FC3F7",
-                  borderRadius: "0 12px 0 0",
-                },
-                {
-                  bottom: 0,
-                  left: 0,
-                  borderBottom: "3px solid #4FC3F7",
-                  borderLeft: "3px solid #4FC3F7",
-                  borderRadius: "0 0 0 12px",
-                },
-                {
-                  bottom: 0,
-                  right: 0,
-                  borderBottom: "3px solid #4FC3F7",
-                  borderRight: "3px solid #4FC3F7",
-                  borderRadius: "0 0 12px 0",
-                },
+                { top: 0, left: 0, borderTop: "3px solid #4FC3F7", borderLeft: "3px solid #4FC3F7", borderRadius: "12px 0 0 0" },
+                { top: 0, right: 0, borderTop: "3px solid #4FC3F7", borderRight: "3px solid #4FC3F7", borderRadius: "0 12px 0 0" },
+                { bottom: 0, left: 0, borderBottom: "3px solid #4FC3F7", borderLeft: "3px solid #4FC3F7", borderRadius: "0 0 0 12px" },
+                { bottom: 0, right: 0, borderBottom: "3px solid #4FC3F7", borderRight: "3px solid #4FC3F7", borderRadius: "0 0 12px 0" },
               ].map((style, i) => (
                 <Box
                   key={i}
@@ -1173,18 +1695,10 @@ const StoreIn: React.FC = () => {
                     position: "absolute",
                     width: 36,
                     height: 36,
-                    ...(style.top !== undefined && {
-                      top: `calc(50% - 120px + ${style.top}px)`,
-                    }),
-                    ...(style.bottom !== undefined && {
-                      bottom: `calc(50% - 120px + ${style.bottom}px)`,
-                    }),
-                    ...(style.left !== undefined && {
-                      left: `calc(50% - 120px + ${style.left}px)`,
-                    }),
-                    ...(style.right !== undefined && {
-                      right: `calc(50% - 120px + ${style.right}px)`,
-                    }),
+                    ...(style.top !== undefined && { top: `calc(50% - 120px + ${style.top}px)` }),
+                    ...(style.bottom !== undefined && { bottom: `calc(50% - 120px + ${style.bottom}px)` }),
+                    ...(style.left !== undefined && { left: `calc(50% - 120px + ${style.left}px)` }),
+                    ...(style.right !== undefined && { right: `calc(50% - 120px + ${style.right}px)` }),
                     borderTop: style.borderTop,
                     borderBottom: style.borderBottom,
                     borderLeft: style.borderLeft,
@@ -1194,15 +1708,13 @@ const StoreIn: React.FC = () => {
                 />
               ))}
 
-              {/* Animated scan line */}
               <Box
                 sx={{
                   position: "absolute",
                   left: "calc(50% - 116px)",
                   width: "232px",
                   height: "2px",
-                  background:
-                    "linear-gradient(90deg, transparent, #4FC3F7 30%, #29B6F6 50%, #4FC3F7 70%, transparent)",
+                  background: "linear-gradient(90deg, transparent, #4FC3F7 30%, #29B6F6 50%, #4FC3F7 70%, transparent)",
                   boxShadow: "0 0 12px 2px rgba(79, 195, 247, 0.5)",
                   animation: "scanLine 2.2s ease-in-out infinite",
                   "@keyframes scanLine": {
@@ -1215,7 +1727,7 @@ const StoreIn: React.FC = () => {
             </Box>
           )}
 
-          {/* Top bar: close button + title */}
+          {/* Top Bar */}
           <Box
             sx={{
               position: "absolute",
@@ -1227,51 +1739,17 @@ const StoreIn: React.FC = () => {
               px: 1,
               py: 1,
               zIndex: 10,
-              background:
-                "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)",
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)",
             }}
           >
-            <IconButton
-              onClick={() => setOpenScanner(false)}
-              sx={{ color: "#fff" }}
-            >
+            <IconButton onClick={() => setOpenScanner(false)} sx={{ color: "#fff" }}>
               <CloseIcon />
             </IconButton>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                color: "#fff",
-                fontWeight: 600,
-                ml: 1,
-                textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-              }}
-            >
+            <Typography variant="subtitle1" sx={{ color: "#fff", fontWeight: 600, ml: 1 }}>
               Scan QR Code
             </Typography>
           </Box>
 
-          {/* Help text */}
-          {!scannerError && (
-            <Typography
-              variant="body2"
-              sx={{
-                position: "absolute",
-                bottom: "calc(50% - 150px)",
-                left: 0,
-                right: 0,
-                textAlign: "center",
-                color: "rgba(255,255,255,0.85)",
-                fontWeight: 500,
-                zIndex: 5,
-                textShadow: "0 1px 6px rgba(0,0,0,0.7)",
-                letterSpacing: "0.3px",
-              }}
-            >
-              Align QR code within the frame
-            </Typography>
-          )}
-
-          {/* Scanner loading spinner */}
           {!scannerReady && !scannerError && (
             <Box
               sx={{
@@ -1286,16 +1764,12 @@ const StoreIn: React.FC = () => {
               }}
             >
               <CircularProgress sx={{ color: "#4FC3F7", mb: 2 }} size={44} />
-              <Typography
-                variant="body2"
-                sx={{ color: "rgba(255,255,255,0.8)" }}
-              >
+              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
                 Starting camera...
               </Typography>
             </Box>
           )}
 
-          {/* Scanner error state */}
           {scannerError && (
             <Box
               sx={{
@@ -1310,55 +1784,26 @@ const StoreIn: React.FC = () => {
                 px: 4,
               }}
             >
-              <PhotoCameraIcon
-                sx={{ fontSize: 56, color: "rgba(255,255,255,0.3)", mb: 2 }}
-              />
-              <Alert
-                severity="error"
-                sx={{
-                  mb: 3,
-                  maxWidth: 340,
-                  backgroundColor: "rgba(211,47,47,0.15)",
-                  color: "#fff",
-                  "& .MuiAlert-icon": { color: "#ef5350" },
-                  borderRadius: 2,
-                }}
-              >
+              <PhotoCameraIcon sx={{ fontSize: 56, color: "rgba(255,255,255,0.3)", mb: 2 }} />
+              <Alert severity="error" sx={{ mb: 3, maxWidth: 340 }}>
                 {scannerError}
               </Alert>
               <Button
                 variant="contained"
                 onClick={() => setOpenScanner(false)}
-                sx={{
-                  borderRadius: 6,
-                  px: 4,
-                  textTransform: "none",
-                  fontWeight: 600,
-                }}
+                sx={{ borderRadius: 6, px: 4, textTransform: "none", fontWeight: 600 }}
               >
                 Close
               </Button>
             </Box>
           )}
 
-          {/* Upload error banner */}
           {uploadError && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: 64,
-                left: 16,
-                right: 16,
-                zIndex: 12,
-              }}
-            >
+            <Box sx={{ position: "absolute", top: 64, left: 16, right: 16, zIndex: 12 }}>
               <Alert
                 severity="error"
                 onClose={() => setUploadError(null)}
-                sx={{
-                  borderRadius: 2,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-                }}
+                sx={{ borderRadius: 2, boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}
               >
                 {uploadError}
               </Alert>
@@ -1373,8 +1818,7 @@ const StoreIn: React.FC = () => {
               left: 0,
               right: 0,
               zIndex: 10,
-              background:
-                "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)",
+              background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)",
               pb: 3,
               pt: 6,
               px: 2,
@@ -1389,15 +1833,7 @@ const StoreIn: React.FC = () => {
                 mx: "auto",
               }}
             >
-              {/* Upload from device */}
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 0.5,
-                }}
-              >
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
                 <IconButton
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadInProgress}
@@ -1407,11 +1843,7 @@ const StoreIn: React.FC = () => {
                     width: 56,
                     height: 56,
                     border: "2px solid rgba(255,255,255,0.25)",
-                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,0.2)",
-                      borderColor: "rgba(255,255,255,0.5)",
-                    },
-                    transition: "all 0.2s ease",
+                    "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
                   }}
                 >
                   {uploadInProgress ? (
@@ -1420,23 +1852,12 @@ const StoreIn: React.FC = () => {
                     <UploadFileIcon sx={{ fontSize: 26 }} />
                   )}
                 </IconButton>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem" }}
-                >
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem" }}>
                   Upload from device
                 </Typography>
               </Box>
 
-              {/* Camera flip */}
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 0.5,
-                }}
-              >
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
                 <IconButton
                   onClick={handleCameraFlip}
                   sx={{
@@ -1444,35 +1865,16 @@ const StoreIn: React.FC = () => {
                     backgroundColor: "rgba(255,255,255,0.1)",
                     width: 48,
                     height: 48,
-                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,0.2)",
-                    },
-                    transition: "all 0.2s ease",
                   }}
                 >
-                  {facingMode === "environment" ? (
-                    <CameraFrontIcon />
-                  ) : (
-                    <CameraRearIcon />
-                  )}
+                  {facingMode === "environment" ? <CameraFrontIcon /> : <CameraRearIcon />}
                 </IconButton>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem" }}
-                >
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem" }}>
                   Flip
                 </Typography>
               </Box>
 
-              {/* Torch Toggle */}
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 0.5,
-                }}
-              >
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
                 <IconButton
                   onClick={handleTorchToggle}
                   sx={{
@@ -1480,25 +1882,17 @@ const StoreIn: React.FC = () => {
                     backgroundColor: "rgba(255,255,255,0.1)",
                     width: 48,
                     height: 48,
-                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,0.2)",
-                    },
-                    transition: "all 0.2s ease",
                   }}
                 >
                   {torchOn ? <FlashOnIcon /> : <FlashOffIcon />}
                 </IconButton>
-                <Typography
-                  variant="caption"
-                  sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem" }}
-                >
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem" }}>
                   Torch
                 </Typography>
               </Box>
             </Box>
           </Box>
 
-          {/* Hidden file input */}
           <input
             type="file"
             accept="image/*"
@@ -1506,17 +1900,9 @@ const StoreIn: React.FC = () => {
             style={{ display: "none" }}
             onChange={handleScanFileUpload}
           />
-
-          {/* Hidden container for file-based QR scanning */}
           <Box
             id="qr-reader-file-store-in"
-            sx={{
-              visibility: "hidden",
-              position: "absolute",
-              width: 0,
-              height: 0,
-              pointerEvents: "none",
-            }}
+            sx={{ visibility: "hidden", position: "absolute", width: 0, height: 0 }}
           />
         </Box>
       </Dialog>

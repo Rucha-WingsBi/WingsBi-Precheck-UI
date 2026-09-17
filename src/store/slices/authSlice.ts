@@ -63,7 +63,11 @@ export const login = createAsyncThunk(
         department: decodedToken.department,
       };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      const serverMsg = error.response?.data?.message;
+      if (!serverMsg || serverMsg.toLowerCase().includes('invalid credentials') || serverMsg.toLowerCase().includes('deactivated')) {
+        return rejectWithValue('Incorrect User ID or Password. Please double-check your credentials and try again.');
+      }
+      return rejectWithValue(serverMsg);
     }
   }
 );

@@ -1,60 +1,24 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import QRCode from "qrcode";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
   Paper,
   Typography,
-  TextField,
   Button,
   Grid,
-  Card,
-  CardContent,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   Alert,
-  IconButton,
-  Tooltip,
   useTheme,
-  useMediaQuery,
   Stack,
-  FormLabel,
-  Chip,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Checkbox,
-  TablePagination,
-  Autocomplete,
-  FormHelperText,
-  InputAdornment,
   Backdrop,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
 } from "@mui/material";
+
 import {
   QrCode as QrCodeIcon,
-  Download as DownloadIcon,
   Refresh as RefreshIcon,
-  ContentCopy as CopyIcon,
-  GetApp as GetAppIcon,
-  Warning as WarningIcon,
-  Edit as EditIcon,
-  Add as AddIcon,
 } from "@mui/icons-material";
-import { useForm, Controller } from "react-hook-form";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { useForm } from "react-hook-form";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import type { RootState, AppDispatch } from "../../store/store";
@@ -64,7 +28,6 @@ import type {
   IRNumber,
   MSNNumber,
   QRCodePayload,
-  Shape,
 } from "../../types";
 import {
   generateQRCode,
@@ -72,6 +35,7 @@ import {
   exportQRCode,
   exportBulkQRCodes,
   bulkUpdateQRCode,
+  getBarcodeDetails,
   clearError,
   clearGeneratedNumber,
   clearQRCodeList,
@@ -93,13 +57,23 @@ import {
 import debounce from "lodash/debounce";
 import QRCodeErrorDisplay from "../../components/QRCodeErrorDisplay";
 import { useDebounce } from "../../hooks/useDebounce";
+import {
+  DrawingDetailsStep,
+  ComponentTypeStep,
+  DispositionStep,
+  LabelPreviewPanel,
+  QRCodesTable,
+  ExportColumnDialog,
+  BulkUpdateDialog,
+  ExistingQRCodesDialog,
+  ALL_BARCODE_EXPORT_COLUMNS,
+} from "./barcode-generation";
 
 // Create typed versions of the hooks
 const useAppDispatch: () => AppDispatch = useDispatch;
 
 export default function BarcodeGeneration() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [qrTypeState, setQrTypeState] = useState<string>("ID");
 
   const dispatch = useAppDispatch();
@@ -108,14 +82,20 @@ export default function BarcodeGeneration() {
   const { qrcodeList, batchItems, loading, error, isDownloading } = useSelector(
     (state: RootState) => state.qrcode,
   );
+  const user = useSelector((state: RootState) => state.auth.user);
   const lastAutoRemarkRef = useRef("");
+
+  // Clear previous error from Redux state on component mount
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
   // TanStack Query Hooks
   const [drawingSearchText, setDrawingSearchText] = useState("");
   const [irSearchText, setIrSearchText] = useState("");
   const [msnSearchText, setMsnSearchText] = useState("");
   const [poSearchText, setPOSearchText] = useState("");
-  const debouncedPOSearch = useDebounce(poSearchText, 500);
+  const debouncedPOSearch = useDebounce(poSearchText, 150);
 
   const { data: productionSeries = [] } = useProductionSeries();
   const { data: allDrawingNumbers = [] } = useAllDrawingNumbers();
@@ -124,7 +104,7 @@ export default function BarcodeGeneration() {
     drawingSearchText,
   );
   const drawingNumbers =
-    (drawingSearchText.length >= 3
+    (drawingSearchText.length >= 1
       ? searchedDrawingNumbers
       : allDrawingNumbers) || [];
 
@@ -163,11 +143,52 @@ export default function BarcodeGeneration() {
   const [componentType, setComponentType] = useState<
     "ID" | "BATCH" | "Batch" | "FIM" | "SI"
   >("ID");
-  const [idType, setIdType] = useState<"series" | "random" | "custom">(
-    "series",
-  );
   const [randomIds, setRandomIds] = useState<string[]>(Array(200).fill(""));
   const [visibleRandomCount, setVisibleRandomCount] = useState<number>(20);
+
+
+  // Export Column Selection Dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [pendingExportTarget, setPendingExportTarget] = useState<{
+    type: "single" | "bulk";
+    qrCodeId?: string;
+    batchId?: string;
+  } | null>(null);
+
+  const handleOpenSingleExportDialog = (qrCodeId: string, batchId?: string) => {
+    setPendingExportTarget({ type: "single", qrCodeId, batchId });
+    setExportDialogOpen(true);
+  };
+
+  const handleOpenBulkExportDialog = () => {
+    setPendingExportTarget({ type: "bulk" });
+    setExportDialogOpen(true);
+  };
+
+  const handleConfirmExportData = async (selectedCols: string[], exportMode: "all" | "custom") => {
+    const cols =
+      exportMode === "all"
+        ? ALL_BARCODE_EXPORT_COLUMNS.map((c) => c.key)
+        : selectedCols;
+
+    if (pendingExportTarget?.type === "single" && pendingExportTarget.qrCodeId) {
+      await dispatch(
+        exportQRCode({
+          qrCodeId: pendingExportTarget.qrCodeId,
+          batchId: pendingExportTarget.batchId,
+          selectedColumns: cols,
+        }),
+      );
+    } else {
+      await dispatch(
+        exportBulkQRCodes({
+          qrCodes: selectedBarcodes,
+          selectedColumns: cols,
+        }) as any,
+      );
+    }
+    setExportDialogOpen(false);
+  };
 
   // QrTableRows for FIM / Purchase Item matrix table
   const [QrTableRows, setQrTableRows] = useState<Array<{
@@ -289,6 +310,7 @@ export default function BarcodeGeneration() {
     }
     setQrTypeState(targetQrType);
     setValue("qrType", targetQrType);
+    clearErrors();
   };
 
 
@@ -356,6 +378,7 @@ export default function BarcodeGeneration() {
       gfnNo: "",
       shapes: "",
       material: "",
+      rmItemCode: "",
     },
   });
 
@@ -367,6 +390,198 @@ export default function BarcodeGeneration() {
   const watchCustomIdRange = watch("customIdRange" as any);
   const watchRemarks = watch("remark");
   const watchProductionSeries = watch("productionSeries");
+  const watchPoNumber = watch("poNumber");
+  const watchDrawingNumber = watch("drawingNumber");
+  const watchUnit = watch("unit");
+  const watchIrNumber = watch("irNumber");
+  const watchMsnNumber = watch("msnNumber");
+  const watchMrirNumber = watch("mrirNumber");
+  const watchMfgDate = watch("manufacturingDate");
+  const watchDesposition = watch("desposition");
+  const watchNomenclature = watch("nomenclature");
+  const watchExpiryDate = watch("expiryDate");
+
+  // State for live QR Code Label Preview image & input
+  const [previewQrInput, setPreviewQrInput] = useState<string>("");
+  const [labelQrDataUrl, setLabelQrDataUrl] = useState<string>("");
+  const [fetchedPreviewItem, setFetchedPreviewItem] = useState<any | null>(null);
+
+  // Fetch or look up barcode details when user enters a QR code number
+  useEffect(() => {
+    const trimmed = previewQrInput.trim();
+    if (!trimmed) {
+      setFetchedPreviewItem(null);
+      return;
+    }
+
+    const matchQr = (item: any) => {
+      if (!item) return false;
+      const candidates = [
+        item.qrCodeNumber,
+        item.QrCodeNumber,
+        item.serialNumber,
+        item.SerialNumber,
+        item.qrCode,
+        item.QrCode,
+        item.idNumber,
+        item.IdNumber,
+        item.idNo,
+        item.IdNo,
+      ];
+      return candidates.some(
+        (val) => val !== undefined && val !== null && String(val).toLowerCase() === trimmed.toLowerCase()
+      );
+    };
+
+    // 1. Search in qrcodeList (generated QR codes list in state) and displayedQRCodes (local table rows)
+    const localMatch =
+      (qrcodeList || []).find(matchQr) ||
+      (displayedQRCodes || []).find(matchQr);
+
+    if (localMatch) {
+      setFetchedPreviewItem(localMatch);
+      return;
+    }
+
+    // 2. Fetch from backend API if length >= 3
+    if (trimmed.length >= 3) {
+      const timer = setTimeout(async () => {
+        try {
+          const result = await dispatch(getBarcodeDetails(trimmed)).unwrap();
+          const rawObj = result?.data ? result.data : result;
+          const data = Array.isArray(rawObj) ? rawObj[0] : rawObj;
+          if (data && typeof data === "object" && Object.keys(data).length > 0) {
+            setFetchedPreviewItem(data);
+          } else {
+            setFetchedPreviewItem(null);
+          }
+        } catch (e) {
+          setFetchedPreviewItem(null);
+        }
+      }, 300);
+
+      return () => clearTimeout(timer);
+    } else {
+      setFetchedPreviewItem(null);
+    }
+  }, [previewQrInput, qrcodeList, displayedQRCodes, dispatch]);
+
+  const labelQrText = useMemo(() => {
+    if (previewQrInput.trim()) {
+      return previewQrInput.trim();
+    }
+    const po = watchPoNumber || "PO-0001";
+    const drw = watchDrawingNumber || "DRW-0001";
+    const series = watchProductionSeries || "SERIES-A";
+    const idStr =
+      watchIdType === "series"
+        ? `${watchStartRange || 1}-${watchEndRange || 1}`
+        : watchCustomIdRange || "ID-001";
+    return `${po}|${drw}|${series}|${idStr}`;
+  }, [
+    previewQrInput,
+    watchPoNumber,
+    watchDrawingNumber,
+    watchProductionSeries,
+    watchIdType,
+    watchStartRange,
+    watchEndRange,
+    watchCustomIdRange,
+  ]);
+
+  const debouncedLabelQrText = useDebounce(labelQrText, 300);
+
+  useEffect(() => {
+    if (!debouncedLabelQrText) {
+      setLabelQrDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(debouncedLabelQrText, { margin: 1, width: 120 })
+      .then((url) => setLabelQrDataUrl(url))
+      .catch(() => setLabelQrDataUrl(""));
+  }, [debouncedLabelQrText]);
+
+  const requiredFieldsRemainingCount = useMemo(() => {
+    let count = 0;
+
+    const isIdOrBatch = componentType === "ID" || componentType === "BATCH";
+    const isFimOrSi = componentType === "FIM" || componentType === "SI";
+
+    // 1. PO Number (only required for ID & BATCH)
+    if (isIdOrBatch && !watchPoNumber) {
+      count++;
+    }
+
+    // 2. Drawing Number / LN Item Code
+    if (isIdOrBatch) {
+      if (!watchDrawingNumber && !selectedDrawing) count++;
+    } else if (isFimOrSi) {
+      if (!watchDrawingNumber && !selectedDrawing) count++;
+    }
+
+    // 3. Production Series (required for all)
+    if (!watchProductionSeries) count++;
+
+    // 4. Unit (required for all)
+    if (!watchUnit) count++;
+
+    // 5. MSN Number (required for all)
+    if (!watchMsnNumber) count++;
+
+    // 6. MFG Date (required for all)
+    if (!watchMfgDate) count++;
+
+    // 7. Disposition (required for all)
+    if (!watchDesposition) count++;
+
+    // 8. ID Range / Matrix Table specific checks
+    if (componentType === "ID") {
+      if (watchIdType === "series") {
+        if (!watchStartRange || Number(watchStartRange) <= 0) count++;
+        if (!watchEndRange || Number(watchEndRange) <= 0) count++;
+      } else if (watchIdType === "custom") {
+        if (!watchCustomIdRange || !watchCustomIdRange.trim()) count++;
+      } else if (watchIdType === "random") {
+        const hasRandomId =
+          Array.isArray(randomIds) &&
+          randomIds.some((id) => id && String(id).trim() !== "");
+        if (!hasRandomId && (!watchQuantity || Number(watchQuantity) <= 0))
+          count++;
+      }
+    } else if (componentType === "BATCH") {
+      if (!watchCustomIdRange || !watchCustomIdRange.trim()) count++;
+    } else if (isFimOrSi) {
+      const hasValidRow =
+        Array.isArray(QrTableRows) &&
+        QrTableRows.some(
+          (row) =>
+            row.idNo &&
+            String(row.idNo).trim() !== "" &&
+            row.quantity !== "" &&
+            Number(row.quantity) > 0,
+        );
+      if (!hasValidRow) count++;
+    }
+
+    return count;
+  }, [
+    componentType,
+    watchIdType,
+    watchPoNumber,
+    watchDrawingNumber,
+    selectedDrawing,
+    watchProductionSeries,
+    watchUnit,
+    watchMsnNumber,
+    watchMfgDate,
+    watchDesposition,
+    watchStartRange,
+    watchEndRange,
+    watchCustomIdRange,
+    watchQuantity,
+    randomIds,
+    QrTableRows,
+  ]);
 
   // Master data handled by hooks
   const { data: irNumbers = [] } = useIRNumbers(
@@ -462,15 +677,9 @@ export default function BarcodeGeneration() {
     const normalizedType = typeToUse.toUpperCase() as any;
     setComponentType(normalizedType);
     if (normalizedType !== "ID") {
-      setIdType("series");
       setValue("idType", "series");
     }
   }, [watchComponentType, setValue]);
-
-  // Update ID type
-  useEffect(() => {
-    setIdType(watchIdType);
-  }, [watchIdType]);
 
   // Sync FIM / SI total quantity from table matrix sum
   useEffect(() => {
@@ -488,12 +697,37 @@ export default function BarcodeGeneration() {
     setPage(0);
   }, [qrcodeList]);
 
+  // Close open dropdowns when scrolling the page (except when scrolling within option listbox)
+  useEffect(() => {
+    const handleScroll = (event: Event) => {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        target.classList &&
+        (target.classList.contains("MuiAutocomplete-listbox") ||
+          target.closest?.(".MuiAutocomplete-popper") ||
+          target.closest?.(".MuiAutocomplete-listbox"))
+      ) {
+        return;
+      }
+      if (
+        document.activeElement instanceof HTMLElement &&
+        (document.activeElement.tagName === "INPUT" ||
+          document.activeElement.getAttribute("role") === "combobox")
+      ) {
+        document.activeElement.blur();
+      }
+    };
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, []);
+
   // Debounced search functions
   const debouncedDrawingSearch = useMemo(
     () =>
       debounce((searchValue: string) => {
         setDrawingSearchText(searchValue);
-      }, 300),
+      }, 150),
     [],
   );
 
@@ -501,7 +735,7 @@ export default function BarcodeGeneration() {
     () =>
       debounce((searchValue: string) => {
         setIrSearchText(searchValue);
-      }, 300),
+      }, 150),
     [],
   );
 
@@ -509,17 +743,15 @@ export default function BarcodeGeneration() {
     () =>
       debounce((searchValue: string) => {
         setMsnSearchText(searchValue);
-      }, 300),
+      }, 150),
     [],
   );
 
   // Handler for IR autocomplete - clear search on clear
   const handleIRInputChange = (_: any, value: string) => {
     if (value.length === 0) {
-      // Clear search text when input is empty
       setIrSearchText("");
-    } else if (value.length >= 3) {
-      // Search when user types 3+ chars
+    } else {
       debouncedIRSearch(value);
     }
   };
@@ -527,10 +759,8 @@ export default function BarcodeGeneration() {
   // Handler for MSN autocomplete - clear search on clear
   const handleMSNInputChange = (_: any, value: string) => {
     if (value.length === 0) {
-      // Clear search text when input is empty
       setMsnSearchText("");
-    } else if (value.length >= 3) {
-      // Search when user types 3+ chars
+    } else {
       debouncedMSNSearch(value);
     }
   };
@@ -783,12 +1013,26 @@ export default function BarcodeGeneration() {
       }
 
       if (response && response.length > 0) {
+        const firstItem = response[0];
         if (componentType === "BATCH") {
-          setValue("batchId", response[0].idNumber?.toString() || "");
+          setValue("batchId", firstItem?.idNumber?.toString() || firstItem?.IdNumber?.toString() || "");
+        }
+
+        const generatedQrNum =
+          firstItem?.qrCodeNumber ||
+          firstItem?.QrCodeNumber ||
+          firstItem?.serialNumber ||
+          firstItem?.SerialNumber ||
+          firstItem?.qrCode ||
+          firstItem?.QrCode;
+
+        if (generatedQrNum) {
+          setPreviewQrInput(String(generatedQrNum));
+          setFetchedPreviewItem(firstItem);
         }
 
         const newCount = response.filter(
-          (item: any) => item.isNewQrCode,
+          (item: any) => item.isNewQrCode !== false,
         ).length;
         if (newCount > 0) {
           setSuccessMessage(
@@ -845,7 +1089,6 @@ export default function BarcodeGeneration() {
     setPoInputValue("");
     setQrTypeState("ID");
     setComponentType("ID");
-    setIdType("series");
     setRandomIds(Array(200).fill(""));
     setVisibleRandomCount(20);
     setQrTableRows(
@@ -861,6 +1104,13 @@ export default function BarcodeGeneration() {
     setSelectedBarcodes([]);
     setPage(0);
     setRowsPerPage(10);
+
+    // Reset preview states
+    setPreviewQrInput("");
+    setFetchedPreviewItem(null);
+    setLabelQrDataUrl("");
+    setDisplayedQRCodes([]);
+    setNoExpiryDate(false);
 
     // Reset all search text states for Autocomplete fields
     setDrawingSearchText("");
@@ -879,6 +1129,98 @@ export default function BarcodeGeneration() {
     setOpenExistingDialog(false);
 
     // Clear validation errors
+    clearErrors();
+  };
+
+  // Handle QR Type change - clear all form fields and local states when switching QR Type
+  const handleQrTypeChange = (newQrType: string) => {
+    const newCompType = (newQrType === "Purchase Item" ? "SI" : newQrType) as any;
+
+    setQrTypeState(newQrType);
+    setComponentType(newCompType);
+
+    // Reset react-hook-form fields with clean state for new QR type
+    reset({
+      qrType: newQrType,
+      productionOrderNumber: "",
+      drawingNumber: "",
+      nomenclature: "",
+      productionSeries: "",
+      componentType: newCompType,
+      idType: "series",
+      startRange: 0,
+      endRange: 0,
+      quantity: 0,
+      randomIds: Array(200).fill(""),
+      customIdRange: "",
+      batchId: "",
+      unit: "",
+      manufacturingDate: new Date() as any,
+      expiryDate: undefined,
+      irNumber: "",
+      msnNumber: "",
+      poNumber: "",
+      projectNumber: "",
+      mrirNumber: "",
+      desposition: "" as any,
+      location: "",
+      partAssemblyId: "",
+      remark: "",
+      buildNumber: "",
+      fanManNumber: "",
+      fanManSerialNumber: "",
+      customerItemCode: "",
+      gfnNo: "",
+      shapes: "",
+      material: "",
+      rmItemCode: "",
+    });
+
+    // Reset manual override ref for remarks
+    lastAutoRemarkRef.current = "";
+
+    // Reset local state variables
+    setSelectedDrawing(null);
+    setSelectedIRNumber(null);
+    setSelectedMSNNumber(null);
+    setSelectedPO(null);
+    setPOSearchText("");
+    setPoInputValue("");
+    setRandomIds(Array(200).fill(""));
+    setVisibleRandomCount(20);
+    setQrTableRows(
+      Array.from({ length: 5 }, (_, index) => ({
+        srNo: index + 1,
+        idNo: "",
+        quantity: "",
+        size: "",
+        mirir: "",
+        heatLotBatchNo: "",
+      })),
+    );
+    setSelectedBarcodes([]);
+    setPage(0);
+
+    // Reset preview & search states
+    setPreviewQrInput("");
+    setFetchedPreviewItem(null);
+    setLabelQrDataUrl("");
+    setDisplayedQRCodes([]);
+    setNoExpiryDate(false);
+
+    setDrawingSearchText("");
+    setIrSearchText("");
+    setMsnSearchText("");
+    setDebouncedLnSearch("");
+
+    // Clear Redux & messages
+    dispatch(clearGeneratedNumber());
+    dispatch(clearQRCodeList());
+    dispatch(clearError());
+    setSuccessMessage("");
+    setExistingItems([]);
+    setOpenExistingDialog(false);
+
     clearErrors();
   };
 
@@ -927,16 +1269,23 @@ export default function BarcodeGeneration() {
   const populatePOData = (newValue: ProductionOrderMaster) => {
     // Selected from dropdown - object value
     setSelectedPO(newValue);
-    setValue("poNumber", newValue.productionOrderNumber || "");
+    setValue("poNumber", newValue.productionOrderNumber || "", {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
     setPoInputValue(newValue.productionOrderNumber || "");
 
     // Map related fields from PO master
-    setValue("projectNumber", newValue.projectNumber || "");
-    setValue("productionSeries", newValue.productionSeries || "");
-    setValue("mrirNumber", newValue.mrirNumber || "");
-    setValue("buildNumber" as any, newValue.buildNumber || "");
-
-    // Note: Removed auto-filling of quantity, startRange, and endRange as per requirement
+    setValue("projectNumber", newValue.projectNumber || "", { shouldDirty: true });
+    setValue("productionSeries", newValue.productionSeries || "", {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    setValue("mrirNumber", newValue.mrirNumber || "", {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    setValue("buildNumber" as any, newValue.buildNumber || "", { shouldDirty: true });
 
     // Find and set matching drawing from allDrawingNumbers
     if (newValue.drawingNumber || newValue.lnItemCode) {
@@ -948,16 +1297,26 @@ export default function BarcodeGeneration() {
 
       if (matchingDrawing) {
         setSelectedDrawing(matchingDrawing);
-        setValue("drawingNumber", matchingDrawing.drawingNumber);
+        setValue("drawingNumber", matchingDrawing.drawingNumber || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
         setValue(
           "nomenclature",
           matchingDrawing.nomenclature || newValue.nomenclature || "",
+          { shouldDirty: true },
         );
-        setValue("unit", matchingDrawing.unitName || "");
-        setValue("location", matchingDrawing.location || "");
+        const unitVal =
+          matchingDrawing.unitName ||
+          (newValue as any).unit ||
+          (newValue as any).unitName ||
+          "";
+        setValue("unit", unitVal, { shouldValidate: true, shouldDirty: true });
+        setValue("location", matchingDrawing.location || "", { shouldDirty: true });
         setValue(
           "partAssemblyId",
           matchingDrawing.parentDrawingNumbers?.[0] || "",
+          { shouldDirty: true },
         );
 
         if (matchingDrawing.componentType) {
@@ -968,13 +1327,27 @@ export default function BarcodeGeneration() {
       } else {
         // If drawing not found, still map the fields from PO
         if (newValue.nomenclature) {
-          setValue("nomenclature", newValue.nomenclature);
+          setValue("nomenclature", newValue.nomenclature, { shouldDirty: true });
+        }
+        const unitVal = (newValue as any).unit || (newValue as any).unitName || "";
+        if (unitVal) {
+          setValue("unit", unitVal, { shouldValidate: true, shouldDirty: true });
         }
         if (newValue.componentType) {
           updateComponentAndQrType(newValue.componentType);
         }
       }
     }
+
+    // Explicitly clear validation errors for all auto-populated fields
+    clearErrors([
+      "poNumber",
+      "drawingNumber",
+      "productionSeries",
+      "unit",
+      "mrirNumber",
+      "nomenclature",
+    ]);
   };
 
   const hasAnySplit = useMemo(() => {
@@ -1112,6 +1485,10 @@ export default function BarcodeGeneration() {
   };
 
   const handleSelectAll = (checked: boolean) => {
+    if (selectedBarcodes.length > 0 && selectedBarcodes.length < displayedQRCodes.length) {
+      setSelectedBarcodes([]);
+      return;
+    }
     if (checked) {
       setSelectedBarcodes(
         displayedQRCodes.map((item) => item.id || item.qrCodeNumber || item.serialNumber),
@@ -1131,35 +1508,9 @@ export default function BarcodeGeneration() {
     });
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (selectedBarcodes.length === 0) return;
-
-    try {
-      const selectedItems = displayedQRCodes.filter((qr) =>
-        selectedBarcodes.includes(qr.id || qr.qrCodeNumber || qr.serialNumber),
-      );
-
-      const qrCodeNumbers = selectedItems
-        .map((qr) => qr.qrCodeNumber || qr.serialNumber)
-        .filter(Boolean);
-
-      const batchIds = selectedItems
-        .map((qr) => qr.batchId)
-        .filter((id) => id && id !== "N/A");
-
-      // Deduplicate the QR Code numbers
-      const uniqueQRCodes = [...new Set(qrCodeNumbers)];
-
-      await dispatch(
-        exportBulkQRCodes({
-          qrCodes: uniqueQRCodes,
-          batchIds: batchIds,
-        }),
-      );
-      setSuccessMessage("QR codes downloaded successfully!");
-    } catch (error) {
-      console.error("Error downloading:", error);
-    }
+    handleOpenBulkExportDialog();
   };
 
   const handleOpenBulkUpdateDialog = () => {
@@ -1336,39 +1687,12 @@ export default function BarcodeGeneration() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => setSuccessMessage("Copied to clipboard!"))
-        .catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  };
-
-  const fallbackCopy = (text: string) => {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed"; // Prevent scrolling to bottom of page in MS Edge.
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    try {
-      // @ts-ignore - execCommand is deprecated but still functional
-      document.execCommand("copy");
-      setSuccessMessage("Copied to clipboard!");
-    } catch (err) {
-      setSuccessMessage("Failed to copy!");
-    }
-    document.body.removeChild(textarea);
-  };
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
-          p: { xs: 1, sm: 1.5, md: 2 },
+          py: { xs: 1, sm: 1.25 },
+          px: { xs: 1.5, sm: 2 },
           maxWidth: "100%",
           mx: "auto",
         }}
@@ -1386,35 +1710,29 @@ export default function BarcodeGeneration() {
           </Box>
         </Backdrop>
 
-        {/* Header Title */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
-            borderBottom: 1,
-            borderColor: "divider",
-            pb: 0.5,
-          }}
-        >
+        {/* Header Section */}
+        <Box sx={{ mb: 1.5 }}>
           <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={600}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
           >
-            Generate QR Code
+            New QR Code
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            Generate, preview, and print QR codes and barcodes for components and materials.
           </Typography>
         </Box>
+
         <>
           {/* Success/Error Messages */}
           {successMessage && (
             <Alert
               severity="success"
-              sx={{ mb: 3 }}
+              sx={{ mb: 1.5 }}
               onClose={() => setSuccessMessage("")}
             >
               {successMessage}
@@ -1427,1792 +1745,268 @@ export default function BarcodeGeneration() {
           />
 
           {/* Main Form */}
-          <Card elevation={2} sx={{ mb: 3 }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              {/* <Typography
-              variant="h6"
-              gutterBottom
-              sx={{ color: "primary.main", fontWeight: 600, mb: 3 }}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Grid container spacing={2} sx={{ mb: 1.5 }}>
+              {/* Left Column: Form Steps */}
+              <Grid item xs={12} lg={8.5}>
+                {/* Step 1: Drawing & Order Details */}
+                <DrawingDetailsStep
+                  control={control}
+                  errors={errors}
+                  setValue={setValue}
+                  clearErrors={clearErrors}
+                  watch={watch}
+                  componentType={componentType}
+                  setComponentType={setComponentType}
+                  qrTypeState={qrTypeState}
+                  setQrTypeState={setQrTypeState}
+                  onQrTypeChange={handleQrTypeChange}
+                  poNumbers={poNumbers}
+                  selectedPO={selectedPO}
+                  setSelectedPO={setSelectedPO}
+                  poLoading={poLoading}
+                  poInputValue={poInputValue}
+                  setPoInputValue={setPoInputValue}
+                  setPOSearchText={setPOSearchText}
+                  populatePOData={populatePOData}
+                  handlePOKeyDown={handlePOKeyDown}
+                  allDrawingNumbers={allDrawingNumbers}
+                  selectedDrawing={selectedDrawing}
+                  setSelectedDrawing={setSelectedDrawing}
+                  isLnSearchLoading={isLnSearchLoading}
+                  isLnSearchFetching={isLnSearchFetching}
+                  updateDebouncedLnSearch={updateDebouncedLnSearch}
+                  setDrawingSearchText={setDrawingSearchText}
+                  debouncedDrawingSearch={debouncedDrawingSearch}
+                  drawingNumbers={drawingNumbers}
+                  updateComponentAndQrType={updateComponentAndQrType}
+                  productionSeries={productionSeries}
+                  units={units}
+                  irNumbers={irNumbers}
+                  selectedIRNumber={selectedIRNumber}
+                  setSelectedIRNumber={setSelectedIRNumber}
+                  handleIROpen={handleIROpen}
+                  handleIRInputChange={handleIRInputChange}
+                  setIrSearchText={setIrSearchText}
+                  msnNumbers={msnNumbers}
+                  selectedMSNNumber={selectedMSNNumber}
+                  setSelectedMSNNumber={setSelectedMSNNumber}
+                  handleMSNOpen={handleMSNOpen}
+                  handleMSNInputChange={handleMSNInputChange}
+                  setMsnSearchText={setMsnSearchText}
+                  noExpiryDate={noExpiryDate}
+                  setNoExpiryDate={setNoExpiryDate}
+                  shapesData={shapesData}
+                  formatComponentType={formatComponentType}
+                  loading={loading}
+                />
+
+                {/* Step 2: ID Range & Quantities */}
+                <ComponentTypeStep
+                  control={control}
+                  componentType={componentType}
+                  watchIdType={watchIdType}
+                  watchStartRange={watchStartRange}
+                  watchEndRange={watchEndRange}
+                  watchCustomIdRange={watchCustomIdRange}
+                  selectedPO={selectedPO}
+                  poStartId={poStartId}
+                  poEndId={poEndId}
+                  idRangeNotice={idRangeNotice}
+                  visibleRandomCount={visibleRandomCount}
+                  setVisibleRandomCount={setVisibleRandomCount}
+                  handleRandomIdChange={handleRandomIdChange}
+                  totalQuantity={totalQuantity}
+                  QrTableRows={QrTableRows}
+                  handleQrTableChange={handleQrTableChange}
+                  handleEnterKey={handleEnterKey}
+                  addNewQrRow={addNewQrRow}
+                />
+
+                {/* Step 3: Disposition & Remarks */}
+                <DispositionStep
+                  control={control}
+                  componentType={componentType}
+                />
+              </Grid>
+
+              {/* Right Column: Master Data Panel & Label Preview */}
+              <LabelPreviewPanel
+                selectedDrawing={selectedDrawing}
+                componentType={componentType}
+                formatComponentType={formatComponentType}
+                watchNomenclature={watchNomenclature}
+                watchProjectNumber={watch("projectNumber")}
+                watchBuildNumber={watch("buildNumber") || ""}
+                watchLocation={watch("location") || ""}
+                watchFanManNumber={watch("fanManNumber") || ""}
+                watchGfnNo={watch("gfnNo") || ""}
+                watchMaterial={watch("material") || ""}
+                previewQrInput={previewQrInput}
+                onPreviewQrInputChange={setPreviewQrInput}
+                fetchedPreviewItem={fetchedPreviewItem}
+                labelQrDataUrl={labelQrDataUrl}
+                labelQrText={labelQrText}
+                watchDrawingNumber={watchDrawingNumber}
+                watchDesposition={watchDesposition}
+                watchProductionSeries={watchProductionSeries}
+                watchUnit={watchUnit}
+                watchQuantity={watchQuantity}
+                watchMrirNumber={watchMrirNumber}
+                watchMfgDate={watchMfgDate}
+                watchExpiryDate={watchExpiryDate}
+                watchIdType={watchIdType}
+                watchStartRange={watchStartRange}
+                watchEndRange={watchEndRange}
+                watchCustomIdRange={watchCustomIdRange}
+                watchBatchId={watch("batchId") || ""}
+                noExpiryDate={noExpiryDate}
+                userName={user?.username || user?.id || ""}
+              />
+            </Grid>
+            {/* Sticky Footer Bar */}
+            <Paper
+              elevation={3}
+              sx={{
+                position: "sticky",
+                bottom: 0,
+                zIndex: 100,
+                backgroundColor: "#FFFFFF",
+                borderTop: "1px solid #E5E7EB",
+                px: { xs: 2, sm: 3 },
+                py: 1,
+                mt: 1.5,
+                mb: 1.5,
+                mx: { xs: -1.5, sm: -2 },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxShadow: "0 -4px 6px -1px rgba(0, 0, 0, 0.05), 0 -2px 4px -1px rgba(0, 0, 0, 0.03)",
+              }}
             >
-              Add Manufacturing Item
-            </Typography> */}
-
-              {/* Strategy 3: Dynamic Section Renderers */}
-              <form onSubmit={handleSubmit(onSubmit)}>
-                {/* 1. Standard Fields Form (FIM & Purchase Item / SI) */}
-                {(componentType === "FIM" || componentType === "SI") && (
-                  <>
-                    {/* Row 1: QR Type | RM Item Code * | RM Drawing Number * */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="qrType"
-                          control={control}
-                          defaultValue="ID"
-                          render={({ field }) => (
-                            <FormControl fullWidth size="small">
-                              <InputLabel>QR Type</InputLabel>
-                              <Select
-                                {...field}
-                                label="QR Type"
-                                value={field.value || qrTypeState}
-                                onChange={(e) => {
-                                  const val = String(e.target.value);
-                                  field.onChange(val);
-                                  setQrTypeState(val);
-                                  const newCompType = (val === "Purchase Item" ? "SI" : val) as any;
-                                  setComponentType(newCompType);
-                                  setValue("componentType", newCompType);
-                                }}
-                              >
-                                <MenuItem value="ID">ID</MenuItem>
-                                <MenuItem value="BATCH">BATCH</MenuItem>
-                                <MenuItem value="FIM">FIM</MenuItem>
-                                <MenuItem value="Purchase Item">Purchase Item</MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Autocomplete
-                          options={allDrawingNumbers || []}
-                          groupBy={(option) => option.lnItemCode || "No LN Code"}
-                          getOptionLabel={(option) => {
-                            if (typeof option === "string") return option;
-                            return option.lnItemCode || "";
-                          }}
-                          value={selectedDrawing}
-                          loading={isLnSearchLoading || isLnSearchFetching}
-                          size="small"
-                          freeSolo={false}
-                          filterOptions={(options, { inputValue }) => {
-                            if (!inputValue) return options.slice(0, 100);
-                            const searchLower = inputValue.toLowerCase();
-                            return options
-                              .filter(
-                                (option) =>
-                                  option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                                  option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                                  option.nomenclature?.toLowerCase().includes(searchLower),
-                              )
-                              .slice(0, 100);
-                          }}
-                          onInputChange={(_, value) => updateDebouncedLnSearch(value)}
-                          onChange={(_, newValue) => {
-                            if (newValue && typeof newValue !== "string") {
-                              setSelectedDrawing(newValue);
-                              setValue("drawingNumber", newValue.drawingNumber);
-                              setValue("nomenclature", newValue.nomenclature);
-                              setValue("unit", newValue.unitName || "");
-                              setValue("location", newValue.location || "");
-                              setValue(
-                                "partAssemblyId",
-                                newValue.parentDrawingNumbers?.[0] || "",
-                              );
-                              if (newValue.componentType) {
-                                updateComponentAndQrType(newValue.componentType);
-                              }
-                            } else {
-                              setValue("drawingNumber", "");
-                              setValue("nomenclature", "");
-                              setValue("unit", "");
-                              setValue("partAssemblyId", "");
-                              setValue("location", "");
-                            }
-                          }}
-                          renderOption={(props, option) => {
-                            const { key, ...optionProps } = props;
-                            return (
-                              <li {...optionProps} key={key}>
-                                <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                                  <Typography variant="body2" fontWeight="500" sx={{ fontSize: "0.85rem", color: "text.primary" }}>
-                                    Drawing: {option.drawingNumber}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.72rem" }}>
-                                    {option.nomenclature} | Type: {formatComponentType(option.componentType)}
-                                  </Typography>
-                                </Box>
-                              </li>
-                            );
-                          }}
-                          renderGroup={(params) => (
-                            <li key={params.key}>
-                              <Typography variant="subtitle2" fontWeight="800" sx={{ px: 2, py: 0.6, backgroundColor: "#F2F2F2", color: "#9C004C", fontSize: "0.875rem", letterSpacing: "0.5px" }}>
-                                LN CODE: {params.group}
-                              </Typography>
-                              <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
-                            </li>
-                          )}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="RM Item Code *"
-                              placeholder="Type to search..."
-                              InputProps={{
-                                ...params.InputProps,
-                                endAdornment: (
-                                  <>
-                                    {isLnSearchLoading || isLnSearchFetching ? <CircularProgress color="inherit" size={16} /> : null}
-                                    {params.InputProps.endAdornment}
-                                  </>
-                                ),
-                              }}
-                            />
-                          )}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="drawingNumber"
-                          control={control}
-                          rules={{ required: "RM Drawing Number is required" }}
-                          render={({ field: { onChange } }) => (
-                            <Autocomplete
-                              options={drawingNumbers.filter(
-                                (d: DrawingNumber) =>
-                                  !selectedDrawing?.lnItemCode || d.lnItemCode === selectedDrawing.lnItemCode,
-                              )}
-                              getOptionLabel={(option) => {
-                                if (typeof option === "string") return option;
-                                return option.drawingNumber || "";
-                              }}
-                              value={selectedDrawing}
-                              size="small"
-                              onInputChange={(_, value, reason) => {
-                                if (reason === "input" && value.length >= 3) debouncedDrawingSearch(value);
-                              }}
-                              onChange={(_, value) => {
-                                setSelectedDrawing(value);
-                                onChange(value ? value.drawingNumber : "");
-                                if (value) {
-                                  setValue("nomenclature", value.nomenclature);
-                                  setValue("location", value.location || "");
-                                  setValue("unit", value.unitName || "");
-                                  if (value.componentType) {
-                                    updateComponentAndQrType(value.componentType);
-                                  }
-                                  setValue("partAssemblyId", value.parentDrawingNumbers?.[0] || "");
-                                } else {
-                                  setValue("nomenclature", "");
-                                  setValue("unit", "");
-                                  setValue("partAssemblyId", "");
-                                  setValue("location", "");
-                                }
-                              }}
-                              renderOption={(props, option) => {
-                                const { key, ...optionProps } = props;
-                                const drawingNo = typeof option === "string" ? option : option.drawingNumber;
-                                const lnCode = typeof option === "string" ? "" : option.lnItemCode;
-                                const nomenclature = typeof option === "string" ? "" : option.nomenclature;
-                                const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
-
-                                const subTextParts = [];
-                                if (lnCode) subTextParts.push(`LN: ${lnCode}`);
-                                if (nomenclature) subTextParts.push(nomenclature);
-                                if (compType) subTextParts.push(compType);
-
-                                return (
-                                  <li {...optionProps} key={key}>
-                                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                                      <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
-                                        {drawingNo}
-                                      </Typography>
-                                      {subTextParts.length > 0 && (
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-                                          {subTextParts.join(" | ")}
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                  </li>
-                                );
-                              }}
-                              renderInput={(params) => (
-                                <TextField
-                                  {...params}
-                                  label="RM Drawing Number *"
-                                  error={!!errors.drawingNumber}
-                                  helperText={errors.drawingNumber?.message}
-                                />
-                              )}
-                            />
-                          )}
-                        />
-                      </Grid>
-                    </Grid>
-
-                    {/* Row 2: LN Item Description | Available For | Production Series * */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="nomenclature"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField {...field} label="LN Item Description" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} InputLabelProps={{ shrink: true }} />
-                          )}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <TextField label="Available For" value={selectedDrawing?.availableFor || ""} fullWidth size="small" InputProps={{ readOnly: true }} sx={{ bgcolor: "grey.50" }} />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="productionSeries"
-                          control={control}
-                          rules={{ required: "Production Series is required" }}
-                          render={({ field: { onChange, value } }) => (
-                            <Autocomplete
-                              size="small"
-                              options={productionSeries || []}
-                              getOptionLabel={(option) => typeof option === "string" ? option : option.productionSeries || ""}
-                              value={(productionSeries || []).find((s) => s.productionSeries === value) || (value ? (value as any) : null)}
-                              onChange={(_, newValue) => onChange(newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "")}
-                              renderInput={(params) => <TextField {...params} label="Production Series *" error={!!errors.productionSeries} helperText={errors.productionSeries?.message} />}
-                            />
-                          )}
-                        />
-                      </Grid>
-                    </Grid>
-
-                    {/* FIM vs Purchase Item (SI) Specific Field Grid */}
-                    {componentType === "SI" ? (
-                      <>
-                        {/* SI Row 3: Component Type | Project | Purchase Order Number */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <TextField label="Component Type" value={formatComponentType(componentType) || ""} fullWidth size="small" InputProps={{ readOnly: true }} sx={{ bgcolor: "grey.50" }} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="projectNumber" control={control} render={({ field }) => <TextField {...field} label="Project" fullWidth size="small" />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller
-                              name="poNumber"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  label="Purchase Order Number"
-                                  fullWidth
-                                  size="small"
-                                />
-                              )}
-                            />
-                          </Grid>
-                        </Grid>
-                        {/* SI Row 4: Location | Shape | Part Number (Assembly) */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="location" control={control} render={({ field }) => <TextField {...field} label="Location" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} InputLabelProps={{ shrink: true }} />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="shapes" control={control} render={({ field: { onChange, value } }) => (
-                              <Autocomplete value={shapesData.find((s: Shape) => s.id.toString() === value) || null} onChange={(_, newValue) => onChange(newValue ? newValue.id.toString() : "")} options={shapesData} getOptionLabel={(option) => option.materialName || ""} renderInput={(params) => <TextField {...params} label="Shape" size="small" fullWidth placeholder="Select Shape" />} size="small" />
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller
-                              name="partAssemblyId"
-                              control={control}
-                              render={({ field: { onChange, value } }) => {
-                                const parentList = selectedDrawing?.parentDrawingNumbers || [];
-                                const parentCount = parentList.length;
-                                const extraCount = parentCount > 1 ? parentCount - 1 : 0;
-                                return (
-                                  <Autocomplete
-                                    value={value || ""}
-                                    onChange={(_, newValue) => onChange(newValue || "")}
-                                    onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                                    options={parentList}
-                                    freeSolo
-                                    openOnFocus={true}
-                                    forcePopupIcon={true}
-                                    size="small"
-                                    renderInput={(params) => (
-                                      <TextField
-                                        {...params}
-                                        label="Part Number (Assembly)"
-                                        helperText={parentCount > 0 ? `Used in ${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                          ...params.InputProps,
-                                          endAdornment: (
-                                            <>
-                                              {extraCount > 0 && (
-                                                <Tooltip title={parentList.join(", ")}>
-                                                  <Chip
-                                                    label={`+${extraCount} more`}
-                                                    size="small"
-                                                    sx={{
-                                                      backgroundColor: "primary.main",
-                                                      color: "#fff",
-                                                      fontWeight: 600,
-                                                      fontSize: "0.72rem",
-                                                      height: 22,
-                                                      borderRadius: "12px",
-                                                      mr: 0.5,
-                                                    }}
-                                                  />
-                                                </Tooltip>
-                                              )}
-                                              {params.InputProps.endAdornment}
-                                            </>
-                                          ),
-                                        }}
-                                      />
-                                    )}
-                                  />
-                                );
-                              }}
-                            />
-                          </Grid>
-                        </Grid>
-                        {/* SI Row 5: Total Quantity * | Unit | Material Specification */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="quantity" control={control} render={({ field }) => <TextField {...field} label="Total Quantity *" type="number" fullWidth size="small" helperText="Derived from table matrix sum." InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field }) => (
-                              <FormControl fullWidth error={!!errors.unit} size="small">
-                                <InputLabel>Unit *</InputLabel>
-                                <Select {...field} label="Unit *">{units.map((u) => <MenuItem key={u.id} value={u.unitName}>{u.unitName}</MenuItem>)}</Select>
-                                {errors.unit && <FormHelperText>{errors.unit.message}</FormHelperText>}
-                              </FormControl>
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="material" control={control} render={({ field }) => <TextField {...field} label="Material Specification" fullWidth size="small" />} />
-                          </Grid>
-                        </Grid>
-                        {/* SI Row 6: IR Number * | MSN Number * | MFG Date */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
-                              <Autocomplete {...field} options={irNumbers} getOptionLabel={(option) => typeof option === "string" ? option : option.irNumber || ""} value={selectedIRNumber} loading={loading} size="small" onOpen={handleIROpen} onInputChange={handleIRInputChange} onChange={(_, value) => { setSelectedIRNumber(value); setValue("irNumber", value?.irNumber || ""); setIrSearchText(""); field.onChange(value?.irNumber || ""); }} renderInput={(params) => <TextField {...params} label="IR Number *" error={!!error} helperText={error?.message} />} />
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="msnNumber" control={control} rules={{ required: "MSN Number is required" }} render={({ field, fieldState: { error } }) => (
-                              <Autocomplete {...field} options={msnNumbers} getOptionLabel={(option) => typeof option === "string" ? option : option.msnNumber || ""} value={selectedMSNNumber} loading={loading} size="small" onOpen={handleMSNOpen} onInputChange={handleMSNInputChange} onChange={(_, value) => { setSelectedMSNNumber(value); setValue("msnNumber", value?.msnNumber || ""); setMsnSearchText(""); field.onChange(value?.msnNumber || ""); }} renderInput={(params) => <TextField {...params} label="MSN Number *" error={!!error} helperText={error?.message} />} />
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="manufacturingDate" control={control} render={({ field }) => <DatePicker {...field} label="MFG Date" maxDate={new Date()} slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.manufacturingDate, helperText: errors.manufacturingDate?.message } }} />} />
-                          </Grid>
-                        </Grid>
-                        {/* SI Row 7: Expiry Date */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="expiryDate" control={control} render={({ field }) => <DatePicker {...field} value={field.value || null} disabled={noExpiryDate} onChange={(newValue) => { field.onChange(newValue || null); if (newValue) setNoExpiryDate(false); }} label="Expiry Date" slotProps={{ textField: { size: "small", fullWidth: true } }} />} />
-                          </Grid>
-                        </Grid>
-                      </>
+              <Typography variant="body2" sx={{ color: "#6B7280", fontWeight: 500, fontSize: "0.875rem" }}>
+                {requiredFieldsRemainingCount > 0
+                  ? `${requiredFieldsRemainingCount} required field${requiredFieldsRemainingCount > 1 ? "s" : ""} remaining`
+                  : "All required fields filled"}
+              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Button
+                  type="button"
+                  variant="text"
+                  size="small"
+                  onClick={handleReset}
+                  startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+                  sx={{
+                    color: "#667085",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    textTransform: "none",
+                    "&:hover": { backgroundColor: "#F2F4F7" },
+                  }}
+                >
+                  Reset
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="small"
+                  disabled={loading}
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={16} color="inherit" />
                     ) : (
-                      <>
-                        {/* FIM Row 3: Component Type | FAN/MAN Number | FAN/MAN Serial Number */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <TextField label="Component Type" value={formatComponentType(componentType) || ""} fullWidth size="small" InputProps={{ readOnly: true }} sx={{ bgcolor: "grey.50" }} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="fanManNumber" control={control} render={({ field }) => <TextField {...field} label="FAN/MAN Number" fullWidth size="small" />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="fanManSerialNumber" control={control} render={({ field }) => <TextField {...field} label="FAN/MAN Serial Number" fullWidth size="small" />} />
-                          </Grid>
-                        </Grid>
-                        {/* FIM Row 4: Location | Project | Purchase Order Number */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="location" control={control} render={({ field }) => <TextField {...field} label="Location" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} InputLabelProps={{ shrink: true }} />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="projectNumber" control={control} render={({ field }) => <TextField {...field} label="Project" fullWidth size="small" />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller
-                              name="poNumber"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  label="Purchase Order Number"
-                                  fullWidth
-                                  size="small"
-                                />
-                              )}
-                            />
-                          </Grid>
-                        </Grid>
-                        {/* FIM Row 5: Shape | Customer Item Code | Part Number (Assembly) */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="shapes" control={control} render={({ field: { onChange, value } }) => (
-                              <Autocomplete value={shapesData.find((s: Shape) => s.id.toString() === value) || null} onChange={(_, newValue) => onChange(newValue ? newValue.id.toString() : "")} options={shapesData} getOptionLabel={(option) => option.materialName || ""} renderInput={(params) => <TextField {...params} label="Shape" size="small" fullWidth placeholder="Select Shape" />} size="small" />
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="customerItemCode" control={control} render={({ field }) => <TextField {...field} label="Customer Item Code" fullWidth size="small" />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller
-                              name="partAssemblyId"
-                              control={control}
-                              render={({ field: { onChange, value } }) => {
-                                const parentList = selectedDrawing?.parentDrawingNumbers || [];
-                                const parentCount = parentList.length;
-                                const extraCount = parentCount > 1 ? parentCount - 1 : 0;
-                                return (
-                                  <Autocomplete
-                                    value={value || ""}
-                                    onChange={(_, newValue) => onChange(newValue || "")}
-                                    onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                                    options={parentList}
-                                    freeSolo
-                                    openOnFocus={true}
-                                    forcePopupIcon={true}
-                                    size="small"
-                                    renderInput={(params) => (
-                                      <TextField
-                                        {...params}
-                                        label="Part Number (Assembly)"
-                                        helperText={parentCount > 0 ? `Used in ${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
-                                        size="small"
-                                        fullWidth
-                                        InputProps={{
-                                          ...params.InputProps,
-                                          endAdornment: (
-                                            <>
-                                              {extraCount > 0 && (
-                                                <Tooltip title={parentList.join(", ")}>
-                                                  <Chip
-                                                    label={`+${extraCount} more`}
-                                                    size="small"
-                                                    sx={{
-                                                      backgroundColor: "primary.main",
-                                                      color: "#fff",
-                                                      fontWeight: 600,
-                                                      fontSize: "0.72rem",
-                                                      height: 22,
-                                                      borderRadius: "12px",
-                                                      mr: 0.5,
-                                                    }}
-                                                  />
-                                                </Tooltip>
-                                              )}
-                                              {params.InputProps.endAdornment}
-                                            </>
-                                          ),
-                                        }}
-                                      />
-                                    )}
-                                  />
-                                );
-                              }}
-                            />
-                          </Grid>
-                        </Grid>
-                        {/* FIM Row 6: Total Quantity * | Unit | Material Specification */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="quantity" control={control} render={({ field }) => <TextField {...field} label="Total Quantity *" type="number" fullWidth size="small" helperText="Derived from table matrix sum." InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field }) => (
-                              <FormControl fullWidth error={!!errors.unit} size="small">
-                                <InputLabel>Unit *</InputLabel>
-                                <Select {...field} label="Unit *">{units.map((u) => <MenuItem key={u.id} value={u.unitName}>{u.unitName}</MenuItem>)}</Select>
-                                {errors.unit && <FormHelperText>{errors.unit.message}</FormHelperText>}
-                              </FormControl>
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="material" control={control} render={({ field }) => <TextField {...field} label="Material Specification" fullWidth size="small" />} />
-                          </Grid>
-                          </Grid>
-                        {/* FIM Row 7: IR Number * | MSN Number * | GFN No */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
-                              <Autocomplete {...field} options={irNumbers} getOptionLabel={(option) => typeof option === "string" ? option : option.irNumber || ""} value={selectedIRNumber} loading={loading} size="small" onOpen={handleIROpen} onInputChange={handleIRInputChange} onChange={(_, value) => { setSelectedIRNumber(value); setValue("irNumber", value?.irNumber || ""); setIrSearchText(""); field.onChange(value?.irNumber || ""); }} renderInput={(params) => <TextField {...params} label="IR Number *" error={!!error} helperText={error?.message} />} />
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="msnNumber" control={control} rules={{ required: "MSN Number is required" }} render={({ field, fieldState: { error } }) => (
-                              <Autocomplete {...field} options={msnNumbers} getOptionLabel={(option) => typeof option === "string" ? option : option.msnNumber || ""} value={selectedMSNNumber} loading={loading} size="small" onOpen={handleMSNOpen} onInputChange={handleMSNInputChange} onChange={(_, value) => { setSelectedMSNNumber(value); setValue("msnNumber", value?.msnNumber || ""); setMsnSearchText(""); field.onChange(value?.msnNumber || ""); }} renderInput={(params) => <TextField {...params} label="MSN Number *" error={!!error} helperText={error?.message} />} />
-                            )} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="gfnNo" control={control} render={({ field }) => <TextField {...field} label="GFN No" fullWidth size="small" />} />
-                          </Grid>
-                        </Grid>
-                        {/* FIM Row 8: MFG Date | Expiry Date */}
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="manufacturingDate" control={control} render={({ field }) => <DatePicker {...field} label="MFG Date" maxDate={new Date()} slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.manufacturingDate, helperText: errors.manufacturingDate?.message } }} />} />
-                          </Grid>
-                          <Grid item xs={12} md={4}>
-                            <Controller name="expiryDate" control={control} render={({ field }) => <DatePicker {...field} value={field.value || null} disabled={noExpiryDate} onChange={(newValue) => { field.onChange(newValue || null); if (newValue) setNoExpiryDate(false); }} label="Expiry Date" slotProps={{ textField: { size: "small", fullWidth: true } }} />} />
-                          </Grid>
-                        </Grid>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* 2. Manufacturing Fields Form (ID & BATCH - Matches Screenshots 1 & 2) */}
-                {(componentType === "ID" || componentType === "BATCH") && (
-                  <>
-                    {/* Row 1: QR Type, PO Number, LN Item Code */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="qrType"
-                          control={control}
-                          defaultValue="ID"
-                          render={({ field }) => (
-                            <FormControl fullWidth size="small">
-                              <InputLabel>QR Type</InputLabel>
-                              <Select
-                                {...field}
-                                label="QR Type"
-                                value={field.value || qrTypeState}
-                                onChange={(e) => {
-                                  const val = String(e.target.value);
-                                  field.onChange(val);
-                                  setQrTypeState(val);
-                                  const newCompType = (val === "Purchase Item" ? "SI" : val) as any;
-                                  setComponentType(newCompType);
-                                  setValue("componentType", newCompType);
-                                }}
-                              >
-                                <MenuItem value="ID">ID</MenuItem>
-                                <MenuItem value="BATCH">BATCH</MenuItem>
-                                <MenuItem value="FIM">FIM</MenuItem>
-                                <MenuItem value="Purchase Item">Purchase Item</MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="poNumber"
-                          control={control}
-                          rules={{ required: "PO Number is required" }}
-                          render={({ field: { onChange, ref }, fieldState: { error } }) => (
-                            <Autocomplete
-                              size="small"
-                              freeSolo
-                              forcePopupIcon={true}
-                              options={Array.isArray(poNumbers) ? poNumbers : []}
-                              getOptionLabel={(option) => typeof option === "string" ? option : option.productionOrderNumber || ""}
-                              value={selectedPO || watch("poNumber") || null}
-                              loading={poLoading}
-                              inputValue={poInputValue}
-                              onInputChange={(_, inputValue) => { setPoInputValue(inputValue); setPOSearchText(inputValue); }}
-                              onChange={(_, newValue) => {
-                                if (newValue && typeof newValue !== "string") { populatePOData(newValue); onChange(newValue.productionOrderNumber || ""); }
-                                else if (typeof newValue === "string") { const matchingPO = poNumbers.find((po) => po.productionOrderNumber?.toLowerCase().includes(newValue.toLowerCase())); if (matchingPO) populatePOData(matchingPO); else { setSelectedPO(null); setPoInputValue(newValue || ""); } onChange(newValue); }
-                                else { setSelectedPO(null); setValue("buildNumber" as any, ""); setValue("partAssemblyId", ""); onChange(""); }
-                              }}
-                              renderOption={(props, option) => {
-                                const { key, ...optionProps } = props;
-                                if (typeof option === "string") {
-                                  return <li {...optionProps} key={key}>{option}</li>;
-                                }
-                                const details = [
-                                  option.lnItemCode ? `LN: ${option.lnItemCode}` : null,
-                                  option.drawingNumber ? `Drawing: ${option.drawingNumber}` : null,
-                                  option.nomenclature ? `Nomenclature: ${option.nomenclature}` : null,
-                                  option.componentType ? `Component Type: ${formatComponentType(option.componentType)}` : null,
-                                ].filter(Boolean).join(" | ");
-
-                                return (
-                                  <li {...optionProps} key={key}>
-                                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                                      <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "primary.main" }}>
-                                        PO: {option.productionOrderNumber}
-                                      </Typography>
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", lineHeight: 1.3 }}>
-                                        {details}
-                                      </Typography>
-                                    </Box>
-                                  </li>
-                                );
-                              }}
-                              renderInput={(params) => <TextField {...params} label="PO Number *" fullWidth size="small" inputRef={ref} onKeyDown={handlePOKeyDown} error={!!error} helperText={error?.message} />}
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Autocomplete
-                          options={allDrawingNumbers || []}
-                          groupBy={(option) => option.lnItemCode || "No LN Code"}
-                          getOptionLabel={(option) => typeof option === "string" ? option : option.lnItemCode || ""}
-                          value={selectedDrawing}
-                          loading={isLnSearchLoading || isLnSearchFetching}
-                          size="small"
-                          filterOptions={(options, { inputValue }) => {
-                            if (!inputValue) return options.slice(0, 100);
-                            const searchLower = inputValue.toLowerCase();
-                            return options
-                              .filter(
-                                (option) =>
-                                  option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                                  option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                                  option.nomenclature?.toLowerCase().includes(searchLower),
-                              )
-                              .slice(0, 100);
-                          }}
-                          onInputChange={(_, value) => updateDebouncedLnSearch(value)}
-                          onChange={(_, newValue) => {
-                            if (newValue && typeof newValue !== "string") {
-                              setSelectedDrawing(newValue);
-                              setValue("drawingNumber", newValue.drawingNumber);
-                              setValue("nomenclature", newValue.nomenclature);
-                              setValue("unit", newValue.unitName || "");
-                              setValue("location", newValue.location || "");
-                              setValue("partAssemblyId", newValue.parentDrawingNumbers?.[0] || "");
-                              if (newValue.componentType) { updateComponentAndQrType(newValue.componentType); }
-                            } else { setValue("drawingNumber", ""); setValue("nomenclature", ""); setValue("unit", ""); setValue("partAssemblyId", ""); setValue("location", ""); }
-                          }}
-                          renderOption={(props, option) => {
-                            const { key, ...optionProps } = props;
-                            return (
-                              <li {...optionProps} key={key}>
-                                <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                                  <Typography variant="body2" fontWeight="500" sx={{ fontSize: "0.85rem", color: "text.primary" }}>
-                                    Drawing: {option.drawingNumber}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.72rem" }}>
-                                    {option.nomenclature} | Type: {formatComponentType(option.componentType)}
-                                  </Typography>
-                                </Box>
-                              </li>
-                            );
-                          }}
-                          renderGroup={(params) => (
-                            <li key={params.key}>
-                              <Typography variant="subtitle2" fontWeight="800" sx={{ px: 2, py: 0.6, backgroundColor: "#F2F2F2", color: "#9C004C", fontSize: "0.875rem", letterSpacing: "0.5px" }}>
-                                LN CODE: {params.group}
-                              </Typography>
-                              <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
-                            </li>
-                          )}
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="LN Item Code"
-                              placeholder="Type to search..."
-                              InputProps={{
-                                ...params.InputProps,
-                                endAdornment: (
-                                  <>
-                                    {isLnSearchLoading || isLnSearchFetching ? <CircularProgress color="inherit" size={16} /> : null}
-                                    {params.InputProps.endAdornment}
-                                  </>
-                                ),
-                              }}
-                            />
-                          )}
-                        />
-                      </Grid>
-                    </Grid>
-
-                    {/* Row 2: Drawing Number, Nomenclature, Available For */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="drawingNumber"
-                          control={control}
-                          rules={{ required: "Drawing Number is required" }}
-                          render={({ field: { onChange } }) => (
-                            <Autocomplete
-                              options={drawingNumbers.filter((d: DrawingNumber) => !selectedDrawing?.lnItemCode || d.lnItemCode === selectedDrawing.lnItemCode)}
-                              getOptionLabel={(option) => typeof option === "string" ? option : option.drawingNumber || ""}
-                              value={selectedDrawing}
-                              size="small"
-                              onInputChange={(_, value, reason) => {
-                                if (reason === "input" && value.length >= 3) debouncedDrawingSearch(value);
-                              }}
-                              onChange={(_, value) => {
-                                setSelectedDrawing(value);
-                                onChange(value ? value.drawingNumber : "");
-                                if (value) {
-                                  setValue("nomenclature", value.nomenclature);
-                                  setValue("location", value.location || "");
-                                  setValue("unit", value.unitName || "");
-                                  if (value.componentType) { updateComponentAndQrType(value.componentType); }
-                                  setValue("partAssemblyId", value.parentDrawingNumbers?.[0] || "");
-                                } else { setValue("nomenclature", ""); setValue("unit", ""); setValue("partAssemblyId", ""); setValue("location", ""); }
-                              }}
-                              renderOption={(props, option) => {
-                                const { key, ...optionProps } = props;
-                                const drawingNo = typeof option === "string" ? option : option.drawingNumber;
-                                const lnCode = typeof option === "string" ? "" : option.lnItemCode;
-                                const nomenclature = typeof option === "string" ? "" : option.nomenclature;
-                                const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
-
-                                const subTextParts = [];
-                                if (lnCode) subTextParts.push(`LN: ${lnCode}`);
-                                if (nomenclature) subTextParts.push(nomenclature);
-                                if (compType) subTextParts.push(compType);
-
-                                return (
-                                  <li {...optionProps} key={key}>
-                                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                                      <Typography variant="body2" fontWeight="700" sx={{ fontSize: "0.875rem", color: "#1a1a1a" }}>
-                                        {drawingNo}
-                                      </Typography>
-                                      {subTextParts.length > 0 && (
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-                                          {subTextParts.join(" | ")}
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                  </li>
-                                );
-                              }}
-                              renderInput={(params) => <TextField {...params} label="Drawing Number *" error={!!errors.drawingNumber} helperText={errors.drawingNumber?.message} />}
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller name="nomenclature" control={control} render={({ field }) => <TextField {...field} label="Nomenclature" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} InputLabelProps={{ shrink: true }} />} />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <TextField label="Available For" value={selectedDrawing?.availableFor || ""} fullWidth size="small" InputProps={{ readOnly: true }} sx={{ bgcolor: "grey.50" }} />
-                      </Grid>
-                    </Grid>
-
-                    {/* Row 3: Prod Series *, Component Type, Project Number */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller
-                          name="productionSeries"
-                          control={control}
-                          rules={{ required: "Production Series is required" }}
-                          render={({ field: { onChange, value } }) => (
-                            <Autocomplete
-                              size="small"
-                              options={productionSeries || []}
-                              getOptionLabel={(option) => typeof option === "string" ? option : option.productionSeries || ""}
-                              value={(productionSeries || []).find((s) => s.productionSeries === value) || (value ? (value as any) : null)}
-                              onChange={(_, newValue) => onChange(newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "")}
-                              renderInput={(params) => <TextField {...params} label="Production Series *" error={!!errors.productionSeries} helperText={errors.productionSeries?.message} />}
-                            />
-                          )}
-                        />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <TextField label="Component Type" value={formatComponentType(componentType) || ""} fullWidth size="small" InputProps={{ readOnly: true }} sx={{ bgcolor: "grey.50" }} />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller name="projectNumber" control={control} render={({ field }) => <TextField {...field} label="Project Number" fullWidth size="small" />} />
-                      </Grid>
-                    </Grid>
-
-                    {/* Row 4: Location, IR Number, MSN Number */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller name="location" control={control} render={({ field }) => <TextField {...field} label="Location" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} InputLabelProps={{ shrink: true }} />} />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
-                          <Autocomplete {...field} options={irNumbers} getOptionLabel={(option) => typeof option === "string" ? option : option.irNumber || ""} value={selectedIRNumber} loading={loading} size="small" onOpen={handleIROpen} onInputChange={handleIRInputChange} onChange={(_, value) => { setSelectedIRNumber(value); setValue("irNumber", value?.irNumber || ""); setIrSearchText(""); field.onChange(value?.irNumber || ""); }} renderInput={(params) => <TextField {...params} label="IR Number *" error={!!error} helperText={error?.message} />} />
-                        )} />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller name="msnNumber" control={control} rules={{ required: "MSN Number is required" }} render={({ field, fieldState: { error } }) => (
-                          <Autocomplete {...field} options={msnNumbers} getOptionLabel={(option) => typeof option === "string" ? option : option.msnNumber || ""} value={selectedMSNNumber} loading={loading} size="small" onOpen={handleMSNOpen} onInputChange={handleMSNInputChange} onChange={(_, value) => { setSelectedMSNNumber(value); setValue("msnNumber", value?.msnNumber || ""); setMsnSearchText(""); field.onChange(value?.msnNumber || ""); }} renderInput={(params) => <TextField {...params} label="MSN Number *" error={!!error} helperText={error?.message} />} />
-                        )} />
-                      </Grid>
-                    </Grid>
-
-                    {/* Row 5: Unit, Manufacturing Date, Build No */}
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
-                        <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field }) => (
-                          <FormControl fullWidth error={!!errors.unit} size="small">
-                            <InputLabel>Unit *</InputLabel>
-                            <Select {...field} label="Unit *">{units.map((unit) => <MenuItem key={unit.id} value={unit.unitName}>{unit.unitName}</MenuItem>)}</Select>
-                            {errors.unit && <FormHelperText>{errors.unit.message}</FormHelperText>}
-                          </FormControl>
-                        )} />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller name="manufacturingDate" control={control} render={({ field }) => <DatePicker {...field} label="Manufacturing Date" maxDate={new Date()} slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.manufacturingDate, helperText: errors.manufacturingDate?.message } }} />} />
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Controller name="buildNumber" control={control} render={({ field }) => <TextField {...field} label="Build No" fullWidth size="small" InputProps={{ readOnly: true }} InputLabelProps={{ shrink: true }} sx={{ bgcolor: "grey.50" }} />} />
-                      </Grid>
-                      {selectedDrawing?.isExpiry === true && (
-                        <Grid item xs={12} md={4}>
-                          <Controller name="expiryDate" control={control} render={({ field }) => <DatePicker {...field} value={field.value || null} onChange={(newValue) => field.onChange(newValue || null)} label="Expiry Date *" slotProps={{ textField: { size: "small", fullWidth: true } }} />} />
-                        </Grid>
-                      )}
-                    </Grid>
-                  </>
-                )}
-
-                {/* 3. ID Specific Section */}
-                {componentType === "ID" && (
-                  <>
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={12}>
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <FormLabel component="legend" sx={{ mr: 2, fontSize: "0.875rem" }}>ID Type:</FormLabel>
-                          <Controller name="idType" control={control} render={({ field }) => (
-                            <RadioGroup {...field} row>
-                              <FormControlLabel value="series" control={<Radio size="small" />} label="Series" />
-                              <FormControlLabel value="custom" control={<Radio size="small" />} label="Custom" />
-                              <FormControlLabel value="random" control={<Radio size="small" />} label="Random" />
-                            </RadioGroup>
-                          )} />
-                        </Box>
-                      </Grid>
-                    </Grid>
-                    {idType === "series" && (
-                      <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={12} md={4}>
-                          <Controller
-                            name="startRange"
-                            control={control}
-                            rules={{
-                              required: "Start ID is required",
-                              validate: (val) => {
-                                if (!val) return true;
-                                const num = Number(val);
-                                if (selectedPO && poStartId > 0 && num < poStartId) return `ID should not be less than ${poStartId}`;
-                                if (selectedPO && poEndId > 0 && num > poEndId) return `ID should not be greater than ${poEndId}`;
-                                return true;
-                              },
-                            }}
-                            render={({ field, fieldState: { error } }) => (
-                              <TextField
-                                {...field}
-                                label="Start ID *"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                error={!!error}
-                                helperText={error?.message || idRangeNotice}
-                              />
-                            )}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <Controller
-                            name="endRange"
-                            control={control}
-                            rules={{
-                              required: "End ID is required",
-                              validate: (val) => {
-                                if (!val) return true;
-                                const num = Number(val);
-                                if (selectedPO && poStartId > 0 && num < poStartId) return `ID should not be less than ${poStartId}`;
-                                if (selectedPO && poEndId > 0 && num > poEndId) return `ID should not be greater than ${poEndId}`;
-                                return true;
-                              },
-                            }}
-                            render={({ field, fieldState: { error } }) => (
-                              <TextField
-                                {...field}
-                                label="End ID *"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                error={!!error}
-                                helperText={error?.message || idRangeNotice}
-                              />
-                            )}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <Controller name="quantity" control={control} render={({ field }) => <TextField {...field} label="Quantity" type="number" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} />} />
-                        </Grid>
-                      </Grid>
-                    )}
-                    {idType === "custom" && (
-                      <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={12} md={4}>
-                          <Controller
-                            name="customIdRange"
-                            control={control}
-                            rules={{
-                              required: "ID Range is required",
-                              validate: (val) => {
-                                if (!val) return true;
-                                if (!selectedPO || poStartId <= 0 || poEndId <= 0) return true;
-                                const parts = val.split(",").map((p) => p.trim());
-                                for (const part of parts) {
-                                  if (!part) continue;
-                                  if (part.includes("-")) {
-                                    const [s, e] = part.split("-").map((n) => Number(n.trim()));
-                                    if (!isNaN(s) && s < poStartId) return `ID should not be less than ${poStartId}`;
-                                    if (!isNaN(e) && e > poEndId) return `ID should not be greater than ${poEndId}`;
-                                  } else {
-                                    const n = Number(part);
-                                    if (!isNaN(n) && n < poStartId) return `ID should not be less than ${poStartId}`;
-                                    if (!isNaN(n) && n > poEndId) return `ID should not be greater than ${poEndId}`;
-                                  }
-                                }
-                                return true;
-                              },
-                            }}
-                            render={({ field, fieldState: { error } }) => (
-                              <TextField
-                                {...field}
-                                label="ID Range *"
-                                fullWidth
-                                size="small"
-                                placeholder="e.g., 1,2,3,4-7"
-                                error={!!error}
-                                helperText={error?.message || idRangeNotice}
-                              />
-                            )}
-                          />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <Controller name="quantity" control={control} render={({ field }) => <TextField {...field} label="Quantity" type="number" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} />} />
-                        </Grid>
-                      </Grid>
-                    )}
-                    {idType === "random" && (
-                      <Box sx={{ mb: 2 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                            Random IDs (Showing {visibleRandomCount} of 200 IDs)
-                          </Typography>
-                          {selectedPO && poStartId > 0 && poEndId > 0 && (
-                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                              select id between {poStartId}-{poEndId}
-                            </Typography>
-                          )}
-                        </Box>
-
-                        <Grid container spacing={1} sx={{ mb: 2 }}>
-                          {Array.from({ length: visibleRandomCount }, (_, index) => (
-                            <Grid item xs={6} sm={4} md={2.4} lg={1.2} key={index}>
-                              <Controller
-                                name={`randomIds.${index}`}
-                                control={control}
-                                rules={{
-                                  validate: (val) => {
-                                    if (!val) return true;
-                                    const num = Number(val);
-                                    if (isNaN(num)) return "Invalid";
-                                    if (!selectedPO) return true;
-                                    if (poStartId > 0 && num < Number(poStartId))
-                                      return `ID should not be less than ${poStartId}`;
-                                    if (poEndId > 0 && num > Number(poEndId))
-                                      return `ID should not be greater than ${poEndId}`;
-                                    return true;
-                                  },
-                                }}
-                                render={({ field, fieldState: { error } }) => (
-                                  <TextField
-                                    {...field}
-                                    size="small"
-                                    placeholder={`ID ${index + 1}`}
-                                    error={!!error}
-                                    helperText={error?.message}
-                                    inputProps={{ maxLength: 10 }}
-                                    fullWidth
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      handleRandomIdChange(index, e.target.value);
-                                    }}
-                                  />
-                                )}
-                              />
-                            </Grid>
-                          ))}
-                        </Grid>
-
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-                          {visibleRandomCount < 200 && (
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => setVisibleRandomCount((prev) => Math.min(prev + 20, 200))}
-                              startIcon={<AddIcon />}
-                              sx={{ textTransform: "none", fontWeight: 600 }}
-                            >
-                              Load More (+20 IDs)
-                            </Button>
-                          )}
-
-                          <Controller
-                            name="quantity"
-                            control={control}
-                            render={({ field }) => (
-                              <TextField
-                                {...field}
-                                label="Quantity"
-                                type="number"
-                                size="small"
-                                InputProps={{
-                                  readOnly: true,
-                                  style: { backgroundColor: "#f5f5f5" },
-                                }}
-                                sx={{ bgcolor: "grey.50", width: 150 }}
-                              />
-                            )}
-                          />
-                        </Box>
-                      </Box>
-                    )}
-                  </>
-                )}
-
-                {/* 4. BATCH Specific Section */}
-                {componentType === "BATCH" && (
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={12} md={4}>
-                      <Controller
-                        name="customIdRange"
-                        control={control}
-                        rules={{
-                          required: "ID Range is required",
-                          validate: (val) => {
-                            if (!val) return true;
-                            if (!selectedPO || poStartId <= 0 || poEndId <= 0) return true;
-                            const parts = val.split(",").map((p) => p.trim());
-                            for (const part of parts) {
-                              if (!part) continue;
-                              if (part.includes("-")) {
-                                const [s, e] = part.split("-").map((n) => Number(n.trim()));
-                                if (!isNaN(s) && s < poStartId) return `ID should not be less than ${poStartId}`;
-                                if (!isNaN(e) && e > poEndId) return `ID should not be greater than ${poEndId}`;
-                              } else {
-                                const n = Number(part);
-                                if (!isNaN(n) && n < poStartId) return `ID should not be less than ${poStartId}`;
-                                if (!isNaN(n) && n > poEndId) return `ID should not be greater than ${poEndId}`;
-                              }
-                            }
-                            return true;
-                          },
-                        }}
-                        render={({ field, fieldState: { error } }) => (
-                          <TextField
-                            {...field}
-                            label="ID Range *"
-                            fullWidth
-                            size="small"
-                            placeholder="e.g., 1,2,3,4-7"
-                            error={!!error}
-                            helperText={error?.message || idRangeNotice}
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Controller name="quantity" control={control} render={({ field }) => <TextField {...field} label="Quantity" type="number" fullWidth size="small" InputProps={{ readOnly: true, style: { backgroundColor: "#f5f5f5" } }} />} />
-                    </Grid>
-                  </Grid>
-                )}
-
-                {/* 5. Matrix Table Section (FIM & Purchase Item) */}
-                {(componentType === "FIM" || componentType === "SI") && (
-                  <Box sx={{ mb: 3, pl: { xs: 2, md: 5.5 }, pr: { xs: 1, md: 2 } }}>
-                    <Box sx={{ display: "flex", alignItems: "flex-end", width: "100%", gap: 1.5 }}>
-                      <TableContainer component={Paper} variant="outlined" sx={{ flexGrow: 1, maxHeight: "500px", overflowY: "auto" }}>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell><b>Sr.No</b></TableCell>
-                              <TableCell><b>ID No</b></TableCell>
-                              <TableCell><b>Quantity</b></TableCell>
-                              <TableCell><b>Size</b></TableCell>
-                              <TableCell><b>MRIR</b></TableCell>
-                              <TableCell><b>HEAT / LOT / BATCH No</b></TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {QrTableRows.map((row, index) => (
-                              <TableRow key={row.srNo}>
-                                <TableCell>{row.srNo}</TableCell>
-                                <TableCell><TextField value={row.idNo} size="small" fullWidth onChange={(e) => handleQrTableChange(index, "idNo", e.target.value)} onKeyDown={(e) => handleEnterKey(e, index, false)} /></TableCell>
-                                <TableCell><TextField value={row.quantity} type="number" size="small" fullWidth onFocus={(e) => e.target.select()} onChange={(e) => handleQrTableChange(index, "quantity", e.target.value)} onKeyDown={(e) => handleEnterKey(e, index, false)} /></TableCell>
-                                <TableCell><TextField value={row.size} size="small" fullWidth onChange={(e) => handleQrTableChange(index, "size", e.target.value)} onKeyDown={(e) => handleEnterKey(e, index, false)} /></TableCell>
-                                <TableCell><TextField value={row.mirir} size="small" fullWidth onChange={(e) => handleQrTableChange(index, "mirir", e.target.value)} onKeyDown={(e) => handleEnterKey(e, index, false)} /></TableCell>
-                                <TableCell><TextField value={row.heatLotBatchNo} size="small" fullWidth onChange={(e) => handleQrTableChange(index, "heatLotBatchNo", e.target.value)} onKeyDown={(e) => handleEnterKey(e, index, true)} /></TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                      <Tooltip title="Add Row" arrow>
-                        <IconButton onClick={addNewQrRow} sx={{ backgroundColor: "#A8005A", color: "#fff", width: 36, height: 36, "&:hover": { backgroundColor: "#800044" } }}>
-                          <AddIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                    <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 2 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Total Quantity:</Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 700, color: "primary.main" }}>{totalQuantity}</Typography>
-                    </Box>
-                  </Box>
-                )}
-
-                {/* 6. MRIR & Part Assembly Section (ID & BATCH) */}
-                {componentType !== "FIM" && componentType !== "SI" && (
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={12} md={4}>
-                      <Controller name="mrirNumber" control={control} render={({ field }) => <TextField {...field} label="MRIR Number *" fullWidth size="small" error={!!errors.mrirNumber} helperText={errors.mrirNumber?.message} />} />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Controller name="partAssemblyId" control={control} render={({ field: { onChange, value } }) => {
-                        const parentList = selectedDrawing?.parentDrawingNumbers || [];
-                        const parentCount = parentList.length;
-                        const extraCount = parentCount > 1 ? parentCount - 1 : 0;
-                        return (
-                          <Autocomplete
-                            value={value || ""}
-                            onChange={(_, newValue) => onChange(newValue || "")}
-                            onInputChange={(_, newInputValue) => onChange(newInputValue || "")}
-                            options={parentList}
-                            freeSolo
-                            openOnFocus={true}
-                            forcePopupIcon={true}
-                            size="small"
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                label="Part Number (Assembly)"
-                                helperText={parentCount > 0 ? `Used in ${parentCount} ${parentCount === 1 ? "assembly" : "assemblies"}` : undefined}
-                                size="small"
-                                fullWidth
-                                InputProps={{
-                                  ...params.InputProps,
-                                  endAdornment: (
-                                    <>
-                                      {extraCount > 0 && (
-                                        <Tooltip title={parentList.join(", ")}>
-                                          <Chip
-                                            label={`+${extraCount} more`}
-                                            size="small"
-                                            sx={{
-                                              backgroundColor: "primary.main",
-                                              color: "#fff",
-                                              fontWeight: 600,
-                                              fontSize: "0.72rem",
-                                              height: 22,
-                                              borderRadius: "12px",
-                                              mr: 0.5,
-                                            }}
-                                          />
-                                        </Tooltip>
-                                      )}
-                                      {params.InputProps.endAdornment}
-                                    </>
-                                  ),
-                                }}
-                              />
-                            )}
-                          />
-                        );
-                      }} />
-                    </Grid>
-                  </Grid>
-                )}
-
-                {/* 7. Disposition Section */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={12}>
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                      <FormLabel component="legend" sx={{ mr: 2, fontSize: "0.875rem" }}>Disposition *:</FormLabel>
-                      <Controller name="desposition" control={control} rules={{ required: "Disposition is required" }} render={({ field }) => (
-                        <RadioGroup {...field} row onChange={(e) => field.onChange(e.target.value)}>
-                          <FormControlLabel value="Accepted" control={<Radio size="small" />} label="Accepted" />
-                          <FormControlLabel value="Rejected" control={<Radio size="small" />} label="Rejected" />
-                          {(componentType === "FIM" || componentType === "SI") ? (
-                            <FormControlLabel value="Send Back to Customer" control={<Radio size="small" />} label="Send Back to Customer" />
-                          ) : (
-                            <FormControlLabel value="Used for QT" control={<Radio size="small" />} label="Used for QT" />
-                          )}
-                        </RadioGroup>
-                      )} />
-                    </Box>
-                  </Grid>
-                </Grid>
-
-                {/* 8. Remarks Section (Available for all 4 types) */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={12}>
-                    <Controller name="remark" control={control} render={({ field }) => <TextField {...field} label="Remarks" fullWidth size="small" multiline rows={2} placeholder="Enter any additional remarks here..." />} />
-                  </Grid>
-                </Grid>
-
-                {/* 9. Form Actions */}
-                <Box sx={{ display: "flex", justifyContent: "center", gap: 2, pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
-                  <Button type="button" variant="outlined" size="medium" onClick={handleReset} startIcon={<RefreshIcon />} sx={{ minWidth: 120, py: 1.5, height: 40 }}>Reset</Button>
-                  <Button type="submit" variant="contained" size="medium" startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <QrCodeIcon />} sx={{ minWidth: 200, py: 1.5, height: 40 }}>
-                    {loading ? "Generating..." : "Generate QR Code"}
-                  </Button>
-                </Box>
-              </form>
-            </CardContent>
-          </Card>
+                      <QrCodeIcon sx={{ fontSize: 18 }} />
+                    )
+                  }
+                  sx={{
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    fontSize: "0.875rem",
+                    borderRadius: "8px",
+                    px: 2.5,
+                    py: 0.75,
+                    textTransform: "none",
+                    boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                  }}
+                >
+                  {loading ? "Generating..." : "Generate QR Code"}
+                </Button>
+              </Stack>
+            </Paper>
+          </form>
 
           {/* Generated QR Codes */}
           {displayedQRCodes.length > 0 && (
-            <Card elevation={2}>
-              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-                <Stack
-                  direction={isMobile ? "column" : "row"}
-                  justifyContent="space-between"
-                  alignItems={isMobile ? "stretch" : "center"}
-                  spacing={2}
-                  sx={{ mb: 3 }}
-                >
-                  <Typography
-                    variant="h6"
-                    sx={{ color: "primary.main", fontWeight: 600 }}
-                  >
-                    Generated QR Codes ({displayedQRCodes.length})
-                  </Typography>
-
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    flexWrap="wrap"
-                  >
-                    <Checkbox
-                      checked={
-                        displayedQRCodes.length > 0 &&
-                        selectedBarcodes.length === displayedQRCodes.length
-                      }
-                      indeterminate={
-                        selectedBarcodes.length > 0 &&
-                        selectedBarcodes.length < displayedQRCodes.length
-                      }
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                    />
-                    <Typography variant="body2" sx={{ mr: 1 }}>
-                      Select All
-                    </Typography>
-
-                    {/* Split All Button */}
-                    {(componentType === "BATCH" || componentType === "Batch") &&
-                      watch("unit") === "ECH" && (
-                        <Button
-                          variant="outlined"
-                          color={hasAnySplit ? "error" : "secondary"}
-                          size="small"
-                          onClick={handleSplitAll}
-                          disabled={
-                            displayedQRCodes.length === 0 ||
-                            (!hasAnySplit && !canSplitAny)
-                          }
-                          sx={{ mr: 1 }}
-                        >
-                          {hasAnySplit ? "Close All" : "Split All"}
-                        </Button>
-                      )}
-
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<DownloadIcon />}
-                      onClick={handleDownload}
-                      disabled={selectedBarcodes.length === 0}
-                    >
-                      Download ({selectedBarcodes.length})
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      size="small"
-                      startIcon={<EditIcon />}
-                      onClick={handleOpenBulkUpdateDialog}
-                      disabled={selectedBarcodes.length === 0}
-                    >
-                      Update ({selectedBarcodes.length})
-                    </Button>
-                  </Stack>
-                </Stack>
-
-                <TableContainer component={Paper} variant="outlined">
-                  <Table stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell
-                          padding="checkbox"
-                          sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                        >
-                          <Checkbox
-                            checked={
-                              selectedBarcodes.length === displayedQRCodes.length &&
-                              displayedQRCodes.length > 0
-                            }
-                            indeterminate={
-                              selectedBarcodes.length > 0 &&
-                              selectedBarcodes.length < displayedQRCodes.length
-                            }
-                            onChange={(e) => handleSelectAll(e.target.checked)}
-                          />
-                        </TableCell>
-                        <TableCell
-                          sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                        >
-                          Sr. No
-                        </TableCell>
-                        <TableCell
-                          sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                        >
-                          QR Code
-                        </TableCell>
-                        <TableCell
-                          sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                        >
-                          ID Number
-                        </TableCell>
-                        {showBatchIdColumn && (
-                          <TableCell
-                            sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                          >
-                            Batch ID
-                          </TableCell>
-                        )}
-                        <TableCell
-                          sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                        >
-                          Status
-                        </TableCell>
-                        <TableCell
-                          align="center"
-                          sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
-                        >
-                          Actions
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {displayedQRCodes
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage,
-                        )
-                        .map((item, index) => (
-                          <TableRow
-                            key={
-                              item.id || item.qrCodeNumber || item.serialNumber
-                            }
-                            hover
-                            sx={{
-                              backgroundColor: item.isSplitRow ? "#f5f5f5" : "inherit",
-                            }}
-                          >
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                checked={selectedBarcodes.includes(
-                                  item.id || item.qrCodeNumber || item.serialNumber,
-                                )}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectBarcode(
-                                    item.id || item.qrCodeNumber || item.serialNumber,
-                                    e.target.checked,
-                                  );
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {page * rowsPerPage + index + 1}
-                            </TableCell>
-                            <TableCell>
-                              <Typography
-                                variant="body2"
-                                sx={{ fontFamily: "monospace" }}
-                              >
-                                {item.qrCodeNumber || item.serialNumber}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>{item.idNumber || "-"}</TableCell>
-                            {showBatchIdColumn && (
-                              <TableCell>{item.batchId || "N/A"}</TableCell>
-                            )}
-                            <TableCell>
-                              <Chip
-                                label={item.isNewQrCode ? "New" : "Existing"}
-                                color={item.isNewQrCode ? "success" : "default"}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                justifyContent="center"
-                                alignItems="center"
-                              >
-                                <Tooltip title="Copy QR Code">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      copyToClipboard(
-                                        item.qrCodeNumber || item.serialNumber,
-                                      )
-                                    }
-                                  >
-                                    <CopyIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Download">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      dispatch(
-                                        exportQRCode(
-                                          item.batchId
-                                            ? {
-                                              qrCodeId: item.qrCodeNumber || item.serialNumber,
-                                              batchId: item.batchId,
-                                            }
-                                            : (item.qrCodeNumber || item.serialNumber),
-                                        ),
-                                      )
-                                    }
-                                  >
-                                    <GetAppIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-
-                                {/* Row split button */}
-                                {(componentType === "BATCH" || componentType === "Batch") &&
-                                  watch("unit") === "ECH" &&
-                                  ((Number(item.quantity) > 1 || item.hasBeenSplit) &&
-                                    !item.isSplitRow ? (
-                                    <Button
-                                      size="small"
-                                      variant="contained"
-                                      color={item.hasBeenSplit ? "error" : "secondary"}
-                                      onClick={() => handleSplit(page * rowsPerPage + index)}
-                                      sx={{
-                                        fontSize: "0.7rem",
-                                        py: 0.5,
-                                        px: 1.5,
-                                        minWidth: "auto",
-                                        height: "28px",
-                                        ml: 0.5,
-                                      }}
-                                    >
-                                      {item.hasBeenSplit ? "Close" : "Split"}
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      size="small"
-                                      variant="contained"
-                                      disabled
-                                      sx={{
-                                        fontSize: "0.7rem",
-                                        py: 0.5,
-                                        px: 1.5,
-                                        minWidth: "auto",
-                                        height: "28px",
-                                        ml: 0.5,
-                                        visibility: "hidden",
-                                      }}
-                                    >
-                                      Split
-                                    </Button>
-                                  ))}
-                              </Stack>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-
-                <TablePagination
-                  component="div"
-                  count={displayedQRCodes.length}
-                  page={page}
-                  onPageChange={(_, newPage) => setPage(newPage)}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={(e) => {
-                    setRowsPerPage(parseInt(e.target.value, 10));
-                    setPage(0);
-                  }}
-                  rowsPerPageOptions={[5, 10, 25, 50]}
-                />
-              </CardContent>
-            </Card>
+            <QRCodesTable
+              displayedQRCodes={displayedQRCodes}
+              selectedBarcodes={selectedBarcodes}
+              onSelectAll={handleSelectAll}
+              onSelectBarcode={handleSelectBarcode}
+              onDownload={handleDownload}
+              onOpenBulkUpdateDialog={handleOpenBulkUpdateDialog}
+              onSplit={handleSplit}
+              onSplitAll={handleSplitAll}
+              hasAnySplit={hasAnySplit}
+              canSplitAny={canSplitAny}
+              showBatchIdColumn={showBatchIdColumn}
+              componentType={componentType}
+              isDownloading={isDownloading}
+              onOpenSingleExportDialog={handleOpenSingleExportDialog}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              onPageChange={(newPage) => setPage(newPage)}
+              onRowsPerPageChange={(newSize) => {
+                setRowsPerPage(newSize);
+                setPage(0);
+              }}
+            />
           )}
 
           {/* Existing QR Code Dialog */}
-          <Dialog
+          <ExistingQRCodesDialog
             open={openExistingDialog}
             onClose={() => setOpenExistingDialog(false)}
-            maxWidth="sm"
-            fullWidth
-          >
-            <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <WarningIcon color="warning" />
-              Existing QR Codes Found
-            </DialogTitle>
-            <DialogContent>
-              <DialogContentText sx={{ mb: 2 }}>
-                The following IDs already have QR codes generated in the system.
-                Please use the existing ones or check your ID range.
-              </DialogContentText>
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>ID Number</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>QR Code</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {existingItems.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{item.idNumber}</TableCell>
-                        <TableCell sx={{ fontFamily: "monospace" }}>
-                          {item.qrCodeNumber || item.serialNumber}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpenExistingDialog(false)} autoFocus>
-                Close
-              </Button>
-            </DialogActions>
-          </Dialog>
+            existingItems={existingItems}
+          />
+
+          {/* Column Selection Export Dialog */}
+          <ExportColumnDialog
+            open={exportDialogOpen}
+            onClose={() => setExportDialogOpen(false)}
+            isDownloading={isDownloading}
+            onConfirmExport={handleConfirmExportData}
+          />
 
           {/* Bulk Update Dialog */}
-          <Dialog
+          <BulkUpdateDialog
             open={bulkUpdateDialogOpen}
             onClose={() => setBulkUpdateDialogOpen(false)}
-            maxWidth="sm"
-            fullWidth
-          >
-            <DialogTitle sx={{ fontWeight: 600, color: "primary.main" }}>
-              Update QR Codes ({selectedBarcodes.length} Selected)
-            </DialogTitle>
-            <DialogContent dividers>
-              <Box sx={{ mt: 1 }}>
-                <Grid container spacing={2}>
-                  {/* Row 1: Prod Series & Available For */}
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      size="small"
-                      options={productionSeries || []}
-                      getOptionLabel={(option) => {
-                        if (typeof option === "string") return option;
-                        return option.productionSeries || "";
-                      }}
-                      value={bulkSelectedProductionSeries}
-                      onChange={(_, newValue) => {
-                        setBulkSelectedProductionSeries(newValue);
-                      }}
-                      renderInput={(params) => (
-                        <TextField {...params} label="Prod Series" fullWidth />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Available For"
-                      value={bulkAvailableFor}
-                      onChange={(e) => setBulkAvailableFor(e.target.value)}
-                      fullWidth
-                      size="small"
-                    />
-                  </Grid>
-
-                  {/* Row 2: Project Number & Location */}
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Project Number"
-                      value={bulkProject}
-                      onChange={(e) => setBulkProject(e.target.value)}
-                      fullWidth
-                      size="small"
-                      placeholder="Enter Project Number"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Location"
-                      type="number"
-                      value={bulkRackLocationId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setBulkRackLocationId(val === "" ? "" : Number(val));
-                      }}
-                      fullWidth
-                      size="small"
-                      placeholder="Enter Location ID"
-                    />
-                  </Grid>
-
-                  {/* Row 3: Unit & MRIR */}
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      size="small"
-                      options={units || []}
-                      getOptionLabel={(option) => {
-                        if (typeof option === "string") return option;
-                        return option.unitName || "";
-                      }}
-                      value={bulkSelectedUnit}
-                      onChange={(_, newValue) => {
-                        setBulkSelectedUnit(newValue);
-                      }}
-                      renderInput={(params) => (
-                        <TextField {...params} label="Unit" fullWidth />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="MRIR"
-                      value={bulkMrir}
-                      onChange={(e) => setBulkMrir(e.target.value)}
-                      fullWidth
-                      size="small"
-                      placeholder="Enter MRIR"
-                    />
-                  </Grid>
-
-                  {/* Row 4: IR & MSN */}
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      size="small"
-                      options={bulkIrNumbers}
-                      getOptionLabel={(option) => {
-                        if (typeof option === "string") return option;
-                        return option.irNumber || "";
-                      }}
-                      value={bulkSelectedIR}
-                      onChange={(_, newValue) => {
-                        setBulkSelectedIR(newValue);
-                      }}
-                      filterOptions={(options, { inputValue }) => {
-                        if (!inputValue) return options;
-                        const searchLower = inputValue.toLowerCase();
-                        return options.filter((option) =>
-                          option.irNumber?.toLowerCase().includes(searchLower) ||
-                          option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                          option.idNumberRange?.toLowerCase().includes(searchLower)
-                        );
-                      }}
-                      renderOption={(props, option) => {
-                        const { key, ...optionProps } = props;
-                        return (
-                          <li {...optionProps} key={key}>
-                            <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                              <Typography variant="body2">{option.irNumber}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {option.drawingNumber || ""} | IDs: {option.idNumberRange || ""}
-                              </Typography>
-                            </Box>
-                          </li>
-                        );
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="IR"
-                          placeholder="Search IR..."
-                          fullWidth
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Autocomplete
-                      size="small"
-                      options={bulkMsnNumbers}
-                      getOptionLabel={(option) => {
-                        if (typeof option === "string") return option;
-                        return option.msnNumber || "";
-                      }}
-                      value={bulkSelectedMSN}
-                      onChange={(_, newValue) => {
-                        setBulkSelectedMSN(newValue);
-                      }}
-                      filterOptions={(options, { inputValue }) => {
-                        if (!inputValue) return options;
-                        const searchLower = inputValue.toLowerCase();
-                        return options.filter((option) =>
-                          option.msnNumber?.toLowerCase().includes(searchLower) ||
-                          option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                          option.idNumberRange?.toLowerCase().includes(searchLower)
-                        );
-                      }}
-                      renderOption={(props, option) => {
-                        const { key, ...optionProps } = props;
-                        return (
-                          <li {...optionProps} key={key}>
-                            <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                              <Typography variant="body2">{option.msnNumber}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {option.drawingNumber || ""} | IDs: {option.idNumberRange || ""}
-                              </Typography>
-                            </Box>
-                          </li>
-                        );
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="MSN"
-                          placeholder="Search MSN..."
-                          fullWidth
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, py: 2 }}>
-              <Button
-                onClick={() => setBulkUpdateDialogOpen(false)}
-                color="inherit"
-                variant="outlined"
-                size="small"
-                disabled={bulkLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleBulkUpdateSubmit}
-                color="primary"
-                variant="contained"
-                size="small"
-                disabled={bulkLoading}
-                startIcon={bulkLoading && <CircularProgress size={20} color="inherit" />}
-              >
-                {bulkLoading ? "Updating..." : "Update"}
-              </Button>
-            </DialogActions>
-          </Dialog>
+            selectedCount={selectedBarcodes.length}
+            productionSeries={productionSeries || []}
+            units={units || []}
+            bulkSelectedProductionSeries={bulkSelectedProductionSeries}
+            onProductionSeriesChange={setBulkSelectedProductionSeries}
+            bulkAvailableFor={bulkAvailableFor}
+            onAvailableForChange={setBulkAvailableFor}
+            bulkProject={bulkProject}
+            onProjectChange={setBulkProject}
+            bulkRackLocationId={bulkRackLocationId}
+            onRackLocationChange={setBulkRackLocationId}
+            bulkSelectedUnit={bulkSelectedUnit}
+            onUnitChange={setBulkSelectedUnit}
+            bulkMrir={bulkMrir}
+            onMrirChange={setBulkMrir}
+            bulkIrNumbers={bulkIrNumbers}
+            bulkSelectedIR={bulkSelectedIR}
+            onIRChange={setBulkSelectedIR}
+            bulkMsnNumbers={bulkMsnNumbers}
+            bulkSelectedMSN={bulkSelectedMSN}
+            onMSNChange={setBulkSelectedMSN}
+            bulkLoading={bulkLoading}
+            onSubmit={handleBulkUpdateSubmit}
+          />
         </>
       </Box>
     </LocalizationProvider>

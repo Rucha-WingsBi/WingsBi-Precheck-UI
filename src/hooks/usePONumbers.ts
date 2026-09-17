@@ -28,13 +28,18 @@ export type ProductionOrderMaster = {
 };
 
 export const usePONumbers = (search?: string) => {
+  const cleanSearch = search?.trim();
   return useQuery<ProductionOrderMaster[]>({
-    queryKey: ["poNumbers", search],
+    queryKey: ["poNumbers", cleanSearch || ""],
     queryFn: async () => {
       const response = await api.get("/api/ProductionOrder/GetAllPONumbers", {
-        params: { search },
+        params: cleanSearch ? { search: cleanSearch } : {},
       });
-      return response.data;
+      const data = response.data;
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.items)) return data.items;
+      return [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

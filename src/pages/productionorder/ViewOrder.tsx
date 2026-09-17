@@ -13,7 +13,6 @@ import {
   TableRow,
   Alert,
   CircularProgress,
-  TablePagination,
   Paper,
   IconButton,
   Stack,
@@ -23,20 +22,30 @@ import {
   Button,
   Chip,
   Tooltip,
+  TextField,
+  Autocomplete,
+  FormControl,
 } from "@mui/material";
+import { CustomPagination } from "../../components/CustomPagination";
+import { usePONumbers, type ProductionOrderMaster } from "../../hooks/usePONumbers";
+import { useProductionSeries, useDrawingNumbers } from "../../hooks/useMasterData";
+
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
   Inventory as InventoryIcon,
   QrCode2 as QrCodeIcon,
-  InfoOutlined as InfoIcon,
 } from "@mui/icons-material";
 import type { RootState, AppDispatch } from "../../store/store";
 import {
   getAvailableComponentsForBOM,
   getProductionOrderDetails,
 } from "../../store/slices/precheckSlice";
+import { StatusChip } from "../../components/StatusChip";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 interface BOMItem {
   sr: number;
@@ -94,6 +103,147 @@ const ViewOrder: React.FC = () => {
   const [poMasterDetails, setPoMasterDetails] = useState<any>(() => navigationState || null);
   const fetchedPoRef = useRef<string | null>(null);
   const [openBomDialog, setOpenBomDialog] = useState(false);
+
+  // Filter controls state
+  const [poSearchText, setPoSearchText] = useState("");
+  const [selectedPO, setSelectedPO] = useState<any>(null);
+  const [drawingSearchText, setDrawingSearchText] = useState("");
+  const [selectedDrawing, setSelectedDrawing] = useState<any>(null);
+  const [lnSearchText, setLnSearchText] = useState("");
+  const [selectedLnCode, setSelectedLnCode] = useState<any>(null);
+  const [selectedProdSeries, setSelectedProdSeries] = useState<any>(null);
+  const [idNumber, setIdNumber] = useState("");
+
+  // Master data queries
+  const { data: poNumbersData = [], isLoading: poLoading } = usePONumbers(poSearchText);
+  const { data: productionSeriesData = [], isLoading: prodSeriesLoading } = useProductionSeries();
+  const { data: drawingNumbersData = [], isLoading: drawingLoading } = useDrawingNumbers("", drawingSearchText);
+
+  // Sync controls with poMasterDetails
+  useEffect(() => {
+    if (poMasterDetails) {
+      if (poMasterDetails.productionOrderNumber) {
+        setSelectedPO({
+          productionOrderNumber: poMasterDetails.productionOrderNumber,
+          ...poMasterDetails,
+        });
+      }
+      if (poMasterDetails.drawingNumber) {
+        setSelectedDrawing({ drawingNumber: poMasterDetails.drawingNumber });
+      }
+      if (poMasterDetails.lnItemCode || poMasterDetails.lnitemcode) {
+        setSelectedLnCode({ lnItemCode: poMasterDetails.lnItemCode || poMasterDetails.lnitemcode });
+      }
+      if (poMasterDetails.productionSeries) {
+        setSelectedProdSeries({ productionSeries: poMasterDetails.productionSeries });
+      }
+      const startId = poMasterDetails.startIdNumber ?? poMasterDetails.idNumber ?? "";
+      if (startId) {
+        setIdNumber(String(startId));
+      }
+    }
+  }, [poMasterDetails]);
+
+  // Memoized options for dropdowns
+  const poOptions = useMemo(() => {
+    const base = Array.isArray(poNumbersData) ? poNumbersData.slice(0, 100) : [];
+    if (
+      selectedPO &&
+      !base.some((opt: any) => opt.productionOrderNumber === selectedPO.productionOrderNumber)
+    ) {
+      return [selectedPO, ...base];
+    }
+    return base;
+  }, [poNumbersData, selectedPO]);
+
+  const drawingOptions = useMemo(() => {
+    const base = Array.isArray(drawingNumbersData) ? drawingNumbersData.slice(0, 100) : [];
+    if (
+      selectedDrawing &&
+      !base.some((opt: any) => opt.drawingNumber === selectedDrawing.drawingNumber)
+    ) {
+      return [selectedDrawing, ...base];
+    }
+    return base;
+  }, [drawingNumbersData, selectedDrawing]);
+
+  const lnOptions = useMemo(() => {
+    const base = Array.isArray(drawingNumbersData) ? drawingNumbersData.slice(0, 100) : [];
+    if (
+      selectedLnCode &&
+      !base.some((opt: any) => (opt.lnItemCode || opt.lnitemcode) === (selectedLnCode.lnItemCode || selectedLnCode.lnitemcode))
+    ) {
+      return [selectedLnCode, ...base];
+    }
+    return base;
+  }, [drawingNumbersData, selectedLnCode]);
+
+  const prodSeriesOptions = useMemo(() => {
+    const base = Array.isArray(productionSeriesData) ? productionSeriesData.slice(0, 100) : [];
+    if (
+      selectedProdSeries &&
+      !base.some((opt: any) => opt.productionSeries === selectedProdSeries.productionSeries)
+    ) {
+      return [selectedProdSeries, ...base];
+    }
+    return base;
+  }, [productionSeriesData, selectedProdSeries]);
+
+  const isApplyEnabled = useMemo(() => {
+    const hasPo = Boolean(selectedPO?.productionOrderNumber || poSearchText.trim());
+    const hasDrawing = Boolean(selectedDrawing?.drawingNumber || drawingSearchText.trim());
+    const hasLn = Boolean(selectedLnCode?.lnItemCode || selectedLnCode?.lnitemcode || lnSearchText.trim());
+    const hasSeries = Boolean(selectedProdSeries?.productionSeries || selectedProdSeries);
+    return Boolean(hasPo && hasDrawing && hasLn && hasSeries);
+  }, [selectedPO, poSearchText, selectedDrawing, drawingSearchText, selectedLnCode, lnSearchText, selectedProdSeries]);
+
+  const handleApplyFilters = () => {
+    const poNumToFetch = selectedPO?.productionOrderNumber || poSearchText.trim();
+    if (poNumToFetch) {
+      handleFetchDetails(poNumToFetch);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSelectedPO(null);
+    setPoSearchText("");
+    setSelectedDrawing(null);
+    setDrawingSearchText("");
+    setSelectedLnCode(null);
+    setLnSearchText("");
+    setSelectedProdSeries(null);
+    setIdNumber("");
+  };
+
+  // Sorting state for BOM table
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedBomData = useMemo(() => {
+    if (!sortColumn) return bomData;
+    return [...bomData].sort((a: any, b: any) => {
+      let aVal = a[sortColumn] ?? a[sortColumn === "lnitemcode" ? "lnItemCode" : sortColumn] ?? "";
+      let bVal = b[sortColumn] ?? b[sortColumn === "lnitemcode" ? "lnItemCode" : sortColumn] ?? "";
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [bomData, sortColumn, sortDirection]);
 
   // Fetch PO Details helper
   const handleFetchDetails = async (poNumber: string) => {
@@ -158,7 +308,7 @@ const ViewOrder: React.FC = () => {
     }
   }, [availableComponents]);
 
-  const handleBomRowDoubleClick = async (bomItem: BOMItem, index: number) => {
+  const handleBomRowClick = async (bomItem: BOMItem, index: number) => {
     const prodSeriesId = poMasterDetails?.prodSeriesId || navigationState?.prodSeriesId;
 
     if (!prodSeriesId) {
@@ -216,7 +366,7 @@ const ViewOrder: React.FC = () => {
       color = "#B54708";
     } else if (stLower.includes("issue") || stLower.includes("complet") || stLower.includes("used")) {
       bg = "#F4EBFF";
-      color = "#6B288A";
+      color = "#6D2A8F";
     } else if (stLower.includes("reject") || stLower.includes("scrap") || stLower.includes("expired")) {
       bg = "#FEF3F2";
       color = "#B42318";
@@ -262,112 +412,14 @@ const ViewOrder: React.FC = () => {
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 45,
-              }}
-            >
-              Sr
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-              }}
-            >
-              LN Item Code
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-              }}
-            >
-              Drawing Number
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 55,
-              }}
-            >
-              Unit
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 70,
-              }}
-              align="center"
-            >
-              Qty / <br /> Assm
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 75,
-              }}
-              align="center"
-            >
-              Total <br /> Req Qty
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 80,
-              }}
-              align="center"
-            >
-              Total <br /> QR Qty
-            </TableCell>
-            <TableCell
-              sx={{
-                fontWeight: 700,
-                backgroundColor: "#F9FAFB",
-                color: "#475467",
-                fontSize: "0.8rem",
-                borderBottom: "1px solid #EAECF0",
-                py: 0.75,
-                width: 80,
-              }}
-              align="center"
-            >
-              Available <br /> Store Qty
-            </TableCell>
+            <SortableTableHeader label="Sr" sortKey="sr" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="LN Item Code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="Drawing Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 55 }}>Unit</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 70 }} align="center">Qty / <br /> Assm</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 75 }} align="center">Total <br /> Req Qty</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 80 }} align="center">Total <br /> QR Qty</TableCell>
+            <TableCell sx={{ ...commonTableHeaderStyle, width: 80 }} align="center">Available <br /> Store Qty</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -382,13 +434,13 @@ const ViewOrder: React.FC = () => {
             </TableRow>
           ) : (
             <>
-              {bomData.map((item, index) => {
+              {sortedBomData.map((item, index) => {
                 const isSelected = selectedBomRow === index;
                 return (
                   <TableRow
                     key={item.sr}
                     hover
-                    onDoubleClick={() => handleBomRowDoubleClick(item, index)}
+                    onClick={() => handleBomRowClick(item, index)}
                     sx={{
                       cursor: "pointer",
                       backgroundColor: isSelected ? "#EFF8FF" : "inherit",
@@ -467,15 +519,13 @@ const ViewOrder: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <IconButton
             onClick={() => navigate(-1)}
-            size="small"
             sx={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #D0D5DD",
-              color: "#344054",
-              "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+              color: "primary.main",
+              p: 0.5,
+              "&:hover": { backgroundColor: "grey.100" },
             }}
           >
-            <ArrowBackIcon fontSize="small" />
+            <ArrowBackIcon />
           </IconButton>
           <Box>
             <Typography
@@ -488,6 +538,7 @@ const ViewOrder: React.FC = () => {
             >
               View Available QR Codes {poFromState ? `— ${poFromState}` : ""}
             </Typography>
+
           </Box>
         </Box>
       </Stack>
@@ -502,16 +553,17 @@ const ViewOrder: React.FC = () => {
         </Alert>
       )}
 
-      {/* Summary Bar */}
+      {/* Form Controls Bar (PO Number, Drawing Number, LN Item Code, Prod Series dropdowns & ID Number text field) */}
       <Paper
         elevation={0}
         sx={{
-          p: 1,
+          p: 1.25,
           px: 1.5,
           mb: 1.25,
-          borderRadius: "10px",
-          border: "1px solid #E9EAEB",
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
           backgroundColor: "#ffffff",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
         }}
       >
         <Box
@@ -519,79 +571,242 @@ const ViewOrder: React.FC = () => {
             display: "flex",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: 0.75,
-            fontSize: "0.875rem",
-            color: "#344054",
+            gap: 1.5,
+            width: "100%",
           }}
         >
-          <Typography variant="body2" component="span" sx={{ color: "#667085", fontWeight: 500 }}>
-            PO Number
-          </Typography>
-          <Typography variant="body2" component="span" sx={{ color: "#101828", fontWeight: 700 }}>
-            {currentPoNumber}
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#D0D5DD", mx: 0.5 }}>
-            ·
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#667085", fontWeight: 500 }}>
-            Drawing Number
-          </Typography>
-          <Typography variant="body2" component="span" sx={{ color: "#101828", fontWeight: 700 }}>
-            {currentDrawingNumber}
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#D0D5DD", mx: 0.5 }}>
-            ·
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#667085", fontWeight: 500 }}>
-            LN Item Code
-          </Typography>
-          <Typography variant="body2" component="span" sx={{ color: "#101828", fontWeight: 700 }}>
-            {currentLnItemCode}
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#D0D5DD", mx: 0.5 }}>
-            ·
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#667085", fontWeight: 500 }}>
-            Series
-          </Typography>
-          <Typography variant="body2" component="span" sx={{ color: "#101828", fontWeight: 700 }}>
-            {currentSeries}
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#D0D5DD", mx: 0.5 }}>
-            ·
-          </Typography>
-
-          <Typography variant="body2" component="span" sx={{ color: "#667085", fontWeight: 500 }}>
-            ID No.
-          </Typography>
-          <Typography variant="body2" component="span" sx={{ color: "#101828", fontWeight: 700 }}>
-            {currentStartId}
-          </Typography>
-
-          <Button
+          {/* PO Number Dropdown */}
+          <FormControl
             size="small"
-            variant="text"
-            onClick={() => navigate("/production-order/upload")}
-            sx={{
-              color: "primary.main",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              textTransform: "none",
-              p: 0,
-              minWidth: "auto",
-              ml: 1.5,
-              "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
-            }}
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
           >
-            Change order
-          </Button>
+            <Autocomplete
+              size="small"
+              options={poOptions}
+              getOptionLabel={(option: any) =>
+                typeof option === "string" ? option : option.productionOrderNumber || ""
+              }
+              value={selectedPO}
+              loading={poLoading}
+              onInputChange={(_, value) => setPoSearchText(value)}
+              onChange={(_, newValue) => {
+                const item = typeof newValue === "string" ? null : newValue;
+                setSelectedPO(item);
+                if (item?.productionOrderNumber) {
+                  handleFetchDetails(item.productionOrderNumber);
+                }
+              }}
+              isOptionEqualToValue={(option: any, val: any) =>
+                option.productionOrderNumber === (typeof val === "string" ? val : val?.productionOrderNumber)
+              }
+              renderOption={(props: any, option: any) => {
+                const { key, ...optionProps } = props;
+                const poNum = typeof option === "string" ? option : option.productionOrderNumber || "";
+                const lnCode = option?.lnItemCode || option?.lnitemcode || "";
+                const dwgNum = option?.drawingNumber || "";
+                const nom = option?.nomenclature || option?.itemDescription || "";
+                const compType = option?.componentType || "";
+
+                return (
+                  <li {...optionProps} key={key}>
+                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
+                        {poNum}
+                      </Typography>
+                      {(lnCode || dwgNum || nom || compType) && (
+                        <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
+                          {lnCode ? `LN: ${lnCode}` : ""}
+                          {dwgNum ? `${lnCode ? " | " : ""}Drawing: ${dwgNum}` : ""}
+                          {nom ? ` | ${nom}` : ""}
+                          {compType ? ` | ${compType}` : ""}
+                        </Typography>
+                      )}
+                    </Box>
+                  </li>
+                );
+              }}
+              ListboxProps={{ style: { maxHeight: "300px" } }}
+              renderInput={(params) => (
+                <TextField {...params} label="PO Number *" size="small" placeholder="Select PO" />
+              )}
+            />
+          </FormControl>
+
+          {/* Drawing Number Dropdown */}
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
+          >
+            <Autocomplete
+              size="small"
+              options={drawingOptions}
+              getOptionLabel={(option: any) =>
+                typeof option === "string" ? option : option.drawingNumber || ""
+              }
+              value={selectedDrawing}
+              loading={drawingLoading}
+              onInputChange={(_, value) => setDrawingSearchText(value)}
+              onChange={(_, newValue) => setSelectedDrawing(newValue)}
+              isOptionEqualToValue={(option: any, val: any) =>
+                option.drawingNumber === (typeof val === "string" ? val : val?.drawingNumber)
+              }
+              renderOption={(props: any, option: any) => {
+                const { key, ...optionProps } = props;
+                const dwgNum = typeof option === "string" ? option : option.drawingNumber || "";
+                const lnCode = option?.lnItemCode || option?.lnitemcode || "";
+                const nom = option?.nomenclature || option?.drawingDescription || "";
+                const compType = option?.componentType || "";
+
+                return (
+                  <li {...optionProps} key={key}>
+                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
+                        {dwgNum}
+                      </Typography>
+                      {(lnCode || nom || compType) && (
+                        <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
+                          {lnCode ? `LN: ${lnCode}` : ""}
+                          {nom ? `${lnCode ? " | " : ""}${nom}` : ""}
+                          {compType ? ` | ${compType}` : ""}
+                        </Typography>
+                      )}
+                    </Box>
+                  </li>
+                );
+              }}
+              ListboxProps={{ style: { maxHeight: "300px" } }}
+              renderInput={(params) => (
+                <TextField {...params} label="Drawing Number *" size="small" placeholder="Select Drawing" />
+              )}
+            />
+          </FormControl>
+
+          {/* LN Item Code Dropdown */}
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 }, minWidth: 150 }}
+          >
+            <Autocomplete
+              size="small"
+              options={lnOptions}
+              getOptionLabel={(option: any) =>
+                typeof option === "string"
+                  ? option
+                  : option.lnItemCode || option.lnitemcode || ""
+              }
+              value={selectedLnCode}
+              onInputChange={(_, value) => setLnSearchText(value)}
+              onChange={(_, newValue) => setSelectedLnCode(newValue)}
+              isOptionEqualToValue={(option: any, val: any) =>
+                (option.lnItemCode || option.lnitemcode) ===
+                (typeof val === "string" ? val : val?.lnItemCode || val?.lnitemcode)
+              }
+              renderOption={(props: any, option: any) => {
+                const { key, ...optionProps } = props;
+                const lnCode = typeof option === "string" ? option : option.lnItemCode || option.lnitemcode || "";
+                const dwgNum = option?.drawingNumber || "";
+                const nom = option?.nomenclature || option?.itemDescription || "";
+                const compType = option?.componentType || "";
+
+                return (
+                  <li {...optionProps} key={key}>
+                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
+                        {lnCode}
+                      </Typography>
+                      {(dwgNum || nom || compType) && (
+                        <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
+                          {dwgNum ? `Drawing: ${dwgNum}` : ""}
+                          {nom ? `${dwgNum ? " | " : ""}${nom}` : ""}
+                          {compType ? ` | ${compType}` : ""}
+                        </Typography>
+                      )}
+                    </Box>
+                  </li>
+                );
+              }}
+              ListboxProps={{ style: { maxHeight: "300px" } }}
+              renderInput={(params) => (
+                <TextField {...params} label="LN Item Code *" size="small" placeholder="Select LN Code" />
+              )}
+            />
+          </FormControl>
+
+          {/* Prod Series Dropdown */}
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 120px", md: 1.0 }, minWidth: 100 }}
+          >
+            <Autocomplete
+              size="small"
+              options={prodSeriesOptions}
+              getOptionLabel={(option: any) =>
+                typeof option === "string" ? option : option.productionSeries || ""
+              }
+              value={selectedProdSeries}
+              loading={prodSeriesLoading}
+              onChange={(_, newValue) => setSelectedProdSeries(newValue)}
+              isOptionEqualToValue={(option: any, val: any) =>
+                option.productionSeries === (typeof val === "string" ? val : val?.productionSeries)
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="Prod Series *" size="small" placeholder="Series" />
+              )}
+            />
+          </FormControl>
+
+          {/* ID Number (TextField ONLY, matching Make Precheck) */}
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 110px", md: 0.9 }, minWidth: 95 }}
+          >
+            <TextField
+              size="small"
+              label="ID Number"
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+              placeholder="Enter ID"
+              variant="outlined"
+              fullWidth
+            />
+          </FormControl>
+
+          {/* Actions */}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              onClick={handleApplyFilters}
+              disabled={!isApplyEnabled || bomLoading}
+              sx={{
+                height: 38,
+                px: 2,
+                fontWeight: 600,
+                borderRadius: "8px",
+                textTransform: "none",
+              }}
+            >
+              Apply
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              onClick={handleClearFilters}
+              sx={{
+                height: 38,
+                px: 2,
+                fontWeight: 600,
+                borderRadius: "8px",
+                textTransform: "none",
+                color: "#667085",
+                borderColor: "#D0D5DD",
+              }}
+            >
+              Clear
+            </Button>
+          </Stack>
         </Box>
       </Paper>
 
@@ -644,14 +859,6 @@ const ViewOrder: React.FC = () => {
               </Stack>
 
               <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Tooltip title="Double-click any row to view available QR components">
-                  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: "#667085", mr: 1 }}>
-                    <InfoIcon sx={{ fontSize: 16 }} />
-                    <Typography variant="caption" sx={{ fontSize: "0.75rem", display: { xs: "none", sm: "inline" } }}>
-                      Double-click row
-                    </Typography>
-                  </Stack>
-                </Tooltip>
                 <IconButton
                   onClick={() => setOpenBomDialog(true)}
                   size="small"
@@ -857,7 +1064,7 @@ const ViewOrder: React.FC = () => {
                             <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
                               {selectedBomRow !== null
                                 ? "No available QR components found for selected BOM item"
-                                : "Double-click a BOM row on the left to view matching QR codes"}
+                                : "Click a BOM row on the left to view matching QR codes"}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -867,22 +1074,18 @@ const ViewOrder: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              component="div"
-              count={qrCodeData.length}
+            <CustomPagination
               page={qrPage}
-              onPageChange={handleQrChangePage}
-              rowsPerPage={qrRowsPerPage}
-              onRowsPerPageChange={handleQrChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              sx={{
-                borderTop: "1px solid #EAECF0",
-                color: "#475467",
-                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-                  fontSize: "0.8rem",
-                },
+              pageSize={qrRowsPerPage}
+              totalCount={qrCodeData.length}
+              pageSizeOptions={[5, 10, 25, 50]}
+              onPageChange={(newPage) => setQrPage(newPage)}
+              onPageSizeChange={(newSize) => {
+                setQrRowsPerPage(newSize);
+                setQrPage(0);
               }}
             />
+
           </Paper>
         </Grid>
       </Grid>

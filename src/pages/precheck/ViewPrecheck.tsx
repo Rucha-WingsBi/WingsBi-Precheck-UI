@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -13,1356 +13,2004 @@ import {
   TableRow,
   TextField,
   Button,
-  FormControl,
   Autocomplete,
   CircularProgress,
-  TableSortLabel,
-  TablePagination,
-  Card,
-  CardContent,
   IconButton,
-  Collapse,
   Chip,
   Tabs,
   Tab,
+  Stack,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  Grid,
+  Collapse,
+  InputAdornment,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Checkbox,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Visibility as VisibilityIcon,
   FileDownload as FileDownloadIcon,
-  Refresh as RefreshIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon,
   QrCode as QrCodeIcon,
   Inventory as InventoryIcon,
   Category as CategoryIcon,
   Settings as SettingsIcon,
+  MoreVert as MoreVertIcon,
+  Close as CloseIcon,
+  Search as SearchIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
 } from "@mui/icons-material";
+import { CustomPagination } from "../../components/CustomPagination";
+import { EmptyState } from "../../components/EmptyState";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { COLOUR_ROLES, commonTableRowStyle } from "../../components/tableStyles";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { StatusChip } from "../../components/StatusChip";
+
 import {
-  viewPrecheckDetails,
-  exportPrecheckDetails,
+
+  viewPrecheckByParameters,
+  exportViewPrecheckDetails,
 } from "../../store/slices/precheckSlice";
 import {
+  getConsumedIn,
+  exportConsumedIn,
+} from "../../store/slices/qrcodeSlice";
+import {
   useProductionSeries,
-  useDrawingNumbers,
-  useLnItemCodeSearch,
   useAllDrawingNumbers,
+  useAllLnItemCodes,
+  useLnItemCodeSearch,
+  useDrawingNumbers,
 } from "../../hooks/useMasterData";
 import {
   usePONumbers,
   type ProductionOrderMaster,
 } from "../../hooks/usePONumbers";
 import { useDebounce } from "../../hooks/useDebounce";
-
 import type { RootState, AppDispatch } from "../../store/store";
-import debounce from "lodash.debounce";
 
-const ViewConsumedIn = React.lazy(() => import("./ViewConsumedIn"));
+interface ColumnDef {
+  field: string;
+  headerName: string;
+  minWidth?: number;
+  align?: "left" | "center" | "right";
+  sortable?: boolean;
+}
 
-const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
+const PRECHECK_COLUMNS: ColumnDef[] = [
+  { field: "sr", headerName: "SR", minWidth: 60, align: "center", sortable: true },
+  { field: "productionOrderNumber", headerName: "PO Number", minWidth: 140, align: "left", sortable: true },
+  { field: "lnItemCode", headerName: "LN Item Code", minWidth: 140, align: "left", sortable: true },
+  { field: "drawingNumber", headerName: "Drawing No.", minWidth: 150, align: "left", sortable: true },
+  { field: "productionSeries", headerName: "Prod Series", minWidth: 110, align: "center", sortable: true },
+  { field: "quantity", headerName: "Qty", minWidth: 70, align: "center", sortable: true },
+  { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
+  { field: "irNumber", headerName: "IR", minWidth: 100, align: "center", sortable: false },
+  { field: "msnNumber", headerName: "MSN", minWidth: 100, align: "center", sortable: false },
+  { field: "componentType", headerName: "Type", minWidth: 95, align: "center", sortable: false },
+  { field: "status", headerName: "Status", minWidth: 110, align: "center", sortable: false },
+  { field: "details", headerName: "Details", minWidth: 80, align: "center", sortable: false },
+];
+
+const CONSUMED_IN_COLUMNS: ColumnDef[] = [
+  { field: "sr", headerName: "Sr No", minWidth: 60, align: "center", sortable: true },
+  { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
+  { field: "consumedInDrawingNumber", headerName: "Consumed IN Drawing Number", minWidth: 220, align: "left", sortable: true },
+  { field: "quantity", headerName: "Quantity", minWidth: 80, align: "center", sortable: true },
+  { field: "poNumber", headerName: "PO Number", minWidth: 140, align: "left", sortable: true },
+  { field: "irNumber", headerName: "IR Number", minWidth: 100, align: "center", sortable: false },
+  { field: "msnNumber", headerName: "MSN Number", minWidth: 110, align: "center", sortable: false },
+  { field: "date", headerName: "Date", minWidth: 140, align: "center", sortable: true },
+  { field: "username", headerName: "Username", minWidth: 120, align: "center", sortable: true },
+  { field: "isRejected", headerName: "Is Rejected", minWidth: 100, align: "center", sortable: false },
+  { field: "rejectionRemarks", headerName: "Remarks", minWidth: 140, align: "left", sortable: false },
+];
+
+const ALL_PRECHECK_EXPORT_COLUMNS = [
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing No." },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "quantity", label: "Qty" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "componentType", label: "Component Type" },
+  { key: "status", label: "Status" },
+];
+
+const ALL_CONSUMED_EXPORT_COLUMNS = [
+  { key: "idNumber", label: "ID Number" },
+  { key: "consumedInDrawingNumber", label: "Consumed IN Drawing" },
+  { key: "quantity", label: "Quantity" },
+  { key: "poNumber", label: "PO Number" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "date", label: "Date" },
+  { key: "username", label: "Username" },
+  { key: "isRejected", label: "Is Rejected" },
+  { key: "rejectionRemarks", label: "Remarks" },
+];
+
+export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
   const location = useLocation();
+
+  // ── Active Tab ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<"precheck" | "consumed">(
     location.pathname.includes("consumed") ? "consumed" : "precheck"
   );
-  const { isLoading } = useSelector((state: RootState) => state.precheck);
+
+  // ── Redux & Local Loading States ───────────────────────────────────────────
+  const { isLoading: isPrecheckLoading } = useSelector((state: RootState) => state.precheck);
+  const { loading: isConsumedLoading, isDownloading } = useSelector((state: RootState) => state.qrcode);
+  const [isExportLoading, setIsExportLoading] = useState(false);
+  const isExporting = isExportLoading || isDownloading;
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  // ── Precheck tab filter states ─────────────────────────────────────────────
+  const [combinedSearch, setCombinedSearch] = useState("");        // PO / Drawing / LN search
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);    // Pending | Partial | Completed
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  // ── Consumed tab / shared filter states ───────────────────────────────────
+  const [selectedLnItemCode, setSelectedLnItemCode] = useState<string[]>([]);
+  const [lnSearchText, setLnSearchText] = useState("");
+  const debouncedLnSearch = useDebounce(lnSearchText, 300);
+  const [idNumber, setIdNumber] = useState("");
+  const [selectedProductionSeries, setSelectedProductionSeries] = useState<string[]>([]);
+  const [selectedDrawing, setSelectedDrawing] = useState<string[]>([]);
+  const [selectedPO, setSelectedPO] = useState<string[]>([]);
+
+  // ── Master data hooks ──────────────────────────────────────────────────────
+  const { data: productionSeriesData = [] } = useProductionSeries();
+  const { data: allDrawingNumbers = [] } = useAllDrawingNumbers();
+  const { data: allLnItemCodesData = [] } = useAllLnItemCodes();
+  const { data: searchedLnCodes = [] } = useLnItemCodeSearch(debouncedLnSearch);
 
   const [poSearchText, setPOSearchText] = useState("");
-  const debouncedPOSearch = useDebounce(poSearchText, 500);
+  const effectivePoSearch = poSearchText.trim() || (selectedDrawing.length > 0 ? selectedDrawing[0] : "");
+  const debouncedPOSearch = useDebounce(effectivePoSearch, 300);
+  const { data: assemblyDrawingNumbers = [] } = useDrawingNumbers("", debouncedPOSearch);
   const { data: poNumbers = [] } = usePONumbers(debouncedPOSearch);
 
-  const [selectedPO, setSelectedPO] = useState<ProductionOrderMaster | null>(
-    null,
-  );
+  // ── Options Derivation for MultiSelectFilter ────────────────────────────────
+  const prodSeriesOptions = useMemo(() => {
+    if (!productionSeriesData) return [];
+    return productionSeriesData
+      .map((item: any) => (typeof item === "string" ? item : item.productionSeries || item.productionSeriesName || item.name))
+      .filter(Boolean);
+  }, [productionSeriesData]);
 
-  // TanStack Query Hooks
-  const [drawingSearchText, setDrawingSearchText] = useState("");
+  const drawingOptions = useMemo(() => {
+    if (!allDrawingNumbers || !Array.isArray(allDrawingNumbers)) return [];
+    return allDrawingNumbers;
+  }, [allDrawingNumbers]);
 
-  const [debouncedLnSearch, setDebouncedLnSearch] = useState("");
-  const { data: productionSeries = [] } = useProductionSeries();
-  const { data: drawingNumbers = [], isLoading: drawingLoading } =
-    useDrawingNumbers("", drawingSearchText);
-  const { data: allDrawingNumbers = [], isLoading: isDrawingsLoading } = useAllDrawingNumbers();
-  const { isLoading: isLnSearchLoading } =
-    useLnItemCodeSearch(debouncedLnSearch);
+  const lnOptions = drawingOptions;
 
-  // Form state
-  // Precheck
-  const [productionOrder, setProductionOrder] = useState("");
-  const [selectedDrawing, setSelectedDrawing] = useState<any>(null);
-  const [selectedProductionSeries, setSelectedProductionSeries] =
-    useState<any>(null);
-  const [idNumber, setIdNumber] = useState("");
+  const poOptions = useMemo(() => {
+    if (poNumbers && Array.isArray(poNumbers) && poNumbers.length > 0) return poNumbers;
+    return drawingOptions;
+  }, [poNumbers, drawingOptions]);
 
-  // Search results
-  // Precheck
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showResults, setShowResults] = useState(false);
+  const consumedAssemblyOptions = useMemo(() => {
+    if (selectedDrawing.length > 0) {
+      const selectedStr = selectedDrawing[0].trim().toLowerCase();
+      const matchedDrawing = (allDrawingNumbers || []).find(
+        (d: any) =>
+          d.drawingNumber?.trim().toLowerCase() === selectedStr ||
+          d.lnItemCode?.trim().toLowerCase() === selectedStr
+      );
+      if (
+        matchedDrawing?.parentDrawingNumbers &&
+        Array.isArray(matchedDrawing.parentDrawingNumbers) &&
+        matchedDrawing.parentDrawingNumbers.length > 0
+      ) {
+        return matchedDrawing.parentDrawingNumbers;
+      }
+    }
+    return poOptions;
+  }, [selectedDrawing, allDrawingNumbers, poOptions]);
 
-  // Sorting state
-  const [orderBy, setOrderBy] = useState<string>("");
+  // ── Row expansion (precheck tab) ───────────────────────────────────────────
+  const [expandedRows, setExpandedRows] = useState<Set<number | string>>(new Set());
+
+  const toggleRowExpand = (rowId: number | string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
+
+  // ── Results State ──────────────────────────────────────────────────────────
+  const [precheckResults, setPrecheckResults] = useState<any[]>([]);
+  const [consumedResults, setConsumedResults] = useState<any[]>([]);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [hasAppliedFilters, setHasAppliedFilters] = useState<boolean>(false);
+
+  // ── Sorting State ──────────────────────────────────────────────────────────
+  const [orderBy, setOrderBy] = useState<string>("sr");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
 
-  // Pagination state
+  // ── Pagination State ───────────────────────────────────────────────────────
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Expanded rows state
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  // ── Details Expansion State ────────────────────────────────────────────────
 
-  const findMatchingDrawing = (po: ProductionOrderMaster | null, drawingList: any[]) => {
-    if (!po || !drawingList || drawingList.length === 0) return null;
+  // ── Export Dialog State & Handlers ─────────────────────────────────────────
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
 
-    // Priority 1: Match exact drawing ID
-    if (po.drawingNumberId) {
-      const match = drawingList.find((d: any) => d.id === po.drawingNumberId);
-      if (match) return match;
-    }
+  const activeExportColumns = useMemo(() => {
+    return activeTab === "precheck" ? ALL_PRECHECK_EXPORT_COLUMNS : ALL_CONSUMED_EXPORT_COLUMNS;
+  }, [activeTab]);
 
-    // Priority 2: Match exact drawing number string (case insensitive)
-    if (po.drawingNumber) {
-      const target = po.drawingNumber.trim().toLowerCase();
-      const match = drawingList.find(
-        (d: any) => d.drawingNumber && d.drawingNumber.trim().toLowerCase() === target
-      );
-      if (match) return match;
-    }
-
-    // Priority 3: Match LN Item Code ID
-    if (po.lnItemCodeId) {
-      const match = drawingList.find((d: any) => d.lnItemCodeId === po.lnItemCodeId);
-      if (match) return match;
-    }
-
-    // Priority 4: Match LN Item Code string (case insensitive)
-    if (po.lnItemCode) {
-      const target = po.lnItemCode.trim().toLowerCase();
-      const match = drawingList.find(
-        (d: any) => d.lnItemCode && d.lnItemCode.trim().toLowerCase() === target
-      );
-      if (match) return match;
-    }
-
-    return null;
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(activeExportColumns.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
   };
 
-  // Sync selectedDrawing with allDrawingNumbers once loaded if selecting PO gave a partial object or was loaded before master data
-  useEffect(() => {
-    if (selectedPO && allDrawingNumbers.length > 0) {
-      const matchingDrawing = findMatchingDrawing(selectedPO, allDrawingNumbers);
-      if (matchingDrawing) {
-        setSelectedDrawing(matchingDrawing);
-      }
-    }
-  }, [allDrawingNumbers, selectedPO]);
-
-  // Debounced search functions
-  const debouncedDrawingSearch = useMemo(
-    () =>
-      debounce((searchValue: string) => {
-        setDrawingSearchText(searchValue);
-      }, 300),
-    [],
-  );
-
-  const updateDebouncedLnSearch = useMemo(
-    () => debounce((value: string) => setDebouncedLnSearch(value), 300),
-    [],
-  );
-
-  // Sorting functions
-  const handleRequestSort = (property: string) => {
-    const isAsc = orderBy === property && order === "asc";
-    setOrder(isAsc ? "desc" : "asc");
-    setOrderBy(property);
-  };
-
-  const sortedResults = useMemo(() => {
-    if (!orderBy) return searchResults;
-
-    return [...searchResults].sort((a, b) => {
-      let aValue = a[orderBy];
-      let bValue = b[orderBy];
-
-      // Handle numeric values
-      if (orderBy === "sr" || orderBy === "quantity") {
-        aValue = Number(aValue) || 0;
-        bValue = Number(bValue) || 0;
-      } else {
-        // Handle string values
-        aValue = String(aValue || "").toLowerCase();
-        bValue = String(bValue || "").toLowerCase();
-      }
-
-      if (order === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
-    });
-  }, [searchResults, orderBy, order]);
-
-  // Pagination handlers
-  const handleChangePage = (__event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  // Paginated results
-  const paginatedResults = useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    return sortedResults.slice(startIndex, endIndex);
-  }, [sortedResults, page, rowsPerPage]);
-
-  const handleViewPrecheck = () => {
-    // According to the API spec, the ViewPrecheck endpoint expects these parameters:
-    // ProductionOrderNumber, ProductionSeriesId, Id, DrawingNumberId
-    const params = {
-      ProductionOrderNumber: productionOrder || undefined,
-      ProductionSeriesId: selectedProductionSeries?.id || undefined,
-      Id: idNumber ? parseInt(idNumber) : undefined,
-      DrawingNumberId: selectedDrawing?.id || undefined,
-    };
-
-    // Only call API if we have at least one parameter
-    if (
-      params.ProductionOrderNumber ||
-      params.ProductionSeriesId ||
-      params.Id ||
-      params.DrawingNumberId
-    ) {
-      dispatch(viewPrecheckDetails(params))
-        .then((result: any) => {
-          if (result.payload && Array.isArray(result.payload)) {
-            // Map the API response to our table format
-            const mappedResults = result.payload.map(
-              (item: any, index: number) => ({
-                sr: index + 1,
-                drawingNumber: item.drawingNumber || "",
-                nomenclature: item.nomenclature || "",
-                quantity: item.quantity || 0,
-                idNumber: item.idNumber || "",
-                ir: item.irNumber || "",
-                msn: item.msnNumber || "",
-                mrirNumber: item.mrirNumber || "",
-                componentType: item.componentType || "",
-                remarks: item.remarks || "",
-                username: item.username || "",
-                modifiedDate: item.modifiedDate
-                  ? formatDate(item.modifiedDate)
-                  : item.createdDate
-                    ? formatDate(item.createdDate)
-                    : "",
-                isPrecheckComplete: item.isPrecheckComplete || false,
-                consumedInDrawing: item.consumedInDrawing || "",
-                productionOrderNumber: item.productionOrderNumber || "",
-                projectNumber: item.projectNumber || "",
-                lnItemCode: item.lnItemCode || "",
-                isRejected: item.isRejected || false,
-              }),
-            );
-            setSearchResults(mappedResults);
-          } else {
-            setSearchResults([]);
-          }
-          setShowResults(true);
-        })
-        .catch(() => {
-          setSearchResults([]);
-          setShowResults(true);
-        });
-    }
-  };
-
-  const handleExport = () => {
-    // Create export parameters object with only defined values
-    const exportParams: {
-      productionOrderNumber?: string;
-      productionSeriesId?: number;
-      id?: number;
-      drawingNumberId?: number;
-    } = {};
-
-    // Only add parameters that have values
-    if (productionOrder) {
-      exportParams.productionOrderNumber = productionOrder;
-    }
-    if (selectedProductionSeries?.id) {
-      exportParams.productionSeriesId = selectedProductionSeries.id;
-    }
-    if (idNumber) {
-      exportParams.id = parseInt(idNumber);
-    }
-    if (selectedDrawing?.id) {
-      exportParams.drawingNumberId = selectedDrawing.id;
-    }
-
-    // Check if at least one parameter is provided
-    if (Object.keys(exportParams).length === 0) {
-      alert("Please enter at least one search criteria before exporting");
-      return;
-    }
-
-    // Call the export API
-    dispatch(exportPrecheckDetails(exportParams))
-      .unwrap()
-      .then((result) => {
-        if (result.success) {
-          // You can show a success message here if needed
-          // toast.success(result.message);
-        }
-      })
-      .catch((error) => {
-        // Show error message
-        alert(error.message || "Failed to export precheck details");
-      });
-  };
-
-  const handleReset = () => {
-    setProductionOrder("");
-    setSelectedDrawing(null);
-    setSelectedProductionSeries(null);
-    setSelectedPO(null);
-    setIdNumber("");
-    setSearchResults([]);
-    setShowResults(false);
-    setOrderBy("");
-    setOrder("asc");
-    setPage(0);
-    setExpandedRows(new Set());
-  };
-
-  const handleRowExpand = (index: number) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(index)) {
-      newExpandedRows.delete(index);
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === activeExportColumns.length) {
+      setSelectedExportColumns([]);
     } else {
-      newExpandedRows.add(index);
-    }
-    setExpandedRows(newExpandedRows);
-  };
-
-  const getComponentTypeChip = (componentType: string) => {
-    const type = componentType?.toUpperCase();
-    switch (type) {
-      case "ID":
-        return (
-          <Chip
-            icon={<QrCodeIcon />}
-            label="ID"
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
-        );
-      case "BATCH":
-        return (
-          <Chip
-            icon={<InventoryIcon />}
-            label="BATCH"
-            size="small"
-            color="secondary"
-            variant="outlined"
-          />
-        );
-      case "FIM":
-        return (
-          <Chip
-            icon={<CategoryIcon />}
-            label="FIM"
-            size="small"
-            color="success"
-            variant="outlined"
-          />
-        );
-      case "SI":
-        return (
-          <Chip
-            icon={<SettingsIcon />}
-            label="SI"
-            size="small"
-            color="warning"
-            variant="outlined"
-          />
-        );
-      default:
-        return <Chip label={type || "N/A"} size="small" variant="outlined" />;
+      setSelectedExportColumns(activeExportColumns.map((c) => c.key));
     }
   };
 
-  // Format date function
+  const handleToggleColumn = (key: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  // ── Format date helper ─────────────────────────────────────────────────────
   const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return "-";
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-GB", {
+      return new Date(dateString).toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       });
-    } catch (error) {
-      return "N/A";
+    } catch {
+      return "-";
     }
   };
 
-  const isSearchCriteriaFilled = !!(
-    productionOrder ||
-    selectedDrawing ||
-    selectedProductionSeries ||
-    selectedPO ||
-    idNumber.trim()
-  );
+  // ── Fetch Precheck Details from API (Using ViewPrechekByParameters) ────────
+  const fetchPrecheckData = (
+    pNum: number = page + 1,
+    pSize: number = rowsPerPage,
+    searchOverride?: string,
+    seriesOverride?: string[],
+    statusOverride?: string[],
+    fromDateOverride?: string,
+    toDateOverride?: string
+  ) => {
+    const searchVal = searchOverride !== undefined ? searchOverride : combinedSearch;
+    const seriesVal = seriesOverride !== undefined ? seriesOverride : selectedProductionSeries;
+    const statusVal = statusOverride !== undefined ? statusOverride : selectedStatus;
+    const fromVal = fromDateOverride !== undefined ? fromDateOverride : dateFrom;
+    const toVal = toDateOverride !== undefined ? toDateOverride : dateTo;
 
-  const isResetEnabled = isSearchCriteriaFilled || searchResults.length > 0;
+    const payload: any = {
+      pageNumber: pNum,
+      pageSize: pSize,
+      searchQuery: searchVal.trim(),
+      prodSeries: seriesVal,
+      status: statusVal,
+      fromDate: fromVal ? fromVal : null,
+      toDate: toVal ? toVal : null,
+    };
 
-  return (
-    <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
-      {!hideHeader && (
-        <Box
+    dispatch(viewPrecheckByParameters(payload))
+      .then((result: any) => {
+        if (result.payload) {
+          const rawList = Array.isArray(result.payload)
+            ? result.payload
+            : result.payload.data || result.payload.items || [];
+          const total = Array.isArray(result.payload)
+            ? result.payload.length
+            : result.payload.totalRecords ?? result.payload.totalCount ?? result.payload.total ?? rawList.length;
+          setTotalRecords(total);
+          const mapped = rawList.map((item: any, index: number) => ({
+            ...item,
+            id: item.precheckDetailsId ?? item.id ?? index + 1,
+            sr: (pNum - 1) * pSize + index + 1,
+            modifiedDate: item.modifiedDate
+              ? formatDate(item.modifiedDate)
+              : item.createdDate
+                ? formatDate(item.createdDate)
+                : "",
+            rawDate: item.modifiedDate || item.createdDate || "",
+          }));
+          setPrecheckResults(mapped);
+        } else {
+          setPrecheckResults([]);
+          setTotalRecords(0);
+        }
+      })
+      .catch((err: any) => {
+        setPrecheckResults([]);
+        setTotalRecords(0);
+        const msg = err?.message || err?.response?.data?.message;
+        if (msg) {
+          setSnackbar({
+            open: true,
+            message: msg,
+            severity: "error",
+          });
+        }
+      });
+  };
+
+  const debouncedCombinedSearch = useDebounce(combinedSearch, 400);
+  const debouncedIdNumber = useDebounce(idNumber, 400);
+  const isInitialSearchRef = useRef(true);
+
+  // Auto-fetch API when user types 3+ characters in precheck search bar or clears search
+  useEffect(() => {
+    if (isInitialSearchRef.current) {
+      isInitialSearchRef.current = false;
+      return;
+    }
+    if (activeTab === "precheck") {
+      const trimmed = debouncedCombinedSearch.trim();
+      if (trimmed.length >= 3 || (trimmed.length === 0 && precheckResults.length > 0)) {
+        if (trimmed.length >= 3) setHasAppliedFilters(true);
+        setPage(0);
+        fetchPrecheckData(1, rowsPerPage, trimmed);
+      }
+    }
+  }, [debouncedCombinedSearch]);
+
+  // Auto-fetch API when user types 3+ characters in consumed tab idNumber or clears it
+  useEffect(() => {
+    if (activeTab === "consumed") {
+      const trimmed = debouncedIdNumber.trim();
+      if (trimmed.length >= 3 || (trimmed.length === 0 && consumedResults.length > 0)) {
+        if (trimmed.length >= 3) setHasAppliedFilters(true);
+        setPage(0);
+        fetchConsumedData();
+      }
+    }
+  }, [debouncedIdNumber]);
+
+  // Auto-populate parent drawing in Assembly No dropdown for Consumed In tab when a drawing is selected
+  useEffect(() => {
+    if (activeTab === "consumed" && selectedDrawing.length > 0) {
+      const selectedStr = selectedDrawing[0].trim().toLowerCase();
+      const matchedDrawing = (allDrawingNumbers || []).find(
+        (d: any) =>
+          d.drawingNumber?.trim().toLowerCase() === selectedStr ||
+          d.lnItemCode?.trim().toLowerCase() === selectedStr
+      );
+      if (
+        matchedDrawing?.parentDrawingNumbers &&
+        Array.isArray(matchedDrawing.parentDrawingNumbers) &&
+        matchedDrawing.parentDrawingNumbers.length > 0
+      ) {
+        if (selectedPO.length === 0 || !matchedDrawing.parentDrawingNumbers.includes(selectedPO[0])) {
+          setSelectedPO([matchedDrawing.parentDrawingNumbers[0]]);
+        }
+      }
+    }
+  }, [selectedDrawing, allDrawingNumbers, activeTab]);
+
+  const isPrecheckDropdownSelected = selectedProductionSeries.length > 0 || selectedStatus.length > 0 || !!dateFrom || !!dateTo;
+  const isConsumedDropdownSelected = selectedLnItemCode.length > 0 && selectedDrawing.length > 0 && selectedProductionSeries.length > 0;
+
+  // ── Fetch Consumed In Details from API ────────────────────────────────────
+  const fetchConsumedData = () => {
+    const params: any = {};
+    if (selectedProductionSeries.length > 0) {
+      params.ProdSeries = selectedProductionSeries;
+    }
+    if (idNumber.trim()) {
+      params.IdNumber = parseInt(idNumber.trim());
+    }
+    if (selectedDrawing.length > 0) {
+      params.DrawingNumber = selectedDrawing[0];
+    }
+    if (selectedPO.length > 0) {
+      params.ProductionOrderNumber = selectedPO[0];
+    }
+    if (selectedLnItemCode.length > 0) {
+      params.LnItemCode = selectedLnItemCode[0];
+    }
+
+    dispatch(getConsumedIn(params))
+      .then((result: any) => {
+        if (result.payload && Array.isArray(result.payload)) {
+          const mapped = result.payload.map((item: any, index: number) => ({
+            ...item,
+            id: item.id ?? index + 1,
+            sr: index + 1,
+            consumedInDrawingNumber: item.consumedInDrawingNumber || item.consumedInDrawing || item.drawingNumber || "",
+            poNumber: item.poNumber || item.consumedInProductionOrderNumber || item.productionOrderNumber || "",
+            date: item.date ? formatDate(item.date) : "",
+            rawDate: item.date || "",
+            rejectionRemarks: item.rejectionReason || item.rejectionRemarks || item.remarks || "",
+          }));
+          setConsumedResults(mapped);
+        } else {
+          setConsumedResults([]);
+        }
+      })
+      .catch((err: any) => {
+        setConsumedResults([]);
+        const msg = err?.message || err?.response?.data?.message;
+        if (msg) {
+          setSnackbar({
+            open: true,
+            message: msg,
+            severity: "error",
+          });
+        }
+      });
+  };
+
+  const handleExport = () => {
+    setIsExportLoading(true);
+    if (activeTab === "precheck") {
+      const selectedCols =
+        exportMode === "custom"
+          ? ALL_PRECHECK_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+          : ALL_PRECHECK_EXPORT_COLUMNS.map((c) => c.key);
+
+      const exportParams: any = {
+        searchQuery: combinedSearch.trim(),
+        productionSeries: selectedProductionSeries,
+        status: selectedStatus,
+        fromDate: dateFrom || null,
+        toDate: dateTo || null,
+        documentType: [],
+        selectedColumns: selectedCols,
+      };
+
+      dispatch(exportViewPrecheckDetails(exportParams))
+        .unwrap()
+        .catch((err: any) => {
+          setSnackbar({
+            open: true,
+            message: err?.message || err?.response?.data?.message || "Failed to export precheck details",
+            severity: "error",
+          });
+        })
+        .finally(() => setIsExportLoading(false));
+    } else {
+      const selectedCols =
+        exportMode === "custom"
+          ? ALL_CONSUMED_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+          : ALL_CONSUMED_EXPORT_COLUMNS.map((c) => c.key);
+
+      const exportParams: any = {
+        searchQuery: idNumber.trim() || combinedSearch.trim(),
+        productionSeries: selectedProductionSeries,
+        status: [],
+        fromDate: dateFrom || null,
+        toDate: dateTo || null,
+        documentType: ["ConsumedIn"],
+        selectedColumns: selectedCols,
+      };
+
+      dispatch(exportViewPrecheckDetails(exportParams))
+        .unwrap()
+        .catch((err: any) => {
+          setSnackbar({
+            open: true,
+            message: err?.message || err?.response?.data?.message || "Failed to export consumed details",
+            severity: "error",
+          });
+        })
+        .finally(() => setIsExportLoading(false));
+    }
+  };
+
+  const handleApplyFilters = () => {
+    setHasAppliedFilters(true);
+    setPage(0);
+    if (activeTab === "precheck") {
+      fetchPrecheckData(1, rowsPerPage);
+    } else {
+      fetchConsumedData();
+    }
+  };
+
+  const handleClearAll = () => {
+    setHasAppliedFilters(false);
+    // Precheck filters
+    setCombinedSearch("");
+    setSelectedStatus([]);
+    setDateFrom("");
+    setDateTo("");
+    // Consumed / shared filters
+    setSelectedPO([]);
+    setSelectedLnItemCode([]);
+    setSelectedDrawing([]);
+    setSelectedProductionSeries([]);
+    setIdNumber("");
+    // Results
+    setPrecheckResults([]);
+    setConsumedResults([]);
+    // Expanded rows
+    setExpandedRows(new Set());
+    setPage(0);
+  };
+
+  // ── Derived Data ───────────────────────────────────────────────────────────
+  const currentRawData = activeTab === "precheck" ? precheckResults : consumedResults;
+  const visibleColumns = activeTab === "precheck" ? PRECHECK_COLUMNS : CONSUMED_IN_COLUMNS;
+
+  // LN Item Codes options derived from drawing numbers master data, LN API, search, and consumed results
+  const lnItemCodeOptions = useMemo(() => {
+    const set = new Set<string>();
+
+    // 1. From allDrawingNumbers master data
+    if (Array.isArray(allDrawingNumbers)) {
+      allDrawingNumbers.forEach((d: any) => {
+        if (d.lnItemCode && typeof d.lnItemCode === "string" && d.lnItemCode.trim() !== "" && d.lnItemCode !== "-") {
+          set.add(d.lnItemCode.trim());
+        }
+      });
+    }
+
+    // 2. From allLnItemCodesData
+    const allLnList = Array.isArray(allLnItemCodesData)
+      ? allLnItemCodesData
+      : (allLnItemCodesData as any)?.data || (allLnItemCodesData as any)?.$values || [];
+    if (Array.isArray(allLnList)) {
+      allLnList.forEach((item: any) => {
+        const code = typeof item === "string" ? item : item.lnItemCode || item.code;
+        if (code && typeof code === "string" && code.trim() !== "" && code !== "-") {
+          set.add(code.trim());
+        }
+      });
+    }
+
+    // 3. From searchedLnCodes
+    const searchedList = Array.isArray(searchedLnCodes)
+      ? searchedLnCodes
+      : (searchedLnCodes as any)?.data || (searchedLnCodes as any)?.$values || [];
+    if (Array.isArray(searchedList)) {
+      searchedList.forEach((item: any) => {
+        const code = typeof item === "string" ? item : item.lnItemCode || item.code;
+        if (code && typeof code === "string" && code.trim() !== "" && code !== "-") {
+          set.add(code.trim());
+        }
+      });
+    }
+
+    // 4. From consumedResults
+    if (Array.isArray(consumedResults)) {
+      consumedResults.forEach((row: any) => {
+        if (row.lnItemCode && typeof row.lnItemCode === "string" && row.lnItemCode.trim() !== "" && row.lnItemCode !== "-") {
+          set.add(row.lnItemCode.trim());
+        }
+      });
+    }
+
+    return Array.from(set).sort();
+  }, [allDrawingNumbers, allLnItemCodesData, searchedLnCodes, consumedResults]);
+
+  // ── Filtered Rows  ──────────────────────────────
+  const filteredData = currentRawData;
+
+  // ── Client-side Sorted Rows ────────────────────────────────────────────────
+  const sortedData = useMemo(() => {
+    if (!orderBy || orderBy === "sr" || filteredData.length <= 1) return filteredData;
+    return [...filteredData].sort((a, b) => {
+      let aVal = a[orderBy];
+      let bVal = b[orderBy];
+      if (orderBy === "quantity") {
+        const numA = Number(aVal) || 0;
+        const numB = Number(bVal) || 0;
+        return order === "asc" ? numA - numB : numB - numA;
+      }
+      const strA = String(aVal || "").toLowerCase();
+      const strB = String(bVal || "").toLowerCase();
+      if (strA < strB) return order === "asc" ? -1 : 1;
+      if (strA > strB) return order === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredData, orderBy, order]);
+
+  // ── Paginated Rows ─────────────────────────────────────────────────────────
+  const paginatedRows = useMemo(() => {
+    if (activeTab === "precheck") {
+      return sortedData;
+    }
+    const start = page * rowsPerPage;
+    return sortedData.slice(start, start + rowsPerPage);
+  }, [activeTab, sortedData, page, rowsPerPage]);
+
+  const handleRequestSort = (field: string) => {
+    const isAsc = orderBy === field && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(field);
+  };
+
+  // ── Active Filter Chips ────────────────────────────────────────────────────
+  const activeChips = useMemo(() => {
+    const chips: Array<{ id: string; label: string; onRemove: () => void }> = [];
+
+    if (activeTab === "precheck") {
+      if (combinedSearch.trim()) {
+        chips.push({
+          id: "search",
+          label: `Search: "${combinedSearch.trim()}"`,
+          onRemove: () => {
+            setCombinedSearch("");
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, "", selectedProductionSeries, selectedStatus, dateFrom, dateTo);
+          },
+        });
+      }
+      selectedProductionSeries.forEach((s) => {
+        chips.push({
+          id: `series-${s}`,
+          label: `Series: ${s}`,
+          onRemove: () => {
+            const nextSeries = selectedProductionSeries.filter((v) => v !== s);
+            setSelectedProductionSeries(nextSeries);
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, nextSeries, selectedStatus, dateFrom, dateTo);
+          },
+        });
+      });
+      selectedStatus.forEach((st) => {
+        chips.push({
+          id: `status-${st}`,
+          label: `Status: ${st}`,
+          onRemove: () => {
+            const nextStatus = selectedStatus.filter((v) => v !== st);
+            setSelectedStatus(nextStatus);
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, selectedProductionSeries, nextStatus, dateFrom, dateTo);
+          },
+        });
+      });
+      if (dateFrom) {
+        chips.push({
+          id: "dateFrom",
+          label: `From: ${dateFrom}`,
+          onRemove: () => {
+            setDateFrom("");
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, selectedProductionSeries, selectedStatus, "", dateTo);
+          },
+        });
+      }
+      if (dateTo) {
+        chips.push({
+          id: "dateTo",
+          label: `To: ${dateTo}`,
+          onRemove: () => {
+            setDateTo("");
+            setPage(0);
+            fetchPrecheckData(1, rowsPerPage, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, "");
+          },
+        });
+      }
+    }
+
+    return chips;
+  }, [activeTab, combinedSearch, selectedProductionSeries, selectedStatus, dateFrom, dateTo, page, rowsPerPage]);
+
+  // ── Cell Content Renderer ──────────────────────────────────────────────────
+  const renderCellContent = (colField: string, row: any, idx: number) => {
+    if (colField === "sr") {
+      return page * rowsPerPage + idx + 1;
+    }
+
+    if (colField === "productionOrderNumber") {
+      return row.productionOrderNumber || row.poNumber || "-";
+    }
+
+    if (colField === "productionSeries") {
+      return row.productionSeries || row.prodSeries || "-";
+    }
+
+    if (colField === "componentType") {
+      return <ComponentTypeChip type={row.componentType} />;
+    }
+
+    if (colField === "status") {
+      if (activeTab === "precheck") {
+        const displayStatus = row.isRejected
+          ? "Rejected"
+          : row.precheckStatus || row.status || (row.isPrecheckComplete ? "Completed" : "Pending");
+        return <StatusChip status={displayStatus} />;
+      } else {
+        return <StatusChip status={row.status} />;
+      }
+    }
+
+    if (colField === "isRejected") {
+      const isRej = row.isRejected === true || row.isRejected === "Yes" || row.isRejected === "Rejected";
+      return <StatusChip status={isRej ? "Rejected" : "Active"} label={isRej ? "Yes" : "No"} />;
+    }
+
+    // Details column (directly toggle expanded sub-table)
+    if (colField === "details") {
+      const rowKey = row.id ?? row.sr;
+      const isExpanded = expandedRows.has(rowKey);
+      return (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleRowExpand(rowKey);
+          }}
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            mb: 1.5,
-            flexWrap: "wrap",
-            gap: { xs: 2, sm: 4, md: 6 },
-            borderBottom: 1,
-            borderColor: "divider",
-            pb: 0.5,
+            color: isExpanded ? "primary.main" : "#667085",
+            p: 0.5,
+            "&:hover": { backgroundColor: "grey.100", color: "#101828" },
           }}
         >
-          <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={600}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-          >
-            {activeTab === "precheck" ? "View Precheck Details" : "View Consumed In Details"}
-          </Typography>
+          {isExpanded ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+        </IconButton>
+      );
+    }
 
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
+
+
+    const val = row[colField];
+    if (val === null || val === undefined || String(val).trim() === "" || String(val).trim() === "null") {
+      return "-";
+    }
+    return val;
+  };
+
+  const handleConfirmExportData = () => {
+    setExportDialogOpen(false);
+    handleExport();
+  };
+
+  // ── JSX ────────────────────────────────────────────────────────────────────
+  return (
+    <Box
+      sx={{
+        py: hideHeader ? 0 : 0.5,
+        px: hideHeader ? 0 : { xs: 1, sm: 2 },
+        maxWidth: 1600,
+        mx: "auto",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+      {/* 1. Page Header */}
+      {!hideHeader && (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={1}
+          sx={{ mb: 0.5 }}
+        >
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                lineHeight: 1.2,
+              }}
+            >
+              Precheck History
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              {activeTab === "consumed"
+                ? "Search, filter, and inspect past precheck inspection records and status reports."
+                : "Search, filter, and inspect precheck inspection records and status reports."}
+            </Typography>
+          </Box>
+
+          {activeTab === "precheck" && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={isExporting ? <CircularProgress size={16} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
+              onClick={handleOpenExportDialog}
+              disabled={isExporting || !hasAppliedFilters}
+              sx={{
+                height: 32,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
                 textTransform: "none",
-                minWidth: 120,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-            }}
-          >
-            <Tab label="View Precheck" value="precheck" />
-            <Tab label="View Consumed In" value="consumed" />
-          </Tabs>
-        </Box>
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                backgroundColor: "background.paper",
+                "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
+              }}
+            >
+              Export
+            </Button>
+          )}
+        </Stack>
       )}
 
-      {activeTab === "consumed" ? (
-        <React.Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />}>
-          <ViewConsumedIn hideHeader />
-        </React.Suspense>
-      ) : (
-        <>
+      {/* 2. Tabs Bar */}
+      <Box sx={{ borderBottom: "1px solid #EAECF0", mb: 0.5 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => {
+            setActiveTab(newValue);
+            setHasAppliedFilters(false);
+            setPage(0);
+          }}
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            minHeight: 34,
+            "& .MuiTab-root": {
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              textTransform: "none",
+              minWidth: 90,
+              py: 0.5,
+            },
+            "& .MuiTab-root.Mui-selected": { color: "primary.main" },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "primary.main",
+              height: 3,
+              borderRadius: "3px 3px 0 0",
+            },
+          }}
+        >
+          <Tab label="Prechecks" value="precheck" />
+          <Tab label="Consumed In" value="consumed" />
+        </Tabs>
+      </Box>
 
-      {/* Precheck Form Controls */}
-      <Card elevation={2} sx={{ mb: 2 }}>
-        <CardContent sx={{ p: { xs: 1, md: 2 } }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              flexWrap: "wrap",
-              gap: 1.5,
-              alignItems: { xs: "stretch", sm: "center" },
-            }}
-          >
-            <FormControl
-              sx={{ minWidth: { xs: "100%", sm: 200 } }}
-              size="small"
-            >
-              <Autocomplete
-                size="small"
-                options={poNumbers || []}
-                getOptionLabel={(option) => {
-                  if (typeof option === "string") return option;
-                  return option.productionOrderNumber || "";
-                }}
-                filterOptions={(options, { inputValue }) => {
-                  if (!inputValue) return options.slice(0, 100);
-                  const searchLower = inputValue.toLowerCase();
-                  const filtered = options.filter((option) => {
-                    return (
-                      option.productionOrderNumber?.toLowerCase().includes(searchLower) ||
-                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                      option.drawingNumber?.toLowerCase().includes(searchLower)
-                    );
-                  });
-                  return filtered.slice(0, 100);
-                }}
-                value={selectedPO}
-                onInputChange={(_, value) => setPOSearchText(value)}
-                onChange={(_, newValue) => {
-                  if (newValue && typeof newValue !== "string") {
-                    setSelectedPO(newValue);
-                    setProductionOrder(newValue.productionOrderNumber);
-
-                    // Auto-select Production Series
-                    if (newValue.prodSeriesId && newValue.productionSeries) {
-                      const matchingSeries = productionSeries.find(
-                        (ps) => ps.id === newValue.prodSeriesId,
-                      );
-                      if (matchingSeries) {
-                        setSelectedProductionSeries(matchingSeries);
-                      } else {
-                        setSelectedProductionSeries({
-                          id: newValue.prodSeriesId,
-                          productionSeries: newValue.productionSeries,
-                        });
-                      }
-                    }
-
-                    // Auto-select Drawing / LN Item Code
-                    const matchingDrawing = findMatchingDrawing(newValue, allDrawingNumbers);
-
-                    if (matchingDrawing) {
-                      setSelectedDrawing(matchingDrawing);
-                    } else if (newValue.drawingNumber || newValue.lnItemCode || newValue.drawingNumberId) {
-                      setSelectedDrawing({
-                        id: newValue.drawingNumberId || 0,
-                        drawingNumber: newValue.drawingNumber || "",
-                        lnItemCode: newValue.lnItemCode || "",
-                        lnItemCodeId: newValue.lnItemCodeId || 0,
-                        nomenclature: newValue.nomenclature || "",
-                        componentType: newValue.componentType || "",
-                      });
-                    }
-                  } else {
-                    setSelectedPO(null);
-                    setProductionOrder("");
-                  }
-                }}
-                renderOption={(props, option) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <li {...optionProps} key={key}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          py: 0.5,
-                          width: "100%",
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          fontWeight="600"
-                          color="primary"
-                        >
-                          PO: {option.productionOrderNumber}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {option.lnItemCode && `LN: ${option.lnItemCode}`}
-                          {option.drawingNumber &&
-                            ` | Drawing: ${option.drawingNumber}`}
-                        </Typography>
-                      </Box>
-                    </li>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="PO Number Filter"
-                    size="small"
-                  />
-                )}
-              />
-            </FormControl>
-
-            {/* LN Item Code Filter */}
-            <FormControl
-              sx={{ minWidth: { xs: "100%", sm: 280 } }}
-              size="small"
-            >
-              <Autocomplete
-                size="small"
-                options={allDrawingNumbers}
-                groupBy={(option: any) => option.lnItemCode || "No LN Code"}
-                getOptionLabel={(option: any) => {
-                  if (typeof option === "string") return option;
-                  return option.lnItemCode || "";
-                }}
-                value={selectedDrawing}
-                loading={isDrawingsLoading || isLnSearchLoading}
-                noOptionsText={
-                  isDrawingsLoading
-                    ? "Loading drawing numbers..."
-                    : "No drawing numbers found"
-                }
-                freeSolo={false}
-                onInputChange={(_, value) => {
-                  updateDebouncedLnSearch(value);
-                }}
-                onChange={(_: any, value: any) => {
-                  setSelectedDrawing(value);
-                }}
-                isOptionEqualToValue={(option: any, value: any) =>
-                  (value?.id && option.id === value.id) ||
-                  (option.drawingNumber && value?.drawingNumber && option.drawingNumber.trim().toLowerCase() === value.drawingNumber.trim().toLowerCase()) ||
-                  (option.lnItemCode && value?.lnItemCode && option.lnItemCode.trim().toLowerCase() === value.lnItemCode.trim().toLowerCase())
-                }
-                filterOptions={(options, { inputValue }) => {
-                  if (!inputValue) return options.slice(0, 100);
-                  const searchLower = inputValue.toLowerCase();
-                  const filtered = options.filter(
-                    (option: any) =>
-                      option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                      option.drawingNumber
-                        ?.toLowerCase()
-                        .includes(searchLower) ||
-                      option.nomenclature?.toLowerCase().includes(searchLower),
-                  );
-                  return filtered.slice(0, 100);
-                }}
-                renderOption={(props: any, option: any) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <li {...optionProps} key={key}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          py: 0.5,
-                          width: "100%",
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          fontWeight="500"
-                          sx={{
-                            fontSize: "0.85rem",
-                            color: "text.primary",
-                          }}
-                        >
-                          Drawing: {option.drawingNumber}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ fontSize: "0.72rem" }}
-                        >
-                          {option.nomenclature} | Type: {option.componentType}
-                        </Typography>
-                      </Box>
-                    </li>
-                  );
-                }}
-                renderGroup={(params) => (
-                  <li key={params.key}>
-                    <Typography
-                      variant="subtitle2"
-                      fontWeight="800"
-                      sx={{
-                        px: 2,
-                        py: 0.5,
-                        backgroundColor: "grey.200",
-                        color: "primary.main",
-                        fontSize: "0.95rem",
-                        letterSpacing: "0.5px",
-                      }}
-                    >
-                      LN CODE: {params.group}
-                    </Typography>
-                    <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
-                  </li>
-                )}
-                renderInput={(params: any) => (
-                  <TextField
-                    {...params}
-                    label="LN Item Code"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLnSearchLoading ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            {/* Drawing Number Filter */}
-            <FormControl
-              sx={{ minWidth: { xs: "100%", sm: 280 } }}
-              size="small"
-            >
-              <Autocomplete
-                size="small"
-                options={drawingNumbers}
-                getOptionLabel={(option) => {
-                  if (typeof option === "string") return option;
-                  return option.drawingNumber || "";
-                }}
-                value={selectedDrawing}
-                loading={drawingLoading}
-                onInputChange={(_: any, value: string) => {
-                  if (value.length >= 3) {
-                    debouncedDrawingSearch(value);
-                  }
-                }}
-                onChange={(_: any, value: any) => {
-                  setSelectedDrawing(value);
-                }}
-                isOptionEqualToValue={(option: any, value: any) =>
-                  Boolean(
-                    (value?.id && option.id === value.id) ||
-                    (option.drawingNumber && value?.drawingNumber && option.drawingNumber.trim().toLowerCase() === value.drawingNumber.trim().toLowerCase())
-                  )
-                }
-                renderOption={(props: any, option: any) => (
-                  <li {...props}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        py: 0.5,
-                      }}
-                    >
-                      <Typography variant="body2">
-                        {option.drawingNumber}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {option.nomenclature || ""} |{" "}
-                        {option.componentType || ""}
-                      </Typography>
-                    </Box>
-                  </li>
-                )}
-                renderInput={(params: any) => (
-                  <TextField
-                    {...params}
-                    label="Drawing Number"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: <>{params.InputProps.endAdornment}</>,
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            <FormControl
-              sx={{ minWidth: { xs: "100%", sm: 120 } }}
-              size="small"
-            >
-              <Autocomplete
-                size="small"
-                options={productionSeries}
-                getOptionLabel={(option) => {
-                  if (typeof option === "string") return option;
-                  return option.productionSeries || "";
-                }}
-                value={selectedProductionSeries}
-                onChange={(_, value) => {
-                  setSelectedProductionSeries(value);
-                }}
-                isOptionEqualToValue={(option, value) =>
-                  option.id === (value?.id || "")
-                }
-                renderOption={(props, option) => (
-                  <li {...props}>
-                    <Typography variant="body2">
-                      {option.productionSeries}
-                    </Typography>
-                  </li>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Prod Series"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: <>{params.InputProps.endAdornment}</>,
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            <FormControl sx={{ minWidth: { xs: "100%", sm: 100 } }}>
-              <TextField
-                size="small"
-                label="ID Number"
-                sx={{ width: 100 }}
-                value={idNumber}
-                onChange={(e) => setIdNumber(e.target.value)}
-                variant="outlined"
-              />
-            </FormControl>
-
+      {/* 3. Unified Single Outer Paper Container */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 1,
+        }}
+      >
+        {/* Section 1: Filter Bar & Active Chips */}
+        <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+          {/* ── Precheck Tab Filters ─────────────────────────────────────────── */}
+          {activeTab === "precheck" && (
             <Box
               sx={{
                 display: "flex",
+                alignItems: "flex-end",
                 gap: 1,
-                width: { xs: "100%", sm: "auto" },
-                justifyContent: { xs: "space-between", sm: "flex-start" },
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                pt: 1.5,
+                pb: 0.5,
+                "&::-webkit-scrollbar": { display: "none" },
               }}
             >
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{ minWidth: { xs: "30%", sm: 130 }, height: 32 }}
+              {/* Combined Search */}
+              <TextField
                 size="small"
-                onClick={handleViewPrecheck}
-                disabled={isLoading || !isSearchCriteriaFilled}
+                placeholder="Search PO No. , Drawing No. , LN Item Code…"
+                value={combinedSearch}
+                onChange={(e) => { setCombinedSearch(e.target.value); setPage(0); }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: combinedSearch ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => { setCombinedSearch(""); setPage(0); }}
+                        edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                      >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+                sx={{
+                  flex: "1 1 340px",
+                  minWidth: 260,
+                }}
+              />
+
+              {/* Production Series */}
+              <MultiSelectFilter
+                label="Prod Series"
+                value={selectedProductionSeries}
+                options={prodSeriesOptions}
+                onChange={(newValue) => {
+                  setSelectedProductionSeries(newValue);
+                  setPage(0);
+                }}
+                flex="0 0 150px"
+                minWidth={120}
+              />
+
+              {/* Status */}
+              <MultiSelectFilter
+                label="Status"
+                value={selectedStatus}
+                options={["Pending", "Partial", "Completed"]}
+                onChange={(newValue) => {
+                  setSelectedStatus(newValue);
+                  setPage(0);
+                }}
+                flex="0 0 120px"
+                minWidth={100}
+              />
+
+              {/* Date From */}
+              <TextField
+                size="small"
+                type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                placeholder="From Date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                inputProps={{ title: "From Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: dateFrom ? "#344054" : "#98A2B3",
+                  },
+                }}
+              />
+
+              {/* Date To */}
+              <TextField
+                size="small"
+                type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                placeholder="To Date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                inputProps={{ title: "To Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: dateTo ? "#344054" : "#98A2B3",
+                  },
+                }}
+              />
+
+              {/* Apply Button */}
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleApplyFilters}
+                disabled={!isPrecheckDropdownSelected || isPrecheckLoading}
+                sx={{
+                  flex: "0 0 auto",
+                  backgroundColor: "primary.main",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  borderRadius: "6px",
+                  px: 2,
+                  height: 38,
+                  textTransform: "none",
+                  boxShadow: "none",
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                }}
               >
-                <VisibilityIcon sx={{ mr: 1 }} />
-                View
+                Apply
               </Button>
+
+              {/* Clear Button */}
               <Button
-                variant="contained"
-                color="info"
-                sx={{ minWidth: { xs: "30%", sm: 130 }, height: 32 }}
                 size="small"
-                onClick={handleExport}
-                disabled={!isSearchCriteriaFilled}
+                variant="text"
+                onClick={handleClearAll}
+                sx={{
+                  flex: "0 0 auto",
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  height: 38,
+                  px: 1,
+                  minWidth: 55,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                }}
               >
-                <FileDownloadIcon sx={{ mr: 1 }} />
-                Export
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                sx={{ minWidth: { xs: "30%", sm: 130 }, height: 32 }}
-                size="small"
-                onClick={handleReset}
-                disabled={!isResetEnabled}
-              >
-                <RefreshIcon sx={{ mr: 1 }} />
-                Reset
+                Clear
               </Button>
             </Box>
+          )}
+
+          {/* ── Consumed Tab Filters  ────────────────────────────── */}
+          {activeTab === "consumed" && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                py: 0.25,
+                "&::-webkit-scrollbar": { display: "none" },
+              }}
+            >
+              {/* 1. LN Item Code (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
+                options={lnOptions}
+                value={selectedLnItemCode.length > 0 ? selectedLnItemCode[0] : null}
+                onChange={(_, newValue) => {
+                  if (newValue && typeof newValue !== "string") {
+                    const lnVal = newValue.lnItemCode || newValue.drawingNumber;
+                    setSelectedLnItemCode(lnVal ? [String(lnVal)] : []);
+                    if (newValue.drawingNumber) {
+                      setSelectedDrawing([String(newValue.drawingNumber)]);
+                    }
+                  } else if (typeof newValue === "string") {
+                    setSelectedLnItemCode([newValue]);
+                  } else {
+                    setSelectedLnItemCode([]);
+                  }
+                  setPage(0);
+                }}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "input") {
+                    setLnSearchText(newInputValue);
+                  }
+                }}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.lnItemCode || option?.drawingNumber || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.lnItemCode || opt?.drawingNumber || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const lnCode = typeof option === "string" || typeof option === "number" ? String(option) : option?.lnItemCode || option?.drawingNumber || "";
+                  const dwgNum = typeof option === "object" ? option?.drawingNumber : "";
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
+                          {lnCode}
+                        </Typography>
+                        {dwgNum ? (
+                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
+                            Drawing: {dwgNum}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "28px !important",
+                      py: "3px !important",
+                      px: "10px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="LN Item Code *"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "1 1 140px", minWidth: 110 }}
+              />
+
+              {/* 2. Drawing Number (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
+                options={drawingOptions}
+                value={selectedDrawing.length > 0 ? selectedDrawing[0] : null}
+                onChange={(_, newValue) => {
+                  if (newValue && typeof newValue !== "string") {
+                    const dwgVal = newValue.drawingNumber || newValue.lnItemCode;
+                    setSelectedDrawing(dwgVal ? [String(dwgVal)] : []);
+                    if (newValue.lnItemCode || newValue.lnitemcode) {
+                      setSelectedLnItemCode([String(newValue.lnItemCode || newValue.lnitemcode)]);
+                    }
+                  } else if (typeof newValue === "string") {
+                    setSelectedDrawing([newValue]);
+                  } else {
+                    setSelectedDrawing([]);
+                  }
+                  setPage(0);
+                }}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.drawingNumber || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.drawingNumber || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const dwgNum = typeof option === "string" || typeof option === "number" ? String(option) : option?.drawingNumber || option?.lnItemCode || "";
+                  const lnCode = typeof option === "object" ? option?.lnItemCode : "";
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
+                          {dwgNum}
+                        </Typography>
+                        {lnCode ? (
+                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
+                            LN: {lnCode}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "28px !important",
+                      py: "3px !important",
+                      px: "10px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Drawing No. *"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "1 1 145px", minWidth: 115 }}
+              />
+
+              {/* 3. Production Series (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
+                options={prodSeriesOptions}
+                value={selectedProductionSeries.length > 0 ? selectedProductionSeries[0] : null}
+                onChange={(_, newValue) => {
+                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
+                  setSelectedProductionSeries(val ? [String(val)] : []);
+                  setPage(0);
+                }}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionSeries || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.productionSeries || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const label = typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionSeries || "";
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: "#101828", fontSize: "0.82rem" }}>
+                        {label}
+                      </Typography>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "26px !important",
+                      py: "2px !important",
+                      px: "8px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Prod Series *"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "1 1 115px", minWidth: 90 }}
+              />
+
+              {/* 4. Assembly No (Searchable Autocomplete) */}
+              <Autocomplete
+                size="small"
+                options={consumedAssemblyOptions}
+                value={selectedPO.length > 0 ? selectedPO[0] : null}
+                onChange={(_, newValue) => {
+                  const val = typeof newValue === "string" ? newValue : newValue ? ((newValue as any).id ?? (newValue as any).label) : null;
+                  setSelectedPO(val ? [String(val)] : []);
+                  setPage(0);
+                }}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (reason === "input") {
+                    setPOSearchText(newInputValue);
+                  }
+                }}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" || typeof option === "number" ? String(option) : option?.label || option?.productionOrderNumber || ""
+                }
+                filterOptions={(options, { inputValue }) => {
+                  if (!inputValue || inputValue.trim() === "") return options.slice(0, 100);
+                  const searchLower = inputValue.toLowerCase().trim();
+                  return options
+                    .filter((opt: any) => {
+                      const label = typeof opt === "string" || typeof opt === "number" ? String(opt) : opt?.label || opt?.productionOrderNumber || "";
+                      return label.toLowerCase().includes(searchLower);
+                    })
+                    .slice(0, 100);
+                }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const poNum = typeof option === "string" || typeof option === "number" ? String(option) : option?.productionOrderNumber || option?.drawingNumber || "";
+                  const lnCode = typeof option === "object" ? option?.lnItemCode : "";
+                  const dwgNum = typeof option === "object" ? option?.drawingNumber : "";
+                  const nom = typeof option === "object" ? option?.nomenclature : "";
+                  const compType = typeof option === "object" ? option?.componentType : "";
+                  const sub = [lnCode ? `LN: ${lnCode}` : null, dwgNum && dwgNum !== poNum ? `Drawing: ${dwgNum}` : null, nom, compType].filter(Boolean).join(" | ");
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box sx={{ display: "flex", flexDirection: "column", width: "100%", py: 0.1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.82rem" }}>
+                          {poNum}
+                        </Typography>
+                        {sub ? (
+                          <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
+                            {sub}
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    </li>
+                  );
+                }}
+                ListboxProps={{
+                  style: { maxHeight: "260px" },
+                  sx: {
+                    "& .MuiAutocomplete-option": {
+                      minHeight: "28px !important",
+                      py: "3px !important",
+                      px: "10px !important",
+                      fontSize: "0.82rem",
+                    },
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Assembly No"
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        fontSize: "0.825rem",
+                        height: 38,
+                        backgroundColor: "background.paper",
+                        borderRadius: "8px",
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                      },
+                    }}
+                  />
+                )}
+                sx={{ flex: "1 1 125px", minWidth: 100 }}
+              />
+
+              {/* 5. ID Number */}
+              <TextField
+                placeholder="ID Number..."
+                size="small"
+                variant="outlined"
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                InputProps={{
+                  endAdornment: idNumber ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setIdNumber("")}
+                        edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                      >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+                sx={{
+                  flex: "1 1 95px",
+                  minWidth: 75,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    fontSize: "0.825rem",
+                    height: 38,
+                    backgroundColor: "background.paper",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                  },
+                }}
+              />
+
+              {/* Apply Button */}
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleApplyFilters}
+                disabled={!isConsumedDropdownSelected || isConsumedLoading}
+                sx={{
+                  flexShrink: 0,
+                  backgroundColor: "primary.main",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  borderRadius: "8px",
+                  px: 2,
+                  height: 38,
+                  textTransform: "none",
+                  boxShadow: "none",
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                }}
+              >
+                Apply
+              </Button>
+
+              {/* Clear Button */}
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleClearAll}
+                sx={{
+                  flexShrink: 0,
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  height: 38,
+                  minWidth: 55,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+          )}
+
+          {/* Active Filter Chips Bar & Results Counter */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mt: activeChips.length > 0 ? 0.75 : 0.5,
+              pt: activeChips.length > 0 ? 0.5 : 0,
+              borderTop: activeChips.length > 0 ? "1px solid #F2F4F7" : "none",
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
+            {activeChips.length > 0 ? (
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center">
+                {activeChips.map((chip) => (
+                  <Chip
+                    key={chip.id}
+                    label={chip.label}
+                    onDelete={chip.onRemove}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      fontWeight: 600,
+                      fontSize: "0.775rem",
+                      height: 24,
+                      borderRadius: "14px",
+                      border: "1px solid #E9EAEB",
+                      "& .MuiChip-deleteIcon": {
+                        color: "#667085",
+                        fontSize: 13,
+                        "&:hover": { color: "#344054" },
+                      },
+                    }}
+                  />
+                ))}
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={handleClearAll}
+                  sx={{
+                    color: "primary.main",
+                    fontWeight: 600,
+                    fontSize: "0.775rem",
+                    textTransform: "none",
+                    p: 0,
+                    minWidth: "auto",
+                    "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                  }}
+                >
+                  Clear all
+                </Button>
+              </Stack>
+            ) : <Box />}
+
+            {/* Results Count Display */}
+            <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500, ml: "auto" }}>
+              {filteredData.length.toLocaleString()} {filteredData.length === 1 ? "result" : "results"}
+            </Typography>
           </Box>
-        </CardContent>
-      </Card>
+        </Box>
 
-      {/* Precheck Results Display */}
-      {showResults && (
-        <Typography variant="body2" sx={{ mb: 1, fontWeight: "medium" }}>
-          Showing results for Production Order: {productionOrder || "All"} /
-          Drawing: {selectedDrawing?.drawingNumber || "All"} / Production
-          Series: {selectedProductionSeries?.productionSeries || "All"} / ID:{" "}
-          {idNumber || "All"}
-        </Typography>
-      )}
-
-      {/* Precheck Results Table */}
-      <Paper sx={{ mt: 1, mb: 1, p: 0.5, boxShadow: 2 }}>
+        {/* Section 2: Data Table */}
         <TableContainer
           sx={{
-            overflow: "auto",
+            overflowX: "auto",
+            minHeight: 350,
+            maxHeight: "calc(100vh - 290px)",
           }}
         >
-          <Table stickyHeader size="small">
+          <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1300 }}>
+            {/* Table Head */}
             <TableHead>
-              <TableRow sx={{ height: 40 }}>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 20,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "sr"}
-                    direction={orderBy === "sr" ? order : "asc"}
-                    onClick={() => handleRequestSort("sr")}
-                  >
-                    SR
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 80,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "lnitemcode"}
-                    direction={orderBy === "lnitemcode" ? order : "asc"}
-                    onClick={() => handleRequestSort("lnitemcode")}
-                  >
-                    LN Item Code
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 80,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "drawingNumber"}
-                    direction={orderBy === "drawingNumber" ? order : "asc"}
-                    onClick={() => handleRequestSort("drawingNumber")}
-                  >
-                    Drawing Number
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 100,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "nomenclature"}
-                    direction={orderBy === "nomenclature" ? order : "asc"}
-                    onClick={() => handleRequestSort("nomenclature")}
-                  >
-                    Nomenclature
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 40,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "quantity"}
-                    direction={orderBy === "quantity" ? order : "asc"}
-                    onClick={() => handleRequestSort("quantity")}
-                  >
-                    Qty
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 80,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "idNumber"}
-                    direction={orderBy === "idNumber" ? order : "asc"}
-                    onClick={() => handleRequestSort("idNumber")}
-                  >
-                    ID Number
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 60,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "ir"}
-                    direction={orderBy === "ir" ? order : "asc"}
-                    onClick={() => handleRequestSort("ir")}
-                  >
-                    IR
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 60,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "msn"}
-                    direction={orderBy === "msn" ? order : "asc"}
-                    onClick={() => handleRequestSort("msn")}
-                  >
-                    MSN
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 80,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <TableSortLabel
-                    active={orderBy === "mrirNumber"}
-                    direction={orderBy === "mrirNumber" ? order : "asc"}
-                    onClick={() => handleRequestSort("mrirNumber")}
-                  >
-                    MRIR Number
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 80,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Type
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 70,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Status
-                </TableCell>
-                <TableCell
-                  align="center"
-                  sx={{
-                    fontWeight: "bold",
-                    bgcolor: "grey.50",
-                    padding: "5px 8px !important",
-                    fontSize: "0.85rem",
-                    minWidth: 40,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Details
-                </TableCell>
+              <TableRow sx={{ backgroundColor: COLOUR_ROLES.headerBg }}>
+                {visibleColumns.map((col) => (
+                  <SortableTableHeader
+                    key={col.field}
+                    label={col.headerName}
+                    columnKey={col.field}
+                    sortColumn={orderBy}
+                    sortDirection={order}
+                    onSort={col.sortable !== false ? handleRequestSort : undefined}
+                    align={col.align || "center"}
+                    minWidth={col.minWidth}
+                    isSortable={col.sortable !== false}
+                  />
+                ))}
               </TableRow>
             </TableHead>
+
+            {/* Table Body */}
             <TableBody>
-              {isLoading ? (
+              {isPrecheckLoading || isConsumedLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ height: 100 }}>
-                    <CircularProgress size={30} />
+                  <TableCell colSpan={visibleColumns.length} align="center" sx={{ height: 280, borderBottom: "none" }}>
+                    <CircularProgress size={32} color="primary" />
+                    <Typography variant="body2" sx={{ color: "#667085", mt: 1 }}>
+                      Loading precheck records...
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ) : paginatedResults.length > 0 ? (
-                paginatedResults.map((item: any, index: number) => (
-                  <React.Fragment key={index}>
-                    <TableRow
-                      hover
-                      sx={{
-                        height: 28,
-                        backgroundColor: item.isRejected
-                          ? "#e0e0e0"
-                          : item.isPrecheckComplete
-                            ? "#f0f0f0"
-                            : "inherit",
-                        opacity: item.isRejected
-                          ? 0.7
-                          : item.isPrecheckComplete
-                            ? 0.8
-                            : 1,
-                      }}
-                    >
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
+              ) : paginatedRows.length > 0 ? (
+                paginatedRows.map((row: any, idx: number) => {
+                  const rowKey = row.id ?? row.sr;
+                  const isExpanded = activeTab === "precheck" && expandedRows.has(rowKey);
+
+                  const statusLower = (row.precheckStatus || row.status || "").toLowerCase();
+                  const isRej = row.isRejected || statusLower === "rejected";
+
+                  const remQtyNum =
+                    row.remainingQuantity !== undefined && row.remainingQuantity !== null
+                      ? Number(row.remainingQuantity)
+                      : null;
+                  const isZeroRemQty = remQtyNum !== null && remQtyNum === 0;
+
+                  const isComplete =
+                    !isRej &&
+                    (statusLower === "completed" ||
+                      statusLower === "verified" ||
+                      isZeroRemQty ||
+                      (row.isPrecheckComplete && (remQtyNum === null || remQtyNum === 0)));
+
+                  const isUpdated =
+                    !isRej &&
+                    !isComplete &&
+                    (statusLower === "updated" ||
+                      row.isUpdated ||
+                      Boolean(row.qrCode));
+                  const isShort =
+                    !isRej &&
+                    !isComplete &&
+                    !isUpdated &&
+                    (statusLower === "short" || statusLower === "partial");
+
+                  let rowBg = "#FFFFFF";
+                  let rowHoverBg = "#F8FAFC";
+                  if (isRej) {
+                    rowBg = "#FDE8E8";
+                    rowHoverBg = "#FDE8E8";
+                  } else if (isUpdated) {
+                    rowBg = "#FFF7ED";
+                    rowHoverBg = "#FFF7ED";
+                  } else if (isShort) {
+                    rowBg = "#FFFBEB";
+                    rowHoverBg = "#FFFBEB";
+                  }
+
+                  return (
+                    <React.Fragment key={rowKey ?? idx}>
+                      {/* Main row */}
+                      <TableRow
+                        hover
+                        sx={{
+                          ...commonTableRowStyle,
+                          backgroundColor: rowBg,
+                          opacity: isRej ? 0.7 : 1,
+                          transition: "background-color 0.2s ease, opacity 0.4s ease",
+                          "&:hover": {
+                            backgroundColor: `${rowHoverBg} !important`,
+                          },
+                        }}
                       >
-                        {item.sr}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.lnItemCode}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.drawingNumber}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.nomenclature}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.idNumber || "-"}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.ir || "-"}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.msn || "-"}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.mrirNumber || "-"}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {getComponentTypeChip(item.componentType || "")}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        {item.isRejected ? (
-                          <Chip
-                            label="REJECTED"
-                            size="small"
-                            color="error"
+                        {visibleColumns.map((col) => (
+                          <TableCell
+                            key={col.field}
+                            align={col.align || "center"}
                             sx={{
-                              fontWeight: "bold",
-                              fontSize: "0.65rem",
-                              height: 20,
+                              fontSize: "0.775rem",
+                              color: COLOUR_ROLES.textMain,
+                              py: 0.15,
+                              px: 0.75,
+                              minWidth: col.minWidth,
+                              whiteSpace: "nowrap",
                             }}
-                          />
-                        ) : (
-                          <Chip
-                            label="ACTIVE"
-                            size="small"
-                            color="success"
-                            sx={{
-                              fontWeight: "bold",
-                              fontSize: "0.65rem",
-                              height: 20,
-                            }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ padding: "4px 8px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRowExpand(index)}
-                          sx={{ p: 0.2 }}
-                        >
-                          {expandedRows.has(index) ? (
-                            <ExpandLessIcon fontSize="small" />
-                          ) : (
-                            <ExpandMoreIcon fontSize="small" />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow sx={{ height: 'auto' }}>
-                      <TableCell
-                        style={{ paddingBottom: 0, paddingTop: 0 }}
-                        colSpan={12}
-                      >
-                        <Collapse
-                          in={expandedRows.has(index)}
-                          timeout="auto"
-                          unmountOnExit
-                        >
-                          <Box sx={{ margin: 0.5 }}>
-                            <Table size="small" aria-label="additional-details">
-                              <TableHead>
-                                <TableRow sx={{ height: 40 }}>
-                                  <TableCell
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      fontWeight: "bold",
-                                      padding: "3px 6px !important",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    Remarks
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      fontWeight: "bold",
-                                      padding: "3px 6px !important",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    User
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      fontWeight: "bold",
-                                      padding: "3px 6px !important",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    Date
-                                  </TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                <TableRow sx={{ height: 40 }}>
-                                  <TableCell
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      padding: "2px 6px !important",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    {item.remarks || "-"}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      padding: "2px 6px !important",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    {item.username || "-"}
-                                  </TableCell>
-                                  <TableCell
-                                    sx={{
-                                      fontSize: "0.75rem",
-                                      padding: "2px 6px !important",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    {item.modifiedDate || "-"}
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))
-              ) : showResults ? (
-                <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ height: 100 }}>
-                    No records found
-                  </TableCell>
-                </TableRow>
+                          >
+                            {renderCellContent(col.field, row, idx)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+
+                      {/* Expanded sub-table (precheck tab only) */}
+                      {activeTab === "precheck" && (
+                        <TableRow sx={{ height: "auto" }}>
+                          <TableCell
+                            colSpan={visibleColumns.length}
+                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                          >
+                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                              <Box
+                                sx={{
+                                  margin: 1,
+                                  p: 1.5,
+                                  backgroundColor: "grey.50",
+                                  borderRadius: "6px",
+                                  border: "1px solid",
+                                  borderColor: "grey.200",
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: "primary.main",
+                                    display: "block",
+                                    mb: 0.75,
+                                    fontSize: "0.8rem",
+                                  }}
+                                >
+                                  Additional Details
+                                </Typography>
+                                <Table size="small" sx={{ width: "100%" }}>
+                                  <TableHead>
+                                    <TableRow sx={{ backgroundColor: "grey.100" }}>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        MRIR Number
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        Nomenclature
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        Remarks
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        User
+                                      </TableCell>
+                                      <TableCell
+                                        sx={{
+                                          fontWeight: 600,
+                                          color: "text.primary",
+                                          fontSize: "0.75rem",
+                                          py: 0.5,
+                                          px: 1.5,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        Date
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    <TableRow>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.mrirNumber || "-"}
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.nomenclature || "-"}
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.remarks || <Typography component="span" sx={{ color: "#98A2B3", fontStyle: "italic", fontSize: "0.75rem" }}>No remarks</Typography>}
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.username || "-"}
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                        {row.modifiedDate || "-"}
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={11}
-                    align="center"
-                    sx={{ height: 100, color: "text.secondary" }}
-                  >
-                    Enter search criteria and click "View Precheck" to see
-                    results
-                  </TableCell>
-                </TableRow>
+                <EmptyState colSpan={visibleColumns.length} title={activeChips.length > 0 ? "No Matching Records found" : "Apply filters to search"} />
               )}
             </TableBody>
           </Table>
         </TableContainer>
 
-        {/* Pagination */}
-        {searchResults.length > 0 && (
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            component="div"
-            count={searchResults.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            sx={{
-              borderTop: "1px solid #e0e0e0",
-              "& .MuiTablePagination-toolbar": {
-                minHeight: 40,
-              },
-              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-              {
-                fontSize: "0.8rem",
-              },
-            }}
-          />
-        )}
+        {/* Section 3: Footer Pagination */}
+        <CustomPagination
+          page={page}
+          pageSize={rowsPerPage}
+          totalCount={activeTab === "precheck" ? (totalRecords || filteredData.length) : filteredData.length}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            if (activeTab === "precheck") {
+              fetchPrecheckData(newPage + 1, rowsPerPage);
+            }
+          }}
+          onPageSizeChange={(newSize) => {
+            setRowsPerPage(newSize);
+            setPage(0);
+            if (activeTab === "precheck") {
+              fetchPrecheckData(1, newSize);
+            }
+          }}
+        />
+
       </Paper>
-      </>
-      )}
+
+
+
+      {/* Export Options Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => !isDownloading && setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 700,
+            color: "#101828",
+            fontSize: "1.1rem",
+            pb: 1,
+          }}
+        >
+          Export {activeTab === "precheck" ? "Precheck Details" : "Consumed In Details"}
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isDownloading}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns(activeExportColumns.map((c) => c.key));
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === activeExportColumns.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < activeExportColumns.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === activeExportColumns.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${activeExportColumns.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {activeExportColumns.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isExporting}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <FileDownloadIcon fontSize="small" />}
+            onClick={handleConfirmExportData}
+            disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

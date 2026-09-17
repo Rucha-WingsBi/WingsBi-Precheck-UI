@@ -9,11 +9,25 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
   Box,
-  Typography,
   Alert,
   useMediaQuery,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Checkbox,
+  Chip,
+  Grid,
+  Typography,
+  IconButton,
+  Button,
 } from "@mui/material";
+import { Close as CloseIcon, FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import {
   viewPrecheckDetails,
   makePrecheck,
@@ -23,7 +37,6 @@ import {
   exportPrecheckDetails,
   remainingPrecheck,
   setHasPendingScans,
-  resetQrQuantity,
   deletePrecheckDetails,
   removePrecheckDetails,
 } from "../../store/slices/precheckSlice";
@@ -43,15 +56,14 @@ import {
   type ProductionOrderMaster,
 } from "../../hooks/usePONumbers";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Html5Qrcode } from "html5-qrcode";
-import * as XLSX from "xlsx";
 
 import type { RootState, AppDispatch } from "../../store/store";
 import debounce from "lodash.debounce";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 // Sub-component imports
 import type { GridItem } from "./make-precheck/types";
-import { formatDate } from "./make-precheck/utils";
+
 import QuantityDialog from "./make-precheck/QuantityDialog";
 import RejectDialog from "./make-precheck/RejectDialog";
 import AddQrCodeDialog from "./make-precheck/AddQrCodeDialog";
@@ -62,11 +74,63 @@ import {
 } from "./make-precheck/ConfirmationDialogs";
 import QrScannerDialog from "./make-precheck/QrScannerDialog";
 import PrecheckFormControls from "./make-precheck/PrecheckFormControls";
-import PrecheckActionBar from "./make-precheck/PrecheckActionBar";
+import PrecheckActionBar, { PrecheckHeaderBar } from "./make-precheck/PrecheckActionBar";
 import PrecheckTable from "./make-precheck/PrecheckTable";
 import { usePrecheckScanning } from "./make-precheck/usePrecheckScanning";
 import ExcelUploadResultDialog from "./make-precheck/ExcelUploadResultDialog";
 import AddBomDrawingDialog from "./make-precheck/AddBomDrawingDialog";
+
+const MAKE_PRECHECK_EXPORT_COLUMNS = [
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing No." },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "quantity", label: "Qty" },
+  { key: "scannedQuantity", label: "Scanned Qty" },
+  { key: "remainingQuantity", label: "Remaining Qty" },
+  { key: "qrCode", label: "QR Code" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "ir", label: "IR Number" },
+  { key: "msn", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "componentType", label: "Type" },
+  { key: "precheckStatus", label: "Precheck Status" },
+  { key: "remarks", label: "Remarks" },
+];
+
+const findMatchingDrawingInList = (
+  allDrawings: any[],
+  target: { drawingNumberId?: number; drawingNumber?: string; lnItemCode?: string }
+) => {
+  if (!allDrawings || allDrawings.length === 0 || !target) return null;
+
+  // 1. First priority: match by drawingNumberId / id
+  if (target.drawingNumberId) {
+    const byId = allDrawings.find(
+      (d: any) => d.id === target.drawingNumberId || d.drawingNumberId === target.drawingNumberId
+    );
+    if (byId) return byId;
+  }
+
+  // 2. Second priority: match by drawingNumber (exact string match, case-insensitive)
+  if (target.drawingNumber && String(target.drawingNumber).trim()) {
+    const targetDwgLower = String(target.drawingNumber).trim().toLowerCase();
+    const byDwg = allDrawings.find(
+      (d: any) => d.drawingNumber && String(d.drawingNumber).trim().toLowerCase() === targetDwgLower
+    );
+    if (byDwg) return byDwg;
+  }
+
+  // 3. Third priority: fallback to lnItemCode ONLY if drawingNumber is NOT specified
+  if (!target.drawingNumber && target.lnItemCode && String(target.lnItemCode).trim()) {
+    const targetLnLower = String(target.lnItemCode).trim().toLowerCase();
+    const byLn = allDrawings.find(
+      (d: any) => d.lnItemCode && String(d.lnItemCode).trim().toLowerCase() === targetLnLower
+    );
+    if (byLn) return byLn;
+  }
+
+  return null;
+};
 
 const MakePrecheck: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -140,10 +204,13 @@ const MakePrecheck: React.FC = () => {
   const { data: poNumbers = [], isLoading: poLoading } =
     usePONumbers(debouncedPOSearch);
 
+  const isClearedRef = useRef(false);
+
   // Get PO details from navigation state if available
   const navigationState = location.state as any;
-  const { data: navigationPODetails } = usePODetails(
-    navigationState?.productionOrderNumber,
+  const activePONumber = selectedPO?.productionOrderNumber || navigationState?.productionOrderNumber;
+  const { data: poDetailsData } = usePODetails(
+    activePONumber,
   );
 
   const { user } = useSelector((state: RootState) => state.auth);
@@ -223,6 +290,8 @@ const MakePrecheck: React.FC = () => {
   // Selected row state
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
+
+
   // Button states
   const [isMakePrecheckEnabled, setIsMakePrecheckEnabled] = useState(false);
 
@@ -232,15 +301,12 @@ const MakePrecheck: React.FC = () => {
     quantityDialogOpen,
     maxQuantity,
     selectedQuantity,
-    pendingBarcodeData,
-    selectedQuantityItem,
     openScanner,
     scannerError,
     uploadInProgress,
     uploadError,
     facingMode,
     scannerReady,
-    cameraPermissionStatus,
     showPermissionDialog,
     excelUploadResult,
     excelResultDialogOpen,
@@ -263,7 +329,7 @@ const MakePrecheck: React.FC = () => {
     handleScanFileUpload,
     handleExcelUpload,
     handleQuantityConfirm,
-    processBarcodeAsync,
+  
     handleDownloadTemplate,
   } = usePrecheckScanning({
     searchResults,
@@ -271,12 +337,24 @@ const MakePrecheck: React.FC = () => {
     user,
     showAlertMessage,
     setBatchWarningOpen,
+    onAutoSubmit: (updatedItems?: GridItem[]) => {
+      handleSubmitPrecheck(updatedItems);
+    },
     onExcelUploadSuccess: () => {
       // Reload current grid if we have loaded data
       if (hasLoadedData && selectedDrawing && selectedProductionSeries && idNumber) {
         executeMakePrecheck();
       }
     },
+    // Form-level context forwarded to usePrecheckScanning for the ViewPrecheck
+    // duplicate-QR check on BATCH / FIM / SI scans
+    selectedDrawingId: selectedDrawing?.id ?? selectedDrawing?.drawingNumberId,
+    selectedProductionSeriesId:
+      selectedProductionSeries?.id ??
+      selectedProductionSeries?.prodSeriesId ??
+      selectedProductionSeries?.productionSeriesId,
+    selectedIdNumber: idNumber,
+    selectedProductionOrderNumber: selectedPO?.productionOrderNumber,
   });
 
   // Debounced search functions
@@ -444,18 +522,13 @@ const MakePrecheck: React.FC = () => {
   useEffect(() => {
     const navigationState = location.state as any;
 
-    if (navigationState && navigationState.drawingNumber && !hasLoadedData) {
+    if (navigationState && navigationState.drawingNumber && !hasLoadedData && !isClearedRef.current) {
       console.log("Navigation state detected:", navigationState);
 
       // Wait for master data to load
       if (allDrawingNumbers.length > 0 && productionSeriesData.length > 0) {
-        // Find matching drawing number (case-insensitive and trimmed)
-        const matchingDrawing = allDrawingNumbers.find(
-          (d: any) =>
-            d.drawingNumber &&
-            navigationState.drawingNumber &&
-            d.drawingNumber.trim().toLowerCase() === navigationState.drawingNumber.trim().toLowerCase(),
-        );
+        // Find matching drawing number using precise matching
+        const matchingDrawing = findMatchingDrawingInList(allDrawingNumbers, navigationState);
 
         // Find matching production series (case-insensitive and trimmed)
         const matchingProdSeries = productionSeriesData.find(
@@ -520,15 +593,11 @@ const MakePrecheck: React.FC = () => {
               .then((response) => {
                 updateGridItems(response);
                 setShowResults(true);
-                showAlertMessage(
-                  "BOM loaded successfully from production order",
-                  "success",
-                );
               })
               .catch((error) => {
                 console.error("Error auto-loading BOM:", error);
                 showAlertMessage(
-                  "Error loading BOM: " + (error as Error).message,
+                  getErrorMessage(error, "Error loading BOM data"),
                   "error",
                 );
               })
@@ -548,49 +617,60 @@ const MakePrecheck: React.FC = () => {
     dispatch,
   ]);
 
-  // Handle PO details from navigation state when fetched via usePODetails
+  // Handle PO details when fetched via usePODetails (for both navigation and manual selection)
   useEffect(() => {
-    if (
-      navigationPODetails &&
-      navigationState?.productionOrderNumber
-    ) {
-      if (!selectedPO) {
-        setSelectedPO(navigationPODetails);
-        setPOSearchText(navigationPODetails.productionOrderNumber);
+    if (poDetailsData && !isClearedRef.current) {
+      if (!selectedPO || selectedPO.productionOrderNumber === poDetailsData.productionOrderNumber) {
+        setSelectedPO((prev) => (prev ? { ...poDetailsData, ...prev } : poDetailsData));
       }
 
-      // Map Production Series if not set yet
-      if (navigationPODetails.productionSeries && !selectedProductionSeries && productionSeriesData.length > 0) {
-        const matchingProdSeries = productionSeriesData.find(
-          (ps) => String(ps.productionSeries).trim().toLowerCase() === String(navigationPODetails.productionSeries).trim().toLowerCase(),
-        );
+      // Map Production Series if not set yet or lacks id
+      if ((poDetailsData.productionSeries || poDetailsData.prodSeriesId) && (!selectedProductionSeries || !selectedProductionSeries.id)) {
+        let matchingProdSeries = null;
+        if (productionSeriesData && productionSeriesData.length > 0) {
+          matchingProdSeries = productionSeriesData.find(
+            (ps: any) =>
+              (poDetailsData.prodSeriesId && ps.id === poDetailsData.prodSeriesId) ||
+              (ps.productionSeries && poDetailsData.productionSeries && String(ps.productionSeries).trim().toLowerCase() === String(poDetailsData.productionSeries).trim().toLowerCase()),
+          );
+        }
         if (matchingProdSeries) {
           setSelectedProductionSeries(matchingProdSeries);
+        } else if (!selectedProductionSeries) {
+          setSelectedProductionSeries({
+            id: poDetailsData.prodSeriesId,
+            productionSeries: poDetailsData.productionSeries || "",
+          });
         }
       }
 
       // Map ID Number if not set yet
-      const poStartId = navigationPODetails.startIdNumber ?? navigationPODetails.endIdNumber;
-      const targetId = navigationState?.startIdNumber ?? navigationState?.idNumber ?? poStartId;
+      const navState = location.state as any;
+      const poStartId = poDetailsData.startIdNumber ?? poDetailsData.endIdNumber;
+      const targetId = navState?.startIdNumber ?? navState?.idNumber ?? poStartId;
       if (targetId !== undefined && targetId !== null && !idNumber) {
         setIdNumber(targetId.toString());
       }
 
-      // Map Drawing if not set yet
-      if ((navigationPODetails.drawingNumber || navigationPODetails.lnItemCode) && !selectedDrawing && allDrawingNumbers.length > 0) {
-        const matchingDrawing = allDrawingNumbers.find(
-          (drawing) =>
-            (drawing.drawingNumber && navigationPODetails.drawingNumber && drawing.drawingNumber.trim().toLowerCase() === navigationPODetails.drawingNumber.trim().toLowerCase()) ||
-            (drawing.lnItemCode && navigationPODetails.lnItemCode && drawing.lnItemCode.trim().toLowerCase() === navigationPODetails.lnItemCode.trim().toLowerCase()),
-        );
+      // Map Drawing if not set yet or lacks id
+      if (poDetailsData.drawingNumber || poDetailsData.drawingNumberId || poDetailsData.lnItemCode) {
+        const matchingDrawing = findMatchingDrawingInList(allDrawingNumbers, poDetailsData);
 
         if (matchingDrawing) {
           setSelectedDrawing(matchingDrawing);
+        } else if (!selectedDrawing || !selectedDrawing.id) {
+          setSelectedDrawing({
+            id: poDetailsData.drawingNumberId,
+            drawingNumber: poDetailsData.drawingNumber || "",
+            lnItemCode: poDetailsData.lnItemCode || "",
+            nomenclature: poDetailsData.nomenclature || "",
+            componentType: poDetailsData.componentType || "",
+          });
         }
       }
     }
   }, [
-    navigationPODetails,
+    poDetailsData,
     selectedPO,
     navigationState,
     productionSeriesData,
@@ -602,17 +682,14 @@ const MakePrecheck: React.FC = () => {
 
   const validateFields = () => {
     // Check if mandatory fields are filled
-    const mandatoryFieldsFilled =
-      selectedDrawing?.drawingNumber &&
-      selectedProductionSeries?.id &&
-      idNumber;
-
-    // Check if the current combination is different from the previously loaded one
-    const hasDifferentCombination =
-      !hasLoadedData ||
-      selectedDrawing?.drawingNumber !== originalDrawingNumber ||
-      selectedProductionSeries?.id !== originalProdSeries ||
-      idNumber !== originalAssemblyNumber;
+    const drawingVal = selectedDrawing?.drawingNumber || (typeof selectedDrawing === "string" ? selectedDrawing : null);
+    const prodSeriesVal =
+      selectedProductionSeries?.id ||
+      selectedProductionSeries?.prodSeriesId ||
+      selectedProductionSeries?.productionSeriesId ||
+      selectedProductionSeries?.productionSeries ||
+      (typeof selectedProductionSeries === "string" ? selectedProductionSeries : null);
+    const mandatoryFieldsFilled = Boolean(drawingVal && prodSeriesVal && idNumber);
 
     // Check if ID Number is within valid range for the selected PO
     const isIdWithinRange =
@@ -620,12 +697,8 @@ const MakePrecheck: React.FC = () => {
       !idNumber ||
       parseInt(idNumber) <= selectedPO.endIdNumber;
 
-    // Enable button only if mandatory fields are filled AND
-    // either we haven't loaded data yet OR the combination is different AND
-    // the ID number is within valid range
-    setIsMakePrecheckEnabled(
-      mandatoryFieldsFilled && hasDifferentCombination && isIdWithinRange,
-    );
+    // Enable button whenever mandatory fields are filled and within range
+    setIsMakePrecheckEnabled(Boolean(mandatoryFieldsFilled && isIdWithinRange));
   };
 
   const handleMakePrecheck = async () => {
@@ -662,17 +735,25 @@ const MakePrecheck: React.FC = () => {
 
     try {
       setIsLoadingLocal(true);
-      // Disable the button immediately
       setHasLoadedData(true);
-      setOriginalDrawingNumber(selectedDrawing?.drawingNumber);
-      setOriginalProdSeries(selectedProductionSeries?.id);
+      setOriginalDrawingNumber(selectedDrawing?.drawingNumber || null);
+      setOriginalProdSeries(
+        selectedProductionSeries?.id ||
+        selectedProductionSeries?.prodSeriesId ||
+        selectedProductionSeries?.productionSeriesId ||
+        null
+      );
       setOriginalAssemblyNumber(activeIdNumber);
 
-      setIsMakePrecheckEnabled(false);
+      const drawingIdVal = selectedDrawing?.id ?? selectedDrawing?.drawingNumberId;
+      const prodSeriesIdVal =
+        selectedProductionSeries?.id ??
+        selectedProductionSeries?.prodSeriesId ??
+        selectedProductionSeries?.productionSeriesId;
 
       const payload = {
-        DrawingNumberId: selectedDrawing?.id,
-        ProductionSeriesId: selectedProductionSeries?.id,
+        DrawingNumberId: drawingIdVal,
+        ProductionSeriesId: prodSeriesIdVal,
         Id: activeIdNumber ? parseInt(activeIdNumber) : undefined,
         ProductionOrderNumber: selectedPO?.productionOrderNumber,
       };
@@ -681,16 +762,17 @@ const MakePrecheck: React.FC = () => {
       await updateGridItems(response);
 
       setShowResults(true);
-      // Submit button will be enabled automatically by useEffect when showResults becomes true
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in LoadGridData:", error);
+      setSearchResults([]);
+      setShowResults(true);
       showAlertMessage(
-        "Error loading data: " + (error as Error).message,
+        getErrorMessage(error, "Failed to fetch precheck details"),
         "error",
       );
     } finally {
       setIsLoadingLocal(false);
-      setIsMakePrecheckEnabled(false);
+      validateFields();
     }
   };
 
@@ -714,11 +796,13 @@ const MakePrecheck: React.FC = () => {
     return true;
   };
 
-  const handleSubmitPrecheck = async () => {
+  const handleSubmitPrecheck = async (itemsList?: GridItem[]) => {
     try {
       setIsLoadingLocal(true);
 
-      const componentsToSubmit = searchResults
+      const targetList = (itemsList && itemsList.length > 0) ? itemsList : searchResults;
+
+      const componentsToSubmit = targetList
         .filter((item) => item.isUpdated && !item.isSubmitted && item.qrCode)
         .map((item) => ({
           ConsumedDrawingNo: `${selectedProductionSeries?.productionSeries}/${selectedDrawing?.drawingNumber}/${idNumber}`,
@@ -816,25 +900,7 @@ const MakePrecheck: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error submitting precheck:", error);
-
-      // Extract user-friendly error message
-      let errorMessage = "Error submitting precheck";
-
-      if (error?.payload) {
-        // Redux rejected action with payload
-        errorMessage = error.payload;
-      } else if (error?.response?.data?.message) {
-        // API returned a structured error response
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        // Standard error object
-        errorMessage = error.message;
-      } else if (typeof error === "string") {
-        // String error
-        errorMessage = error;
-      }
-
-      showAlertMessage(`Error submitting precheck: ${errorMessage}`, "error");
+      showAlertMessage(getErrorMessage(error, "Error submitting precheck"), "error");
     } finally {
       setIsLoadingLocal(false);
     }
@@ -842,6 +908,9 @@ const MakePrecheck: React.FC = () => {
 
   // Cleanup function
   const resetAllData = useCallback(() => {
+    isClearedRef.current = true;
+    navigate(location.pathname, { replace: true, state: null });
+
     // Clear form fields
     setHasLoadedData(false);
     setSelectedDrawing(null);
@@ -903,16 +972,7 @@ const MakePrecheck: React.FC = () => {
     }
   };
 
-  const handleConfirmReload = () => {
-    setShowReloadConfirmation(false);
-    if (pendingAction === "reset") {
-      resetAllData();
-    } else if (pendingAction === "reload") {
-      executeMakePrecheck();
-    }
-    setPendingAction(null);
-  };
-
+ 
 
 
   // Handle row expansion
@@ -932,16 +992,7 @@ const MakePrecheck: React.FC = () => {
     setSelectedRow(selectedRow === actualIndex ? null : actualIndex);
   };
 
-  // Handle plus button click
-  const handlePlusClick = (item: GridItem) => {
-    setSelectedRowForAdd(item);
-    setAddQrFormData({
-      prodSeriesId: selectedProductionSeries?.id?.toString() || "",
-      idNumber: "",
-      qrCodeNumber: "",
-    });
-    setAddQrDialogOpen(true);
-  };
+
   const handleAddRow = async (item: GridItem) => {
     try {
       setIsLoadingLocal(true);
@@ -1439,18 +1490,38 @@ const MakePrecheck: React.FC = () => {
     }
   };
 
-  // handle export
-  const handleExport = () => {
-    // Create export parameters object with only defined values
-    const exportParams: {
-      productionOrderNumber?: string;
-      productionSeriesId?: number;
-      id?: number;
-      drawingNumberId?: number;
-      remainingPrecheck?: boolean;
-    } = {};
+  // Export Modal state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
 
-    // Only add parameters that have values
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === MAKE_PRECHECK_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const handleConfirmExportData = () => {
+    const selectedCols = exportMode === "all"
+      ? MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key)
+      : MAKE_PRECHECK_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key);
+
+    const exportParams: any = {};
+
     if (selectedPO?.productionOrderNumber) {
       exportParams.productionOrderNumber = selectedPO.productionOrderNumber;
     }
@@ -1464,64 +1535,31 @@ const MakePrecheck: React.FC = () => {
       exportParams.drawingNumberId = selectedDrawing.id;
     }
 
-    // Check if at least one parameter is provided
     if (Object.keys(exportParams).length === 0) {
       alert("Please enter at least one search criteria before exporting");
       return;
     }
 
-    // Add remainingPrecheck parameter based on filterRemainingOnly state
     exportParams.remainingPrecheck = filterRemainingOnly;
+    exportParams.selectedColumns = selectedCols;
 
-    // Call the export API
     dispatch(exportPrecheckDetails(exportParams))
       .unwrap()
-      .then((result) => {
-        if (result.success) {
-          // You can show a success message here if needed
-          // toast.success(result.message);
-        }
+      .then(() => {
+        setExportDialogOpen(false);
       })
       .catch((error) => {
         alert(error.message || "Failed to export precheck details");
       });
   };
 
-  //handle next 
-  const handleNextId = () => {
-    const currentIndex = idOptions.findIndex(
-      (id) => id === idNumber
-    );
-
-    if (currentIndex !== -1 && currentIndex < idOptions.length - 1) {
-      const nextId = idOptions[currentIndex + 1];
-
-      setIdNumber(nextId);
-
-      // Automatically reload BOM data
-      executeMakePrecheck(nextId);
-    } else {
-      showAlertMessage("No more ID numbers available", "info");
-    }
+  // handle export
+  const handleExport = () => {
+    handleOpenExportDialog();
   };
 
-  //handle previous
-  const handlePrevId = () => {
-    const currentIndex = idOptions.findIndex(
-      (id) => id === idNumber
-    );
-
-    if (currentIndex !== -1 && currentIndex > 0) {
-      const prevId = idOptions[currentIndex - 1];
-
-      setIdNumber(prevId);
-
-      // Automatically reload BOM data
-      executeMakePrecheck(prevId);
-    } else {
-      showAlertMessage("No previous ID numbers available", "info");
-    }
-  };
+  
+ 
 
   // Handle remarks change for any row
   const handleRemarksChange = (item: GridItem, newRemarks: string) => {
@@ -1574,11 +1612,26 @@ const MakePrecheck: React.FC = () => {
     return searchResults.every((item) => item.isPrecheckComplete);
   }, [searchResults]);
 
-  const updateGridItems = async (response: any[]) => {
-    if (!response?.length) return;
+  const updateGridItems = async (response: any) => {
+    const rawList = Array.isArray(response)
+      ? response
+      : (response?.data || response?.items || response?.$values || []);
 
-    // Map the response to objects and assign sequential SRs based on the API response sequence
-    const finalItems = response.map((item, index) => ({
+    if (!rawList || rawList.length === 0) {
+      setSearchResults([]);
+      showAlertMessage("No precheck records found for the selected filter.", "warning");
+      return;
+    }
+
+    // Sort API response by drawingNumber in ascending order (grouping same drawing numbers together)
+    const sortedRawList = [...rawList].sort((a: any, b: any) => {
+      const dwgA = String(a.drawingNumber || a.drawingNo || "").trim().toLowerCase();
+      const dwgB = String(b.drawingNumber || b.drawingNo || "").trim().toLowerCase();
+      return dwgA.localeCompare(dwgB, undefined, { numeric: true, sensitivity: "base" });
+    });
+
+    // Map the response to objects and assign sequential SRs based on sorted order
+    const finalItems = sortedRawList.map((item: any, index: number) => ({
       drawingNumber: item.drawingNumber,
       nomenclature: item.nomenclature,
       quantity: item.quantity,
@@ -1622,7 +1675,7 @@ const MakePrecheck: React.FC = () => {
   return (
     <Box
       sx={{
-        p: { xs: 0.5, sm: 1, md: 1.5 },
+        py: { xs: 0.5, sm: 0.75 }, px: { xs: 1.5, sm: 2 },
         height: "calc(100vh - 64px)",
         boxSizing: "border-box",
         display: "flex",
@@ -1630,18 +1683,6 @@ const MakePrecheck: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{
-          color: "primary.main",
-          fontWeight: 600,
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-          mb: 0.5,
-        }}
-      >
-        Make Precheck
-      </Typography>
-
       {/* Alert */}
       {showAlert && (
         <Alert
@@ -1653,38 +1694,72 @@ const MakePrecheck: React.FC = () => {
         </Alert>
       )}
 
-      {/* Form Controls */}
+      {/* Page Title & More Action Button at Top Header */}
+      <PrecheckHeaderBar
+        filterRemainingOnly={filterRemainingOnly}
+        onToggleFilter={() => setFilterRemainingOnly(!filterRemainingOnly)}
+        onExport={handleExport}
+        onReset={handleReset}
+        onUploadExcel={() => excelFileInputRef.current?.click()}
+        onDownloadTemplate={handleDownloadTemplate}
+        onReject={() => navigate("/materialrequisition")}
+        isSubmitEnabled={isSubmitEnabled}
+        uploadInProgress={uploadInProgress}
+        downloadTemplateInProgress={downloadTemplateInProgress}
+        isLoadingLocal={isLoadingLocal}
+      />
+
+      {/* Filter Controls Bar */}
       <PrecheckFormControls
         selectedPO={selectedPO}
         poNumbers={poNumbers}
         poLoading={poLoading}
         onPOSearchChange={(inputValue) => setPOSearchText(inputValue)}
         onPOChange={(newValue) => {
+          isClearedRef.current = false;
           if (newValue) {
             setSelectedPO(newValue);
-            // Auto-fill form fields from PO
-            if (newValue.drawingNumber && allDrawingNumbers.length > 0) {
-              const matchingDrawing = allDrawingNumbers.find(
-                (d: any) =>
-                  d.drawingNumber &&
-                  d.drawingNumber.trim().toLowerCase() ===
-                  newValue.drawingNumber?.trim().toLowerCase(),
-              );
-              if (matchingDrawing) setSelectedDrawing(matchingDrawing);
+            // Auto-fill form fields from PO using precise drawing matching
+            const matchingDrawing = findMatchingDrawingInList(allDrawingNumbers, newValue);
+            if (matchingDrawing) {
+              setSelectedDrawing(matchingDrawing);
+            } else if (newValue.drawingNumberId || newValue.drawingNumber || newValue.lnItemCode) {
+              setSelectedDrawing({
+                id: newValue.drawingNumberId,
+                drawingNumber: newValue.drawingNumber || "",
+                lnItemCode: newValue.lnItemCode || "",
+                nomenclature: newValue.nomenclature || "",
+                componentType: newValue.componentType || "",
+              });
             }
-            if (newValue.productionSeries && productionSeriesData.length > 0) {
-              const matchingPS = productionSeriesData.find(
-                (ps: any) =>
-                  String(ps.productionSeries).trim().toLowerCase() ===
-                  String(newValue.productionSeries).trim().toLowerCase(),
-              );
-              if (matchingPS) setSelectedProductionSeries(matchingPS);
+
+            if (newValue.productionSeries || newValue.prodSeriesId) {
+              let matchingPS = null;
+              if (productionSeriesData && productionSeriesData.length > 0) {
+                matchingPS = productionSeriesData.find(
+                  (ps: any) =>
+                    (newValue.prodSeriesId && ps.id === newValue.prodSeriesId) ||
+                    (ps.productionSeries && newValue.productionSeries && String(ps.productionSeries).trim().toLowerCase() === String(newValue.productionSeries).trim().toLowerCase()),
+                );
+              }
+              if (matchingPS) {
+                setSelectedProductionSeries(matchingPS);
+              } else {
+                setSelectedProductionSeries({
+                  id: newValue.prodSeriesId,
+                  productionSeries: newValue.productionSeries || "",
+                });
+              }
             }
+
             if (newValue.startIdNumber !== undefined && newValue.startIdNumber !== null) {
               setIdNumber(newValue.startIdNumber.toString());
             }
           } else {
             setSelectedPO(null);
+            setSelectedDrawing(null);
+            setSelectedProductionSeries(null);
+            setIdNumber("");
           }
         }}
         selectedDrawing={selectedDrawing}
@@ -1704,6 +1779,9 @@ const MakePrecheck: React.FC = () => {
         idOptions={idOptions}
         onIdNumberChange={(val) => setIdNumber(val)}
         onIdInputChange={(val) => setIdNumber(val)}
+        onApply={handleMakePrecheck}
+        onClear={handleReset}
+        isApplyEnabled={isMakePrecheckEnabled}
         onReset={handleReset}
         showAlertMessage={showAlertMessage}
         selectedPOEndIdNumber={selectedPO?.endIdNumber}
@@ -1716,7 +1794,7 @@ const MakePrecheck: React.FC = () => {
         isSidebarOpen={isSidebarOpen}
       />
 
-      {/* Action Bar + BOM Header */}
+      {/* Action Bar + Header + Scanner Hero Panel */}
       <PrecheckActionBar
         barcodeText={barcodeText}
         isSidebarOpen={isSidebarOpen}
@@ -1731,6 +1809,13 @@ const MakePrecheck: React.FC = () => {
         selectedDrawingNumber={selectedDrawing?.drawingNumber || ""}
         selectedProductionSeries={selectedProductionSeries?.productionSeries || ""}
         idNumber={idNumber}
+        selectedPONumber={selectedPO?.productionOrderNumber || ""}
+        selectedLnItemCode={selectedDrawing?.lnItemCode || ""}
+        searchResults={searchResults}
+        filterRemainingOnly={filterRemainingOnly}
+        onToggleFilter={() => setFilterRemainingOnly(!filterRemainingOnly)}
+        onExport={handleExport}
+        onReset={handleReset}
         onBarcodeChange={handleBarcodeChange}
         onBarcodeKeyDown={handleBarcodeKeyDown}
         onOpenScanner={handleOpenScanner}
@@ -1903,6 +1988,151 @@ const MakePrecheck: React.FC = () => {
         onClose={() => setExcelResultDialogOpen(false)}
         data={excelUploadResult}
       />
+
+      {/* Export Options Dialog */}
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: 700,
+            color: "#101828",
+            fontSize: "1.1rem",
+            pb: 1,
+          }}
+        >
+          Export Precheck Details
+          <IconButton size="small" onClick={() => setExportDialogOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ py: 2 }}>
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+              Choose Export Option:
+            </Typography>
+
+            <RadioGroup
+              value={exportMode}
+              onChange={(e) => {
+                const newMode = e.target.value as "all" | "custom";
+                setExportMode(newMode);
+                if (newMode === "custom") {
+                  setSelectedExportColumns(MAKE_PRECHECK_EXPORT_COLUMNS.map((c) => c.key));
+                }
+              }}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="all"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+              />
+            </RadioGroup>
+
+            {exportMode === "custom" && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: "12px",
+                  bgcolor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={selectedExportColumns.length === MAKE_PRECHECK_EXPORT_COLUMNS.length}
+                        indeterminate={
+                          selectedExportColumns.length > 0 &&
+                          selectedExportColumns.length < MAKE_PRECHECK_EXPORT_COLUMNS.length
+                        }
+                        onChange={handleToggleSelectAllColumns}
+                        sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" fontWeight="700">
+                        {selectedExportColumns.length === MAKE_PRECHECK_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                      </Typography>
+                    }
+                  />
+                  <Chip
+                    label={`${selectedExportColumns.length} / ${MAKE_PRECHECK_EXPORT_COLUMNS.length} selected`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderColor: "primary.main", color: "primary.main" }}
+                  />
+                </Box>
+
+                <Grid container spacing={1}>
+                  {MAKE_PRECHECK_EXPORT_COLUMNS.map((col) => (
+                    <Grid item xs={6} sm={4} key={col.key}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={selectedExportColumns.includes(col.key)}
+                            onChange={() => handleToggleColumn(col.key)}
+                            sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                          />
+                        }
+                        label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            onClick={() => setExportDialogOpen(false)}
+            sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<FileDownloadIcon fontSize="small" />}
+            onClick={handleConfirmExportData}
+            disabled={exportMode === "custom" && selectedExportColumns.length === 0}
+            sx={{
+              minWidth: 110,
+              fontWeight: 600,
+              borderRadius: "8px",
+              textTransform: "none",
+              backgroundColor: "primary.main",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            Export
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -11,7 +11,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   InputAdornment,
   CircularProgress,
   Snackbar,
@@ -20,7 +19,6 @@ import {
   Collapse,
   Checkbox,
   FormControl,
-  Autocomplete,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -31,27 +29,70 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Stack,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Grid,
+  Tooltip,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
+import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CallSplitIcon from '@mui/icons-material/CallSplit';
-import { getBarcodeDetails, getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
-import { useProductionSeries, useQRUsers } from '../../hooks/useMasterData';
-import { type ProductionOrderMaster } from '../../hooks/usePONumbers';
+import CloseIcon from '@mui/icons-material/Close';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
+import { getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
+import { useProductionSeries, useUsers } from '../../hooks/useMasterData';
+import { useHasPermission } from '../../hooks/useHasPermission';
+import { useDebounce } from '../../hooks/useDebounce';
 import { type RootState } from '../../store/store';
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from '../../store/store';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ReplayIcon from '@mui/icons-material/Replay';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { CustomPagination } from '../../components/CustomPagination';
+
+import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
+import { MultiSelectFilter } from '../../components/MultiSelectFilter';
+import { EmptyState } from '../../components/EmptyState';
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+
+const ALL_EXPORTABLE_COLUMNS = [
+  { key: "qrCodeNumber", label: "QRCode ID" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "componentType", label: "Component Type" },
+  { key: "consumedInDrawing", label: "Consumed In Drawing" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "batchId", label: "Batch ID" },
+  { key: "qrCodeStatus", label: "Status" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "buildNumber", label: "Build No" },
+  { key: "quantity", label: "Quantity" },
+  { key: "remainingQuantity", label: "Remaining Qty" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "unitName", label: "Unit" },
+  { key: "fan", label: "FAN/MAN No" },
+  { key: "desposition", label: "Disposition" },
+  { key: "users", label: "Username" },
+  { key: "createdDate", label: "Created Date" },
+  { key: "assemblyNumber", label: "Assembly Number" },
+  { key: "remarks", label: "Remarks" },
+  { key: "department", label: "Department" },
+];
 
 const formatQuantity = (qty: any) => {
   if (qty === undefined || qty === null || qty === '') return 'N/A';
@@ -77,6 +118,108 @@ const formatDate = (dateString: string) => {
   }
 };
 
+const renderStatusBadge = (statusStr: string) => {
+  const status = (statusStr || 'Active').toLowerCase();
+  let bg = '#f4f5f7';
+  let color = '#344054';
+  let borderColor = '#d0d5dd';
+
+  if (status === 'active') {
+    bg = '#ecfdf5';
+    color = '#047857';
+    borderColor = '#a7f3d0';
+  } else if (status === 'consumed') {
+    bg = '#f3f4f6';
+    color = '#4b5563';
+    borderColor = '#e5e7eb';
+  } else if (status === 'disabled') {
+    bg = '#fef2f2';
+    color = '#b91c1c';
+    borderColor = '#fecaca';
+  }
+
+  return (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.75,
+        px: 1.25,
+        py: 0.25,
+        borderRadius: '12px',
+        bgcolor: bg,
+        color: color,
+        border: `1px solid ${borderColor}`,
+        fontWeight: 600,
+        fontSize: '0.75rem',
+      }}
+    >
+      <Box
+        sx={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          bgcolor: color,
+        }}
+      />
+      {statusStr || 'Active'}
+    </Box>
+  );
+};
+
+
+
+const TableHeaderSortable = ({
+  label,
+  columnKey,
+  sortColumn,
+  sortDirection,
+  onSort,
+  minWidth = '120px',
+}: {
+  label: string;
+  columnKey: string;
+  sortColumn: string;
+  sortDirection: 'asc' | 'desc';
+  onSort: (col: string) => void;
+  minWidth?: string;
+}) => {
+  const isSorted = sortColumn === columnKey;
+  return (
+    <TableCell
+      onClick={() => onSort(columnKey)}
+      sx={{
+        fontWeight: 600,
+        minWidth,
+        textAlign: 'left',
+        py: '8px',
+        px: '12px',
+        whiteSpace: 'nowrap',
+        color: '#475467',
+        fontSize: '0.8rem',
+        cursor: 'pointer',
+        userSelect: 'none',
+        borderBottom: '1px solid #eaecf0',
+        bgcolor: '#f9fafb !important',
+        '&:hover': { color: '#101828' },
+      }}
+    >
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        {label}
+        {isSorted ? (
+          sortDirection === 'asc' ? (
+            <ArrowUpwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+          ) : (
+            <ArrowDownwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+          )
+        ) : (
+          <ArrowDownwardIcon sx={{ fontSize: 14, color: '#98a2b3', opacity: 0.5 }} />
+        )}
+      </Box>
+    </TableCell>
+  );
+};
+
 const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, returnFilters }: {
   barcodeDetails: any;
   isSelected: boolean;
@@ -93,8 +236,8 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
   const isConsumed = barcodeDetails?.qrCodeStatus?.toLowerCase() === 'consumed';
   const isDisabledStatus = barcodeDetails?.qrCodeStatus?.toLowerCase() === 'disabled';
 
-  const canSplit = (barcodeDetails?.componentType === 'Batch' || barcodeDetails?.componentType === 'BATCH') &&
-    barcodeDetails?.unitName === 'ECH' && (Number(barcodeDetails?.quantity) > 1 || barcodeDetails.hasBeenSplit) && !barcodeDetails.isSplitRow;
+  const isBatchComponent = String(barcodeDetails?.componentType || '').toLowerCase() === 'batch';
+  const canSplit = isBatchComponent && (Number(barcodeDetails?.quantity) > 1 || barcodeDetails?.hasBeenSplit) && !barcodeDetails?.isSplitRow;
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -118,48 +261,58 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
     <>
       <TableRow
         sx={{
-          '& > *': { borderBottom: 'unset' },
-          backgroundColor: barcodeDetails.isSplitRow ? '#f5f5f5' : 'inherit',
-          height: 28
+          '& > *': { borderBottom: '1px solid #f1f5f9' },
+          backgroundColor: barcodeDetails.isSplitRow ? '#f8fafc' : 'inherit',
+          height: 32,
+          '&:hover': { backgroundColor: '#f8fafc' }
         }}
       >
-        <TableCell padding="checkbox" sx={{ textAlign: 'center', padding: "4px 8px !important" }}>
+        <TableCell padding="checkbox" sx={{ textAlign: 'center', py: '4px', px: '8px' }}>
           <Checkbox
             checked={isSelected}
             onChange={(e) => onSelect(e.target.checked)}
+            size="small"
+            sx={{ color: '#d0d5dd', '&.Mui-checked': { color: 'primary.main' } }}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '150px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.qrCodeNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '120px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.productionSeries || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '120px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.lnItemCode || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '180px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.drawingNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '150px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.nomenclature || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '120px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.componentType || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '200px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.consumedInDrawing || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '120px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>{barcodeDetails?.idNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '140px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', fontWeight: 600, color: '#101828' }}>
+          {barcodeDetails?.qrCodeNumber || 'N/A'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          {barcodeDetails?.productionSeries || 'N/A'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          {barcodeDetails?.lnItemCode || 'N/A'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          {barcodeDetails?.drawingNumber || 'N/A'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '160px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          {barcodeDetails?.nomenclature || 'N/A'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '2px', px: '12px', whiteSpace: 'nowrap' }}>
+          <ComponentTypeChip type={barcodeDetails?.componentType} />
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          {barcodeDetails?.consumedInDrawing || 'N/A'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          {barcodeDetails?.idNumber || 'N/A'}
+        </TableCell>
+
         {showBatchId && (
-          <TableCell sx={{ textAlign: 'center', minWidth: '120px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>
-            {barcodeDetails?.batchId || 'N/A'}
+          <TableCell sx={{ textAlign: 'left', minWidth: '110px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+            {barcodeDetails?.batchId || barcodeDetails?.batchID || 'N/A'}
           </TableCell>
         )}
 
-        <TableCell sx={{ textAlign: 'center', minWidth: '110px', padding: "4px 8px !important", whiteSpace: "nowrap" }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-            <IconButton
-              aria-label="expand row"
-              size="small"
-              onClick={() => setOpen(!open)}
-              sx={{ padding: '4px !important' }}
-              title={open ? "Collapse details" : "Expand details"}
-            >
-              {open ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
-            </IconButton>
-
+        <TableCell sx={{ textAlign: 'center', minWidth: '80px', py: '4px', px: '8px', whiteSpace: 'nowrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <IconButton
               aria-label="actions menu"
               size="small"
               onClick={handleMenuClick}
-              sx={{ padding: '4px !important' }}
+              sx={{ padding: '2px !important', color: '#667085' }}
               title="Actions"
             >
               <MoreVertIcon fontSize="small" />
@@ -170,18 +323,22 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
               open={isMenuOpen}
               onClose={handleMenuClose}
               transitionDuration={0}
+              disableRestoreFocus
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               PaperProps={{
                 elevation: 3,
-                sx: { minWidth: 150, py: 0.5, borderRadius: 2 }
+                sx: { minWidth: 160, py: 0.5, borderRadius: 2 }
               }}
             >
               {!isConsumed && (
                 <MenuItem
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleMenuClose();
-                    handleEdit();
+                    setTimeout(() => {
+                      handleEdit();
+                    }, 0);
                   }}
                   sx={{ fontSize: '0.85rem', py: 0.75 }}
                 >
@@ -191,6 +348,22 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
                   <ListItemText primary="Edit QR" primaryTypographyProps={{ fontSize: '0.85rem' }} />
                 </MenuItem>
               )}
+
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  setOpen(!open);
+                }}
+                sx={{ fontSize: '0.85rem', py: 0.75 }}
+              >
+                <ListItemIcon sx={{ minWidth: '28px !important' }}>
+                  {open ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={open ? "Hide Details" : "View Details"}
+                  primaryTypographyProps={{ fontSize: '0.85rem' }}
+                />
+              </MenuItem>
 
               {canSplit && (
                 <MenuItem
@@ -229,47 +402,72 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
           </Box>
         </TableCell>
       </TableRow>
+
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={showBatchId ? 12 : 11}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={showBatchId ? 11 : 10}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1 }}>
-              <Table size="small">
+            <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 0.75,
+                }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
+                  Additional Details
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => setOpen(false)}
+                  title="Close Additional Details"
+                  sx={{
+                    p: 0.25,
+                    color: "#667085",
+                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
+                  }}
+                >
+                  <KeyboardArrowUpIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
-                  <TableRow sx={{ height: 50 }}>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>IR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>MSN Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>MRIR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Build No</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>PO Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Unit</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Disposition</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Username</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Created Date</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Assembly Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', padding: "3px 6px !important", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Remarks</TableCell>
+                  <TableRow sx={{ backgroundColor: "grey.100" }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>IR Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>MSN Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>MRIR Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Build No</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Quantity</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>PO Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Unit</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Disposition</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Username</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Created Date</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Assembly Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remarks</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <TableRow sx={{ height: 50 }}>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.qrCodeStatus || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.irNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.msnNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.mrirNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.buildNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{formatQuantity(barcodeDetails?.quantity)}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.remainingQuantity || '-'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.productionOrderNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.unitName || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.fan || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.desposition || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.users || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{formatDate(barcodeDetails?.createdDate)}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.assemblyNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', padding: "2px 6px !important", fontSize: "0.72rem", whiteSpace: "nowrap" }}>{barcodeDetails?.remark || barcodeDetails?.remarks || 'N/A'}</TableCell>
+                  <TableRow sx={{ height: 36 }}>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{renderStatusBadge(barcodeDetails?.qrCodeStatus)}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.irNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.msnNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.mrirNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.buildNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{formatQuantity(barcodeDetails?.quantity)}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.remainingQuantity ?? '-'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.productionOrderNumber || barcodeDetails?.poNumber || barcodeDetails?.purchaseOrderNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.unitName || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.fan || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.department || barcodeDetails?.desposition || barcodeDetails?.disposition || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.users || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{formatDate(barcodeDetails?.createdDate)}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.assemblyNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.remark || barcodeDetails?.remarks || 'N/A'}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -286,11 +484,11 @@ const ViewBarcode: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
+  const hasGenerateAccess = useHasPermission("New QR Code");
+
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Keep track of the last search query and parameters to refresh correctly
-  const [lastSearchType, setLastSearchType] = useState<'none' | 'query' | 'parameters'>('none');
-  const [lastSearchQuery, setLastSearchQuery] = useState('');
+  // Last search params
   const [lastSearchParams, setLastSearchParams] = useState<any>(null);
 
   // Disable QR Code dialog states
@@ -299,133 +497,171 @@ const ViewBarcode: React.FC = () => {
   const [disableRemarks, setDisableRemarks] = useState('');
   const [remarksError, setRemarksError] = useState(false);
 
-  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
-  const [selectedLnItem, setSelectedLnItem] = useState<any>(null);
-  const [selectedDrawingNumber, setSelectedDrawingNumber] = useState<any>(null);
-  const [drawingSearchText, setDrawingSearchText] = useState('');
-  const [lnSearchText, setLnSearchText] = useState("");
-  const [debouncedLnSearch, setDebouncedLnSearch] = useState("");
-  const [selectedQRCodes, setSelectedQRCodes] = useState<string[]>([]);
-
+  // Multiselect Filter States
+  const [selectedProductionSeries, setSelectedProductionSeries] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedGeneratedBy, setSelectedGeneratedBy] = useState<(number | string)[]>([]);
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
 
-  const [poSearchText, setPOSearchText] = useState("");
-  const [selectedPO, setSelectedPO] = useState<ProductionOrderMaster | null>(null);
+  // Applied Filter States (Updated only when Apply button is clicked)
+  const [appliedProductionSeries, setAppliedProductionSeries] = useState<string[]>([]);
+  const [appliedStatus, setAppliedStatus] = useState<string[]>([]);
+  const [appliedGeneratedBy, setAppliedGeneratedBy] = useState<(number | string)[]>([]);
+  const [appliedFromDate, setAppliedFromDate] = useState<Date | null>(null);
+  const [appliedToDate, setAppliedToDate] = useState<Date | null>(null);
 
-  const [selectedFanMan, setSelectedFanMan] = useState<string | null>(null);
+  const [selectedQRCodes, setSelectedQRCodes] = useState<string[]>([]);
+
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState<string>('createdDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const { data: productionSeriesData = [] } = useProductionSeries();
+  const { data: usersData = [] } = useUsers();
 
-  const [selectedUser, setSelectedUser] = useState<any[]>([]);
-  const { data: users = [] } = useQRUsers();
+  const prodSeriesOptions = React.useMemo(() => {
+    if (!productionSeriesData) return [];
+    return productionSeriesData
+      .map((item: any) => (typeof item === 'string' ? item : item.productionSeries))
+      .filter(Boolean);
+  }, [productionSeriesData]);
 
-  const [selectedFromId, setSelectedFromId] = useState<string | null>(null);
-  const [selectedToId, setSelectedToId] = useState<string | null>(null);
+  const userOptions = React.useMemo(() => {
+    const rawUsers = Array.isArray(usersData) ? usersData : (usersData as any)?.data || (usersData as any)?.items || [];
+    return rawUsers.map((u: any) => {
+      const numId = Number(u.id ?? u.createdBy ?? u.user_id ?? u.idUser);
+      const idVal = !isNaN(numId) && numId > 0 ? numId : (u.id ?? u.userId ?? u.userName);
+      const labelVal = u.userName || (u as any).name || u.users || String(idVal);
+      return {
+        id: idVal,
+        label: labelVal,
+      };
+    });
+  }, [usersData]);
 
-  // Processing lock for QR code scanner
+  // Scanner lock
   const isProcessing = React.useRef(false);
   const scannerTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  const buildApiParams = (
+    queryStr: string = searchQuery,
+    seriesArr: string[] = appliedProductionSeries,
+    genByArr: (number | string)[] = appliedGeneratedBy,
+    fromD: Date | null = appliedFromDate,
+    toD: Date | null = appliedToDate,
+    pNum: number = 1,
+    pSize: number = 20
+  ) => {
+    const rawUsers = Array.isArray(usersData) ? usersData : (usersData as any)?.data || (usersData as any)?.items || [];
+
+    const numericCreatedBy = genByArr
+      .map((val) => {
+        const num = Number(val);
+        if (!isNaN(num) && num > 0) return num;
+        const matched = rawUsers.find(
+          (u: any) =>
+            (u.userName && String(u.userName).toLowerCase() === String(val).toLowerCase()) ||
+            (u.name && String(u.name).toLowerCase() === String(val).toLowerCase()) ||
+            (u.users && String(u.users).toLowerCase() === String(val).toLowerCase()) ||
+            (u.userId && String(u.userId).toLowerCase() === String(val).toLowerCase())
+        );
+        if (matched) {
+          const foundId = Number(matched.id ?? matched.createdBy ?? matched.user_id ?? matched.idUser ?? matched.userId);
+          if (!isNaN(foundId) && foundId > 0) return foundId;
+        }
+        return null;
+      })
+      .filter((id): id is number => id !== null && id > 0);
+
+    return {
+      pageNumber: pNum,
+      pageSize: pSize,
+      searchQuery: queryStr.trim(),
+      prodSeries: seriesArr,
+      createdBy: numericCreatedBy,
+      fromDate: fromD ? format(fromD, "yyyy-MM-dd") : null,
+      toDate: toD ? format(toD, "yyyy-MM-dd") : null,
+    };
+  };
+
   const currentFilters = React.useMemo(() => ({
     searchQuery,
-    selectedProductionSeries,
-    selectedLnItem,
-    selectedDrawingNumber,
-    drawingSearchText,
-    lnSearchText,
-    debouncedLnSearch,
-    selectedPO,
-    poSearchText,
-    selectedFanMan,
-    fromDate: fromDate ? fromDate.toISOString() : null,
-    toDate: toDate ? toDate.toISOString() : null,
-    selectedUser,
-    selectedFromId,
-    selectedToId,
-    lastSearchType,
-    lastSearchQuery,
+    selectedProductionSeries: appliedProductionSeries,
+    selectedStatus: appliedStatus,
+    selectedGeneratedBy: appliedGeneratedBy,
+    fromDate: appliedFromDate ? format(appliedFromDate, "yyyy-MM-dd") : null,
+    toDate: appliedToDate ? format(appliedToDate, "yyyy-MM-dd") : null,
     lastSearchParams,
   }), [
     searchQuery,
-    selectedProductionSeries,
-    selectedLnItem,
-    selectedDrawingNumber,
-    drawingSearchText,
-    lnSearchText,
-    debouncedLnSearch,
-    selectedPO,
-    poSearchText,
-    selectedFanMan,
-    fromDate,
-    toDate,
-    selectedUser,
-    selectedFromId,
-    selectedToId,
-    lastSearchType,
-    lastSearchQuery,
+    appliedProductionSeries,
+    appliedStatus,
+    appliedGeneratedBy,
+    appliedFromDate,
+    appliedToDate,
     lastSearchParams,
   ]);
 
+  const hasFetchedOnMount = React.useRef(false);
+
   useEffect(() => {
+    if (hasFetchedOnMount.current) return;
+    hasFetchedOnMount.current = true;
+
     const returnFilters = (location.state as any)?.returnFilters;
     if (returnFilters) {
       if (returnFilters.searchQuery !== undefined) setSearchQuery(returnFilters.searchQuery);
-      if (returnFilters.selectedProductionSeries !== undefined) setSelectedProductionSeries(returnFilters.selectedProductionSeries);
-      if (returnFilters.selectedLnItem !== undefined) setSelectedLnItem(returnFilters.selectedLnItem);
-      if (returnFilters.selectedDrawingNumber !== undefined) setSelectedDrawingNumber(returnFilters.selectedDrawingNumber);
-      if (returnFilters.drawingSearchText !== undefined) setDrawingSearchText(returnFilters.drawingSearchText);
-      if (returnFilters.lnSearchText !== undefined) setLnSearchText(returnFilters.lnSearchText);
-      if (returnFilters.debouncedLnSearch !== undefined) setDebouncedLnSearch(returnFilters.debouncedLnSearch);
-      if (returnFilters.selectedPO !== undefined) setSelectedPO(returnFilters.selectedPO);
-      if (returnFilters.poSearchText !== undefined) setPOSearchText(returnFilters.poSearchText);
-      if (returnFilters.selectedFanMan !== undefined) setSelectedFanMan(returnFilters.selectedFanMan);
-      if (returnFilters.fromDate) setFromDate(new Date(returnFilters.fromDate));
-      if (returnFilters.toDate) setToDate(new Date(returnFilters.toDate));
-      if (returnFilters.selectedUser !== undefined) setSelectedUser(returnFilters.selectedUser);
-      if (returnFilters.selectedFromId !== undefined) setSelectedFromId(returnFilters.selectedFromId);
-      if (returnFilters.selectedToId !== undefined) setSelectedToId(returnFilters.selectedToId);
-
-      if (returnFilters.lastSearchType !== undefined) setLastSearchType(returnFilters.lastSearchType);
-      if (returnFilters.lastSearchQuery !== undefined) setLastSearchQuery(returnFilters.lastSearchQuery);
+      if (returnFilters.selectedProductionSeries !== undefined) {
+        setSelectedProductionSeries(returnFilters.selectedProductionSeries);
+        setAppliedProductionSeries(returnFilters.selectedProductionSeries);
+      }
+      if (returnFilters.selectedStatus !== undefined) {
+        setSelectedStatus(returnFilters.selectedStatus);
+        setAppliedStatus(returnFilters.selectedStatus);
+      }
+      if (returnFilters.selectedGeneratedBy !== undefined) {
+        setSelectedGeneratedBy(returnFilters.selectedGeneratedBy);
+        setAppliedGeneratedBy(returnFilters.selectedGeneratedBy);
+      }
+      if (returnFilters.fromDate) {
+        setFromDate(new Date(returnFilters.fromDate));
+        setAppliedFromDate(new Date(returnFilters.fromDate));
+      }
+      if (returnFilters.toDate) {
+        setToDate(new Date(returnFilters.toDate));
+        setAppliedToDate(new Date(returnFilters.toDate));
+      }
       if (returnFilters.lastSearchParams !== undefined) setLastSearchParams(returnFilters.lastSearchParams);
 
       navigate(location.pathname, { replace: true, state: null });
 
-      if (returnFilters.lastSearchType === 'query' && returnFilters.lastSearchQuery) {
-        dispatch(getBarcodeDetails(returnFilters.lastSearchQuery));
-      } else if (returnFilters.lastSearchType === 'parameters' && returnFilters.lastSearchParams) {
-        dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams as any));
-      } else if (returnFilters.searchQuery?.trim()) {
-        dispatch(getBarcodeDetails(returnFilters.searchQuery.trim()));
+      if (returnFilters.lastSearchParams) {
+        dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams));
       } else {
-        const drawing = returnFilters.selectedDrawingNumber || returnFilters.selectedLnItem;
-        const hasFilter = returnFilters.selectedFanMan || returnFilters.selectedProductionSeries || returnFilters.selectedLnItem || returnFilters.selectedDrawingNumber || returnFilters.selectedPO || returnFilters.fromDate || returnFilters.toDate || returnFilters.selectedUser || returnFilters.selectedFromId || returnFilters.selectedToId;
-        if (hasFilter) {
-          const params = {
-            prodSeriesId: returnFilters.selectedProductionSeries?.id,
-            drawingNumberId: drawing?.id,
-            lnItemCodeId: drawing?.lnItemCodeId,
-            productionOrderNumber: returnFilters.selectedPO?.productionOrderNumber || undefined,
-            fromDate: returnFilters.fromDate ? format(new Date(returnFilters.fromDate), 'yyyy-MM-dd') : undefined,
-            toDate: returnFilters.toDate ? format(new Date(returnFilters.toDate), 'yyyy-MM-dd') : undefined,
-            createdBy: returnFilters.selectedUser?.id || undefined,
-            fromBatchId: returnFilters.selectedFromId || undefined,
-            toBatchId: returnFilters.selectedToId || undefined,
-            fanManNumber: returnFilters.selectedFanMan || undefined,
-          };
-          dispatch(getBarcodeDetailsWithParameters(params as any));
-        }
+        const queryStr = returnFilters.searchQuery || "";
+        const seriesArr = returnFilters.selectedProductionSeries || [];
+        const genByArr = returnFilters.selectedGeneratedBy || [];
+        const fromD = returnFilters.fromDate ? new Date(returnFilters.fromDate) : null;
+        const toD = returnFilters.toDate ? new Date(returnFilters.toDate) : null;
+        const params = buildApiParams(queryStr, seriesArr, genByArr, fromD, toD, 1, 10);
+        dispatch(getBarcodeDetailsWithParameters(params));
       }
     } else {
-      // Clear search results when entering ViewBarcode page fresh
-      dispatch(clearBarcodeDetails());
+      const initialParams = buildApiParams("", [], [], null, null, 1, 10);
+      setLastSearchParams(initialParams);
+      dispatch(getBarcodeDetailsWithParameters(initialParams));
     }
   }, []);
 
-  const { barcodeDetails, loading, error, isDownloading } = useSelector((state: RootState) => state.qrcode);
+  const { barcodeDetails, loading, error, isDownloading, totalCount } = useSelector((state: RootState) => state.qrcode);
 
-  // Clear stale Redux errors on component mount
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [displayedData, setDisplayedData] = useState<any[]>([]);
+
+  const totalRecordsCount = totalCount || displayedData.length;
+
   useEffect(() => {
     dispatch(clearError());
     return () => {
@@ -439,48 +675,139 @@ const ViewBarcode: React.FC = () => {
     severity: 'success'
   });
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [displayedData, setDisplayedData] = useState<any[]>([]);
+  const handleSort = (columnKey: string) => {
+    if (sortColumn === columnKey) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection('asc');
+    }
+  };
 
   const sortedBarcodeDetails = React.useMemo(() => {
     if (!barcodeDetails) return [];
-    const detailsArray = Array.isArray(barcodeDetails) ? barcodeDetails : [barcodeDetails];
+    let detailsArray: any[] = [];
+    if (Array.isArray(barcodeDetails)) {
+      detailsArray = barcodeDetails;
+    } else if (barcodeDetails && Array.isArray((barcodeDetails as any).data)) {
+      detailsArray = (barcodeDetails as any).data;
+    } else if (barcodeDetails && Array.isArray((barcodeDetails as any).items)) {
+      detailsArray = (barcodeDetails as any).items;
+    } else {
+      detailsArray = [barcodeDetails];
+    }
     return [...detailsArray].sort((a, b) => {
-      const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
-      const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
-      return dateB - dateA;
+      let valA = a[sortColumn];
+      let valB = b[sortColumn];
+
+      if (sortColumn === 'createdDate') {
+        valA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
+        valB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
+      } else if (sortColumn === 'qrCodeNumber') {
+        valA = a.qrCodeNumber || a.id || '';
+        valB = b.qrCodeNumber || b.id || '';
+      } else if (sortColumn === 'productionOrderNumber') {
+        valA = a.productionOrderNumber || a.poNumber || '';
+        valB = b.productionOrderNumber || b.poNumber || '';
+      }
+
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortDirection === "asc" ? valA - valB : valB - valA;
+      }
+
+      const strA = String(valA || "").toLowerCase().trim();
+      const strB = String(valB || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [barcodeDetails]);
+  }, [barcodeDetails, sortColumn, sortDirection]);
 
   const filteredBarcodeDetails = React.useMemo(() => {
-    if (!searchQuery.trim()) return sortedBarcodeDetails;
-    const query = searchQuery.trim().toLowerCase();
+    let list = sortedBarcodeDetails;
 
-    return sortedBarcodeDetails.filter((item: any) => {
-      const qrCodeNumber = (item.qrCodeNumber || item.id || "").toString().toLowerCase();
-      const poNumber = (item.productionOrderNumber || item.poNumber || item.productionorder || "").toString().toLowerCase();
-      const drawingNumber = (item.drawingNumber || item.drawingnumber || "").toString().toLowerCase();
-      const lnItemCode = (item.lnItemCode || item.itemcode || "").toString().toLowerCase();
-      const idNumber = (item.idNumber || item.id_num || item.startIdNumber || item.endIdNumber || "").toString().toLowerCase();
-      const projectNumber = (item.projectNumber || item.projectcode || item.projectDescription || "").toString().toLowerCase();
-      const nomenclature = (item.nomenclature || item.itemDescription || "").toString().toLowerCase();
+    // Search query filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      list = list.filter((item: any) => {
+        const qrCodeNumber = (item.qrCodeNumber || item.id || "").toString().toLowerCase();
+        const poNumber = (item.productionOrderNumber || item.poNumber || item.productionorder || "").toString().toLowerCase();
+        const drawingNumber = (item.drawingNumber || item.drawingnumber || "").toString().toLowerCase();
+        const lnItemCode = (item.lnItemCode || item.itemcode || "").toString().toLowerCase();
+        const idNumber = (item.idNumber || item.id_num || item.startIdNumber || item.endIdNumber || "").toString().toLowerCase();
+        const projectNumber = (item.projectNumber || item.projectcode || item.projectDescription || "").toString().toLowerCase();
+        const nomenclature = (item.nomenclature || item.itemDescription || "").toString().toLowerCase();
 
-      return (
-        qrCodeNumber.includes(query) ||
-        poNumber.includes(query) ||
-        drawingNumber.includes(query) ||
-        lnItemCode.includes(query) ||
-        idNumber.includes(query) ||
-        projectNumber.includes(query) ||
-        nomenclature.includes(query)
+        return (
+          qrCodeNumber.includes(query) ||
+          poNumber.includes(query) ||
+          drawingNumber.includes(query) ||
+          lnItemCode.includes(query) ||
+          idNumber.includes(query) ||
+          projectNumber.includes(query) ||
+          nomenclature.includes(query)
+        );
+      });
+    }
+
+    // Applied Prod series filter
+    if (appliedProductionSeries.length > 0) {
+      list = list.filter((item: any) =>
+        appliedProductionSeries.includes(item.productionSeries)
       );
-    });
-  }, [sortedBarcodeDetails, searchQuery]);
+    }
+
+    // Applied Status filter
+    if (appliedStatus.length > 0) {
+      list = list.filter((item: any) => {
+        const itemStatus = item.qrCodeStatus || 'Active';
+        return appliedStatus.some((s) => s.toLowerCase() === itemStatus.toLowerCase());
+      });
+    }
+
+    // Applied Generated by filter
+    if (appliedGeneratedBy.length > 0) {
+      list = list.filter((item: any) => {
+        const itemUserId = item.createdBy || item.userId || item.createdById || item.usersId;
+        const itemUserName = (item.users || item.userName || item.createdBy || "").toString().toLowerCase();
+
+        return appliedGeneratedBy.some((selectedVal) => {
+          if (itemUserId && String(itemUserId) === String(selectedVal)) {
+            return true;
+          }
+          const matchedUser = usersData.find((u: any) => String(u.id) === String(selectedVal));
+          if (matchedUser) {
+            const name = (matchedUser.userName || (matchedUser as any).name || "").toString().toLowerCase();
+            if (name && itemUserName.includes(name)) return true;
+          }
+          return false;
+        });
+      });
+    }
+
+    // Applied Date range filter (From Date & To Date)
+    if (appliedFromDate || appliedToDate) {
+      list = list.filter((item: any) => {
+        if (!item.createdDate) return false;
+        const itemTime = new Date(item.createdDate).getTime();
+        if (isNaN(itemTime)) return false;
+        if (appliedFromDate) {
+          const fromTime = new Date(appliedFromDate).setHours(0, 0, 0, 0);
+          if (itemTime < fromTime) return false;
+        }
+        if (appliedToDate) {
+          const toTime = new Date(appliedToDate).setHours(23, 59, 59, 999);
+          if (itemTime > toTime) return false;
+        }
+        return true;
+      });
+    }
+
+    return list;
+  }, [sortedBarcodeDetails, searchQuery, appliedProductionSeries, appliedStatus, appliedGeneratedBy, usersData, appliedFromDate, appliedToDate]);
 
   useEffect(() => {
     setDisplayedData(filteredBarcodeDetails);
-    setPage(0);
   }, [filteredBarcodeDetails]);
 
   const showBatchIdColumn = React.useMemo(() => {
@@ -492,14 +819,12 @@ const ViewBarcode: React.FC = () => {
     if (!item) return;
 
     if (item.hasBeenSplit || item.isSplitRow) {
-      // Unsplit: remove rows that were created for this parent
-      const parentId = item.isSplitRow ? item.parentId : (item.id || item.qrCodeNumber);
+      const parentId = item.isSplitRow ? item.parentId : (item.qrCodeNumber || item.id);
       const newData = displayedData.filter(row => row.parentId !== parentId);
-      const updatedIndex = newData.findIndex(row => (row.id || row.qrCodeNumber) === parentId && !row.isSplitRow);
+      const updatedIndex = newData.findIndex(row => (row.qrCodeNumber || row.id) === parentId && !row.isSplitRow);
 
       if (updatedIndex !== -1) {
-        // Restore original values from sortedBarcodeDetails
-        const originalItem = sortedBarcodeDetails.find(orig => (orig.id || orig.qrCodeNumber) === parentId);
+        const originalItem = sortedBarcodeDetails.find(orig => (orig.qrCodeNumber || orig.id) === parentId);
         if (originalItem) {
           newData[updatedIndex] = { ...originalItem, hasBeenSplit: false };
         } else {
@@ -511,7 +836,6 @@ const ViewBarcode: React.FC = () => {
     }
 
     const qty = Number(item.quantity);
-
     const newRows = [];
 
     for (let i = 2; i <= qty; i++) {
@@ -520,23 +844,19 @@ const ViewBarcode: React.FC = () => {
         quantity: 1,
         batchId: `${i}/${qty}`,
         isSplitRow: true,
-        parentId: item.id || item.qrCodeNumber,
-        // Keep original qrCodeNumber as requested
+        parentId: item.qrCodeNumber || item.id,
         qrCodeNumber: item.qrCodeNumber,
-        // Use a unique ID for React keys and selection
-        id: `${item.id || item.qrCodeNumber}-split-${i}`
+        id: `${item.qrCodeNumber || item.id}-split-${i}`
       });
     }
 
     const newData = [...displayedData];
-    // Keep the original row but mark it as split, and update it to be the first split item
     newData[globalIndex] = {
       ...item,
       hasBeenSplit: true,
       quantity: 1,
       batchId: `1/${qty}`
     };
-    // Insert new rows after the original
     newData.splice(globalIndex + 1, 0, ...newRows);
     setDisplayedData(newData);
   };
@@ -545,7 +865,6 @@ const ViewBarcode: React.FC = () => {
     const hasAnySplit = displayedData.some(item => item.hasBeenSplit);
 
     if (hasAnySplit) {
-      // Close all splits: restore original data from sortedBarcodeDetails
       setDisplayedData([...filteredBarcodeDetails]);
       return;
     }
@@ -554,13 +873,12 @@ const ViewBarcode: React.FC = () => {
     let hasSplit = false;
 
     displayedData.forEach((item) => {
-      const isBatch = item.componentType === 'Batch' || item.componentType === 'BATCH';
-      if (isBatch && item.unitName === 'ECH' && Number(item.quantity) > 1 && !item.batchId && !item.hasBeenSplit) {
+      const isBatch = String(item.componentType || '').toLowerCase() === 'batch';
+      const isSelected = selectedQRCodes.length === 0 || selectedQRCodes.includes(item.qrCodeNumber || item.id) || selectedQRCodes.includes(item.qrCodeNumber);
+      if (isBatch && isSelected && Number(item.quantity) > 1 && !item.hasBeenSplit) {
         hasSplit = true;
-
         const qty = Number(item.quantity);
 
-        // Parent row becomes 1/qty
         newData.push({
           ...item,
           hasBeenSplit: true,
@@ -574,9 +892,9 @@ const ViewBarcode: React.FC = () => {
             quantity: 1,
             batchId: `${i}/${qty}`,
             isSplitRow: true,
-            parentId: item.id || item.qrCodeNumber,
+            parentId: item.qrCodeNumber || item.id,
             qrCodeNumber: item.qrCodeNumber,
-            id: `${item.id || item.qrCodeNumber}-split-${i}`
+            id: `${item.qrCodeNumber || item.id}-split-${i}`
           });
         }
       } else {
@@ -589,42 +907,41 @@ const ViewBarcode: React.FC = () => {
     }
   };
 
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
   useEffect(() => {
     setSelectedQRCodes([]);
   }, [barcodeDetails]);
 
-
-
   const handleFilterSearch = () => {
-    // Prefer selectedDrawingNumber; fall back to selectedLnItem for drawingNumberId/lnItemCodeId
-    const drawing = selectedDrawingNumber || selectedLnItem;
-    const prodSeriesIds = selectedProductionSeries.map((s: any) => s.id || s).filter(Boolean);
-    const userIds = selectedUser.map((u: any) => u.id || u).filter(Boolean);
+    if (scannerTimeoutRef.current) {
+      clearTimeout(scannerTimeoutRef.current);
+      scannerTimeoutRef.current = null;
+    }
+    setAppliedProductionSeries(selectedProductionSeries);
+    setAppliedStatus(selectedStatus);
+    setAppliedGeneratedBy(selectedGeneratedBy);
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
 
-    const params = {
-      prodSeriesId: prodSeriesIds.length > 0 ? prodSeriesIds.join(',') : undefined,
-      drawingNumberId: drawing?.id,
-      lnItemCodeId: drawing?.lnItemCodeId,
-      productionOrderNumber: selectedPO?.productionOrderNumber || undefined,
-      fromDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
-      toDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
-      createdBy: userIds.length > 0 ? userIds.join(',') : undefined,
-      fromBatchId: selectedFromId || undefined,
-      toBatchId: selectedToId || undefined,
-      fanManNumber: selectedFanMan || undefined,
-    };
-    setLastSearchType('parameters');
+    setPage(0);
+    const params = buildApiParams(searchQuery, selectedProductionSeries, selectedGeneratedBy, fromDate, toDate, 1, rowsPerPage);
     setLastSearchParams(params);
-    dispatch(getBarcodeDetailsWithParameters(params as any));
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const handleProductionSeriesChange = (newSeries: string[]) => {
+    setSelectedProductionSeries(newSeries);
+  };
+
+  const handleGeneratedByChange = (newGenBy: (number | string)[]) => {
+    setSelectedGeneratedBy(newGenBy);
+  };
+
+  const handleFromDateChange = (newFromDate: Date | null) => {
+    setFromDate(newFromDate);
+  };
+
+  const handleToDateChange = (newToDate: Date | null) => {
+    setToDate(newToDate);
   };
 
   const handleCloseSnackbar = () => {
@@ -639,32 +956,10 @@ const ViewBarcode: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    if (lastSearchType === 'query' && lastSearchQuery) {
-      dispatch(getBarcodeDetails(lastSearchQuery));
-    } else if (lastSearchType === 'parameters' && lastSearchParams) {
-      dispatch(getBarcodeDetailsWithParameters(lastSearchParams as any));
-    } else if (searchQuery.trim()) {
-      dispatch(getBarcodeDetails(searchQuery.trim()));
+    if (lastSearchParams) {
+      dispatch(getBarcodeDetailsWithParameters(lastSearchParams));
     } else {
-      const drawing = selectedDrawingNumber || selectedLnItem;
-      const hasFilter = selectedFanMan || selectedProductionSeries.length > 0 || selectedLnItem || selectedDrawingNumber || selectedPO || fromDate || toDate || selectedUser.length > 0 || selectedFromId || selectedToId;
-      if (hasFilter) {
-        const prodSeriesIds = selectedProductionSeries.map((s: any) => s.id || s).filter(Boolean);
-        const userIds = selectedUser.map((u: any) => u.id || u).filter(Boolean);
-        const params = {
-          prodSeriesId: prodSeriesIds.length > 0 ? prodSeriesIds.join(',') : undefined,
-          drawingNumberId: drawing?.id,
-          lnItemCodeId: drawing?.lnItemCodeId,
-          productionOrderNumber: selectedPO?.productionOrderNumber || undefined,
-          fromDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
-          toDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
-          createdBy: userIds.length > 0 ? userIds.join(',') : undefined,
-          fromBatchId: selectedFromId || undefined,
-          toBatchId: selectedToId || undefined,
-          fanManNumber: selectedFanMan || undefined,
-        };
-        dispatch(getBarcodeDetailsWithParameters(params as any));
-      }
+      handleFilterSearch();
     }
   };
 
@@ -698,20 +993,31 @@ const ViewBarcode: React.FC = () => {
     }
   };
 
-  const paginatedBarcodeDetails = React.useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    return displayedData.slice(startIndex, startIndex + rowsPerPage);
-  }, [displayedData, page, rowsPerPage]);
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    const params = buildApiParams(searchQuery, appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, newPage + 1, rowsPerPage);
+    setLastSearchParams(params);
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const handleRowsPerPageChange = (newRowsPerPage: number) => {
+    setRowsPerPage(newRowsPerPage);
+    setPage(0);
+    const params = buildApiParams(searchQuery, appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, newRowsPerPage);
+    setLastSearchParams(params);
+    dispatch(getBarcodeDetailsWithParameters(params));
+  };
+
+  const paginatedBarcodeDetails = displayedData;
 
   const handleSelectAll = (checked: boolean) => {
-    // If currently partially selected (indeterminate state with minus icon), clicking unselects all items
     if (selectedQRCodes.length > 0 && selectedQRCodes.length < displayedData.length) {
       setSelectedQRCodes([]);
       return;
     }
     if (checked) {
       const allIds = displayedData
-        .map((item: any) => item.id || item.qrCodeNumber)
+        .map((item: any) => item.qrCodeNumber || item.id)
         .filter((id: string) => id);
       setSelectedQRCodes(allIds);
     } else {
@@ -727,51 +1033,86 @@ const ViewBarcode: React.FC = () => {
     }
   };
 
-  const handleDownload = async () => {
-    if (selectedQRCodes.length === 0) {
+  // Export Dialog states
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+
+  const handleOpenExportDialog = () => {
+    setExportMode("custom");
+    setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(colKey)
+        ? prev.filter((k) => k !== colKey)
+        : [...prev, colKey]
+    );
+  };
+
+  const handleToggleSelectAllColumns = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+    } else {
+      setSelectedExportColumns([]);
+    }
+  };
+
+  const handleConfirmExportData = async () => {
+    const activeColumns =
+      exportMode === "all"
+        ? ALL_EXPORTABLE_COLUMNS.map((c) => c.key)
+        : ALL_EXPORTABLE_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key);
+
+    if (exportMode === "custom" && activeColumns.length === 0) {
       setSnackbar({
         open: true,
-        message: 'Please select at least one QR code to download',
-        severity: 'error'
+        message: "Please select at least one column to export.",
+        severity: "error",
       });
       return;
     }
 
     try {
-      // Map unique IDs back to QR Code numbers for the API call
-      const qrCodeNumbers = displayedData
-        .filter(item => selectedQRCodes.includes(item.id || item.qrCodeNumber))
-        .map(item => item.qrCodeNumber)
-        .filter(num => num);
+      const numericGenBy = appliedGeneratedBy
+        .map((id) => Number(id))
+        .filter((id) => !isNaN(id) && id > 0);
 
-      const batchIds = displayedData
-        .filter(item => selectedQRCodes.includes(item.id || item.qrCodeNumber))
-        .map(item => item.batchId)
-        .filter(id => id && id !== 'N/A');
-
-      const result = await dispatch(exportViewQrCode({
-        qrCodeNumber: qrCodeNumbers,
-        batchId: batchIds.length > 0 ? batchIds : undefined,
-      }));
+      const result = await dispatch(
+        exportViewQrCode({
+          qrCodeNumbers: selectedQRCodes,
+          qrCodeStatusId: 0,
+          searchQuery: searchQuery.trim(),
+          generatedBy: numericGenBy,
+          prodSeries: appliedProductionSeries,
+          fromDate: appliedFromDate ? format(appliedFromDate, "yyyy-MM-dd") : null,
+          toDate: appliedToDate ? format(appliedToDate, "yyyy-MM-dd") : null,
+          selectedColumns: activeColumns,
+          createdBy: user?.id ? Number(user.id) : 6,
+        })
+      );
 
       if (exportViewQrCode.fulfilled.match(result)) {
+        setExportDialogOpen(false);
         setSnackbar({
           open: true,
-          message: 'QR codes downloaded successfully!',
-          severity: 'success'
+          message: "QR codes exported successfully!",
+          severity: "success",
         });
       } else if (exportViewQrCode.rejected.match(result)) {
         setSnackbar({
           open: true,
-          message: result.payload as string || 'Failed to download QR codes',
-          severity: 'error'
+          message: (result.payload as string) || "Failed to export QR codes",
+          severity: "error",
         });
       }
     } catch (error: any) {
       setSnackbar({
         open: true,
-        message: error.message || 'Failed to download QR codes',
-        severity: 'error'
+        message: error.message || "Failed to export QR codes",
+        severity: "error",
       });
     }
   };
@@ -779,116 +1120,53 @@ const ViewBarcode: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedProductionSeries([]);
-    setSelectedLnItem(null);
-    setSelectedDrawingNumber(null);
-    setDrawingSearchText('');
-    setLnSearchText('');
-    setDebouncedLnSearch('');
+    setSelectedStatus([]);
+    setSelectedGeneratedBy([]);
     setFromDate(null);
     setToDate(null);
+    setAppliedProductionSeries([]);
+    setAppliedStatus([]);
+    setAppliedGeneratedBy([]);
+    setAppliedFromDate(null);
+    setAppliedToDate(null);
     setSelectedQRCodes([]);
-    setSelectedPO(null);
-    setPOSearchText('');
-    setSelectedUser([]);
-    setSelectedFromId(null);
-    setSelectedToId(null);
-    setSelectedFanMan(null);
-    setLastSearchType('none');
-    setLastSearchQuery('');
-    setLastSearchParams(null);
-    dispatch(clearBarcodeDetails());
-    dispatch(clearError());
     setPage(0);
-    // Clear processing lock just in case
     isProcessing.current = false;
     if (scannerTimeoutRef.current) {
       clearTimeout(scannerTimeoutRef.current);
       scannerTimeoutRef.current = null;
     }
+    const initialParams = buildApiParams('', [], [], null, null, 1, rowsPerPage);
+    setLastSearchParams(initialParams);
+    dispatch(clearBarcodeDetails());
+    dispatch(clearError());
+    dispatch(getBarcodeDetailsWithParameters(initialParams));
   };
 
   const handleReset = () => {
     clearFilters();
   };
 
-  const processBarcodeScan = React.useCallback(async (barcode: string, isFanMan: boolean = false) => {
-    if (!barcode || isProcessing.current) return;
 
-    try {
-      isProcessing.current = true;
-      if (isFanMan) {
-        const params = { fanManNumber: barcode.trim() };
-        setLastSearchType('parameters');
-        setLastSearchParams(params);
-        await dispatch(getBarcodeDetailsWithParameters(params)).unwrap();
-      } else {
-        const query = barcode.trim();
-        setLastSearchType('query');
-        setLastSearchQuery(query);
-        await dispatch(getBarcodeDetails(query)).unwrap();
-      }
-    } catch (err) {
-      console.error("Error fetching barcode details:", err);
-    } finally {
-      isProcessing.current = false;
-    }
-  }, [dispatch, setLastSearchType, setLastSearchQuery, setLastSearchParams]);
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+  const isInitialDebounceMount = React.useRef(true);
 
-  // Smart QR Code processing logic for View Barcode
   useEffect(() => {
-    const query = searchQuery.trim();
-    if (!query) {
-      if (scannerTimeoutRef.current) {
-        clearTimeout(scannerTimeoutRef.current);
-        scannerTimeoutRef.current = null;
-      }
+    if (isInitialDebounceMount.current) {
+      isInitialDebounceMount.current = false;
       return;
     }
-
-    // Only auto-trigger for numeric QR codes of length 12 or 15
-    const isNumeric = /^\d+$/.test(query);
-    if (!isNumeric) return;
-
-    // Clear any existing timer on every keystroke
-    if (scannerTimeoutRef.current) {
-      clearTimeout(scannerTimeoutRef.current);
-      scannerTimeoutRef.current = null;
+    const trimmed = debouncedSearchQuery.trim();
+    if (trimmed.length >= 3 || trimmed.length === 0) {
+      const params = buildApiParams(trimmed, appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, rowsPerPage);
+      setLastSearchParams(params);
+      dispatch(getBarcodeDetailsWithParameters(params));
     }
-
-    if (isProcessing.current) return;
-
-    if (query.length === 15) {
-      // Process 15-digit codes immediately
-      processBarcodeScan(query);
-    } else if (query.length === 12) {
-      // Process 12-digit codes after a 1000ms delay
-      scannerTimeoutRef.current = setTimeout(() => {
-        if (!isProcessing.current) {
-          processBarcodeScan(query);
-        }
-      }, 1000);
-    }
-
-    return () => {
-      if (scannerTimeoutRef.current) {
-        clearTimeout(scannerTimeoutRef.current);
-      }
-    };
-  }, [searchQuery, processBarcodeScan]);
+  }, [debouncedSearchQuery]);
 
   const handleQueryKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      const query = searchQuery.trim();
-
-      // Clear any pending auto-process timers
-      if (scannerTimeoutRef.current) {
-        clearTimeout(scannerTimeoutRef.current);
-        scannerTimeoutRef.current = null;
-      }
-
-      if (query && !isProcessing.current) {
-        processBarcodeScan(query);
-      }
+      handleFilterSearch();
     }
   };
 
@@ -896,323 +1174,711 @@ const ViewBarcode: React.FC = () => {
     return displayedData.some(item => item.hasBeenSplit);
   }, [displayedData]);
 
-  const canSplitAny = React.useMemo(() => {
-    return displayedData.some(item => (item.componentType === 'Batch' || item.componentType === 'BATCH') && item.unitName === 'ECH' && Number(item.quantity) > 1 && !item.isSplitRow && !item.hasBeenSplit);
-  }, [displayedData]);
+  const canSplitSelected = React.useMemo(() => {
+    if (hasAnySplit) return true;
+
+    if (selectedQRCodes.length === 0) return false;
+
+    const selectedRows = displayedData.filter((item) => {
+      const itemId = String(item.id ?? '');
+      const itemQr = String(item.qrCodeNumber ?? '');
+      return selectedQRCodes.some((code) => {
+        const sCode = String(code);
+        return sCode === itemId || sCode === itemQr;
+      });
+    });
+
+    if (selectedRows.length === 0) return false;
+
+    return selectedRows.every((item) => {
+      const compType = String(item.componentType || '').toLowerCase();
+      const isBatch = compType.includes('batch') || item.componentTypeId === 1;
+      return isBatch && !item.isSplitRow;
+    });
+  }, [displayedData, selectedQRCodes, hasAnySplit]);
+
+  const isDropdownFilterSelected =
+    selectedProductionSeries.length > 0 ||
+    selectedStatus.length > 0 ||
+    selectedGeneratedBy.length > 0 ||
+    !!fromDate ||
+    !!toDate;
 
   const isResetEnabled = !!(
     searchQuery.trim() ||
-    selectedPO ||
     selectedProductionSeries.length > 0 ||
-    selectedLnItem ||
-    selectedDrawingNumber ||
-    selectedUser.length > 0 ||
-    selectedFromId ||
-    selectedToId ||
-    selectedFanMan ||
+    selectedStatus.length > 0 ||
+    selectedGeneratedBy.length > 0 ||
     fromDate ||
     toDate ||
+    appliedProductionSeries.length > 0 ||
+    appliedStatus.length > 0 ||
+    appliedGeneratedBy.length > 0 ||
+    appliedFromDate ||
+    appliedToDate ||
     sortedBarcodeDetails.length > 0
   );
 
+
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: { xs: 0.5, sm: 1 } }}>
+      <Box sx={{ py: 1.5, px: { xs: 1.5, sm: 2.5 }, bgcolor: '#fcfcfd', minHeight: '100vh' }}>
+
+        {/* Page Header */}
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 0.75,
-            flexWrap: 'wrap',
-            gap: 1,
-            borderBottom: 1,
-            borderColor: 'divider',
-            pb: 0.25
+            justify: 'space-between',
+            width: '100%',
+            mb: 2,
           }}
         >
           <Box>
-            <Typography variant="h4" color="primary.main" fontWeight={600} sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>
-              View QR Code
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: 'primary.main',
+                fontSize: { xs: '1.25rem', sm: '1.5rem' },
+              }}
+            >
+              QR Code List
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Search, filter, export, and manage generated QR code numbers.
             </Typography>
           </Box>
+
+          <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<DownloadIcon fontSize="small" />}
+              onClick={handleOpenExportDialog}
+              disabled={isDownloading || (displayedData.length === 0 && selectedQRCodes.length === 0)}
+              sx={{
+                height: 34,
+                borderRadius: '6px',
+                borderColor: 'grey.300',
+                color: 'text.secondary',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                backgroundColor: 'background.paper',
+                '&:hover': { borderColor: 'grey.400', backgroundColor: 'grey.50' },
+              }}
+            >
+              {isDownloading ? 'Exporting...' : 'Export'}
+            </Button>
+
+            <Tooltip
+              title={!hasGenerateAccess ? "You do not have access to create QR code page" : ""}
+              arrow
+            >
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddIcon fontSize="small" />}
+                  disabled={!hasGenerateAccess}
+                  onClick={() => navigate('/qrcode/generate')}
+                  sx={{
+                    height: 34,
+                    borderRadius: '6px',
+                    backgroundColor: 'primary.main',
+                    color: '#ffffff',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                    boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
+                    '&:hover': { backgroundColor: 'primary.dark' },
+                    '&.Mui-disabled': {
+                      backgroundColor: '#EAECF0',
+                      color: '#98A2B3',
+                    },
+                  }}
+                >
+                  New QR Code
+                </Button>
+              </span>
+            </Tooltip>
+          </Stack>
         </Box>
 
-        <Paper sx={{ p: { xs: 1, sm: 1.25 }, mt: 0.5 }}>
+        {/* Unified Single Outer Paper Container */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: "12px",
+            border: "1px solid #eaecf0",
+            backgroundColor: "#ffffff",
+            overflow: "hidden",
+            mb: 2,
+          }}
+        >
+          {/* Section 1: Filter Bar & Active Chips */}
+          <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #eaecf0" }}>
+            {/* Single Row Filter Controls */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 1,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                pt: 1.5,
+                pb: 0.5,
+                "&::-webkit-scrollbar": { display: "none" },
+              }}
+            >
+              {/* Search Input */}
+              <TextField
+                size="small"
+                placeholder="Search QR Code Number, PO No. Drawing No. Ln Item Code..."
+                value={searchQuery}
+                onChange={(e) => {
+                  if (error) dispatch(clearError());
+                  setSearchQuery(e.target.value);
+                }}
+                onKeyDown={handleQueryKeyDown}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: '#98A2B3', fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {loading ? (
+                        <CircularProgress size={16} />
+                      ) : searchQuery ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setSearchQuery('');
+                            if (error) dispatch(clearError());
+                            const params = buildApiParams('', appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, rowsPerPage);
+                            setLastSearchParams(params);
+                            dispatch(getBarcodeDetailsWithParameters(params));
+                          }}
+                          sx={{ p: 0.25, color: '#98A2B3', '&:hover': { color: '#344054' } }}
+                          title="Clear search"
+                        >
+                          <CloseIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      ) : null}
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  flex: "1 1 340px",
+                  minWidth: 260,
+                  position: 'relative',
+                }}
+              />
+
+              {/* Multiselect Prod. Series Dropdown */}
+              <MultiSelectFilter
+                label="Prod Series"
+                value={selectedProductionSeries}
+                options={prodSeriesOptions}
+                onChange={handleProductionSeriesChange}
+                minWidth={120}
+                flex="0 0 150px"
+              />
+
+              {/* Multiselect Generated By Dropdown */}
+              <MultiSelectFilter
+                label="Generated By"
+                value={selectedGeneratedBy}
+                options={userOptions}
+                onChange={handleGeneratedByChange}
+                minWidth={115}
+                flex="0 0 140px"
+              />
+
+              {/* From Date */}
+              <TextField
+                size="small"
+                type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                placeholder="From Date"
+                value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleFromDateChange(val ? new Date(val) : null);
+                }}
+                inputProps={{ title: "From Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: fromDate ? "#344054" : "#98A2B3",
+                  },
+                }}
+              />
+
+              {/* To Date */}
+              <TextField
+                size="small"
+                type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                placeholder="To Date"
+                value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleToDateChange(val ? new Date(val) : null);
+                }}
+                inputProps={{ title: "To Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: toDate ? "#344054" : "#98A2B3",
+                  },
+                }}
+              />
+
+              {/* Apply Button */}
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleFilterSearch}
+                disabled={!isDropdownFilterSelected || loading}
+                sx={{
+                  flex: "0 0 auto",
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  borderRadius: "6px",
+                  px: 2,
+                  height: 38,
+                  textTransform: "none",
+                  boxShadow: "none",
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                }}
+              >
+                Apply
+              </Button>
+
+              {/* Clear Link */}
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleReset}
+                disabled={!isResetEnabled}
+                sx={{
+                  flex: "0 0 auto",
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  height: 38,
+                  px: 1,
+                  minWidth: 55,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+
+            {/* Active Filter Chips Row & Results Count */}
+            {(() => {
+              const activeSeriesList = Array.from(new Set([...selectedProductionSeries, ...appliedProductionSeries]));
+              const activeStatusList = Array.from(new Set([...selectedStatus, ...appliedStatus]));
+              const activeGenByList = Array.from(new Set([...selectedGeneratedBy, ...appliedGeneratedBy]));
+              const displayFromDate = fromDate || appliedFromDate;
+              const displayToDate = toDate || appliedToDate;
+
+              const hasAnyFilterSelected =
+                searchQuery.trim() !== "" ||
+                activeSeriesList.length > 0 ||
+                activeStatusList.length > 0 ||
+                activeGenByList.length > 0 ||
+                !!displayFromDate ||
+                !!displayToDate;
+
+              return (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'space-between',
+                    mt: 1,
+                    pt: 0.75,
+                    borderTop: '1px solid #f2f4f7',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                    {searchQuery.trim() && (
+                      <Chip
+                        key="search-query"
+                        label={`Search: "${searchQuery.trim()}"`}
+                        size="small"
+                        onDelete={() => {
+                          setSearchQuery('');
+                          if (error) dispatch(clearError());
+                          const params = buildApiParams('', appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, rowsPerPage);
+                          setLastSearchParams(params);
+                          dispatch(getBarcodeDetailsWithParameters(params));
+                        }}
+                        sx={{
+                          borderRadius: '16px',
+                          bgcolor: '#F4F3FF',
+                          color: 'primary.main',
+                          border: '1px solid #D9D6FE',
+                          fontWeight: 600,
+                          fontSize: '0.775rem',
+                          height: '26px',
+                          '& .MuiChip-deleteIcon': {
+                            fontSize: '14px',
+                            color: 'primary.main',
+                            '&:hover': { color: 'primary.dark' },
+                          },
+                        }}
+                      />
+                    )}
+
+                    {activeSeriesList.map((s) => (
+                      <Chip
+                        key={`series-${s}`}
+                        label={`Series: ${s}`}
+                        size="small"
+                        onDelete={() => {
+                          const nextSel = selectedProductionSeries.filter((v) => v !== s);
+                          const nextApp = appliedProductionSeries.filter((v) => v !== s);
+                          setSelectedProductionSeries(nextSel);
+                          setAppliedProductionSeries(nextApp);
+                          const params = buildApiParams(searchQuery, nextApp, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, rowsPerPage);
+                          setLastSearchParams(params);
+                          dispatch(getBarcodeDetailsWithParameters(params));
+                        }}
+                        sx={{
+                          borderRadius: '16px',
+                          bgcolor: '#F4F3FF',
+                          color: 'primary.main',
+                          border: '1px solid #D9D6FE',
+                          fontWeight: 600,
+                          fontSize: '0.775rem',
+                          height: '26px',
+                          '& .MuiChip-deleteIcon': {
+                            fontSize: '14px',
+                            color: 'primary.main',
+                            '&:hover': { color: 'primary.dark' },
+                          },
+                        }}
+                      />
+                    ))}
+
+                    {activeStatusList.map((st) => (
+                      <Chip
+                        key={`status-${st}`}
+                        label={`Status: ${st}`}
+                        size="small"
+                        onDelete={() => {
+                          const nextSel = selectedStatus.filter((v) => v !== st);
+                          const nextApp = appliedStatus.filter((v) => v !== st);
+                          setSelectedStatus(nextSel);
+                          setAppliedStatus(nextApp);
+                          const params = buildApiParams(searchQuery, appliedProductionSeries, appliedGeneratedBy, appliedFromDate, appliedToDate, 1, rowsPerPage);
+                          setLastSearchParams(params);
+                          dispatch(getBarcodeDetailsWithParameters(params));
+                        }}
+                        sx={{
+                          borderRadius: '16px',
+                          bgcolor: '#F4F3FF',
+                          color: 'primary.main',
+                          border: '1px solid #D9D6FE',
+                          fontWeight: 600,
+                          fontSize: '0.775rem',
+                          height: '26px',
+                          '& .MuiChip-deleteIcon': {
+                            fontSize: '14px',
+                            color: 'primary.main',
+                            '&:hover': { color: 'primary.dark' },
+                          },
+                        }}
+                      />
+                    ))}
+
+                    {activeGenByList.map((userId) => {
+                      const matchedUser = usersData.find((u: any) => String(u.id) === String(userId));
+                      const userLabel = matchedUser ? (matchedUser.userName || (matchedUser as any).name || String(userId)) : String(userId);
+                      return (
+                        <Chip
+                          key={`genBy-${userId}`}
+                          label={`Generated By: ${userLabel}`}
+                          size="small"
+                          onDelete={() => {
+                            const nextSelUsers = selectedGeneratedBy.filter((id) => String(id) !== String(userId));
+                            const nextAppUsers = appliedGeneratedBy.filter((id) => String(id) !== String(userId));
+                            setSelectedGeneratedBy(nextSelUsers);
+                            setAppliedGeneratedBy(nextAppUsers);
+                            const params = buildApiParams(searchQuery, appliedProductionSeries, nextAppUsers, appliedFromDate, appliedToDate, 1, rowsPerPage);
+                            setLastSearchParams(params);
+                            dispatch(getBarcodeDetailsWithParameters(params));
+                          }}
+                          sx={{
+                            borderRadius: '16px',
+                            bgcolor: '#F4F3FF',
+                            color: 'primary.main',
+                            border: '1px solid #D9D6FE',
+                            fontWeight: 600,
+                            fontSize: '0.775rem',
+                            height: '26px',
+                            '& .MuiChip-deleteIcon': {
+                              fontSize: '14px',
+                              color: 'primary.main',
+                              '&:hover': { color: 'primary.dark' },
+                            },
+                          }}
+                        />
+                      );
+                    })}
+
+                    {displayFromDate && (
+                      <Chip
+                        key="from-date"
+                        label={`From: ${format(displayFromDate, 'dd/MM/yyyy')}`}
+                        size="small"
+                        onDelete={() => {
+                          setFromDate(null);
+                          setAppliedFromDate(null);
+                          const params = buildApiParams(searchQuery, appliedProductionSeries, appliedGeneratedBy, null, appliedToDate, 1, rowsPerPage);
+                          setLastSearchParams(params);
+                          dispatch(getBarcodeDetailsWithParameters(params));
+                        }}
+                        sx={{
+                          borderRadius: '16px',
+                          bgcolor: '#F4F3FF',
+                          color: 'primary.main',
+                          border: '1px solid #D9D6FE',
+                          fontWeight: 600,
+                          fontSize: '0.775rem',
+                          height: '26px',
+                          '& .MuiChip-deleteIcon': {
+                            fontSize: '14px',
+                            color: 'primary.main',
+                            '&:hover': { color: 'primary.dark' },
+                          },
+                        }}
+                      />
+                    )}
+
+                    {displayToDate && (
+                      <Chip
+                        key="to-date"
+                        label={`To: ${format(displayToDate, 'dd/MM/yyyy')}`}
+                        size="small"
+                        onDelete={() => {
+                          setToDate(null);
+                          setAppliedToDate(null);
+                          const params = buildApiParams(searchQuery, appliedProductionSeries, appliedGeneratedBy, appliedFromDate, null, 1, rowsPerPage);
+                          setLastSearchParams(params);
+                          dispatch(getBarcodeDetailsWithParameters(params));
+                        }}
+                        sx={{
+                          borderRadius: '16px',
+                          bgcolor: '#F4F3FF',
+                          color: 'primary.main',
+                          border: '1px solid #D9D6FE',
+                          fontWeight: 600,
+                          fontSize: '0.775rem',
+                          height: '26px',
+                          '& .MuiChip-deleteIcon': {
+                            fontSize: '14px',
+                            color: 'primary.main',
+                            '&:hover': { color: 'primary.dark' },
+                          },
+                        }}
+                      />
+                    )}
+
+                    {hasAnyFilterSelected && (
+                      <Button
+                        variant="text"
+                        onClick={clearFilters}
+                        sx={{
+                          color: 'primary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          minWidth: 'auto',
+                          px: 0.5,
+                          py: 0,
+                          height: '26px',
+                          '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' },
+                        }}
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                  </Box>
+
+                  {/* Total Results Count */}
+                  <Typography variant="body2" sx={{ color: '#667085', fontSize: '0.85rem', fontWeight: 500, ml: 'auto' }}>
+                    {totalRecordsCount} {totalRecordsCount === 1 ? 'result' : 'results'}
+                  </Typography>
+                </Box>
+              );
+            })()}
+          </Box>
+
+          {/* Section 2: Bulk Action Bar */}
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              mb: 1,
-              flexWrap: 'wrap',
-              width: '100%'
+              justify: 'space-between',
+              width: '100%',
+              px: 2,
+              py: 1,
+              bgcolor: '#ffffff',
+              borderBottom: '1px solid #eaecf0',
             }}
           >
-            <TextField
-              size="small"
-              placeholder="QR Code, PO No, Drawing No, LN Item, ID No..."
-              value={searchQuery}
-              onChange={(e) => {
-                if (error) dispatch(clearError());
-                setSearchQuery(e.target.value);
-              }}
-              onKeyDown={handleQueryKeyDown}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
-                endAdornment: loading && (
-                  <InputAdornment position="end">
-                    <CircularProgress size={18} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                flex: { xs: '1 1 100%', md: '1 1 0%' },
-                minWidth: 160
-              }}
-              error={!!error && !!searchQuery.trim()}
-              helperText={(searchQuery.trim() && error?.message) || ''}
-            />
-
-            <FormControl size="small" sx={{ flex: { xs: '1 1 calc(50% - 4px)', md: '0 1 auto' }, minWidth: 120 }}>
-              <Autocomplete
-                multiple
-                disableCloseOnSelect
-                renderTags={() => null}
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Checkbox
+                checked={selectedQRCodes.length === displayedData.length && displayedData.length > 0}
+                indeterminate={selectedQRCodes.length > 0 && selectedQRCodes.length < displayedData.length}
+                onChange={(e) => handleSelectAll(e.target.checked)}
                 size="small"
-                options={productionSeriesData}
-                getOptionLabel={(option) => {
-                  if (typeof option === "string") return option;
-                  return option.productionSeries || '';
-                }}
-                value={selectedProductionSeries}
-                onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                isOptionEqualToValue={(option, value) => (option.id || option) === (value?.id || value)}
-                ListboxProps={{
-                  sx: {
-                    py: 0.5,
-                    '& .MuiAutocomplete-option': {
-                      minHeight: '30px !important',
-                      py: '2px !important',
-                      px: '8px !important',
-                      fontSize: '0.85rem'
-                    }
-                  }
-                }}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <li {...optionProps} key={key}>
-                      <Checkbox
-                        size="small"
-                        sx={{ p: '2px', mr: 0.75 }}
-                        checked={selected}
-                      />
-                      {typeof option === "string" ? option : option.productionSeries}
-                    </li>
-                  );
-                }}
-                renderInput={(params) => <TextField {...params} label="Prod Series" InputLabelProps={{ shrink: true }} placeholder={selectedProductionSeries.length > 0 ? `${selectedProductionSeries.length} selected` : "Select"} size="small" />}
-              />
-            </FormControl>
-
-            <FormControl size="small" sx={{ flex: { xs: '1 1 calc(50% - 4px)', md: '0 1 auto' }, minWidth: 120 }}>
-              <Autocomplete
-                multiple
-                disableCloseOnSelect
-                renderTags={() => null}
-                size="small"
-                options={users || []}
-                getOptionLabel={(option: any) => {
-                  if (typeof option === 'string') return option;
-                  return option.userName || option.username || "";
-                }}
-                value={selectedUser}
-                onChange={(_, newValue) => setSelectedUser(newValue)}
-                isOptionEqualToValue={(option, value) => (option.id || option) === (value?.id || value)}
-                ListboxProps={{
-                  sx: {
-                    py: 0.5,
-                    '& .MuiAutocomplete-option': {
-                      minHeight: '30px !important',
-                      py: '2px !important',
-                      px: '8px !important',
-                      fontSize: '0.85rem'
-                    }
-                  }
-                }}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <li {...optionProps} key={key}>
-                      <Checkbox
-                        size="small"
-                        sx={{ p: '2px', mr: 0.75 }}
-                        checked={selected}
-                      />
-                      {typeof option === 'string' ? option : (option.userName || option.username || "")}
-                    </li>
-                  );
-                }}
-                renderInput={(params) => <TextField {...params} label="Generated By" InputLabelProps={{ shrink: true }} placeholder={selectedUser.length > 0 ? `${selectedUser.length} selected` : "Select"} size="small" />}
-              />
-            </FormControl>
-
-            <DatePicker
-              label="From Date"
-              value={fromDate}
-              onChange={(newValue) => setFromDate(newValue)}
-              slotProps={{ textField: { size: "small", sx: { flex: { xs: '1 1 calc(50% - 4px)', md: '0 0 auto' }, minWidth: 120, width: { md: 140 } } } }}
-            />
-            <DatePicker
-              label="To Date"
-              value={toDate}
-              onChange={(newValue) => setToDate(newValue)}
-              slotProps={{ textField: { size: "small", sx: { flex: { xs: '1 1 calc(50% - 4px)', md: '0 0 auto' }, minWidth: 120, width: { md: 140 } } } }}
-            />
-
-            <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', width: { xs: '100%', md: 'auto' }, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleFilterSearch}
-                size="small"
-                disabled={!!searchQuery || (!selectedFanMan && selectedProductionSeries.length === 0 && !selectedLnItem && !selectedDrawingNumber && !selectedPO && !fromDate && !toDate && selectedUser.length === 0 && !selectedFromId && !selectedToId)}
-                sx={{ height: 36, minWidth: 70, px: 1.5 }}
-              >
-                Search
-              </Button>
-              <Button variant="contained" color="primary" startIcon={<DownloadIcon sx={{ fontSize: 16 }} />} onClick={handleDownload} size="small" disabled={isDownloading || selectedQRCodes.length === 0} sx={{ height: 36, minWidth: 70, px: 1.5 }}>
-                {isDownloading ? '...' : 'Download'}
-              </Button>
-              <Button variant="contained" color="error" startIcon={<ReplayIcon sx={{ fontSize: 16 }} />} onClick={handleReset} size="small" disabled={!isResetEnabled} sx={{ height: 36, minWidth: 60, px: 1.5 }}>
-                Reset
-              </Button>
-            </Box>
-          </Box>
-
-          {(selectedProductionSeries.length > 0 || selectedUser.length > 0) && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center', mb: 1, px: 0.5 }}>
-              {selectedProductionSeries.map((item: any) => {
-                const label = typeof item === 'string' ? item : item.productionSeries;
-                return (
-                  <Chip
-                    key={item.id || label}
-                    label={`Series: ${label}`}
-                    size="small"
-                    onDelete={() => {
-                      setSelectedProductionSeries(prev => prev.filter((s: any) => (s.id || s) !== (item.id || item)));
-                    }}
-                    color="primary"
-                    variant="outlined"
-                  />
-                );
-              })}
-              {selectedUser.map((userItem: any) => {
-                const label = typeof userItem === 'string' ? userItem : (userItem.userName || userItem.username);
-                return (
-                  <Chip
-                    key={userItem.id || label}
-                    label={`User: ${label}`}
-                    size="small"
-                    onDelete={() => {
-                      setSelectedUser(prev => prev.filter((u: any) => (u.id || u) !== (userItem.id || userItem)));
-                    }}
-                    color="primary"
-                    variant="outlined"
-                  />
-                );
-              })}
-              <Button
-                size="small"
-                color="error"
-                variant="text"
-                onClick={() => {
-                  setSelectedProductionSeries([]);
-                  setSelectedUser([]);
-                }}
-                sx={{ fontSize: '0.75rem', py: 0, px: 1, height: '24px', minWidth: 'auto', fontWeight: 600 }}
-              >
-                Clear All
-              </Button>
-            </Box>
-          )}
-
-
-
-          {displayedData.length > 0 && (
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Checkbox
-                  checked={selectedQRCodes.length === displayedData.length && displayedData.length > 0}
-                  indeterminate={selectedQRCodes.length > 0 && selectedQRCodes.length < displayedData.length}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                />
-                <Typography variant="body2">Select All ({selectedQRCodes.length} of {displayedData.length} selected)</Typography>
-              </Box>
-
-              <Button
-                variant="contained"
-                color={hasAnySplit ? "error" : "secondary"}
-                onClick={handleSplitAll}
-                size="small"
-                disabled={displayedData.length === 0 || (!hasAnySplit && !canSplitAny)}
-                sx={{ height: '32px', minWidth: '90px' }}
-              >
-                {hasAnySplit ? 'Close All' : 'Split All'}
-              </Button>
-            </Box>
-          )}
-
-          <TableContainer sx={{ width: '100%', maxHeight: 'calc(100vh - 270px)', minHeight: '480px', overflowX: 'auto', overflowY: 'auto' }}>
-            <Table sx={{ width: '100%', minWidth: '1540px', tableLayout: 'auto' }} stickyHeader aria-label="QR codes table">
-              <TableHead
                 sx={{
-                  backgroundColor: '#f5f5f5',
-                  '& .MuiTableCell-head': {
-                    backgroundColor: '#f5f5f5',
-                    zIndex: 2,
-                    position: 'sticky',
-                    top: 0,
+                  p: 0,
+                  color: '#d0d5dd',
+                  '&.Mui-checked': { color: 'primary.main' },
+                  '&.MuiCheckbox-indeterminate': { color: 'primary.main' },
+                }}
+              />
+              <Typography variant="body2" sx={{ color: '#475467', fontSize: '0.85rem' }}>
+                <Box component="span" sx={{ fontWeight: 600, color: '#101828' }}>
+                  {selectedQRCodes.length} of {displayedData.length} selected
+                </Box>
+                {' · Select rows if you want to export specific QR codes'}
+              </Typography>
+            </Stack>
+
+            <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<CallSplitIcon fontSize="small" />}
+                onClick={handleSplitAll}
+                disabled={displayedData.length === 0 || !canSplitSelected}
+                sx={{
+                  height: 34,
+                  borderRadius: '6px',
+                  backgroundColor: 'primary.main',
+                  color: '#ffffff',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
+                  '&:hover': { backgroundColor: 'primary.dark' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(107, 40, 138, 0.3)',
+                    color: '#ffffff',
                   },
                 }}
               >
-                <TableRow sx={{ height: 30 }}>
-                  <TableCell padding="checkbox" sx={{ fontWeight: 'bold', textAlign: 'center', padding: "5px 8px !important" }}>
+                {hasAnySplit ? 'Close Split' : 'Split selected'}
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Section 3: Data Table */}
+          <TableContainer sx={{ width: '100%', maxHeight: 'calc(100vh - 290px)', minHeight: '380px', overflowX: 'auto', overflowY: 'auto' }}>
+            <Table sx={{ width: '100%', minWidth: '1300px', tableLayout: 'auto' }} stickyHeader aria-label="QR codes table">
+              <TableHead>
+                <TableRow sx={{ height: 40 }}>
+                  <TableCell padding="checkbox" sx={{ textAlign: 'center', py: '8px', px: '8px', borderBottom: '1px solid #eaecf0', bgcolor: '#f9fafb !important' }}>
                     <Checkbox
                       checked={selectedQRCodes.length === displayedData.length && displayedData.length > 0}
                       indeterminate={selectedQRCodes.length > 0 && selectedQRCodes.length < displayedData.length}
                       onChange={(e) => handleSelectAll(e.target.checked)}
+                      size="small"
+                      sx={{ color: '#d0d5dd', '&.Mui-checked': { color: 'primary.main' }, '&.MuiCheckbox-indeterminate': { color: 'primary.main' } }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '180px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>QRCode ID</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '140px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Prod Series</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>LN Item Code</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '200px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Drawing Number</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '200px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Nomenclature</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '150px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Component Type</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '220px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>ConsumedInDrawing</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '140px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>ID Number</TableCell>
+
+                  <TableHeaderSortable label="QRCode Number" columnKey="qrCodeNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="140px" />
+                  <TableHeaderSortable label="Prod Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
+                  <TableHeaderSortable label="LN Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
+                  <TableHeaderSortable label="Drawing Number" columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="150px" />
+                  <TableHeaderSortable label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="160px" />
+                  <TableHeaderSortable label="Component Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="130px" />
+                  <TableHeaderSortable label="Consumed In Drawing" columnKey="consumedInDrawing" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="150px" />
+                  <TableHeaderSortable label="ID Number" columnKey="idNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="130px" />
+
                   {showBatchIdColumn && (
-                    <TableCell sx={{ fontWeight: 'bold', minWidth: '130px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Batch ID</TableCell>
+                    <TableHeaderSortable label="Batch ID" columnKey="batchId" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="110px" />
                   )}
-                  <TableCell sx={{ fontWeight: 'bold', minWidth: '110px', textAlign: 'center', padding: "5px 8px !important", whiteSpace: "nowrap" }}>Actions</TableCell>
+
+                  <TableCell sx={{ fontWeight: 600, minWidth: '110px', textAlign: 'center', py: '8px', px: '8px', whiteSpace: 'nowrap', color: '#475467', fontSize: '0.8rem', borderBottom: '1px solid #eaecf0', bgcolor: '#f9fafb !important' }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedBarcodeDetails.length > 0 ? (
+                {loading ? (
+                  <TableRow sx={{ height: '260px' }}>
+                    <TableCell colSpan={showBatchIdColumn ? 11 : 10} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+                        <CircularProgress size={32} color="primary" />
+                        <Typography variant="body2" sx={{ color: '#667085', fontWeight: 500 }}>
+                          Loading QR codes...
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedBarcodeDetails.length > 0 ? (
                   paginatedBarcodeDetails.map((item, index) => {
                     const globalIndex = page * rowsPerPage + index;
                     return (
                       <Row
                         key={item.id || `${item.qrCodeNumber}-${index}`}
                         barcodeDetails={item}
-                        isSelected={selectedQRCodes.includes(item.id || item.qrCodeNumber)}
-                        onSelect={(checked) => handleSelectQRCode(item.id || item.qrCodeNumber, checked)}
+                        isSelected={selectedQRCodes.includes(item.qrCodeNumber || item.id)}
+                        onSelect={(checked) => handleSelectQRCode(item.qrCodeNumber || item.id, checked)}
                         onSplit={() => handleSplit(globalIndex)}
                         showBatchId={showBatchIdColumn}
                         onDisable={() => handleOpenDisableDialog(item.qrCodeNumber)}
@@ -1221,37 +1887,174 @@ const ViewBarcode: React.FC = () => {
                     );
                   })
                 ) : (
-                  !loading && (
-                    <TableRow sx={{ height: '350px' }}>
-                      <TableCell colSpan={showBatchIdColumn ? 12 : 11} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', width: '100%' }}>
-                          
-                         
-                          <Typography variant="body1" color="text.secondary">Use the search filters to view QR codes.
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  )
+                  <EmptyState colSpan={showBatchIdColumn ? 11 : 10} />
                 )}
               </TableBody>
             </Table>
           </TableContainer>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            component="div"
-            count={displayedData.length}
-            rowsPerPage={rowsPerPage}
+
+          {/* Section 4: Footer Bar */}
+          <CustomPagination
             page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
+            pageSize={rowsPerPage}
+            totalCount={totalRecordsCount}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handleRowsPerPageChange}
           />
+
         </Paper>
 
         <Snackbar open={snackbar.open} autoHideDuration={snackbar.severity === 'error' ? null : 4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
           <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
         </Snackbar>
 
+        {/* Export Options Dialog */}
+        <Dialog
+          open={exportDialogOpen}
+          onClose={() => !isDownloading && setExportDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { borderRadius: "16px", p: 1 },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontWeight: 700,
+              color: "#101828",
+              fontSize: "1.1rem",
+              pb: 1,
+            }}
+          >
+            Export QR Codes
+            <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isDownloading}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent dividers sx={{ py: 2 }}>
+            <FormControl component="fieldset" sx={{ width: "100%" }}>
+              <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+                Choose Export Option:
+              </Typography>
+
+              <RadioGroup
+                value={exportMode}
+                onChange={(e) => {
+                  const newMode = e.target.value as "all" | "custom";
+                  setExportMode(newMode);
+                  if (newMode === "custom") {
+                    setSelectedExportColumns(ALL_EXPORTABLE_COLUMNS.map((c) => c.key));
+                  }
+                }}
+                sx={{ mb: 2 }}
+              >
+                <FormControlLabel
+                  value="all"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+                />
+                <FormControlLabel
+                  value="custom"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+                />
+              </RadioGroup>
+
+              {exportMode === "custom" && (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: "12px",
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length}
+                          indeterminate={
+                            selectedExportColumns.length > 0 &&
+                            selectedExportColumns.length < ALL_EXPORTABLE_COLUMNS.length
+                          }
+                          onChange={handleToggleSelectAllColumns}
+                          sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" fontWeight="700">
+                          {selectedExportColumns.length === ALL_EXPORTABLE_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                        </Typography>
+                      }
+                    />
+                    <Chip
+                      label={`${selectedExportColumns.length} / ${ALL_EXPORTABLE_COLUMNS.length} selected`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderColor: "primary.main", color: "primary.main" }}
+                    />
+                  </Box>
+
+                  <Grid container spacing={1}>
+                    {ALL_EXPORTABLE_COLUMNS.map((col) => (
+                      <Grid item xs={6} sm={4} key={col.key}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedExportColumns.includes(col.key)}
+                              onChange={() => handleToggleColumn(col.key)}
+                              sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                            />
+                          }
+                          label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+            </FormControl>
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              onClick={() => setExportDialogOpen(false)}
+              disabled={isDownloading}
+              sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={isDownloading ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+              onClick={handleConfirmExportData}
+              disabled={isDownloading || (exportMode === "custom" && selectedExportColumns.length === 0)}
+              sx={{
+                minWidth: 110,
+                fontWeight: 600,
+                borderRadius: "8px",
+                textTransform: "none",
+                backgroundColor: "primary.main",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
+            >
+              {isDownloading ? "Exporting..." : "Export"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Disable Dialog */}
         <Dialog open={disableDialogOpen} onClose={() => setDisableDialogOpen(false)} maxWidth="xs" fullWidth>
           <DialogTitle sx={{ fontWeight: 600, color: 'error.main' }}>Disable QR Code</DialogTitle>
           <DialogContent>

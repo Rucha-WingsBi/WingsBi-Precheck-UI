@@ -207,14 +207,21 @@ export const useDeleteUserRole = () => {
   });
 };
 
-export const useUsers = (enabled: boolean = true) => {
+export const useUsers = (searchQueryOrEnabled?: string | boolean, enabledArg: boolean = true) => {
+  const searchQuery = typeof searchQueryOrEnabled === "string" ? searchQueryOrEnabled : "";
+  const enabled = typeof searchQueryOrEnabled === "boolean" ? searchQueryOrEnabled : enabledArg;
+
   return useQuery<User[]>({
-    queryKey: ["users"],
+    queryKey: ["users", searchQuery],
     queryFn: async () => {
-      const response = await api.get("/api/User/GetAllUsers");
-      return response.data;
+      const response = await api.get("/api/User/GetAllUsers", {
+        params: searchQuery ? { searchQuery } : undefined,
+      });
+      const rawData = response.data?.data || response.data?.$values || response.data;
+      return Array.isArray(rawData) ? rawData : [];
     },
     enabled,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -299,6 +306,67 @@ export const useDrawingNumbers = (componentType = "", search = "") => {
   });
 };
 
+export const useFetchAllDrawingNumbers = (
+  searchQuery = "",
+  pageNumber = 1,
+  pageSize = 20,
+  componentType = "",
+  prodSeries: string[] = [],
+  unit: string[] = []
+) => {
+  return useQuery<DrawingNumber[]>({
+    queryKey: [
+      "fetchAllDrawingNumbers",
+      searchQuery,
+      pageNumber,
+      pageSize,
+      componentType,
+      prodSeries,
+      unit,
+    ],
+    queryFn: async () => {
+      try {
+        const payload = {
+          componentType: componentType || "",
+          search: searchQuery || "",
+          prodSeries: Array.isArray(prodSeries) ? prodSeries : (prodSeries ? [prodSeries] : []),
+          unit: Array.isArray(unit) ? unit : (unit ? [unit] : []),
+        };
+
+        const response = await api.post(
+          `/api/Common/FetchAllDrawingNumbers?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+          payload
+        );
+        const rawData = response.data?.data || response.data?.$values || response.data;
+        let list: any[] = [];
+        if (Array.isArray(rawData)) {
+          list = [...rawData];
+        } else if (Array.isArray(response.data)) {
+          list = [...response.data];
+        }
+        const totalRecords =
+          response.data?.totalRecords ??
+          response.data?.totalCount ??
+          response.data?.total;
+
+        if (totalRecords !== undefined) {
+          (list as any).totalRecords = totalRecords;
+        }
+        (list as any).pageNumber = pageNumber;
+        (list as any).pageSize = pageSize;
+        return list;
+      } catch (err) {
+        console.error("FetchAllDrawingNumbers API call failed:", err);
+        const emptyList: any[] = [];
+        (emptyList as any).totalRecords = 0;
+        return emptyList;
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+
 export const useAssemblyNumbers = () => {
   return useQuery({
     queryKey: ["assemblyNumbers"],
@@ -314,22 +382,11 @@ export const useAllDrawingNumbers = () => {
   return useQuery<DrawingNumber[]>({
     queryKey: ["allDrawingNumbers"],
     queryFn: async () => {
-      try {
-        const response = await api.get("/api/Common/FetchAllDrawingNumbers");
-        const rawData = response.data?.data || response.data?.$values || response.data;
-        if (Array.isArray(rawData) && rawData.length > 0) {
-          return rawData;
-        }
-      } catch (err) {
-        console.warn("FetchAllDrawingNumbers endpoint failed, trying GetAllDrawingNumber fallback:", err);
-      }
-
-      // Fallback to GetAllDrawingNumber if FetchAllDrawingNumbers is not available or empty
-      const fallbackResponse = await api.get("/api/Common/GetAllDrawingNumber", {
+      const response = await api.get("/api/Common/GetAllDrawingNumber", {
         params: { ComponentType: "", search: "" },
       });
-      const fallbackRaw = fallbackResponse.data?.data || fallbackResponse.data?.$values || fallbackResponse.data;
-      return Array.isArray(fallbackRaw) ? fallbackRaw : [];
+      const rawData = response.data?.data || response.data?.$values || response.data;
+      return Array.isArray(rawData) ? rawData : Array.isArray(response.data) ? response.data : [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes cache for instant navigation
   });
@@ -367,7 +424,7 @@ export const useIRNumbers = (
 
       // Find all NA-like entries
       const allNAEntries = rawData.filter((item: any) => isAnyNA(item.irNumber));
-      
+
       // Prefer longer variants or the first one found
       const apiNAEntry = allNAEntries.find((item: any) => {
         const n = item.irNumber?.trim().toUpperCase();
@@ -429,7 +486,7 @@ export const useIRNumbers = (
       }
 
       // Filter by search text
-      if (searchText && searchText.length >= 3) {
+      if (searchText && searchText.trim() !== "") {
         const searchLower = searchText.toLowerCase();
         filteredData = filteredData.filter(
           (item: any) =>
@@ -490,7 +547,7 @@ export const useMSNNumbers = (
 
       // Find all NA-like entries
       const allNAEntries = rawData.filter((item: any) => isAnyNA(item.msnNumber));
-      
+
       // Prefer longer variants or the first one found
       const apiNAEntry = allNAEntries.find((item: any) => {
         const n = item.msnNumber?.trim().toUpperCase();
@@ -552,7 +609,7 @@ export const useMSNNumbers = (
       }
 
       // Filter by search text
-      if (searchText && searchText.length >= 3) {
+      if (searchText && searchText.trim() !== "") {
         const searchLower = searchText.toLowerCase();
         filteredData = filteredData.filter(
           (item: any) =>
@@ -688,6 +745,7 @@ export const useUpdateDepartment = () => {
     mutationFn: async (data: {
       id: number;
       departmentName: string;
+      description?: string | null;
       modifiedBy: number;
     }) => {
       const response = await api.post("/api/Auth/UpdateDepartment", data);
@@ -715,7 +773,11 @@ export const useDeleteDepartment = () => {
 export const useAddDepartment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { departmentName: string; createdBy: number }) => {
+    mutationFn: async (data: {
+      departmentName: string;
+      description?: string | null;
+      createdBy: number;
+    }) => {
       const response = await api.post("/api/User/AddDepartment", data);
       return response.data;
     },

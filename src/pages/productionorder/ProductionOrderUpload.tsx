@@ -30,6 +30,7 @@ import {
   Tooltip,
   CircularProgress,
   Autocomplete,
+  Select,
 } from "@mui/material";
 import {
   CloudUpload as UploadIcon,
@@ -45,7 +46,8 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   MoreVert as MoreVertIcon,
-
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -66,13 +68,16 @@ import api from "../../services/api";
 import { useDebounce } from "../../hooks/useDebounce";
 import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
 import { isPageAccessible } from "../../utils/accessUtils";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import { getAutosizedColumns } from "../../utils/gridUtils";
 
 // --- Sub-components imported from modular directory ---
 import { UploadDropzone } from "./components/UploadDropzone";
-import { UploadSummaryCard } from "./components/UploadSummaryCard";
+import { UploadSummaryCard, parseErrorString } from "./components/UploadSummaryCard";
 import { HistoryStatCard } from "./components/HistoryStatCard";
 import { ActiveFilterChips, type FilterChipItem } from "./components/ActiveFilterChips";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { EmptyState } from "../../components/EmptyState";
 
 // --- Interfaces & Constants ---
 
@@ -144,7 +149,6 @@ const statusOptions = [
 ];
 
 const ALL_EXPORTABLE_COLUMNS = [
-  { key: "sr", label: "Sr No" },
   { key: "productionOrderNumber", label: "PO Number" },
   { key: "projectNumber", label: "Project" },
   { key: "projectDescription", label: "Project Description" },
@@ -152,9 +156,9 @@ const ALL_EXPORTABLE_COLUMNS = [
   { key: "itemDescription", label: "Item Description" },
   { key: "drawingNumber", label: "Drawing Number" },
   { key: "productionSeries", label: "Prod Series" },
+  { key: "quantity", label: "Qty" },
   { key: "startIdNumber", label: "Start ID" },
   { key: "endIdNumber", label: "End ID" },
-  { key: "quantity", label: "Qty" },
   { key: "mrirNumber", label: "MRIR No" },
   { key: "buildNumber", label: "Build No" },
   { key: "status", label: "Status" },
@@ -190,14 +194,14 @@ const RowActionsMenu: React.FC<{
     }, 0);
   };
 
-  const hasViewAccess = isPageAccessible(pageAccessData, "View Order Details");
-  const hasMakeAccess = isPageAccessible(pageAccessData, "Make Precheck");
+  const hasViewAccess = useHasPermission("Manage Orders");
+  const hasMakeAccess = useHasPermission("Run Precheck");
   const isConfirming = deleteConfirmId === row.id;
   const canDeleteOrEdit = row.precheckStatus === 1 || row.precheckStatus === 4;
 
   if (isConfirming) {
     return (
-      <Box sx={{ display: "flex", gap: 0.5 }}>
+      <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
         <Tooltip title="Confirm Delete">
           <IconButton
             size="small"
@@ -227,7 +231,7 @@ const RowActionsMenu: React.FC<{
   }
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
       <IconButton
         size="small"
         onClick={handleOpen}
@@ -252,31 +256,47 @@ const RowActionsMenu: React.FC<{
           sx: { minWidth: 170, borderRadius: 2, py: 0.5 },
         }}
       >
-        <MenuItem
-          disabled={!hasViewAccess}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleNavigate("/production-order/view", row);
-          }}
+        <Tooltip
+          title={!hasViewAccess ? "You do not have access to view order details" : ""}
+          arrow
+          placement="left"
         >
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
-          </ListItemIcon>
-          <ListItemText primary="View Available QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
-        </MenuItem>
+          <span>
+            <MenuItem
+              disabled={!hasViewAccess}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNavigate("/production-order/view", row);
+              }}
+            >
+              <ListItemIcon>
+                <VisibilityIcon fontSize="small" color={hasViewAccess ? "primary" : "disabled"} />
+              </ListItemIcon>
+              <ListItemText primary="View Available QRs" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+            </MenuItem>
+          </span>
+        </Tooltip>
 
-        <MenuItem
-          disabled={!hasMakeAccess}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleNavigate("/precheck/make", row);
-          }}
+        <Tooltip
+          title={!hasMakeAccess ? "You do not have access to make precheck" : ""}
+          arrow
+          placement="left"
         >
-          <ListItemIcon>
-            <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
-          </ListItemIcon>
-          <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
-        </MenuItem>
+          <span>
+            <MenuItem
+              disabled={!hasMakeAccess}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNavigate("/precheck/make", row);
+              }}
+            >
+              <ListItemIcon>
+                <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
+              </ListItemIcon>
+              <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+            </MenuItem>
+          </span>
+        </Tooltip>
 
         <MenuItem
           disabled={!canDeleteOrEdit}
@@ -315,6 +335,120 @@ const RowActionsMenu: React.FC<{
           />
         </MenuItem>
       </Menu>
+    </Box>
+  );
+};
+
+const CustomNoRowsOverlay: React.FC<{ isLoading?: boolean }> = ({ isLoading }) => {
+  if (isLoading) return null;
+  return <EmptyState />;
+};
+
+interface CustomPaginationBarProps {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  pageSizeOptions?: number[];
+  onPageChange: (newPage: number) => void;
+  onPageSizeChange: (newPageSize: number) => void;
+  disabled?: boolean;
+}
+
+const CustomPaginationBar: React.FC<CustomPaginationBarProps> = ({
+  page,
+  pageSize,
+  totalCount,
+  pageSizeOptions = [10, 20, 50, 100],
+  onPageChange,
+  onPageSizeChange,
+  disabled = false,
+}) => {
+  const startRow = totalCount > 0 ? page * pageSize + 1 : 0;
+  const endRow = Math.min((page + 1) * pageSize, totalCount);
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        p: 0.75,
+        px: 2,
+        borderTop: "1px solid #EAECF0",
+        backgroundColor: "#ffffff",
+        flexWrap: "wrap",
+        gap: 1,
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.775rem", fontWeight: 500 }}>
+          Rows per page
+        </Typography>
+        <Select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          size="small"
+          disabled={disabled}
+          sx={{
+            height: 26,
+            fontSize: "0.725rem",
+            borderRadius: "6px",
+            "& .MuiSelect-select": { py: 0.15, px: 0.85, pr: "20px !important", fontSize: "0.725rem" },
+            "& .MuiSelect-icon": { fontSize: 16 },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#98A2B3" },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "primary.main" },
+          }}
+        >
+          {pageSizeOptions.map((opt) => (
+            <MenuItem key={opt} value={opt} sx={{ fontSize: "0.725rem" }}>
+              {opt}
+            </MenuItem>
+          ))}
+        </Select>
+      </Stack>
+
+      <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.775rem", fontWeight: 500 }}>
+          {totalCount > 0
+            ? `${startRow.toLocaleString()}–${endRow.toLocaleString()} of ${totalCount.toLocaleString()}`
+            : "0–0 of 0"}
+        </Typography>
+        <Stack direction="row" spacing={0.5}>
+          <IconButton
+            size="small"
+            disabled={page === 0 || disabled}
+            onClick={() => onPageChange(Math.max(0, page - 1))}
+            sx={{
+              width: 26,
+              height: 26,
+              p: 0,
+              color: "#344054",
+              borderRadius: "6px",
+              "&:hover": { backgroundColor: "#F2F4F7" },
+              "&.Mui-disabled": { color: "#D0D5DD" },
+            }}
+          >
+            <ChevronLeftIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            disabled={(page + 1) * pageSize >= totalCount || disabled}
+            onClick={() => onPageChange(page + 1)}
+            sx={{
+              width: 26,
+              height: 26,
+              p: 0,
+              color: "#344054",
+              borderRadius: "6px",
+              "&:hover": { backgroundColor: "#F2F4F7" },
+              "&.Mui-disabled": { color: "#D0D5DD" },
+            }}
+          >
+            <ChevronRightIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Stack>
+      </Stack>
     </Box>
   );
 };
@@ -365,13 +499,26 @@ const ProductionOrderUpload: React.FC = () => {
     }
   };
 
-  // Filter states
-  const [fromDate, setFromDate] = useState<Date | null>(null);
-  const [toDate, setToDate] = useState<Date | null>(null);
+  // Filter states: Draft (for dropdowns & dates before clicking Apply)
+  const [draftFromDate, setDraftFromDate] = useState<Date | null>(null);
+  const [draftToDate, setDraftToDate] = useState<Date | null>(null);
+  const [draftProductionSeries, setDraftProductionSeries] = useState<any[]>([]);
+  const [draftStatusList, setDraftStatusList] = useState<any[]>([]);
+
+  // Filter states: Applied (actively used for API calls & chips)
+  const [appliedFromDate, setAppliedFromDate] = useState<Date | null>(null);
+  const [appliedToDate, setAppliedToDate] = useState<Date | null>(null);
+  const [appliedProductionSeries, setAppliedProductionSeries] = useState<any[]>([]);
+  const [appliedStatusList, setAppliedStatusList] = useState<any[]>([]);
+
+  // Search Query state (triggers API call directly)
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProductionSeries, setSelectedProductionSeries] = useState<any[]>([]);
-  const [selectedStatusList, setSelectedStatusList] = useState<any[]>([]);
   const { data: productionSeriesData = [] } = useProductionSeries();
+  const prodSeriesOptions = React.useMemo(() => {
+    return (productionSeriesData || [])
+      .map((item: any) => (typeof item === "string" ? item : item.productionSeries))
+      .filter(Boolean);
+  }, [productionSeriesData]);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
@@ -391,7 +538,12 @@ const ProductionOrderUpload: React.FC = () => {
 
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 20,
+    pageSize: 10,
+  });
+
+  const [previewPaginationModel, setPreviewPaginationModel] = useState({
+    page: 0,
+    pageSize: 10,
   });
 
   // Handle automatic reload if coming from edit success
@@ -405,15 +557,15 @@ const ProductionOrderUpload: React.FC = () => {
     }
   }, [location.state, location.pathname, navigate, queryClient]);
 
-  // Reset pagination page to 0 when filters change
+  // Reset pagination page to 0 when applied filters change
   React.useEffect(() => {
     setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   }, [
-    fromDate,
-    toDate,
+    appliedFromDate,
+    appliedToDate,
     debouncedSearchQuery,
-    selectedProductionSeries,
-    selectedStatusList,
+    appliedProductionSeries,
+    appliedStatusList,
   ]);
 
   const handleCloseSnackbar = () => {
@@ -431,18 +583,19 @@ const ProductionOrderUpload: React.FC = () => {
   const buildPayload = () => {
     const payload: any = {
       searchQuery: debouncedSearchQuery?.trim() || "",
-      productionSeries: selectedProductionSeries.map((s: any) =>
+      productionSeries: appliedProductionSeries.map((s: any) =>
         (s.productionSeries || s).toString()
       ),
-      precheckStatus: selectedStatusList.map((s: any) =>
-        (typeof s === "number" ? s : s.id).toString()
-      ),
+      precheckStatus: appliedStatusList.map((s: any) => {
+        if (typeof s === "object") return s.id.toString();
+        return s.toString();
+      }),
     };
 
-    if (fromDate && toDate) {
+    if (appliedFromDate && appliedToDate) {
       payload.dateFilterType = "range";
-      payload.fromDate = format(fromDate, "yyyy-MM-dd");
-      payload.toDate = format(toDate, "yyyy-MM-dd");
+      payload.fromDate = format(appliedFromDate, "yyyy-MM-dd");
+      payload.toDate = format(appliedToDate, "yyyy-MM-dd");
     }
 
     return payload;
@@ -456,11 +609,11 @@ const ProductionOrderUpload: React.FC = () => {
   } = useQuery<PaginatedResponse<ProductionOrder>>({
     queryKey: [
       "productionOrders",
-      fromDate,
-      toDate,
+      appliedFromDate,
+      appliedToDate,
       debouncedSearchQuery,
-      selectedProductionSeries,
-      selectedStatusList,
+      appliedProductionSeries,
+      appliedStatusList,
       paginationModel.page,
       paginationModel.pageSize,
     ],
@@ -495,11 +648,11 @@ const ProductionOrderUpload: React.FC = () => {
   const { data: statusCounts } = useQuery<StatusCount>({
     queryKey: [
       "productionOrderCounts",
-      fromDate,
-      toDate,
+      appliedFromDate,
+      appliedToDate,
       debouncedSearchQuery,
-      selectedProductionSeries,
-      selectedStatusList,
+      appliedProductionSeries,
+      appliedStatusList,
     ],
     queryFn: async () => {
       const payload = buildPayload();
@@ -520,17 +673,17 @@ const ProductionOrderUpload: React.FC = () => {
   // Client-side filtering fallback
   const filteredRows = React.useMemo(() => {
     let rows = productionOrders || [];
-    if (selectedProductionSeries.length > 0) {
-      const seriesNames = selectedProductionSeries.map((s: any) =>
+    if (appliedProductionSeries.length > 0) {
+      const seriesNames = appliedProductionSeries.map((s: any) =>
         (s.productionSeries || s).toString().toLowerCase()
       );
       rows = rows.filter(
         (row) => row.productionSeries && seriesNames.includes(row.productionSeries.toLowerCase())
       );
     }
-    if (selectedStatusList.length > 0) {
-      const statusIds = selectedStatusList.map((s: any) =>
-        typeof s === "number" ? s : s.id
+    if (appliedStatusList.length > 0) {
+      const statusIds = appliedStatusList.map((s: any) =>
+        typeof s === "number" ? Number(s) : Number(s.id)
       );
       rows = rows.filter(
         (row) => row.precheckStatus !== undefined && statusIds.includes(row.precheckStatus)
@@ -550,7 +703,261 @@ const ProductionOrderUpload: React.FC = () => {
         (row.precheckStatus === 2 && "partial".includes(term)) ||
         (row.precheckStatus === 3 && "completed".includes(term))
     );
-  }, [productionOrders, debouncedSearchQuery, selectedProductionSeries, selectedStatusList]);
+  }, [productionOrders, debouncedSearchQuery, appliedProductionSeries, appliedStatusList]);
+
+  // Helper to generate and download error report PDF file
+  const downloadErrorReportPdf = (result: UploadResult, message?: string) => {
+    const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+    const title = "PRODUCTION ORDER UPLOAD ERROR REPORT";
+    const errors = result.errors || [];
+    const summaryItems = [
+      { label: "Date & Time", value: new Date().toLocaleString() },
+      { label: "Total Rows", value: String(result.totalRows ?? errors.length) },
+      { label: "Imported", value: String(result.imported ?? 0) },
+      { label: "Skipped", value: String(result.skipped ?? 0) },
+      { label: "Error Count", value: String(errors.length) },
+    ];
+    if (message) {
+      summaryItems.unshift({ label: "Summary", value: message });
+    }
+
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
+    const margin = 40;
+    const contentWidth = pageWidth - margin * 2;
+
+    const sanitize = (str: string) =>
+      String(str || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/\(/g, "\\(")
+        .replace(/\)/g, "\\)")
+        .replace(/[^\x20-\x7E]/g, "?");
+
+    const pageStreams: string[] = [];
+    let currentStream: string[] = [];
+    let y = pageHeight - 45;
+
+    const startNewPage = (isFirstPage = false) => {
+      if (currentStream.length > 0) {
+        pageStreams.push(currentStream.join("\n"));
+        currentStream = [];
+      }
+      y = pageHeight - 45;
+
+      currentStream.push(
+        "0.43 0.16 0.56 rg",
+        "BT",
+        `/F1 ${isFirstPage ? 15 : 11} Tf`,
+        `${margin} ${y} Td`,
+        `(${sanitize(isFirstPage ? title : title + " (Continued)")}) Tj`,
+        "ET"
+      );
+      y -= isFirstPage ? 20 : 16;
+
+      currentStream.push(
+        "0.8 0.8 0.8 RG",
+        "0.75 w",
+        `${margin} ${y} m`,
+        `${margin + contentWidth} ${y} l`,
+        "S"
+      );
+      y -= 18;
+    };
+
+    startNewPage(true);
+
+    if (summaryItems.length > 0) {
+      const rowCount = Math.ceil(summaryItems.length / 2);
+      const boxHeight = rowCount * 18 + 14;
+      const boxY = y - boxHeight;
+
+      currentStream.push(
+        "0.96 0.97 0.98 rg",
+        "0.88 0.90 0.92 RG",
+        "0.75 w",
+        `${margin} ${boxY} ${contentWidth} ${boxHeight} re`,
+        "B"
+      );
+
+      let itemY = y - 16;
+      summaryItems.forEach((item, idx) => {
+        const col = idx % 2;
+        if (idx > 0 && col === 0) itemY -= 18;
+
+        const xPos = margin + 12 + col * 245;
+        currentStream.push(
+          "0.3 0.35 0.4 rg",
+          "BT",
+          "/F2 8.5 Tf",
+          `${xPos} ${itemY} Td`,
+          `(${sanitize(item.label)}: ) Tj`,
+          "ET",
+          "0.1 0.1 0.1 rg",
+          "BT",
+          "/F1 8.5 Tf",
+          `${xPos + 75} ${itemY} Td`,
+          `(${sanitize(item.value)}) Tj`,
+          "ET"
+        );
+      });
+
+      y = boxY - 20;
+    }
+
+    currentStream.push(
+      "0.1 0.1 0.1 rg",
+      "BT",
+      "/F1 11 Tf",
+      `${margin} ${y} Td`,
+      "(Detailed Error List:) Tj",
+      "ET"
+    );
+    y -= 16;
+
+    const colX = [margin, margin + 45, margin + 165, margin + 285];
+    const parsedErrors = errors.map((errStr, idx) => parseErrorString(errStr, idx));
+
+    let currentIdx = 0;
+    while (currentIdx < parsedErrors.length) {
+      const availableHeight = y - 50;
+      const maxRowsOnPage = Math.max(1, Math.floor((availableHeight - 22) / 20));
+      const pageChunk = parsedErrors.slice(currentIdx, currentIdx + maxRowsOnPage);
+
+      const headerHeight = 22;
+      const rowHeight = 20;
+      const tableHeight = headerHeight + pageChunk.length * rowHeight;
+      const tableTopY = y;
+      const tableBottomY = tableTopY - tableHeight;
+
+      // Outer Border Box for Entire Table
+      currentStream.push(
+        "0.8 0.82 0.85 RG",
+        "0.75 w",
+        `${margin} ${tableBottomY} ${contentWidth} ${tableHeight} re`,
+        "S"
+      );
+
+      // Header Fill & Bottom Border
+      currentStream.push(
+        "0.93 0.94 0.96 rg",
+        `${margin + 0.5} ${tableTopY - headerHeight + 0.5} ${contentWidth - 1} ${headerHeight - 1} re`,
+        "f",
+        "0.8 0.82 0.85 RG",
+        "0.75 w",
+        `${margin} ${tableTopY - headerHeight} m`,
+        `${margin + contentWidth} ${tableTopY - headerHeight} l`,
+        "S"
+      );
+
+      // Header Labels
+      currentStream.push(
+        "0.2 0.25 0.3 rg BT /F1 8.5 Tf",
+        `${colX[0] + 6} ${tableTopY - 15} Td (Row) Tj ET`,
+        `BT /F1 8.5 Tf ${colX[1] + 6} ${tableTopY - 15} Td (PO Number) Tj ET`,
+        `BT /F1 8.5 Tf ${colX[2] + 6} ${tableTopY - 15} Td (Field) Tj ET`,
+        `BT /F1 8.5 Tf ${colX[3] + 6} ${tableTopY - 15} Td (Issue Description) Tj ET`
+      );
+
+      // Chunk Rows
+      pageChunk.forEach((item, rIdx) => {
+        const rowTopY = tableTopY - headerHeight - rIdx * rowHeight;
+        const rowBottomY = rowTopY - rowHeight;
+
+        if (rIdx % 2 === 1) {
+          currentStream.push(
+            "0.98 0.98 0.99 rg",
+            `${margin + 0.5} ${rowBottomY + 0.5} ${contentWidth - 1} ${rowHeight - 1} re`,
+            "f"
+          );
+        }
+
+        if (rIdx < pageChunk.length - 1) {
+          currentStream.push(
+            "0.88 0.9 0.92 RG",
+            "0.5 w",
+            `${margin} ${rowBottomY} m`,
+            `${margin + contentWidth} ${rowBottomY} l`,
+            "S"
+          );
+        }
+
+        currentStream.push(
+          "0.3 0.3 0.3 rg BT /F2 8 Tf",
+          `${colX[0] + 6} ${rowTopY - 14} Td (${sanitize(String(item.row))}) Tj ET`,
+          "0.1 0.1 0.1 rg BT /F1 8 Tf",
+          `${colX[1] + 6} ${rowTopY - 14} Td (${sanitize(String(item.poNumber))}) Tj ET`,
+          "0.3 0.3 0.3 rg BT /F2 8 Tf",
+          `${colX[2] + 6} ${rowTopY - 14} Td (${sanitize(String(item.field))}) Tj ET`,
+          "0.85 0.18 0.13 rg BT /F2 8 Tf",
+          `${colX[3] + 6} ${rowTopY - 14} Td (${sanitize(String(item.issue).slice(0, 60))}) Tj ET`
+        );
+      });
+
+      currentIdx += pageChunk.length;
+      y = tableBottomY - 20;
+
+      if (currentIdx < parsedErrors.length) {
+        startNewPage(false);
+      }
+    }
+
+    if (currentStream.length > 0) {
+      pageStreams.push(currentStream.join("\n"));
+    }
+
+    const numPages = pageStreams.length;
+    const pdfObjects: string[] = [];
+
+    pdfObjects.push("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj");
+
+    const pageObjectIds = Array.from({ length: numPages }, (_, i) => `${3 + i * 2} 0 R`).join(" ");
+    pdfObjects.push(`2 0 obj\n<< /Type /Pages /Kids [${pageObjectIds}] /Count ${numPages} >>\nendobj`);
+
+    pageStreams.forEach((streamText, i) => {
+      const pageObjId = 3 + i * 2;
+      const contentObjId = 4 + i * 2;
+      const streamLength = streamText.length;
+
+      pdfObjects.push(
+        `${pageObjId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${3 + numPages * 2} 0 R /F2 ${4 + numPages * 2} 0 R >> >> /Contents ${contentObjId} 0 R >>\nendobj`
+      );
+
+      pdfObjects.push(
+        `${contentObjId} 0 obj\n<< /Length ${streamLength} >>\nstream\n${streamText}\nendstream\nendobj`
+      );
+    });
+
+    const f1Id = 3 + numPages * 2;
+    const f2Id = 4 + numPages * 2;
+    pdfObjects.push(`${f1Id} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj`);
+    pdfObjects.push(`${f2Id} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj`);
+
+    let pdf = "%PDF-1.4\n";
+    const offsets: number[] = [];
+
+    pdfObjects.forEach((obj) => {
+      offsets.push(pdf.length);
+      pdf += obj + "\n";
+    });
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${pdfObjects.length + 1}\n0000000000 65535 f \n`;
+    offsets.forEach((off) => {
+      pdf += `${off.toString().padStart(10, "0")} 00000 n \n`;
+    });
+
+    pdf += `trailer\n<< /Size ${pdfObjects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    const blob = new Blob([pdf], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Upload_Error_Report_${timestamp}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -569,6 +976,8 @@ const ProductionOrderUpload: React.FC = () => {
       const importedCount = result.imported || 0;
 
       if (errors.length > 0) {
+        downloadErrorReportPdf(result, data.message);
+        showSnackbar(data.message || "Upload completed with errors. PDF error report downloaded.", "error");
         return;
       }
 
@@ -956,6 +1365,14 @@ const ProductionOrderUpload: React.FC = () => {
       align: "center",
     },
     {
+      field: "quantity",
+      headerName: "Qty",
+      flex: 0.6,
+      minWidth: 70,
+      headerAlign: "center",
+      align: "center",
+    },
+    {
       field: "id_num",
       headerName: "Start ID",
       flex: 0.8,
@@ -968,14 +1385,6 @@ const ProductionOrderUpload: React.FC = () => {
       headerName: "End ID",
       flex: 0.8,
       minWidth: 90,
-      headerAlign: "center",
-      align: "center",
-    },
-    {
-      field: "quantity",
-      headerName: "Qty",
-      flex: 0.6,
-      minWidth: 70,
       headerAlign: "center",
       align: "center",
     },
@@ -1107,6 +1516,24 @@ const ProductionOrderUpload: React.FC = () => {
       align: "center",
     },
     {
+      field: "startIdNumber",
+      headerName: "Start ID",
+      flex: 0.8,
+      minWidth: 90,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params: any) => params.value || "-",
+    },
+    {
+      field: "endIdNumber",
+      headerName: "End ID",
+      flex: 0.8,
+      minWidth: 90,
+      headerAlign: "center",
+      align: "center",
+      renderCell: (params: any) => params.value || "-",
+    },
+    {
       field: "buildNumber",
       headerName: "Build No.",
       flex: 0.8,
@@ -1139,7 +1566,7 @@ const ProductionOrderUpload: React.FC = () => {
         let chipColor = "#B42318";
         if (status === 4) {
           chipBg = "#F4EBFF";
-          chipColor = "#6B288A";
+          chipColor = "#6D2A8F";
         } else if (status === 3) {
           chipBg = "#ECFDF3";
           chipColor = "#027A48";
@@ -1225,57 +1652,141 @@ const ProductionOrderUpload: React.FC = () => {
     return getAutosizedColumns(historyColumns, historyTableRows);
   }, [historyColumns, historyTableRows]);
 
-  // Construct active filter chips
+  // State helpers for Apply and Clear buttons
+  const hasSelectedDropdownFilters = React.useMemo(() => {
+    return (
+      draftProductionSeries.length > 0 ||
+      draftStatusList.length > 0 ||
+      draftFromDate !== null ||
+      draftToDate !== null
+    );
+  }, [draftProductionSeries, draftStatusList, draftFromDate, draftToDate]);
+
+  const hasAnyFilterActive = React.useMemo(() => {
+    return (
+      searchQuery.trim() !== "" ||
+      draftProductionSeries.length > 0 ||
+      draftStatusList.length > 0 ||
+      draftFromDate !== null ||
+      draftToDate !== null ||
+      appliedProductionSeries.length > 0 ||
+      appliedStatusList.length > 0 ||
+      appliedFromDate !== null ||
+      appliedToDate !== null
+    );
+  }, [
+    searchQuery,
+    draftProductionSeries,
+    draftStatusList,
+    draftFromDate,
+    draftToDate,
+    appliedProductionSeries,
+    appliedStatusList,
+    appliedFromDate,
+    appliedToDate,
+  ]);
+
+  const handleApplyFilters = () => {
+    setAppliedProductionSeries(draftProductionSeries);
+    setAppliedStatusList(draftStatusList);
+    setAppliedFromDate(draftFromDate);
+    setAppliedToDate(draftToDate);
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setDraftProductionSeries([]);
+    setDraftStatusList([]);
+    setDraftFromDate(null);
+    setDraftToDate(null);
+    setAppliedProductionSeries([]);
+    setAppliedStatusList([]);
+    setAppliedFromDate(null);
+    setAppliedToDate(null);
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
+  // Construct active filter chips for selected filters
   const activeChips: FilterChipItem[] = React.useMemo(() => {
     const list: FilterChipItem[] = [];
 
     if (searchQuery.trim()) {
       list.push({
         id: "search",
-        label: `PO / Search: "${searchQuery.trim()}"`,
+        label: `Search: "${searchQuery.trim()}"`,
         onRemove: () => setSearchQuery(""),
       });
     }
 
-    selectedStatusList.forEach((st: any) => {
-      const label = typeof st === "string" ? st : st.label || st.id;
+    const currentStatusList = draftStatusList.length > 0 ? draftStatusList : appliedStatusList;
+    const currentSeriesList = draftProductionSeries.length > 0 ? draftProductionSeries : appliedProductionSeries;
+    const currentFromDate = draftFromDate !== null ? draftFromDate : appliedFromDate;
+    const currentToDate = draftToDate !== null ? draftToDate : appliedToDate;
+
+    currentStatusList.forEach((st: any) => {
+      const stVal = typeof st === "object" ? st.id : st;
+      const matchOpt = statusOptions.find(
+        (opt) => opt.id === Number(stVal) || opt.label.toLowerCase() === String(st).toLowerCase()
+      );
+      const label = matchOpt ? matchOpt.label : (typeof st === "object" ? st.label || st.id : st);
       list.push({
-        id: `status_${typeof st === "object" ? st.id : st}`,
-        label: `Status: ${label}`,
-        onRemove: () =>
-          setSelectedStatusList((prev) =>
-            prev.filter((item) => (typeof item === "object" ? item.id : item) !== (typeof st === "object" ? st.id : st))
-          ),
+        id: `status_${stVal}`,
+        label: `Status: ${label || "All"}`,
+        onRemove: () => {
+          const updated = currentStatusList.filter((item: any) => {
+            const itemVal = typeof item === "object" ? item.id : item;
+            return itemVal !== stVal && itemVal !== Number(stVal);
+          });
+          setAppliedStatusList(updated);
+          setDraftStatusList(updated);
+        },
       });
     });
 
-    selectedProductionSeries.forEach((ser: any) => {
+    currentSeriesList.forEach((ser: any) => {
       const val = typeof ser === "object" ? ser.productionSeries || ser.id : ser;
       list.push({
         id: `series_${val}`,
         label: `Series: ${val}`,
-        onRemove: () =>
-          setSelectedProductionSeries((prev) =>
-            prev.filter((item) => (typeof item === "object" ? item.productionSeries || item.id : item) !== val)
-          ),
+        onRemove: () => {
+          const updated = currentSeriesList.filter((item: any) => {
+            const itemVal = typeof item === "object" ? item.productionSeries || item.id : item;
+            return itemVal !== val;
+          });
+          setAppliedProductionSeries(updated);
+          setDraftProductionSeries(updated);
+        },
       });
     });
 
-    if (fromDate || toDate) {
-      const fromStr = fromDate ? format(fromDate, "dd/MM/yyyy") : "...";
-      const toStr = toDate ? format(toDate, "dd/MM/yyyy") : "...";
+    if (currentFromDate || currentToDate) {
+      const fromStr = currentFromDate ? format(currentFromDate, "dd/MM/yyyy") : "...";
+      const toStr = currentToDate ? format(currentToDate, "dd/MM/yyyy") : "...";
       list.push({
         id: "dateRange",
         label: `Created On: ${fromStr} – ${toStr}`,
         onRemove: () => {
-          setFromDate(null);
-          setToDate(null);
+          setAppliedFromDate(null);
+          setAppliedToDate(null);
+          setDraftFromDate(null);
+          setDraftToDate(null);
         },
       });
     }
 
     return list;
-  }, [searchQuery, selectedStatusList, selectedProductionSeries, fromDate, toDate]);
+  }, [
+    searchQuery,
+    draftStatusList,
+    appliedStatusList,
+    draftProductionSeries,
+    appliedProductionSeries,
+    draftFromDate,
+    appliedFromDate,
+    draftToDate,
+    appliedToDate,
+  ]);
 
   const totalOrdersCount = counts.totalCount || totalRowCount;
   const pendingCount = counts.pendingCount || 0;
@@ -1319,11 +1830,11 @@ const ProductionOrderUpload: React.FC = () => {
           >
             {view === "upload" ? "Upload Production Orders" : "Production Order History"}
           </Typography>
-          {view === "upload" && (
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-              Import production orders from an Excel sheet.
-            </Typography>
-          )}
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+            {view === "upload"
+              ? "Import and validate production orders from an Excel sheet."
+              : "Track, filter, and view uploaded production orders."}
+          </Typography>
         </Box>
 
         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -1331,18 +1842,18 @@ const ProductionOrderUpload: React.FC = () => {
             <Button
               variant="outlined"
               size="small"
-              startIcon={<HistoryIcon sx={{ fontSize: 18 }} />}
+              startIcon={<HistoryIcon fontSize="small" />}
               onClick={() => setView("history")}
               sx={{
-                borderColor: "#D0D5DD",
-                color: "#344054",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2,
-                py: 0.75,
+                height: 34,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
                 textTransform: "none",
-                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                backgroundColor: "background.paper",
+                "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
               }}
             >
               Upload history ({totalRowCount})
@@ -1353,17 +1864,17 @@ const ProductionOrderUpload: React.FC = () => {
                 variant="outlined"
                 size="small"
                 onClick={handleOpenExportDialog}
-                startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}
+                startIcon={<DownloadIcon fontSize="small" />}
                 sx={{
-                  borderColor: "#D0D5DD",
-                  color: "#344054",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  borderRadius: "8px",
-                  px: 2,
-                  py: 0.75,
+                  height: 34,
+                  borderRadius: "6px",
+                  borderColor: "grey.300",
+                  color: "text.secondary",
                   textTransform: "none",
-                  "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  backgroundColor: "background.paper",
+                  "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
                 }}
               >
                 Export
@@ -1371,18 +1882,17 @@ const ProductionOrderUpload: React.FC = () => {
               <Button
                 variant="contained"
                 size="small"
-                startIcon={<UploadIcon sx={{ fontSize: 18 }} />}
+                startIcon={<UploadIcon fontSize="small" />}
                 onClick={() => setView("upload")}
                 sx={{
+                  height: 34,
+                  borderRadius: "6px",
                   backgroundColor: "primary.main",
                   color: "#ffffff",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  borderRadius: "8px",
-                  px: 2.5,
-                  py: 0.75,
                   textTransform: "none",
-                  boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
                   "&:hover": { backgroundColor: "primary.dark" },
                 }}
               >
@@ -1413,7 +1923,7 @@ const ProductionOrderUpload: React.FC = () => {
               skippedCount={uploadResult?.skipped || 0}
               onDownloadErrorReport={
                 uploadResult?.errors && uploadResult.errors.length > 0
-                  ? () => alert(uploadResult.errors.join("\n"))
+                  ? () => downloadErrorReportPdf(uploadResult)
                   : undefined
               }
               onUploadAnother={() => {
@@ -1459,15 +1969,16 @@ const ProductionOrderUpload: React.FC = () => {
               <DataGrid
                 rows={uploadTableRows}
                 columns={autosizedPreviewColumns}
-                pageSizeOptions={[10, 25, 50]}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 50 } },
-                }}
-                density="compact"
+                paginationModel={previewPaginationModel}
+                onPaginationModelChange={setPreviewPaginationModel}
+                pageSizeOptions={[10, 25, 50, 100]}
+                rowHeight={32}
                 disableColumnFilter
                 disableColumnMenu
                 disableColumnSelector
                 disableRowSelectionOnClick
+                hideFooter
+                slots={{ noRowsOverlay: CustomNoRowsOverlay }}
                 sx={{
                   height: "100%",
                   width: "100%",
@@ -1490,6 +2001,10 @@ const ProductionOrderUpload: React.FC = () => {
                     border: "2px solid #F2F4F7 !important",
                     "&:hover": { backgroundColor: "#667085 !important" },
                   },
+                  "& .MuiDataGrid-row": {
+                    minHeight: "32px !important",
+                    maxHeight: "32px !important",
+                  },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",
                     color: "#475467",
@@ -1500,12 +2015,34 @@ const ProductionOrderUpload: React.FC = () => {
                     top: 0,
                     zIndex: 2,
                   },
+                  "& .MuiDataGrid-columnHeader": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitleContainer": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
                   "& .MuiDataGrid-cell": {
-                    fontSize: "0.85rem",
+                    fontSize: "0.775rem",
                     color: "#344054",
                     borderBottom: "1px solid #F2F4F7",
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-cellContent": {
+                    display: "flex !important",
+                    alignItems: "center !important",
                   },
                 }}
+              />
+              <CustomPaginationBar
+                page={previewPaginationModel.page}
+                pageSize={previewPaginationModel.pageSize}
+                totalCount={uploadTableRows.length}
+                pageSizeOptions={[10, 25, 50, 100]}
+                onPageChange={(newPage) => setPreviewPaginationModel((prev) => ({ ...prev, page: newPage }))}
+                onPageSizeChange={(newPageSize) => setPreviewPaginationModel({ page: 0, pageSize: newPageSize })}
               />
             </Box>
           </Paper>
@@ -1516,14 +2053,14 @@ const ProductionOrderUpload: React.FC = () => {
           {/* Stat Cards Row */}
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={1.25}
-            sx={{ mb: 1 }}
+            spacing={1}
+            sx={{ mb: 0.75 }}
           >
             <HistoryStatCard
               title="Total orders"
               count={totalOrdersCount}
-              indicatorColor="#6B288A"
-              subtext="All series · all time"
+              indicatorColor="#6D2A8F"
+              subtext="All Orders"
             />
             <HistoryStatCard
               title="Pending"
@@ -1545,27 +2082,41 @@ const ProductionOrderUpload: React.FC = () => {
             />
           </Stack>
 
-          {/* Filter Bar */}
+          {/* Unified Single Container Card */}
           <Paper
             elevation={0}
             sx={{
-              p: 1,
-              mb: 0.75,
-              borderRadius: "10px",
-              border: "1px solid #E9EAEB",
+              flexGrow: 1,
+              minHeight: 0,
+              borderRadius: "12px",
+              border: "1px solid #EAECF0",
               backgroundColor: "#ffffff",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                flexWrap="wrap"
-                alignItems="center"
+            {/* Top Filter Bar Section */}
+            <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 1,
+                  flexWrap: "nowrap",
+                  width: "100%",
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  pt: 1.5,
+                  pb: 0.5,
+                  "&::-webkit-scrollbar": { display: "none" },
+                }}
               >
                 {/* Search Field */}
                 <TextField
-                  placeholder="Search PO, LN Item Code, Drawing No, MRIR No..."
+                  placeholder="Search PO, LN Item Code, Drawing No..."
                   variant="outlined"
                   size="small"
                   value={searchQuery}
@@ -1573,229 +2124,274 @@ const ProductionOrderUpload: React.FC = () => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchIcon fontSize="small" sx={{ color: "#667085" }} />
+                        <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
                       </InputAdornment>
                     ),
                     endAdornment: searchQuery ? (
                       <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearchQuery("")}>
-                          <ClearIcon fontSize="small" />
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchQuery("")}
+                          edge="end"
+                          sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                        >
+                          <ClearIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </InputAdornment>
                     ) : null,
                   }}
                   sx={{
-                    width: { xs: "100%", sm: 280 },
-                    "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" },
+                    flex: "1 1 340px",
+                    minWidth: 260,
                   }}
                 />
 
-                {/* Prod. Series Dropdown (Multi-Select with Checkboxes) */}
-                <Autocomplete
-                  multiple
-                  disableCloseOnSelect
-                  renderTags={() => null}
-                  size="small"
-                  options={productionSeriesData}
-                  getOptionLabel={(option: any) => option.productionSeries || option.toString()}
-                  isOptionEqualToValue={(option, value) =>
-                    (option.productionSeries || option) === (value.productionSeries || value)
-                  }
-                  value={selectedProductionSeries}
-                  onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                  renderOption={(props, option, { selected }) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box component="li" key={key} {...optionProps}>
-                        <Checkbox
-                          size="small"
-                          sx={{ mr: 0.75, p: 0.15 }}
-                          checked={selected}
-                        />
-                        {option.productionSeries || option.toString()}
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={selectedProductionSeries.length > 0 ? `Prod. Series · ${selectedProductionSeries.length}` : "Prod. Series"}
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
-                    />
-                  )}
-                  sx={{ minWidth: 150, maxWidth: 220 }}
+                {/* Prod. Series Dropdown */}
+                <MultiSelectFilter
+                  label="Prod Series"
+                  value={draftProductionSeries}
+                  options={prodSeriesOptions}
+                  onChange={(newValue) => setDraftProductionSeries(newValue)}
+                  flex="0 0 150px"
+                  minWidth={120}
                 />
 
-                {/* Status Dropdown (Multi-Select with Checkboxes) */}
-                <Autocomplete
-                  multiple
-                  disableCloseOnSelect
-                  renderTags={() => null}
-                  size="small"
+                {/* Status Dropdown */}
+                <MultiSelectFilter
+                  label="Status"
+                  value={draftStatusList}
                   options={statusOptions}
-                  getOptionLabel={(option) => option.label}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  value={selectedStatusList}
-                  onChange={(_, newValue) => setSelectedStatusList(newValue)}
-                  renderOption={(props, option, { selected }) => {
-                    const { key, ...optionProps } = props;
-                    return (
-                      <Box component="li" key={key} {...optionProps}>
-                        <Checkbox
-                          size="small"
-                          sx={{ mr: 0.75, p: 0.15 }}
-                          checked={selected}
-                        />
-                        {option.label}
-                      </Box>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={selectedStatusList.length > 0 ? `Status · ${selectedStatusList.length}` : "Status"}
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: "0.85rem" } }}
-                    />
-                  )}
-                  sx={{ minWidth: 140, maxWidth: 200 }}
+                  onChange={(newValue) => setDraftStatusList(newValue)}
+                  flex="0 0 120px"
+                  minWidth={100}
                 />
 
-                {/* Date Range Pickers */}
-                <DatePicker
+                {/* From Date */}
+                <TextField
+                  size="small"
+                  type="date"
                   label="From Date"
-                  value={fromDate}
-                  onChange={(newValue) => setFromDate(newValue)}
-                  slotProps={{
-                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="From Date"
+                  value={draftFromDate ? format(draftFromDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDraftFromDate(val ? new Date(val) : null);
+                  }}
+                  inputProps={{ title: "From Date" }}
+                  sx={{
+                    flex: "0 0 148px",
+                    minWidth: 140,
+                    "& .MuiOutlinedInput-root": {
+                      height: 38,
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.75rem",
+                      bgcolor: "#ffffff",
+                      px: 0.5,
+                      color: "#667085",
+                      "&.Mui-focused": { color: "primary.main" },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      py: "8.5px",
+                      px: 1.5,
+                      fontSize: "0.82rem",
+                      color: draftFromDate ? "#344054" : "#98A2B3",
+                    },
                   }}
                 />
-                <DatePicker
+
+                {/* To Date */}
+                <TextField
+                  size="small"
+                  type="date"
                   label="To Date"
-                  value={toDate}
-                  onChange={(newValue) => setToDate(newValue)}
-                  slotProps={{
-                    textField: { size: "small", sx: { width: 140, "& .MuiOutlinedInput-root": { borderRadius: "8px" } } },
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="To Date"
+                  value={draftToDate ? format(draftToDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDraftToDate(val ? new Date(val) : null);
+                  }}
+                  inputProps={{ title: "To Date" }}
+                  sx={{
+                    flex: "0 0 148px",
+                    minWidth: 140,
+                    "& .MuiOutlinedInput-root": {
+                      height: 38,
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.75rem",
+                      bgcolor: "#ffffff",
+                      px: 0.5,
+                      color: "#667085",
+                      "&.Mui-focused": { color: "primary.main" },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      py: "8.5px",
+                      px: 1.5,
+                      fontSize: "0.82rem",
+                      color: draftToDate ? "#344054" : "#98A2B3",
+                    },
                   }}
                 />
 
                 <Button
                   size="small"
-                  variant="text"
-                  disabled={
-                    !searchQuery &&
-                    selectedProductionSeries.length === 0 &&
-                    selectedStatusList.length === 0 &&
-                    !fromDate &&
-                    !toDate
-                  }
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedProductionSeries([]);
-                    setSelectedStatusList([]);
-                    setFromDate(null);
-                    setToDate(null);
-                  }}
+                  variant="contained"
+                  disabled={!hasSelectedDropdownFilters}
+                  onClick={handleApplyFilters}
                   sx={{
+                    flex: "0 0 auto",
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    borderRadius: "6px",
+                    px: 2,
+                    height: 38,
+                    textTransform: "none",
+                    boxShadow: "none",
+                    minWidth: 65,
+                    "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                  }}
+                >
+                  Apply
+                </Button>
+
+                <Button
+                  size="small"
+                  variant="text"
+                  disabled={!hasAnyFilterActive}
+                  onClick={handleClearFilters}
+                  sx={{
+                    flex: "0 0 auto",
                     color: "#667085",
                     fontWeight: 600,
+                    fontSize: "0.82rem",
+                    height: 38,
+                    px: 1,
+                    minWidth: 55,
                     textTransform: "none",
                     "&:hover": { color: "#101828", backgroundColor: "transparent" },
                   }}
                 >
                   Clear
                 </Button>
-              </Stack>
-            </LocalizationProvider>
-          </Paper>
+              </Box>
 
-          {/* Active Filter Chips & Results Count */}
-          <ActiveFilterChips
-            chips={activeChips}
-            onClearAll={() => {
-              setSearchQuery("");
-              setSelectedProductionSeries([]);
-              setSelectedStatusList([]);
-              setFromDate(null);
-              setToDate(null);
-            }}
-            totalResults={totalRowCount}
-          />
+              {/* Active Filter Chips & Results Count Bar */}
+              <Box sx={{ mt: 0.5 }}>
+                <ActiveFilterChips
+                  chips={activeChips}
+                  onClearAll={handleClearFilters}
+                  totalResults={totalRowCount}
+                />
+              </Box>
+            </Box>
 
-          {/* Data Grid Table */}
-          <Paper
-            elevation={0}
-            sx={{
-              flexGrow: 1,
-              minHeight: 0,
-              borderRadius: "12px",
-              border: "1px solid #E9EAEB",
-              backgroundColor: "#ffffff",
-              overflow: "hidden",
-              position: "relative",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <DataGrid
-              rows={historyTableRows}
-              columns={autosizedHistoryColumns}
-              loading={isHistoryLoading}
-              rowCount={totalRowCount}
-              paginationMode="server"
-              paginationModel={paginationModel}
-              onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
-              pageSizeOptions={[10, 20, 50, 100]}
-              filterModel={filterModel}
-              onFilterModelChange={(newModel) => setFilterModel(newModel)}
-              disableColumnFilter
-              disableColumnMenu
-              disableColumnSelector
-              density="compact"
-              disableRowSelectionOnClick
-              getRowId={(row) => row.id || row.sr}
+            {/* Data Grid Table Container */}
+            <Box
               sx={{
-                flex: 1,
-                height: "100%",
-                width: "100%",
-                border: "none",
-                "& .MuiDataGrid-virtualScroller": {
-                  overflowX: "auto !important",
-                  overflowY: "auto !important",
-                },
-                "& ::-webkit-scrollbar": {
-                  height: "12px !important",
-                  width: "10px !important",
-                },
-                "& ::-webkit-scrollbar-track": {
-                  backgroundColor: "#F2F4F7 !important",
-                  borderRadius: "6px !important",
-                },
-                "& ::-webkit-scrollbar-thumb": {
-                  backgroundColor: "#98A2B3 !important",
-                  borderRadius: "6px !important",
-                  border: "2px solid #F2F4F7 !important",
-                  "&:hover": { backgroundColor: "#667085 !important" },
-                },
-                "& .MuiDataGrid-columnHeaders": {
-                  backgroundColor: "#F9FAFB",
-                  color: "#475467",
-                  fontWeight: 700,
-                  fontSize: "0.8rem",
-                  borderBottom: "1px solid #EAECF0",
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 2,
-                },
-                "& .MuiDataGrid-cell": {
-                  fontSize: "0.85rem",
-                  color: "#344054",
-                  borderBottom: "1px solid #F2F4F7",
-                },
-                "& .MuiDataGrid-cell:focus": { outline: "none !important" },
-                "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
-                "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
+                flexGrow: 1,
+                minHeight: 0,
+                backgroundColor: "#ffffff",
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
               }}
-            />
+            >
+              <DataGrid
+                rows={historyTableRows}
+                columns={autosizedHistoryColumns}
+                loading={isHistoryLoading}
+                rowCount={totalRowCount}
+                paginationMode="server"
+                paginationModel={paginationModel}
+                onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+                pageSizeOptions={[10, 20, 50, 100]}
+                filterModel={filterModel}
+                onFilterModelChange={(newModel) => setFilterModel(newModel)}
+                disableColumnFilter
+                disableColumnMenu
+                disableColumnSelector
+                rowHeight={32}
+                disableRowSelectionOnClick
+                getRowId={(row) => row.id || row.sr}
+                hideFooter
+                slots={{ noRowsOverlay: CustomNoRowsOverlay }}
+                slotProps={{ noRowsOverlay: { isLoading: isHistoryLoading } as any }}
+                sx={{
+                  flex: 1,
+                  height: "100%",
+                  width: "100%",
+                  border: "none",
+                  "& .MuiDataGrid-virtualScroller": {
+                    overflowX: "auto !important",
+                    overflowY: "auto !important",
+                  },
+                  "& ::-webkit-scrollbar": {
+                    height: "12px !important",
+                    width: "10px !important",
+                  },
+                  "& ::-webkit-scrollbar-track": {
+                    backgroundColor: "#F2F4F7 !important",
+                    borderRadius: "6px !important",
+                  },
+                  "& ::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#98A2B3 !important",
+                    borderRadius: "6px !important",
+                    border: "2px solid #F2F4F7 !important",
+                    "&:hover": { backgroundColor: "#667085 !important" },
+                  },
+                  "& .MuiDataGrid-row": {
+                    minHeight: "32px !important",
+                    maxHeight: "32px !important",
+                  },
+                  "& .MuiDataGrid-columnHeaders": {
+                    backgroundColor: "#F9FAFB",
+                    color: "#475467",
+                    fontWeight: 700,
+                    fontSize: "0.8rem",
+                    borderBottom: "1px solid #EAECF0",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2,
+                  },
+                  "& .MuiDataGrid-columnHeader": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-columnHeaderTitleContainer": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-cell": {
+                    fontSize: "0.775rem",
+                    color: "#344054",
+                    borderBottom: "1px solid #F2F4F7",
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-cellContent": {
+                    display: "flex !important",
+                    alignItems: "center !important",
+                  },
+                  "& .MuiDataGrid-cell:focus": { outline: "none !important" },
+                  "& .MuiDataGrid-cell:focus-within": { outline: "none !important" },
+                  "& .MuiDataGrid-columnHeader:focus": { outline: "none !important" },
+                }}
+              />
+              <CustomPaginationBar
+                page={paginationModel.page}
+                pageSize={paginationModel.pageSize}
+                totalCount={totalRowCount}
+                pageSizeOptions={[10, 20, 50, 100]}
+                onPageChange={(newPage) => setPaginationModel((prev) => ({ ...prev, page: newPage }))}
+                onPageSizeChange={(newPageSize) => setPaginationModel({ page: 0, pageSize: newPageSize })}
+                disabled={isHistoryLoading}
+              />
+            </Box>
           </Paper>
         </Box>
       )}

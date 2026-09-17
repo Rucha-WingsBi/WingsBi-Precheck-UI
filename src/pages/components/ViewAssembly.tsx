@@ -22,21 +22,32 @@ import {
   DialogActions,
   Snackbar,
   Autocomplete,
-  Tabs,
-  Tab,
+  Chip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Tooltip,
 } from "@mui/material";
-import ViewComponents from "./ViewComponents";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import api from "../../services/api";
 import debounce from "lodash/debounce";
+import { EmptyState } from "../../components/EmptyState";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
+import { useHasPermission } from "../../hooks/useHasPermission";
 
 const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hasEditAccess = useHasPermission("Components");
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "N/A";
@@ -55,6 +66,9 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
   };
   // Search filter states
   const [drawingInput, setDrawingInput] = useState(() => {
+    if (location.state?.drawingNumber) {
+      return location.state.drawingNumber;
+    }
     const saved = sessionStorage.getItem("viewAssembly_searchState");
     if (saved) {
       try {
@@ -94,6 +108,15 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
   const [selectedDrawing, setSelectedDrawing] = useState<any | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<{ anchorEl: HTMLElement; parent: any } | null>(null);
+
+  const handleOpenActionMenu = (event: React.MouseEvent<HTMLElement>, parent: any) => {
+    setActionMenuAnchor({ anchorEl: event.currentTarget, parent });
+  };
+
+  const handleCloseActionMenu = () => {
+    setActionMenuAnchor(null);
+  };
 
   React.useEffect(() => {
     sessionStorage.setItem(
@@ -152,9 +175,8 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       setSelectedDrawingOption(newValue);
       if (newValue) {
         const optionLabel = newValue.drawingNumber
-          ? `${newValue.drawingNumber}${
-              newValue.lnItemCode ? ` - ${newValue.lnItemCode}` : ""
-            }`
+          ? `${newValue.drawingNumber}${newValue.lnItemCode ? ` - ${newValue.lnItemCode}` : ""
+          }`
           : "";
         setDrawingInput(optionLabel);
         setLnInput(newValue.lnItemCode || "");
@@ -255,11 +277,11 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
   });
 
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, dwgToSearch?: string, lnToSearch?: string) => {
     if (e) e.preventDefault();
 
-    const finalDwg = (selectedDrawingOption?.drawingNumber || drawingInput).trim();
-    const finalLn = lnInput.trim();
+    const finalDwg = ((dwgToSearch !== undefined ? dwgToSearch : (selectedDrawingOption?.drawingNumber || drawingInput)) || "").trim();
+    const finalLn = ((lnToSearch !== undefined ? lnToSearch : lnInput) || "").trim();
 
     if (!finalDwg && !finalLn) {
       return;
@@ -277,7 +299,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
 
       const response = await api.post("/api/Common/GetAllAssemblyDrawingMappings", payload);
       const data = response.data || [];
-      const containsInactive = data.some((m: any) => m.drawingNumberStatus === false);
+      const containsInactive = data.some((m: any) => m.isActive === false);
       if (containsInactive) {
         setSnackbar({
           open: true,
@@ -285,7 +307,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           severity: "warning",
         });
       }
-      const filteredData = data.filter((m: any) => m.drawingNumberStatus !== false);
+      const filteredData = data.filter((m: any) => m.isActive !== false);
       setSearchResults(filteredData);
 
       // 2. Resolve drawing details locally for expand view
@@ -307,6 +329,17 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     }
   };
 
+  // Auto-trigger search when navigated from View BOM with location.state.drawingNumber and location.state.lnItemCode
+  React.useEffect(() => {
+    const passedDwg = location.state?.drawingNumber;
+    const passedLn = location.state?.lnItemCode;
+    if ((passedDwg && passedDwg.trim()) || (passedLn && passedLn.trim())) {
+      if (passedDwg) setDrawingInput(passedDwg);
+      if (passedLn) setLnInput(passedLn);
+      handleSearch(undefined, passedDwg, passedLn);
+    }
+  }, [location.state?.drawingNumber, location.state?.lnItemCode]);
+
 
   const refreshSelectedDrawing = async () => {
     try {
@@ -320,7 +353,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
 
       const response = await api.post("/api/Common/GetAllAssemblyDrawingMappings", payload);
       const data = response.data || [];
-      const containsInactive = data.some((m: any) => m.drawingNumberStatus === false);
+      const containsInactive = data.some((m: any) => m.isActive === false);
       if (containsInactive) {
         setSnackbar({
           open: true,
@@ -328,7 +361,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           severity: "warning",
         });
       }
-      const filteredData = data.filter((m: any) => m.drawingNumberStatus !== false);
+      const filteredData = data.filter((m: any) => m.isActive !== false);
       setSearchResults(filteredData);
 
       // Refresh details locally
@@ -358,6 +391,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     setSelectedDrawing(null);
     setHasSearched(false);
     sessionStorage.removeItem("viewAssembly_searchState");
+    navigate(".", { replace: true, state: {} });
   };
 
   // Helper to call backend APIs
@@ -368,6 +402,20 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       delete: "/api/Common/RemoveChildDrawing",
     };
     return await api.post(paths[action], payload);
+  };
+
+  const getFriendlyErrorMessage = (rawMessage?: string, fallbackMessage: string = "An error occurred"): string => {
+    if (!rawMessage) return fallbackMessage;
+    if (typeof rawMessage === "string") {
+      if (rawMessage.toLowerCase().includes("no active mapping found for the given drawing")) {
+        return "No active mapping found for the specified drawing, parent drawing, and position number.";
+      }
+      if (rawMessage.startsWith("Error executing scalar query:")) {
+        const cleaned = rawMessage.replace(/^Error executing scalar query:\s*/i, "").trim();
+        return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : fallbackMessage;
+      }
+    }
+    return rawMessage;
   };
 
   // Actions
@@ -443,7 +491,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     } catch (err: any) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to add parent assembly.",
+        message: getFriendlyErrorMessage(err.response?.data?.message, "Failed to add parent assembly."),
         severity: "error",
       });
     } finally {
@@ -481,7 +529,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     } catch (err: any) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to update parent assembly.",
+        message: getFriendlyErrorMessage(err.response?.data?.message, "Failed to update parent assembly."),
         severity: "error",
       });
     } finally {
@@ -512,7 +560,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
     } catch (err: any) {
       setSnackbar({
         open: true,
-        message: err.response?.data?.message || "Failed to delete parent assembly.",
+        message: getFriendlyErrorMessage(err.response?.data?.message, "Failed to delete parent assembly."),
         severity: "error",
       });
     } finally {
@@ -543,9 +591,35 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       .filter((parent) => parent.isActive !== false);
   }, [searchResults]);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
 
-  const activeTab = location.pathname.includes("assembly") ? "assembly" : "components";
+  const sortedParents = useMemo(() => {
+    if (!sortColumn) return parents;
+    return [...parents].sort((a: any, b: any) => {
+      let aVal = a[sortColumn] ?? "";
+      let bVal = b[sortColumn] ?? "";
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [parents, sortColumn, sortDirection]);
+
 
   return (
     <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
@@ -553,63 +627,58 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
         <Box
           sx={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
+            alignItems: "center",
             mb: 1.5,
-            flexWrap: "wrap",
-            gap: { xs: 1, sm: 2, md: 3 },
-            borderBottom: 1,
-            borderColor: "divider",
             pb: 0.5,
+            borderBottom: "1px solid #EAECF0",
+            gap: 1,
           }}
         >
-          <Typography
-            variant="h4"
-            color="primary.main"
-            fontWeight={600}
-            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-          >
-            {activeTab === "components" ? "View Component Details" : "View Assembly Details"}
-          </Typography>
-
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => {
-              if (newValue === "components") {
-                navigate("/components/view");
+          <IconButton
+            onClick={() => {
+              const dwg = (selectedDrawingOption?.drawingNumber || drawingInput || "").trim();
+              const ln = (selectedDrawingOption?.lnItemCode || lnInput || "").trim();
+              if (dwg) {
+                navigate("/sop/view", { state: { tab: "bom", drawingNumber: dwg, lnItemCode: ln } });
               } else {
-                navigate("/components/assembly");
+                navigate(-1);
               }
             }}
-            textColor="primary"
-            indicatorColor="primary"
             sx={{
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 100,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
+              color: "primary.main",
+              p: 0.5,
+              "&:hover": { backgroundColor: "grey.100" },
             }}
           >
-            <Tab label="View Component" value="components" />
-            <Tab label="View Assembly" value="assembly" />
-          </Tabs>
+            <ArrowBackIcon />
+          </IconButton>
+          <Box>
+            <Typography
+              variant="h5"
+              color="primary.main"
+              fontWeight={700}
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+            >
+              Edit BOM Details
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              View, search, and manage component assembly mappings and bill of materials.
+            </Typography>
+          </Box>
         </Box>
       )}
 
-      {activeTab === "components" ? (
-        <ViewComponents hideHeader />
-      ) : (
-        <>
-
-      <Paper sx={{ p: { xs: 1.5, md: 2 }, mb: 2 }}>
+      {/* Filter Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          p: { xs: 1.5, md: 2 },
+          mb: 2,
+        }}
+      >
         <form onSubmit={handleSearch}>
           <Grid container spacing={2} alignItems="center" sx={{ maxWidth: 950 }}>
             <Grid item xs={12} sm={6} md={6}>
@@ -620,13 +689,12 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 inputValue={drawingInput}
                 onInputChange={handleDrawingInputChange}
                 options={drawingOptions}
-                 getOptionLabel={(option) =>
+                getOptionLabel={(option) =>
                   typeof option === "string"
                     ? option
                     : option.drawingNumber
-                      ? `${option.drawingNumber}${
-                          option.lnItemCode ? ` - ${option.lnItemCode}` : ""
-                        }`
+                      ? `${option.drawingNumber}${option.lnItemCode ? ` - ${option.lnItemCode}` : ""
+                      }`
                       : ""
                 }
                 isOptionEqualToValue={(option, value) => option?.id === value?.id}
@@ -642,12 +710,6 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                         height: 40,
                         paddingTop: "0px !important",
                         paddingBottom: "0px !important",
-                      },
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#d1d5db",
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#A8005A",
                       },
                     }}
                     InputProps={{
@@ -683,9 +745,10 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 fullWidth
               />
             </Grid>
-           
+
             <Grid item xs={12} sm={12} md={5} sx={{ display: "flex", gap: 1 }}>
               <Button
+                type="button"
                 variant="outlined"
                 startIcon={<RefreshIcon />}
                 onClick={handleClear}
@@ -695,14 +758,15 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                   flexGrow: 1,
                   whiteSpace: "nowrap",
                   minWidth: "fit-content",
-                  borderColor: "#6b7280",
-                  color: "#6b7280",
-                  fontSize: "0.75rem",
+                  borderColor: "#D0D5DD",
+                  color: "#344054",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
                   textTransform: "none",
+                  borderRadius: "6px",
                   "&:hover": {
-                    borderColor: "#374151",
-                    backgroundColor: "#f9fafb",
-                    color: "#374151",
+                    borderColor: "grey.400",
+                    backgroundColor: "#F9FAFB",
                   },
                 }}
               >
@@ -719,55 +783,69 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                   flexGrow: 1,
                   whiteSpace: "nowrap",
                   minWidth: "fit-content",
-                  fontSize: "0.75rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
                   textTransform: "none",
-                  backgroundColor: "#2563eb",
-                  "&:hover": { backgroundColor: "#1d4ed8" },
-                  "&:disabled": { backgroundColor: "#94a3b8" },
-                  boxShadow: "0 1px 4px rgba(37, 99, 235, 0.3)",
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  borderRadius: "6px",
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                  "&:disabled": { backgroundColor: "grey.300" },
                 }}
               >
                 Search
               </Button>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                disabled={!selectedDrawing}
-                onClick={() => {
-                  setChildDrawingInput("");
-                  setChildLnInput("");
-                  setSelectedChildDwg(null);
-                  setFilteredChildDrawingOptions([]);
-
-                  const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
-                  const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
-
-                  setParentDrawingInput(parentDwg);
-                  setParentLnInput(parentLn);
-                  setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
-                  setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
-
-                  setFindNo("");
-                  setConsumedProdSeriesId("");
-                  setQuantity(0);
-                  setOpenAddDialog(true);
-                }}
-                sx={{
-                  height: 40,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                  minWidth: "fit-content",
-                  fontSize: "0.75rem",
-                  textTransform: "none",
-                  backgroundColor: "#A8005A",
-                  "&:hover": { backgroundColor: "#920050" },
-                  "&:disabled": { backgroundColor: "#d1a3c0" },
-                  boxShadow: "0 1px 4px rgba(168, 0, 90, 0.3)",
-                }}
+              <Tooltip
+                title={!hasEditAccess ? "You do not have access to manage assembly mappings" : ""}
+                arrow
               >
-                Add
-              </Button>
+                <span>
+                  <Button
+                    type="button"
+                    variant="contained"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    disabled={!hasEditAccess || !selectedDrawing}
+                    onClick={() => {
+                      setChildDrawingInput("");
+                      setChildLnInput("");
+                      setSelectedChildDwg(null);
+                      setFilteredChildDrawingOptions([]);
+
+                      const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
+                      const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
+
+                      setParentDrawingInput(parentDwg);
+                      setParentLnInput(parentLn);
+                      setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
+                      setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
+
+                      setFindNo("");
+                      setConsumedProdSeriesId("");
+                      setQuantity(0);
+                      setOpenAddDialog(true);
+                    }}
+                    sx={{
+                      height: 40,
+                      flexGrow: 1,
+                      whiteSpace: "nowrap",
+                      minWidth: "fit-content",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      textTransform: "none",
+                      backgroundColor: "primary.main",
+                      color: "#ffffff",
+                      borderRadius: "6px",
+                      boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                      "&:hover": { backgroundColor: "primary.dark" },
+                      "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
+                    }}
+                  >
+                    Add
+                  </Button>
+                </span>
+              </Tooltip>
             </Grid>
           </Grid>
         </form>
@@ -779,113 +857,202 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
         </Box>
       )}
 
-      {!isSearching && hasSearched && searchResults.length === 0 && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          No child drawing numbers found matching the specified search criteria.
-        </Alert>
-      )}
-      {/* Parent-Child Display */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={12}>
-          <Paper sx={{ p: 2 }}>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
-                      Drawing Number
+      {/* Parent-Child Display Table Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+        }}
+      >
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <SortableTableHeader
+                  label="Sr.No"
+                  sortKey="id"
+                  activeSortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <SortableTableHeader
+                  label="Drawing No."
+                  sortKey="drawingNumber"
+                  activeSortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="left"
+                />
+                <TableCell sx={commonTableHeaderStyle}>
+                  Nomenclature
+                </TableCell>
+                <SortableTableHeader
+                  label="LN Item Code"
+                  sortKey="lnItemCode"
+                  activeSortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="left"
+                />
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 120 }}>
+                  Component Type
+                </TableCell>
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 80 }}>
+                  Qty
+                </TableCell>
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 110 }}>
+                  Position No
+                </TableCell>
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 120 }}>
+                  Assembly No
+                </TableCell>
+                <TableCell align="center" sx={{ ...commonTableHeaderStyle, width: 80 }}>
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedParents.length > 0 ? (
+                sortedParents.map((parent: any, idx: number) => (
+                  <TableRow
+                    key={idx}
+                    hover
+                    sx={commonTableRowStyle}
+                  >
+                    <TableCell sx={{ textAlign: "center" }}>
+                      {idx + 1}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
-                      Nomenclature
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {parent.drawingNumber}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5" }}>
-                      LN Item Code
+                    <TableCell>
+                      {parent.nomenclature}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Component Type
+                    <TableCell>
+                      {parent.lnItemCode}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Qty
+                    <TableCell align="center">
+                      <ComponentTypeChip type={parent.componentType} />
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Position No
+                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+                      {parent.qty}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Assembly No
+                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+                      {parent.findNo}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: "bold", bgcolor: "#f5f5f5", width: 100, textAlign: "center" }}>
-                      Actions
+                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+                      {parent.assemblyNo}
+                    </TableCell>
+                    <TableCell sx={{ width: 80, textAlign: "center" }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleOpenActionMenu(e, parent)}
+                        sx={{
+                          color: "text.secondary",
+                          p: 0.5,
+                          "&:hover": { backgroundColor: "grey.100", color: "text.primary" },
+                        }}
+                      >
+                        <MoreVertIcon fontSize="small" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {parents.length > 0 ? (
-                    parents.map((parent: any, idx: number) => (
-                      <TableRow key={idx} hover>
-                        <TableCell sx={{ fontWeight: "500" }}>{parent.drawingNumber}</TableCell>
-                        <TableCell>{parent.nomenclature}</TableCell>
-                        <TableCell>{parent.lnItemCode}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.componentType}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.qty}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.findNo}</TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>{parent.assemblyNo}</TableCell>
-                        <TableCell sx={{ width: 100, textAlign: "center" }}>
-                          <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
-                            <IconButton
-                              size="small"
-                              sx={{ color: "#A8005A" }}
-                              onClick={() => {
-                                setSelectedDrawing({
-                                  drawingNumber: parent.drawingNumber,
-                                  findNumber: parent.findNo === "N/A" ? "" : parent.findNo,
-                                  qtyPerAssembly: parent.qty === "N/A" ? "" : parent.qty,
-                                  assemblyNo: parent.assemblyNo,
-                                  childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
-                                  assemblyLnItemCode: parent.assemblyLnItemCode || "",
-                                });
-                                setEditingParentDwg(parent.assemblyNo);
-                                setParentDrawingInput(parent.assemblyNo);
-                                setOpenEditDialog(true);
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setSelectedDrawing({
-                                  drawingNumber: parent.drawingNumber,
-                                  childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
-                                  assemblyLnItemCode: parent.assemblyLnItemCode || "",
-                                });
-                                setDeletingParentDwg(parent.assemblyNo);
-                                setOpenDeleteDialog(true);
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 3, color: "text.secondary" }}>
-                        No child drawing numbers found matching the specified search criteria.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-      </Grid>
+                ))
+              ) : !hasSearched ? (
+                <EmptyState
+                  colSpan={9}
+                  title="Search to view assembly details"
+                  subtitle="Enter an assembly number or LN item code above to search."
+                />
+              ) : (
+                <EmptyState
+                  colSpan={9}
+                  title="No Matching Records found"
+                  subtitle="No child drawing numbers found matching the specified search criteria."
+                />
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Action Menu Popover */}
+        <Menu
+          anchorEl={actionMenuAnchor?.anchorEl}
+          open={Boolean(actionMenuAnchor)}
+          onClose={handleCloseActionMenu}
+          transitionDuration={0}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          PaperProps={{
+            elevation: 3,
+            sx: { minWidth: 130, borderRadius: "8px", py: 0.5 },
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              const parent = actionMenuAnchor?.parent;
+              if (parent) {
+                setSelectedDrawing({
+                  drawingNumber: parent.drawingNumber,
+                  findNumber: parent.findNo === "N/A" ? "" : parent.findNo,
+                  qtyPerAssembly: parent.qty === "N/A" ? "" : parent.qty,
+                  assemblyNo: parent.assemblyNo,
+                  childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
+                  assemblyLnItemCode: parent.assemblyLnItemCode || "",
+                });
+                setEditingParentDwg(parent.assemblyNo);
+                setParentDrawingInput(parent.assemblyNo);
+                setOpenEditDialog(true);
+              }
+              handleCloseActionMenu();
+            }}
+            sx={{ py: 0.75, px: 1.5 }}
+          >
+            <ListItemIcon sx={{ minWidth: 28 }}>
+              <EditIcon fontSize="small" color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="Edit" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
+          </MenuItem>
+
+          <MenuItem
+            onClick={() => {
+              const parent = actionMenuAnchor?.parent;
+              if (parent) {
+                setSelectedDrawing({
+                  drawingNumber: parent.drawingNumber,
+                  childLnItemCode: parent.lnItemCode === "N/A" ? "" : parent.lnItemCode,
+                  assemblyLnItemCode: parent.assemblyLnItemCode || "",
+                });
+                setDeletingParentDwg(parent.assemblyNo);
+                setOpenDeleteDialog(true);
+              }
+              handleCloseActionMenu();
+            }}
+            sx={{ py: 0.75, px: 1.5 }}
+          >
+            <ListItemIcon sx={{ minWidth: 28 }}>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText primary="Delete" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500, color: "error.main" }} />
+          </MenuItem>
+        </Menu>
+      </Paper>
 
       {/* Add Dialog */}
-      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: "bold", color: "#A8005A" }}>Add Parent Assembly Mapping</DialogTitle>
+      <Dialog
+        open={openAddDialog}
+        onClose={() => setOpenAddDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
+          Add Parent Assembly Mapping
+        </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
             <Autocomplete
@@ -916,12 +1083,18 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 }
               }}
               filterOptions={(options) => options}
+              loading={isSearchingParent}
+              noOptionsText={
+                (parentDrawingInput || "").trim().length < 3
+                  ? "Type at least 3 characters to search"
+                  : "No drawings found"
+              }
               renderOption={(props, option) => {
                 const opt = option as any;
                 const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
                 return (
                   <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "#333", textAlign: "left", width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", textAlign: "left", width: "100%" }}>
                       {opt.drawingNumber}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
@@ -934,8 +1107,17 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 <TextField
                   {...params}
                   label="Parent Drawing Number"
-                  placeholder="Select parent drawing"
+                  placeholder="Select or search parent drawing"
                   required
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingParent ? <CircularProgress color="inherit" size={18} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
                 />
               )}
             />
@@ -967,12 +1149,18 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 }
               }}
               filterOptions={(options) => options}
+              loading={isSearchingChild}
+              noOptionsText={
+                (childDrawingInput || "").trim().length < 3
+                  ? "Type at least 3 characters to search"
+                  : "No drawings found"
+              }
               renderOption={(props, option) => {
                 const opt = option as any;
                 const lnCode = opt.lnItemCode || opt.childLnItemCode || "";
                 return (
                   <Box component="li" {...props} key={opt.id || opt.drawingNumber} sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start !important", textAlign: "left !important", width: "100%" }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "#333", textAlign: "left", width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary", textAlign: "left", width: "100%" }}>
                       {opt.drawingNumber}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
@@ -985,8 +1173,17 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 <TextField
                   {...params}
                   label="Child Drawing Number"
-                  placeholder="Select child drawing"
+                  placeholder="Type at least 3 characters..."
                   required
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingChild ? <CircularProgress color="inherit" size={18} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
                 />
               )}
             />
@@ -999,8 +1196,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAddDialog(false)} color="inherit" size="small">
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenAddDialog(false)}
+            color="inherit"
+            size="small"
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
             Cancel
           </Button>
           <Button
@@ -1008,20 +1210,36 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             onClick={handleAddAssembly}
             variant="contained"
             disabled={isSubmitting || !selectedParentDwg || !selectedChildDwg}
-            sx={{ bgcolor: "#A8005A", "&:hover": { bgcolor: "#920050" } }}
+            sx={{
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: "6px",
+              px: 2,
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
           >
-            {isSubmitting ? <CircularProgress size={24} /> : "Save"}
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Save"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: "bold", color: "#A8005A" }}>Edit Drawing</DialogTitle>
+      <Dialog
+        open={openEditDialog}
+        onClose={() => setOpenEditDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
+          Edit Drawing
+        </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
             <TextField
-              label=" Drawing Number"
+              label="Drawing Number"
               value={selectedDrawing?.drawingNumber || ""}
               disabled
               fullWidth
@@ -1043,7 +1261,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 const val = e.target.value;
                 setSelectedDrawing({
                   ...selectedDrawing!,
-                  qtyPerAssembly: val
+                  qtyPerAssembly: val,
                 });
               }}
               fullWidth
@@ -1051,32 +1269,58 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)} color="inherit" size="small">
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenEditDialog(false)}
+            color="inherit"
+            size="small"
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleUpdateAssembly}
             variant="contained"
             disabled={isSubmitting}
-            sx={{ bgcolor: "#A8005A", "&:hover": { bgcolor: "#920050" } }}
+            sx={{
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: "6px",
+              px: 2,
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
             size="small"
           >
-            {isSubmitting ? <CircularProgress size={24} /> : "Update"}
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Update"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ fontWeight: "bold" }}>Delete Parent Assembly Mapping</DialogTitle>
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
+          Delete Parent Assembly Mapping
+        </DialogTitle>
         <DialogContent dividers>
-          <Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
             Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child drawing <strong>{selectedDrawing?.drawingNumber}</strong>?
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)} color="inherit" size="small">
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setOpenDeleteDialog(false)}
+            color="inherit"
+            size="small"
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
             Cancel
           </Button>
           <Button
@@ -1085,8 +1329,9 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             color="error"
             disabled={isSubmitting}
             size="small"
+            sx={{ fontWeight: 600, textTransform: "none", borderRadius: "6px", px: 2 }}
           >
-            {isSubmitting ? <CircularProgress size={24} /> : "Delete"}
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1106,8 +1351,6 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
           {snackbar.message}
         </Alert>
       </Snackbar>
-        </>
-      )}
     </Box>
   );
 };

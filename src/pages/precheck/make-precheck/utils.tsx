@@ -1,4 +1,4 @@
-import React from "react";
+
 import {
   Chip,
 } from "@mui/material";
@@ -112,3 +112,106 @@ export const getComponentTypeChip = (
       return <Chip label={type || "N/A"} size="small" variant="outlined" />;
   }
 };
+
+export const getStatusBadgeChip = (item: any) => {
+  if (item.isRejected || item.precheckStatus?.toLowerCase() === "rejected") {
+    return (
+      <Chip
+        label="Rejected"
+        size="small"
+        sx={{
+          backgroundColor: "#FDE8E8",
+          color: "#9B1C1C",
+          fontWeight: 600,
+          fontSize: "0.75rem",
+          height: 24,
+        }}
+      />
+    );
+  }
+
+  const statusLower = (item.precheckStatus || "").toLowerCase();
+  const isRej = item.isRejected || statusLower === "rejected";
+  const isComplete =
+    !isRej &&
+    (item.isPrecheckComplete ||
+      statusLower === "verified" ||
+      statusLower === "completed");
+
+  const isUpdated =
+    !isRej &&
+    !isComplete &&
+    (statusLower === "updated" || item.isUpdated || Boolean(item.qrCode));
+
+  const scannedQty = item.scannedQuantity ?? (item.qrCode ? item.quantity : 0);
+  const totalQty = item.quantity ?? 1;
+  const remQty = item.remainingQuantity;
+
+  if (isComplete) {
+    return (
+      <Chip
+        label="Verified"
+        size="small"
+        sx={{
+          backgroundColor: "#DEF7EC",
+          color: "#03543F",
+          fontWeight: 600,
+          fontSize: "0.75rem",
+          height: 24,
+          border: "1px solid #6EE7B7",
+        }}
+      />
+    );
+  }
+
+  if (isUpdated) {
+    return (
+      <Chip
+        label="Updated"
+        size="small"
+        sx={{
+          backgroundColor: "#FFF7ED",
+          color: "#B45309",
+          fontWeight: 600,
+          fontSize: "0.75rem",
+          height: 24,
+          border: "1px solid #D97706",
+        }}
+      />
+    );
+  }
+
+  if (
+    (scannedQty > 0 && scannedQty < totalQty) ||
+    (remQty !== undefined && remQty !== null && remQty > 0 && remQty < totalQty)
+  ) {
+    return (
+      <Chip
+        label="Short"
+        size="small"
+        sx={{
+          backgroundColor: "#FEF3C7",
+          color: "#92400E",
+          fontWeight: 600,
+          fontSize: "0.75rem",
+          height: 24,
+        }}
+      />
+    );
+  }
+
+  return (
+    <Chip
+      label="Not Scanned"
+      size="small"
+      sx={{
+        backgroundColor: "#F3F4F6",
+        color: "#374151",
+        fontWeight: 600,
+        fontSize: "0.75rem",
+        height: 24,
+      }}
+    />
+  );
+};
+

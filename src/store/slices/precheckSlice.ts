@@ -1,9 +1,10 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
+import { getErrorMessage } from "../../utils/errorUtils";
 
 interface PrecheckState {
   assemblyDrawings: any[];
-  precheckDetails: any[];
+  precheckDetails: any;
   precheckStatus: any[];
   availableComponents: any[];
   storeInData: any[];
@@ -15,7 +16,7 @@ interface PrecheckState {
 
 const initialState: PrecheckState = {
   assemblyDrawings: [],
-  precheckDetails: [],
+  precheckDetails: null,
   precheckStatus: [],
   availableComponents: [],
   storeInData: [],
@@ -49,21 +50,7 @@ export const makePrecheck = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       console.error("Precheck API error:", error);
-
-      // Handle specific error cases
-      if (error.response?.status === 400) {
-        const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data ||
-          "Bad request - Invalid data";
-        return rejectWithValue(errorMessage);
-      } else if (error.response?.status === 500) {
-        return rejectWithValue("Server error - Please try again later");
-      } else {
-        return rejectWithValue(
-          error.response?.data?.message || "Failed to make precheck",
-        );
-      }
+      return rejectWithValue(getErrorMessage(error, "Failed to make precheck"));
     }
   },
 );
@@ -85,7 +72,7 @@ export const makePrecheckFromExcel = createAsyncThunk(
     } catch (error: any) {
       console.error("MakePrecheckFromExcel API error:", error);
       return rejectWithValue(
-        error.response?.data?.message || "Failed to process Excel precheck",
+        getErrorMessage(error, "Failed to process Excel precheck")
       );
     }
   },
@@ -103,6 +90,41 @@ export const viewPrecheckDetails = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to view precheck details",
+      );
+    }
+  },
+);
+
+export const viewPrecheckByParameters = createAsyncThunk(
+  "precheck/viewPrecheckByParameters",
+  async (request: any, { rejectWithValue }) => {
+    try {
+      const pageNumber = request?.pageNumber ?? 1;
+      const pageSize = request?.pageSize ?? 20;
+      const body = {
+        searchQuery: request?.searchQuery ?? "",
+        prodSeries: Array.isArray(request?.prodSeries)
+          ? request.prodSeries
+          : request?.prodSeries
+            ? [request.prodSeries]
+            : [],
+        status: Array.isArray(request?.status)
+          ? request.status
+          : request?.status
+            ? [request.status]
+            : [],
+        fromDate: request?.fromDate ?? null,
+        toDate: request?.toDate ?? null,
+      };
+      const response = await api.post(
+        `/api/Precheck/ViewPrechekByParameters?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        body
+      );
+      console.log("Response view precheck by parameters:", response);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to view precheck details by parameters",
       );
     }
   },
@@ -279,6 +301,7 @@ export const exportPrecheckDetails = createAsyncThunk(
       id?: number;
       drawingNumberId?: number;
       remainingPrecheck?: boolean;
+      selectedColumns?: string[];
     },
     { rejectWithValue },
   ) => {
@@ -301,19 +324,25 @@ export const exportPrecheckDetails = createAsyncThunk(
       );
 
       if (response.data && response.data.size > 0) {
-        // Create download link for PDF file
+        const contentDisposition = response.headers["content-disposition"];
+        let filename = `PrecheckExport_${new Date().toISOString().split("T")[0]}.xlsx`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, "");
+          }
+        }
+
+        // Create download link for Excel file
         const url = window.URL.createObjectURL(
           new Blob([response.data], {
-            type: "application/pdf",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           }),
         );
 
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute(
-          "download",
-          `PrecheckExport_${new Date().toISOString().split("T")[0]}.pdf`,
-        );
+        link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -335,6 +364,88 @@ export const exportPrecheckDetails = createAsyncThunk(
       );
     }
   },
+);
+
+export const exportViewPrecheckDetails = createAsyncThunk(
+  "precheck/exportViewPrecheckDetails",
+  async (
+    payload: {
+      searchQuery?: string;
+      productionSeries?: string[];
+      status?: string[];
+      fromDate?: string | null;
+      toDate?: string | null;
+      selectedColumns?: string[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const body = {
+        searchQuery: payload.searchQuery || "",
+        productionSeries: Array.isArray(payload.productionSeries)
+          ? payload.productionSeries
+          : payload.productionSeries
+            ? [payload.productionSeries]
+            : [],
+        status: Array.isArray(payload.status)
+          ? payload.status
+          : payload.status
+            ? [payload.status]
+            : [],
+        fromDate: payload.fromDate || null,
+        toDate: payload.toDate || null,
+        selectedColumns: Array.isArray(payload.selectedColumns)
+          ? payload.selectedColumns
+          : [],
+      };
+
+      const response = await api.post(
+        "/api/Precheck/ExportViewPrecheckdetails",
+        body,
+        {
+          responseType: "blob",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data && response.data.size > 0) {
+        const contentDisposition = response.headers["content-disposition"];
+        let filename = `ViewPrecheckExport_${new Date().toISOString().split("T")[0]}.xlsx`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, "");
+          }
+        }
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        return {
+          success: true,
+          message: "Precheck details exported successfully",
+        };
+      } else {
+        throw new Error("No file content received from the API");
+      }
+    } catch (error: any) {
+      console.error("Error exporting view precheck details:", error);
+      return rejectWithValue(
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to export precheck details"
+      );
+    }
+  }
 );
 
 export const downloadBulkPrecheckTemplate = createAsyncThunk(
@@ -391,21 +502,37 @@ export const getStoreInData = createAsyncThunk(
   "precheck/getStoreInData",
   async (
     payload: {
-      qrCode: string;
-      fromDate?: string;
-      toDate?: string;
+      qrCode?: string;
+      fromDate?: string | null;
+      toDate?: string | null;
+      searchQuery?: string;
+      drawingNumber?: string;
+      prodSeries?: string[];
+      status?: string;
+      pageNumber?: number;
+      pageSize?: number;
     },
     { rejectWithValue }
   ) => {
     try {
+      const pageNumber = payload?.pageNumber ?? 1;
+      const pageSize = payload?.pageSize ?? 20;
+      const body = {
+        qrCode: payload?.qrCode ?? "",
+        fromDate: payload?.fromDate ?? null,
+        toDate: payload?.toDate ?? null,
+        searchQuery: payload?.searchQuery ?? "",
+        drawingNumber: payload?.drawingNumber ?? "",
+        prodSeries: Array.isArray(payload?.prodSeries)
+          ? payload.prodSeries
+          : payload?.prodSeries
+            ? [payload.prodSeries]
+            : [],
+        status: payload?.status ?? "",
+      };
       const response = await api.post(
-        `/api/Precheck/GetStoreAvailablComponents`,
-        {
-
-          qrCode: payload.qrCode,
-          fromDate: payload.fromDate,
-          toDate: payload.toDate,
-        }
+        `/api/Precheck/GetStoreAvailablComponents?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        body
       );
       if (!response.data) {
         return rejectWithValue("No store-in data found");
@@ -413,7 +540,7 @@ export const getStoreInData = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(
-        "Error fetching store-in data: " + (error.message || error),
+        "Error fetching store-in data: " + (error.response?.data?.message || error.message || error),
       );
     }
   },
@@ -723,6 +850,19 @@ const precheckSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
+      // Export View Precheck Details
+      .addCase(exportViewPrecheckDetails.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(exportViewPrecheckDetails.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(exportViewPrecheckDetails.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
       // Get Precheck Status
       .addCase(getPrecheckStatus.pending, (state) => {
         state.isLoading = true;
@@ -960,6 +1100,19 @@ const precheckSlice = createSlice({
         state.error = null;
       })
       .addCase(removePrecheckDetails.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // View Precheck By Parameters
+      .addCase(viewPrecheckByParameters.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(viewPrecheckByParameters.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.precheckDetails = action.payload;
+      })
+      .addCase(viewPrecheckByParameters.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

@@ -145,65 +145,88 @@ const ForgetPassword: React.FC = () => {
       sx={{
         minHeight: "100vh",
         width: "100vw",
-        backgroundColor: "#D82578",
+        background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        py: 3,
       }}
     >
       <Card
         sx={{
-          maxWidth: 520,
+          maxWidth: 540,
           width: "100%",
           mx: 2,
-          boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.1)",
-          borderRadius: 2,
+          boxShadow: "0px 20px 50px rgba(0, 0, 0, 0.3)",
+          borderRadius: "16px",
+          border: "none",
+          backgroundColor: "#ffffff",
           overflow: "hidden",
         }}
       >
         {/* Header */}
         <Box
           sx={{
-            bgcolor: "primary.main",
-            background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+            background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
             p: 3,
-            pb: 4,
             display: "flex",
             flexDirection: "row",
             justifyContent: "space-between",
-            alignItems: "center", // vertically center-align items
+            alignItems: "center",
           }}
         >
-          <Typography variant="h5" color="white" fontWeight="600">
-            Reset Password
-          </Typography>
+          <Box>
+            <Typography variant="h5" color="white" fontWeight="700" sx={{ fontSize: "1.35rem", lineHeight: 1.2 }}>
+              Reset Password
+            </Typography>
+            <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "0.8rem", mt: 0.5 }}>
+              Verify your security question to set a new password
+            </Typography>
+          </Box>
 
           <Box
-            component="img"
-            src="/assets/logo.jpg"
-            alt="Logo"
             sx={{
-              height: 50,
-              width: "auto",
-              borderRadius: 2,
+              backgroundColor: "#ffffff",
+              p: 0.5,
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
             }}
-          />
+          >
+            <Box
+              component="img"
+              src="/assets/logo.jpg"
+              alt="Logo"
+              sx={{
+                height: 42,
+                width: "auto",
+                borderRadius: "6px",
+                display: "block",
+              }}
+            />
+          </Box>
         </Box>
 
         {/* Form */}
-        <CardContent sx={{ p: 3, pt: 4 }}>
+        <CardContent sx={{ p: 3, pt: 3.5 }}>
           <form onSubmit={handleSubmit}>
-            <Box mb={3}>
+            <Box mb={2.5}>
               <Typography
-                variant="subtitle1"
-                fontWeight="600"
-                color="secondary.main"
-                mb={1}
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: "#344054",
+                  fontSize: "0.825rem",
+                  mb: 0.75,
+                }}
               >
                 User ID
               </Typography>
               <TextField
                 fullWidth
+                size="small"
                 id="userId"
                 name="userId"
                 placeholder="Enter your user ID"
@@ -212,28 +235,37 @@ const ForgetPassword: React.FC = () => {
                 error={!!formErrors.userId}
                 helperText={formErrors.userId}
                 disabled={isLoading}
-                InputProps={{
-                  sx: {
-                    borderRadius: 1.5,
-                    bgcolor: "background.default",
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "0.875rem",
+                    height: 40,
+                    "& fieldset": { borderColor: "#D0D5DD" },
+                    "&:hover fieldset": { borderColor: "#6D2A8F" },
+                    "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                   },
                 }}
               />
             </Box>
 
-            <Grid container spacing={2} mb={3}>
+            <Grid container spacing={2} mb={2.5}>
               <Grid item xs={12} sm={6}>
                 <Typography
-                  variant="subtitle1"
-                  fontWeight="600"
-                  color="secondary.main"
-                  mb={1}
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "#344054",
+                    fontSize: "0.825rem",
+                    mb: 0.75,
+                  }}
                 >
                   Security Question
                 </Typography>
                 <TextField
                   select
                   fullWidth
+                  size="small"
                   id="securityQuestion"
                   name="securityQuestion"
                   value={formData.securityQuestion}
@@ -241,15 +273,20 @@ const ForgetPassword: React.FC = () => {
                   error={!!formErrors.securityQuestion}
                   helperText={formErrors.securityQuestion}
                   disabled={isLoading}
-                  InputProps={{
-                    sx: {
-                      borderRadius: 1.5,
-                      bgcolor: "background.default",
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "0.875rem",
+                      height: 40,
+                      "& fieldset": { borderColor: "#D0D5DD" },
+                      "&:hover fieldset": { borderColor: "#6D2A8F" },
+                      "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                     },
                   }}
                 >
                   {securityQuestions.map((option: any) => (
-                    <MenuItem key={option.id} value={option.id}>
+                    <MenuItem key={option.id} value={option.id} sx={{ fontSize: "0.85rem" }}>
                       {option.question || option.securityQuestion}
                     </MenuItem>
                   ))}
@@ -257,15 +294,19 @@ const ForgetPassword: React.FC = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography
-                  variant="subtitle1"
-                  fontWeight="600"
-                  color="secondary.main"
-                  mb={1}
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "#344054",
+                    fontSize: "0.825rem",
+                    mb: 0.75,
+                  }}
                 >
                   Security Answer
                 </Typography>
                 <TextField
                   fullWidth
+                  size="small"
                   id="securityAnswer"
                   name="securityAnswer"
                   placeholder="Enter your answer"
@@ -274,28 +315,37 @@ const ForgetPassword: React.FC = () => {
                   error={!!formErrors.securityAnswer}
                   helperText={formErrors.securityAnswer}
                   disabled={isLoading}
-                  InputProps={{
-                    sx: {
-                      borderRadius: 1.5,
-                      bgcolor: "background.default",
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "0.875rem",
+                      height: 40,
+                      "& fieldset": { borderColor: "#D0D5DD" },
+                      "&:hover fieldset": { borderColor: "#6D2A8F" },
+                      "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                     },
                   }}
                 />
               </Grid>
             </Grid>
 
-            <Grid container spacing={2} mb={3}>
+            <Grid container spacing={2} mb={2.5}>
               <Grid item xs={12} sm={6}>
                 <Typography
-                  variant="subtitle1"
-                  fontWeight="600"
-                  color="secondary.main"
-                  mb={1}
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "#344054",
+                    fontSize: "0.825rem",
+                    mb: 0.75,
+                  }}
                 >
                   New Password
                 </Typography>
                 <TextField
                   fullWidth
+                  size="small"
                   id="newPassword"
                   name="newPassword"
                   type={showNewPassword ? "text" : "password"}
@@ -305,19 +355,28 @@ const ForgetPassword: React.FC = () => {
                   error={!!formErrors.newPassword}
                   helperText={formErrors.newPassword}
                   disabled={isLoading}
-                  InputProps={{
-                    sx: {
-                      borderRadius: 1.5,
-                      bgcolor: "background.default",
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "0.875rem",
+                      height: 40,
+                      "& fieldset": { borderColor: "#D0D5DD" },
+                      "&:hover fieldset": { borderColor: "#6D2A8F" },
+                      "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                     },
+                  }}
+                  InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
                           aria-label="toggle password visibility"
                           onClick={handleToggleNewPassword}
                           edge="end"
+                          size="small"
+                          sx={{ color: "#667085" }}
                         >
-                          {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                          {showNewPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -326,15 +385,19 @@ const ForgetPassword: React.FC = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography
-                  variant="subtitle1"
-                  fontWeight="600"
-                  color="secondary.main"
-                  mb={1}
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: "#344054",
+                    fontSize: "0.825rem",
+                    mb: 0.75,
+                  }}
                 >
                   Confirm Password
                 </Typography>
                 <TextField
                   fullWidth
+                  size="small"
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
@@ -344,22 +407,31 @@ const ForgetPassword: React.FC = () => {
                   error={!!formErrors.confirmPassword}
                   helperText={formErrors.confirmPassword}
                   disabled={isLoading}
-                  InputProps={{
-                    sx: {
-                      borderRadius: 1.5,
-                      bgcolor: "background.default",
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "8px",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "0.875rem",
+                      height: 40,
+                      "& fieldset": { borderColor: "#D0D5DD" },
+                      "&:hover fieldset": { borderColor: "#6D2A8F" },
+                      "&.Mui-focused fieldset": { borderColor: "#6D2A8F", borderWidth: "1.5px" },
                     },
+                  }}
+                  InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
                           aria-label="toggle password visibility"
                           onClick={handleToggleConfirmPassword}
                           edge="end"
+                          size="small"
+                          sx={{ color: "#667085" }}
                         >
                           {showConfirmPassword ? (
-                            <VisibilityOff />
+                            <VisibilityOff fontSize="small" />
                           ) : (
-                            <Visibility />
+                            <Visibility fontSize="small" />
                           )}
                         </IconButton>
                       </InputAdornment>
@@ -370,24 +442,28 @@ const ForgetPassword: React.FC = () => {
             </Grid>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert severity="error" sx={{ mb: 2, borderRadius: "8px", fontSize: "0.825rem" }}>
                 {error}
               </Alert>
             )}
 
             <Box
-              sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}
+              sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2, gap: 2 }}
             >
               <Button
                 component={RouterLink}
                 to="/login"
                 variant="outlined"
-                color="secondary"
                 sx={{
-                  py: 1.5,
-                  px: 3,
+                  height: 40,
+                  px: 2.5,
                   fontWeight: 600,
-                  minWidth: "120px",
+                  fontSize: "0.875rem",
+                  textTransform: "none",
+                  borderRadius: "8px",
+                  borderColor: "#D0D5DD",
+                  color: "#344054",
+                  "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3", color: "#101828" },
                 }}
               >
                 Back to Login
@@ -396,15 +472,19 @@ const ForgetPassword: React.FC = () => {
               <Button
                 type="submit"
                 variant="contained"
-                color="primary"
                 disabled={isLoading}
                 sx={{
-                  py: 1.5,
-                  px: 4,
+                  height: 40,
+                  px: 3,
                   fontWeight: 600,
-                  minWidth: "120px",
-                  backgroundColor: "#D82578",
-                  "&:hover": { backgroundColor: "#4A1964" },
+                  fontSize: "0.875rem",
+                  textTransform: "none",
+                  borderRadius: "8px",
+                  backgroundColor: "#6D2A8F",
+                  color: "#ffffff",
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "#582075" },
+                  "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
                 }}
               >
                 {isLoading ? "Resetting..." : "Reset Password"}

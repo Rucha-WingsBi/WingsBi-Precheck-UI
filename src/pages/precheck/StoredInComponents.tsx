@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,29 +16,48 @@ import {
   Alert,
   TextField,
   InputAdornment,
-  TablePagination,
   IconButton,
   Collapse,
   Autocomplete,
   Tabs,
   Tab,
+  Stack,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  Checkbox,
+  Chip,
+  Grid,
+  FormControl,
 } from '@mui/material';
+import { CustomPagination } from '../../components/CustomPagination';
+
 import DownloadIcon from '@mui/icons-material/Download';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from '../../store/store';
 import { getStoredComponentsByDate, exportStoredComponents, clearStoredComponents } from '../../store/slices/qrcodeSlice';
-import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import debounce from 'lodash/debounce';
+import { SortableTableHeader } from '../../components/SortableTableHeader';
+import { commonTableHeaderStyle, commonTableRowStyle } from '../../components/tableStyles';
 
 // Types for stored components
 interface StoredComponent {
@@ -88,86 +107,225 @@ interface StoredComponent {
   lnItemCode: string;
 }
 
-const Row = ({ component }: { component: StoredComponent }) => {
-  const [open, setOpen] = useState(false);
+const ALL_STORED_IN_EXPORT_COLUMNS = [
+  { key: "qrCodeNumber", label: "QRCode ID" },
+  { key: "productionOrderNumber", label: "PO Number" },
+  { key: "projectNumber", label: "Project Number" },
+  { key: "productionSeries", label: "Prod Series" },
+  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "idNumber", label: "ID Number" },
+  { key: "quantity", label: "Qty" },
+  { key: "nomenclature", label: "Nomenclature" },
+  { key: "consumedInDrawing", label: "Consumed in Drawing" },
+  { key: "qrCodeStatus", label: "Status" },
+  { key: "irNumber", label: "IR Number" },
+  { key: "msnNumber", label: "MSN Number" },
+  { key: "mrirNumber", label: "MRIR Number" },
+  { key: "desposition", label: "Disposition" },
+  { key: "users", label: "Username" },
+];
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'N/A';
+const Row = ({ component, sr }: { component: StoredComponent; sr: number }) => {
+  const [open, setOpen] = useState(false);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const isMenuOpen = Boolean(menuAnchorEl);
+
+  const handleOpenMenu = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setMenuAnchorEl(e.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+  };
+
+  const handleToggleDetails = () => {
+    handleCloseMenu();
+    setOpen((prev) => !prev);
+  };
+
+  // Status badge renderer
+  const renderStatusBadge = (statusStr: string | undefined) => {
+    const status = (statusStr || 'N/A').toLowerCase();
+    let bg = '#f4f5f7';
+    let color = '#344054';
+    let borderColor = '#d0d5dd';
+
+    if (status.includes('ready') || status.includes('complete') || status.includes('available')) {
+      bg = '#ecfdf5';
+      color = '#047857';
+      borderColor = '#a7f3d0';
+    } else if (status.includes('pending') || status.includes('hold')) {
+      bg = '#fffbeb';
+      color = '#d97706';
+      borderColor = '#fde68a';
+    } else if (status.includes('consumed') || status.includes('used')) {
+      bg = '#eff6ff';
+      color = '#2563eb';
+      borderColor = '#bfdbfe';
     }
+
+    return (
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.75,
+          px: 1.25,
+          py: 0.25,
+          borderRadius: '12px',
+          bgcolor: bg,
+          color: color,
+          border: `1px solid ${borderColor}`,
+          fontWeight: 600,
+          fontSize: '0.75rem',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <Box
+          sx={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            bgcolor: color,
+          }}
+        />
+        {statusStr || 'N/A'}
+      </Box>
+    );
   };
 
   return (
     <>
-      <TableRow hover sx={{ '& > *': { borderBottom: 'unset' } }}>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.qrCodeNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.productionOrderNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.projectNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.productionSeries || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.drawingNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.idNumber || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.quantity || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1, fontSize: '0.875rem' }}>{component?.nomenclature || 'N/A'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', py: 1 }}>
+      <TableRow
+        hover
+        sx={{
+          height: 40,
+          '&:hover': { backgroundColor: 'grey.50' },
+          '& td': {
+            borderBottom: '1px solid',
+            borderColor: 'grey.100',
+            fontSize: '0.8rem',
+            color: '#344054',
+            py: 0.75,
+            px: 1.5,
+            whiteSpace: 'nowrap',
+          },
+        }}
+      >
+        <TableCell sx={{ textAlign: 'center', width: '45px', color: 'text.muted', fontSize: '0.8rem' }}>{sr}</TableCell>
+        <TableCell sx={{ textAlign: 'center', fontWeight: 600, color: '#101828' }}>{component?.qrCodeNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.productionOrderNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.projectNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.productionSeries || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.drawingNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.idNumber || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.quantity || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}>{component?.nomenclature || 'N/A'}</TableCell>
+        <TableCell sx={{ textAlign: 'center', width: '60px' }}>
           <IconButton
-            aria-label="expand row"
             size="small"
-            onClick={() => setOpen(!open)}
+            onClick={handleOpenMenu}
+            sx={{
+              color: 'text.muted',
+              p: 0.5,
+              '&:hover': { backgroundColor: 'grey.100', color: 'text.primary' },
+            }}
           >
-            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            <MoreVertIcon fontSize="small" />
           </IconButton>
+
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={isMenuOpen}
+            onClose={handleCloseMenu}
+            transitionDuration={0}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            PaperProps={{
+              elevation: 3,
+              sx: { minWidth: 110, borderRadius: '6px', py: 0.25 },
+            }}
+          >
+            <MenuItem onClick={handleToggleDetails} sx={{ py: 0.35, px: 1, minHeight: 28 }}>
+              <ListItemIcon sx={{ minWidth: 20, '& .MuiSvgIcon-root': { fontSize: 15 } }}>
+                {open ? <KeyboardArrowUpIcon color="primary" /> : <KeyboardArrowDownIcon />}
+              </ListItemIcon>
+              <ListItemText
+                primary={open ? 'Hide Details' : 'View Details'}
+                primaryTypographyProps={{ fontSize: '0.725rem', fontWeight: 500 }}
+              />
+            </MenuItem>
+          </Menu>
         </TableCell>
       </TableRow>
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={10}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1 }}>
-              <Table size="small">
+            <Box
+              sx={{
+                margin: 1,
+                p: 1.5,
+                backgroundColor: 'grey.50',
+                borderRadius: '6px',
+                border: '1px solid',
+                borderColor: 'grey.200',
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 0.75,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 700,
+                    color: "primary.main",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  Additional Details
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={handleToggleDetails}
+                  title="Close Additional Details"
+                  sx={{
+                    p: 0.25,
+                    color: "#667085",
+                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
+                  }}
+                >
+                  <KeyboardArrowUpIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Table size="small" sx={{ width: '100%' }}>
                 <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Consumed in Drawing</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>IR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>MSN Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>MRIR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Disposition</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>Username</TableCell>
+                  <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Consumed in Drawing</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>IR Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>MSN Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>MRIR Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Disposition</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 0.5, textAlign: 'center' }}>Username</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   <TableRow>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.consumedInDrawing || '-'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>
-                      <Box
-                        sx={{
-                          bgcolor: component?.qrCodeStatus === 'readyforconsumption' ? '#e8f5e8' : '#fff3cd',
-                          color: component?.qrCodeStatus === 'readyforconsumption' ? '#2e7d32' : '#856404',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          display: 'inline-block',
-                        }}
-                      >
-                        {component?.qrCodeStatus || 'N/A'}
-                      </Box>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.consumedInDrawing || '-'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', py: 0.5 }}>
+                      {renderStatusBadge(component?.qrCodeStatus)}
                     </TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.irNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.msnNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.mrirNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.desposition || 'N/A'}</TableCell>
-                    <TableCell sx={{ textAlign: 'center', fontSize: '0.8rem' }}>{component?.users || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.irNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.msnNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.mrirNumber || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.desposition || 'N/A'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: '0.75rem', py: 0.5 }}>{component?.users || 'N/A'}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -183,7 +341,6 @@ const AvailableInStore = React.lazy(() => import("./AvailableInStore"));
 
 const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
   const location = useLocation();
   const [storeTab, setStoreTab] = useState<"available" | "stored">(
     hideHeader ? "stored" : (location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available")
@@ -197,7 +354,34 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
   const [loadingDrawings, setLoadingDrawings] = useState(false);
 
   // Get data from Redux store
-  const { storedComponents, loading, error } = useSelector((state: RootState) => state.qrcode);
+  const { storedComponents, loading, isDownloading, error } = useSelector((state: RootState) => state.qrcode);
+
+  // Export Dialog State & Handlers
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
+    ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key)
+  );
+
+  const handleOpenExportDialog = () => {
+    setSelectedExportColumns(ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key));
+    setExportMode("all");
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_STORED_IN_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setSelectedExportColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -223,12 +407,41 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     );
   }, [storedComponents, searchQuery]);
 
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedComponents = React.useMemo(() => {
+    if (!sortColumn) return filteredComponents;
+    return [...filteredComponents].sort((a: any, b: any) => {
+      let aVal = a[sortColumn] ?? "";
+      let bVal = b[sortColumn] ?? "";
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [filteredComponents, sortColumn, sortDirection]);
+
   // Paginated results
   const paginatedComponents = React.useMemo(() => {
     const startIndex = page * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return filteredComponents.slice(startIndex, endIndex);
-  }, [filteredComponents, page, rowsPerPage]);
+    return sortedComponents.slice(startIndex, endIndex);
+  }, [sortedComponents, page, rowsPerPage]);
 
   // Fetch drawing numbers for autocomplete
   const fetchDrawingNumbers = async (search: string) => {
@@ -320,96 +533,73 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     fetchStoredComponents(newDate);
   };
 
-  const handleSearch = () => {
-    if (selectedDate || searchQuery) {
-      fetchStoredComponents(selectedDate);
-    } else {
-      setSnackbar({
-        open: true,
-        message: 'Please select a date or enter a drawing number first',
-        severity: 'warning'
-      });
-    }
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const handleClearFilter = () => {
     setSelectedDate(null);
     setSearchQuery('');
     setSelectedDrawingNo('');
-    setPage(0);
     dispatch(clearStoredComponents());
   };
 
-  const handleExport = () => {
-    const hasValidDate = selectedDate instanceof Date && !isNaN(selectedDate.getTime());
-    if (!hasValidDate && !searchQuery) {
+  const handleExport = async () => {
+    try {
+      const selectedCols =
+        exportMode === "custom"
+          ? ALL_STORED_IN_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+          : ALL_STORED_IN_EXPORT_COLUMNS.map((c) => c.key);
+
+      const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
+      await dispatch(
+        exportStoredComponents({
+          storeInDate: dateStr,
+          drawingNumber: searchQuery || selectedDrawingNo || null,
+          selectedColumns: selectedCols,
+        })
+      ).unwrap();
+      setExportDialogOpen(false);
       setSnackbar({
         open: true,
-        message: 'Please select a date or enter a drawing number first',
-        severity: 'error'
+        message: 'Components exported successfully!',
+        severity: 'success',
       });
-      return;
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: typeof err === 'string' ? err : err?.message || 'Failed to export components',
+        severity: 'error',
+      });
     }
-
-    const formattedDate = hasValidDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-    dispatch(exportStoredComponents({ storeInDate: formattedDate, drawingNumber: searchQuery }))
-      .unwrap()
-      .then((result) => {
-        if (result.success) {
-          setSnackbar({
-            open: true,
-            message: result.message,
-            severity: 'success'
-          });
-        }
-      })
-      .catch((error) => {
-        setSnackbar({
-          open: true,
-          message: error.message || 'Failed to export components',
-          severity: 'error'
-        });
-      });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: hideHeader ? 0 : { xs: 1, sm: 1.5, md: 2 } }}>
+      <Box sx={{ py: hideHeader ? 0 : 1.5, px: hideHeader ? 0 : { xs: 1.5, sm: 2.5 }, bgcolor: "#fcfcfd", minHeight: hideHeader ? "auto" : "100vh" }}>
         {!hideHeader && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              mb: 1.5,
-              flexWrap: "wrap",
-              gap: { xs: 2, sm: 4, md: 6 },
-              borderBottom: 1,
-              borderColor: "divider",
-              pb: 0.5,
-            }}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={2}
+            sx={{ mb: 2 }}
           >
-            <Typography
-              variant="h4"
-              color="primary.main"
-              fontWeight={600}
-              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" }, mb: 0.5 }}
-            >
-              {storeTab === "available" ? "Available In Store" : "Stored In Components"}
-            </Typography>
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  color: "primary.main",
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                }}
+              >
+                {storeTab === "available" ? "Available In Store" : "Stored In Components"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5, fontSize: "0.85rem" }}>
+                View and filter stored components in the system.
+              </Typography>
+            </Box>
 
             <Tabs
               value={storeTab}
@@ -434,7 +624,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
               <Tab label="Available In Store" value="available" />
               <Tab label="Stored In Components" value="stored" />
             </Tabs>
-          </Box>
+          </Stack>
         )}
 
         {storeTab === "available" ? (
@@ -443,261 +633,394 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
           </React.Suspense>
         ) : (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
-              View and export components stored on specific dates
-            </Typography>
-
-        <Paper sx={{ p: { xs: 1, sm: 2 }, mt: 2 }}>
-          {/* Date Selection and Search Controls */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              mb: 2,
-              flexWrap: 'wrap',
-              flexDirection: { xs: 'column', sm: 'row' },
-              width: '100%'
-            }}
-          >
-            <DatePicker
-              label="Select Store In Date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              slotProps={{
-                field: { clearable: true },
-                textField: {
-                  size: 'small',
-                  sx: { width: { xs: '100%', sm: '200px' } },
-                  InputProps: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <CalendarTodayIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  },
-                }
-              }}
-            />
-
-            <Autocomplete
-              freeSolo
-              size="small"
-              options={drawingOptions}
-              loading={loadingDrawings}
-              getOptionLabel={(option) => {
-                if (typeof option === 'string') return option;
-                return option?.drawingNumber || '';
-              }}
-              value={searchQuery}
-              onInputChange={(_, newValue) => {
-                setSearchQuery(newValue);
-                debouncedFetchDrawings(newValue);
-              }}
-              onChange={(_, newValue) => {
-                const drawingNo = typeof newValue === 'string' ? newValue : (newValue?.drawingNumber || '');
-                setSearchQuery(drawingNo);
-                fetchStoredComponents(selectedDate, drawingNo);
-              }}
-              renderOption={(props, option) => (
-                <li {...props}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5 }}>
-                    <Typography variant="body2" fontWeight={500}>
-                      {option.drawingNumber}
-                    </Typography>
-                    {option.nomenclature && (
-                      <Typography variant="caption" color="text.secondary">
-                        {option.nomenclature} {option.componentType ? `| ${option.componentType}` : ''}
-                      </Typography>
-                    )}
-                  </Box>
-                </li>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Search components..."
-                  onPaste={(e) => {
-                    const pastedText = e.clipboardData.getData('text');
-                    if (pastedText) {
-                      setSearchQuery(pastedText);
-                      fetchStoredComponents(selectedDate, pastedText);
+            <Paper elevation={0} sx={{ p: 2, borderRadius: "12px", border: "1px solid #eaecf0", backgroundColor: "#ffffff", mb: 2 }}>
+              {/* Date Selection and Search Controls */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  flexWrap: 'nowrap',
+                  width: '100%',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  py: 0.25,
+                  '&::-webkit-scrollbar': { display: 'none' },
+                }}
+              >
+                <DatePicker
+                  label="Select Store In Date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  slotProps={{
+                    field: { clearable: true },
+                    textField: {
+                      size: 'small',
+                      sx: { width: { xs: '100%', sm: '200px' } },
+                      InputProps: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <CalendarTodayIcon fontSize="small" sx={{ color: '#667085' }} />
+                          </InputAdornment>
+                        ),
+                      },
                     }
                   }}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <>
-                        {loadingDrawings ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
+                />
+
+                <Autocomplete
+                  freeSolo
+                  size="small"
+                  options={drawingOptions}
+                  loading={loadingDrawings}
+                  getOptionLabel={(option) => {
+                    if (typeof option === 'string') return option;
+                    return option?.drawingNumber || '';
+                  }}
+                  value={searchQuery}
+                  onInputChange={(_, newValue) => {
+                    setSearchQuery(newValue);
+                    debouncedFetchDrawings(newValue);
+                  }}
+                  onChange={(_, newValue) => {
+                    const drawingNo = typeof newValue === 'string' ? newValue : (newValue?.drawingNumber || '');
+                    setSearchQuery(drawingNo);
+                    fetchStoredComponents(selectedDate, drawingNo);
+                  }}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', py: 0.5 }}>
+                        <Typography variant="body2" fontWeight={600} color="#101828">
+                          {option.drawingNumber}
+                        </Typography>
+                        {option.nomenclature && (
+                          <Typography variant="caption" color="#667085">
+                            {option.nomenclature} {option.componentType ? `| ${option.componentType}` : ''}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search components..."
+                      onPaste={(e) => {
+                        const pastedText = e.clipboardData.getData('text');
+                        if (pastedText) {
+                          setSearchQuery(pastedText);
+                          fetchStoredComponents(selectedDate, pastedText);
+                        }
+                      }}
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" sx={{ color: '#667085' }} />
+                          </InputAdornment>
+                        ),
+                        endAdornment: (
+                          <>
+                            {loadingDrawings ? <CircularProgress color="inherit" size={18} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  sx={{
+                    width: { xs: '100%', sm: '250px' },
+                    '& .MuiAutocomplete-inputRoot': {
+                      pr: '30px !important'
+                    }
+                  }}
+                />
+
+                <Button
+                  variant="outlined"
+                  size='small'
+                  onClick={handleClearFilter}
+                  startIcon={<ClearIcon fontSize="small" />}
+                  sx={{
+                    height: 36,
+                    borderRadius: "6px",
+                    borderColor: "#d0d5dd",
+                    color: "#344054",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    "&:hover": { borderColor: "#98a2b3", bgcolor: "#f9fafb" },
+                  }}
+                >
+                  Clear Filter
+                </Button>
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={handleOpenExportDialog}
+                  disabled={!filteredComponents.length || isDownloading}
+                  startIcon={isDownloading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon fontSize="small" />}
+                  sx={{
+                    height: 36,
+                    borderRadius: "6px",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    textTransform: "none",
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  }}
+                >
+                  Export Excel
+                </Button>
+              </Box>
+            </Paper>
+
+            {/* Results Count Display & Summary Bar */}
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1, px: 0.5 }}>
+              {(hasValidDate || selectedDrawingNo) ? (
+                <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}>
+                  Showing {filteredComponents.length.toLocaleString()} stored components for:{" "}
+                  <strong>
+                    {hasValidDate && !selectedDrawingNo && format(selectedDate, "dd/MM/yyyy")}
+                    {!hasValidDate && selectedDrawingNo && selectedDrawingNo}
+                    {hasValidDate && selectedDrawingNo && `${format(selectedDate, "dd/MM/yyyy")} and ${selectedDrawingNo}`}
+                  </strong>
+                </Typography>
+              ) : <Box />}
+              <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500, ml: "auto" }}>
+                {filteredComponents.length.toLocaleString()} {filteredComponents.length === 1 ? "result" : "results"}
+              </Typography>
+            </Box>
+
+            {/* Data Table Paper Container */}
+            <Paper elevation={0} sx={{ borderRadius: "12px", border: "1px solid #eaecf0", backgroundColor: "#ffffff", boxShadow: "0px 1px 3px rgba(16, 24, 40, 0.05)", overflow: "hidden", mb: 2 }}>
+              <TableContainer sx={{ overflowX: "auto", maxHeight: "calc(100vh - 290px)" }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <SortableTableHeader label="Sr.No" sortKey="id" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                      <TableCell align="center" sx={commonTableHeaderStyle}>QRCode ID</TableCell>
+                      <SortableTableHeader label="PO Number" sortKey="poNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="left" sx={commonTableHeaderStyle}>Project Number</TableCell>
+                      <SortableTableHeader label="Prod Series" sortKey="productionSeries" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <SortableTableHeader label="Drawing Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="center" sx={commonTableHeaderStyle}>ID</TableCell>
+                      <TableCell align="center" sx={commonTableHeaderStyle}>Qty</TableCell>
+                      <SortableTableHeader label="Nomenclature" sortKey="nomenclature" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="center" sx={commonTableHeaderStyle}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={10} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <CircularProgress size={32} color="primary" />
+                          <Typography variant="body2" sx={{ color: "#667085", mt: 1.5, fontWeight: 500 }}>
+                            Loading stored components...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : error ? (
+                      <TableRow>
+                        <TableCell colSpan={10} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <Typography variant="body2" color="error" fontWeight={600}>
+                            {error.message || 'An error occurred'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : paginatedComponents.length > 0 ? (
+                      paginatedComponents.map((component, index) => (
+                        <Row
+                          key={`${component.qrCodeNumber}-${index}`}
+                          component={component}
+                          sr={page * rowsPerPage + index + 1}
+                        />
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={10} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <Box sx={{ textAlign: "center", py: 2 }}>
+                            <Box
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: "50%",
+                                backgroundColor: "#F4EBFF",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mb: 1.5,
+                              }}
+                            >
+                              <SearchIcon sx={{ color: "primary.main", fontSize: 24 }} />
+                            </Box>
+                            <Typography variant="subtitle1" fontWeight={700} color="#101828">
+                              No stored components found
+                            </Typography>
+                            <Typography variant="body2" color="#667085" sx={{ mt: 0.5 }}>
+                              Try selecting a different date or search query.
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Pagination */}
+              {filteredComponents.length > 0 && (
+                <CustomPagination
+                  page={page}
+                  pageSize={rowsPerPage}
+                  totalCount={filteredComponents.length}
+                  pageSizeOptions={[5, 10, 25, 50]}
+                  onPageChange={(newPage) => setPage(newPage)}
+                  onPageSizeChange={(newSize) => {
+                    setRowsPerPage(newSize);
+                    setPage(0);
                   }}
                 />
               )}
-              sx={{
-                width: { xs: '100%', sm: '250px' },
-                '& .MuiAutocomplete-inputRoot': {
-                  pr: '30px !important'
-                }
-              }}
-            />
+            </Paper>
 
-            <Button
-              variant="outlined"
-              size='small'
-              color="inherit"
-              onClick={handleClearFilter}
-              startIcon={<ClearIcon />}
-              sx={{ minWidth: '120px', height: '40px' }}
+            {/* Snackbar for notifications */}
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={snackbar.severity === 'error' ? null : 6000}
+              onClose={handleCloseSnackbar}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             >
-              Clear Filter
-            </Button>
+              <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%', borderRadius: "8px" }}>
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
 
-            <Button
-              variant="contained"
-              color="success"
-              size="small"
-              onClick={handleExport}
-              disabled={!filteredComponents.length}
-              startIcon={<DownloadIcon />}
-              sx={{ minWidth: '120px', height: '40px' }}
-            >
-              Export Excel
-            </Button>
-          </Box>
-
-          {/* Results Summary */}
-          {(hasValidDate || selectedDrawingNo) && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Showing {filteredComponents.length} stored components for:{" "}
-
-              <strong>
-                {hasValidDate && !selectedDrawingNo && (
-                  <>{format(selectedDate, "dd/MM/yyyy")}</>
-                )}
-
-                {!hasValidDate && selectedDrawingNo && (
-                  <>{selectedDrawingNo}</>
-                )}
-
-                {hasValidDate && selectedDrawingNo && (
-                  <>
-                    {format(selectedDate, "dd/MM/yyyy")} and {selectedDrawingNo}
-                  </>
-                )}
-              </strong>
-
-            </Typography>
-          )}
-
-
-          {/* Data Table */}
-          <TableContainer>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    QRCode ID
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    PO Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Project Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Prod Series
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Drawing Number
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    ID
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Qty
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Nomenclature
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', bgcolor: 'grey.50', py: 1 }}>
-                    Details
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <CircularProgress size={40} />
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Loading stored components...
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="error">
-                        {error.message || 'An error occurred'}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedComponents.length > 0 ? (
-                  paginatedComponents.map((component, index) => (
-                    <Row key={`${component.qrCodeNumber}-${index}`} component={component} />
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No stored components found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination */}
-          {filteredComponents.length > 0 && (
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              component="div"
-              count={filteredComponents.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{
-                borderTop: '1px solid #e0e0e0',
-                '& .MuiTablePagination-toolbar': {
-                  minHeight: 40,
-                },
+            {/* Export Column Selection Dialog */}
+            <Dialog
+              open={exportDialogOpen}
+              onClose={() => setExportDialogOpen(false)}
+              maxWidth="sm"
+              fullWidth
+              PaperProps={{
+                sx: { borderRadius: "12px", p: 1 },
               }}
-            />
-          )}
-        </Paper>
+            >
+              <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+                Export Stored In Components
+              </DialogTitle>
+              <DialogContent>
+                <FormControl component="fieldset" sx={{ width: "100%" }}>
+                  <RadioGroup
+                    value={exportMode}
+                    onChange={(e) => setExportMode(e.target.value as "all" | "custom")}
+                    sx={{ mb: 2 }}
+                  >
+                    <FormControlLabel
+                      value="all"
+                      control={<Radio size="small" />}
+                      label={<Typography variant="body2" fontWeight={600}>Export All Columns</Typography>}
+                    />
+                    <FormControlLabel
+                      value="custom"
+                      control={<Radio size="small" />}
+                      label={<Typography variant="body2" fontWeight={600}>Select Custom Columns</Typography>}
+                    />
+                  </RadioGroup>
 
-        {/* Snackbar for notifications */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={snackbar.severity === 'error' ? null : 6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-        </>
+                  {exportMode === "custom" && (
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: "12px",
+                        bgcolor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedExportColumns.length === ALL_STORED_IN_EXPORT_COLUMNS.length}
+                              indeterminate={
+                                selectedExportColumns.length > 0 &&
+                                selectedExportColumns.length < ALL_STORED_IN_EXPORT_COLUMNS.length
+                              }
+                              onChange={handleToggleSelectAllColumns}
+                              sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" fontWeight="700">
+                              {selectedExportColumns.length === ALL_STORED_IN_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                            </Typography>
+                          }
+                        />
+                        <Chip
+                          label={`${selectedExportColumns.length} / ${ALL_STORED_IN_EXPORT_COLUMNS.length} selected`}
+                          size="small"
+                          variant="outlined"
+                          sx={{ borderColor: "primary.main", color: "primary.main" }}
+                        />
+                      </Box>
+
+                      <Grid container spacing={1}>
+                        {ALL_STORED_IN_EXPORT_COLUMNS.map((col) => (
+                          <Grid item xs={6} sm={4} key={col.key}>
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  size="small"
+                                  checked={selectedExportColumns.includes(col.key)}
+                                  onChange={() => handleToggleColumn(col.key)}
+                                  sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                                />
+                              }
+                              label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  )}
+                </FormControl>
+              </DialogContent>
+
+              <DialogActions sx={{ px: 3, py: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  onClick={() => setExportDialogOpen(false)}
+                  disabled={isDownloading}
+                  sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={isDownloading ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon fontSize="small" />}
+                  onClick={handleExport}
+                  disabled={isDownloading || (exportMode === "custom" && selectedExportColumns.length === 0)}
+                  sx={{
+                    minWidth: 110,
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    textTransform: "none",
+                    backgroundColor: "primary.main",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                  }}
+                >
+                  {isDownloading ? "Exporting..." : "Export"}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </>
         )}
       </Box>
     </LocalizationProvider>

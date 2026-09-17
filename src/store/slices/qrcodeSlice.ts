@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
+import { getErrorMessage } from "../../utils/errorUtils";
 import type {
   QRCodeItem as ImportedQRCodeItem,
   BarcodeDetails as ImportedBarcodeDetails,
@@ -16,7 +17,7 @@ interface QRCodeError {
 interface QRCodeState {
   qrcodeList: ImportedQRCodeItem[];
   consumedInList: any[];
-  barcodeDetails: ImportedBarcodeDetails | null;
+  barcodeDetails: any;
   storedComponents: any[];
   batchItems: ImportedBatchInfo[];
   loading: boolean;
@@ -26,6 +27,7 @@ interface QRCodeState {
   storeInQRCodeDetails: ImportedBarcodeDetails | null;
   serialNumberSummary: SerialNumberSummary[];
   fanManSerialNumbers: string[];
+  totalCount: number;
 }
 
 interface QRCodePayload {
@@ -74,6 +76,7 @@ const initialState: QRCodeState = {
   storeInQRCodeDetails: null,
   serialNumberSummary: [],
   fanManSerialNumbers: [],
+  totalCount: 0,
 };
 
 // Generate QR Code
@@ -210,47 +213,56 @@ export const getBarcodeDetails = createAsyncThunk(
   },
 );
 
-// Get Barcode Details with Parameters
+// Get Barcode Details with Parameters (POST endpoint)
 export const getBarcodeDetailsWithParameters = createAsyncThunk(
   "qrcode/getBarcodeDetailsWithParameters",
   async (
-    params: {
-      prodSeriesId?: number;
-      drawingNumberId?: number;
-      lnItemCodeId?: number;
-      productionOrderNumber?: string;
-      fromDate?: string;
-      toDate?: string;
-      createdBy?: number;
-      fromBatchId?: string;
-      toBatchId?: string;
-      fanManNumber?: string;
+    payload: {
+      pageNumber?: number;
+      pageSize?: number;
+      searchQuery?: string;
+      prodSeries?: string[];
+      createdBy?: number[] | number;
+      generatedBy?: number[];
+      fromDate?: string | null;
+      toDate?: string | null;
     },
     { rejectWithValue },
   ) => {
     try {
-      let query = `/api/QRCode/GetBarcodeDetailsWithParameters?`;
-      if (params.prodSeriesId) query += `ProdSeriesId=${params.prodSeriesId}&`;
-      if (params.drawingNumberId)
-        query += `DrawingNumberId=${params.drawingNumberId}&`;
-      if (params.lnItemCodeId) query += `LnItemCodeId=${params.lnItemCodeId}&`;
-      if (params.productionOrderNumber)
-        query += `ProductionOrderNumber=${params.productionOrderNumber}&`;
-      if (params.fromDate) query += `FromDate=${params.fromDate}&`;
-      if (params.toDate) query += `ToDate=${params.toDate}&`;
-      if (params.createdBy) query += `CreatedBy=${params.createdBy}&`;
-      if (params.fromBatchId) query += `FromBatchId=${params.fromBatchId}&`;
-      if (params.toBatchId) query += `ToBatchId=${params.toBatchId}&`;
-      if (params.fanManNumber) query += `FanManNumber=${params.fanManNumber}&`;
+      const pageNumber = payload.pageNumber || 1;
+      const pageSize = payload.pageSize || 20;
 
-      const response = await api.get(
-        query.endsWith("&") ? query.slice(0, -1) : query,
+      const searchQueryVal =
+        typeof payload.searchQuery === "string"
+          ? payload.searchQuery.trim()
+          : typeof payload.searchQuery === "number"
+            ? String(payload.searchQuery)
+            : "";
+
+      const createdByArr = Array.isArray(payload.createdBy)
+        ? payload.createdBy.map((id) => Number(id)).filter((n) => !isNaN(n) && n > 0)
+        : Array.isArray(payload.generatedBy)
+          ? payload.generatedBy.map((id) => Number(id)).filter((n) => !isNaN(n) && n > 0)
+          : typeof payload.createdBy === "number" && payload.createdBy > 0
+            ? [payload.createdBy]
+            : [];
+
+      const body = {
+        searchQuery: searchQueryVal,
+        prodSeries: Array.isArray(payload.prodSeries) ? payload.prodSeries : [],
+        createdBy: createdByArr,
+        fromDate: payload.fromDate ? String(payload.fromDate) : null,
+        toDate: payload.toDate ? String(payload.toDate) : null,
+      };
+
+      const response = await api.post(
+        `/api/QRCode/GetBarcodeDetailsWithParameters?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        body,
       );
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch barcode details",
-      );
+      return rejectWithValue(getErrorMessage(error, "Failed to fetch barcode details"));
     }
   },
 );
@@ -374,25 +386,51 @@ export const generateBatchQRCode = createAsyncThunk(
 export const exportQRCode = createAsyncThunk(
   "qrcode/exportQRCode",
   async (
-    qrCodeIdOrObj: string | { qrCodeId: string; batchId?: string },
+    qrCodeIdOrObj:
+      | string
+      | {
+          qrCodeId: string;
+          batchId?: string;
+          selectedColumns?: string[];
+        },
     { rejectWithValue, getState },
   ) => {
     // Handle both old string format and new object format for backward compatibility
-    const qrCodeId = typeof qrCodeIdOrObj === "string" ? qrCodeIdOrObj : qrCodeIdOrObj.qrCodeId;
-    const batchId = typeof qrCodeIdOrObj === "string" ? undefined : qrCodeIdOrObj.batchId;
+    const inputQrCodeId =
+      typeof qrCodeIdOrObj === "string"
+        ? qrCodeIdOrObj
+        : qrCodeIdOrObj.qrCodeId;
+    const selectedColumns =
+      typeof qrCodeIdOrObj === "string"
+        ? undefined
+        : qrCodeIdOrObj.selectedColumns;
 
-    if (!qrCodeId) {
+    if (!inputQrCodeId) {
       return rejectWithValue("QR code ID must be provided");
     }
 
     try {
       const state = getState() as any;
       const user = state.auth.user;
-      const qrcodeList = state.qrcode.qrcodeList;
+      const qrcodeList = state.qrcode.qrcodeList || [];
+      const barcodeDetails = state.qrcode.barcodeDetails || [];
+      const detailsArray = Array.isArray(barcodeDetails) ? barcodeDetails : [barcodeDetails];
 
-      // Find the QR code item to get drawing number, production series, and quantity
-      const qrCodeItem = qrcodeList.find(
-        (item: any) => (item.qrCodeNumber || item.serialNumber) === qrCodeId,
+      // Find the QR code item
+      const qrCodeItem =
+        qrcodeList.find(
+          (item: any) =>
+            String(item.qrCodeNumber || item.serialNumber || item.qrCode || "") === String(inputQrCodeId) ||
+            String(item.id || "") === String(inputQrCodeId),
+        ) ||
+        detailsArray.find(
+          (item: any) =>
+            String(item.qrCodeNumber || item.serialNumber || item.qrCode || "") === String(inputQrCodeId) ||
+            String(item.id || "") === String(inputQrCodeId),
+        );
+
+      const actualQrCodeNumber = String(
+        qrCodeItem?.qrCodeNumber || qrCodeItem?.serialNumber || qrCodeItem?.qrCode || inputQrCodeId,
       );
 
       // Get drawing number string (e.g., "CK310-0800-362")
@@ -420,10 +458,12 @@ export const exportQRCode = createAsyncThunk(
       const s = String(now.getSeconds()).padStart(2, "0");
       const timestamp = `${dateStr}_${h}:${m}:${s}`;
 
-      const payload = {
-        QRCodeNumbers: [qrCodeId],
-        BatchIdNumbers: batchId ? [batchId] : [],
+      const payload: any = {
+        qrCodeNumbers: [actualQrCodeNumber],
       };
+      if (selectedColumns && selectedColumns.length > 0) {
+        payload.selectedColumns = selectedColumns;
+      }
 
       const response = await api.post("/api/QRCode/ExportQrCode", payload, {
         responseType: "blob",
@@ -469,71 +509,71 @@ export const exportQRCode = createAsyncThunk(
 export const exportBulkQRCodes = createAsyncThunk(
   "qrcode/exportBulkQRCodes",
   async (
-    qrCodesOrObj: string[] | { qrCodes: string[]; batchIds?: string[] },
+    qrCodesOrObj:
+      | string[]
+      | {
+          qrCodes?: string[];
+          qrCodeNumbers?: string[];
+          selectedColumns?: string[];
+        },
     { rejectWithValue, getState },
   ) => {
     // Handle both old array format and new object format for backward compatibility
-    const qrCodes = Array.isArray(qrCodesOrObj) ? qrCodesOrObj : qrCodesOrObj.qrCodes;
-    const batchIds = Array.isArray(qrCodesOrObj) ? [] : (qrCodesOrObj.batchIds || []);
+    const inputQrCodes = Array.isArray(qrCodesOrObj)
+      ? qrCodesOrObj
+      : qrCodesOrObj.qrCodeNumbers || qrCodesOrObj.qrCodes || [];
+    const selectedColumns = Array.isArray(qrCodesOrObj)
+      ? undefined
+      : qrCodesOrObj.selectedColumns;
 
-    if (!qrCodes || qrCodes.length === 0) {
+    if (!inputQrCodes || inputQrCodes.length === 0) {
       return rejectWithValue("At least one QR code must be provided");
     }
 
     try {
       const state = getState() as any;
       const user = state.auth.user;
-      const qrcodeList = state.qrcode.qrcodeList;
-      const barcodeDetails = state.qrcode.barcodeDetails;
+      const qrcodeList = state.qrcode.qrcodeList || [];
+      const barcodeDetails = state.qrcode.barcodeDetails || [];
+      const detailsArray = Array.isArray(barcodeDetails) ? barcodeDetails : [barcodeDetails];
+
+      const allKnownItems = [...qrcodeList, ...detailsArray];
+
+      const qrCodeNumbers: string[] = [];
+
+      inputQrCodes.forEach((code: any) => {
+        const strCode = String(code);
+        const match = allKnownItems.find(
+          (item: any) =>
+            String(item.qrCodeNumber || "") === strCode ||
+            String(item.serialNumber || "") === strCode ||
+            String(item.id || "") === strCode,
+        );
+
+        const realQrNumber = String(
+          match?.qrCodeNumber || match?.serialNumber || match?.qrCode || strCode,
+        );
+
+        if (realQrNumber) {
+          qrCodeNumbers.push(realQrNumber);
+        }
+      });
 
       // Get drawing number string (e.g., "CK310-0800-362") from first QR code item
       let drawingNumber = "Bulk";
       let productionSeries = "Unknown";
 
-      // Try to get from qrcodeList first (for generate page)
-      const firstQrCode = qrcodeList.find((item: any) =>
-        qrCodes.includes(item.qrCodeNumber || item.serialNumber),
+      const firstQrCode = allKnownItems.find((item: any) =>
+        qrCodeNumbers.includes(String(item.qrCodeNumber || item.serialNumber)),
       );
       if (firstQrCode?.drawingNumber) {
-        drawingNumber = firstQrCode.drawingNumber.replace(
-          /[^a-zA-Z0-9-]/g,
-          "_",
-        );
-      } else if (barcodeDetails) {
-        // Try to get from barcodeDetails (for view page)
-        const detailsArray = Array.isArray(barcodeDetails)
-          ? barcodeDetails
-          : [barcodeDetails];
-        const firstDetail = detailsArray.find((item: any) =>
-          qrCodes.includes(item.qrCodeNumber),
-        );
-        if (firstDetail?.drawingNumber) {
-          // Use drawingNumber string (e.g., "CK310-0800-362")
-          drawingNumber = firstDetail.drawingNumber.replace(
-            /[^a-zA-Z0-9-]/g,
-            "_",
-          );
-        }
+        drawingNumber = firstQrCode.drawingNumber.replace(/[^a-zA-Z0-9-]/g, "_");
       }
-
-      // Get production series from first QR code
       if (firstQrCode?.productionSeries) {
         productionSeries = firstQrCode.productionSeries.replace(/[^a-zA-Z0-9-]/g, "_");
-      } else if (barcodeDetails) {
-        const detailsArray = Array.isArray(barcodeDetails)
-          ? barcodeDetails
-          : [barcodeDetails];
-        const firstDetail = detailsArray.find((item: any) =>
-          qrCodes.includes(item.qrCodeNumber),
-        );
-        if (firstDetail?.productionSeries) {
-          productionSeries = firstDetail.productionSeries.replace(/[^a-zA-Z0-9-]/g, "_");
-        }
       }
 
-      // Get quantity from selected QR codes
-      const quantity = qrCodes.length;
-
+      const quantity = qrCodeNumbers.length;
       const username = user?.username || user?.id || "User";
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -542,10 +582,12 @@ export const exportBulkQRCodes = createAsyncThunk(
       const s = String(now.getSeconds()).padStart(2, "0");
       const timestamp = `${dateStr}_${h}:${m}:${s}`;
 
-      const payload = {
-        QRCodeNumbers: qrCodes,
-        BatchIdNumbers: batchIds,
+      const payload: any = {
+        qrCodeNumbers,
       };
+      if (selectedColumns && selectedColumns.length > 0) {
+        payload.selectedColumns = selectedColumns;
+      }
 
       const response = await api.post("/api/QRCode/ExportQrCode", payload, {
         responseType: "blob",
@@ -837,7 +879,11 @@ export const bulkUpdateQRCode = createAsyncThunk(
 export const exportStoredComponents = createAsyncThunk(
   "qrcode/exportStoredComponents",
   async (
-    payload: { storeInDate: string | null; drawingNumber: string | null },
+    payload: {
+      storeInDate: string | null;
+      drawingNumber: string | null;
+      selectedColumns?: string[];
+    },
     { rejectWithValue }
   ) => {
     try {
@@ -862,6 +908,7 @@ export const exportStoredComponents = createAsyncThunk(
         {
           storeInDate: formattedDate,
           drawingNumber: payload.drawingNumber && payload.drawingNumber.trim() ? payload.drawingNumber : null,
+          selectedColumns: payload.selectedColumns || [],
         },
         {
           responseType: "blob",
@@ -897,76 +944,47 @@ export const exportViewQrCode = createAsyncThunk(
   "qrcode/exportViewQrCode",
   async (
     payload: {
-      qrCodeNumber?: string | string[];
-      batchId?: string[];
-      prodSeriesId?: number;
-      drawingNumberId?: number;
-      productionOrderNumber?: string;
+      qrCodeNumbers?: string[];
       qrCodeStatusId?: number;
+      searchQuery?: string;
+      generatedBy?: number[];
+      prodSeries?: string[];
+      fromDate?: string | null;
+      toDate?: string | null;
+      selectedColumns?: string[];
+      createdBy?: number;
     },
-    { rejectWithValue },
+    { rejectWithValue, getState },
   ) => {
     try {
-      // Validate that we have either qrCodeNumber(s) OR both prodSeriesId and drawingNumberId
-      const hasQRCodes =
-        payload.qrCodeNumber &&
-        ((Array.isArray(payload.qrCodeNumber) &&
-          payload.qrCodeNumber.length > 0) ||
-          (!Array.isArray(payload.qrCodeNumber) &&
-            payload.qrCodeNumber.trim() !== ""));
-      const hasBatchIds = payload.batchId && payload.batchId.length > 0;
+      const state = getState() as any;
+      const user = state.auth.user;
+      const userId = payload.createdBy || (user?.id ? Number(user.id) : 6);
 
-      if (!hasQRCodes && !payload.prodSeriesId && !payload.drawingNumberId && !payload.productionOrderNumber && !hasBatchIds) {
-        return rejectWithValue(
-          "Either QR code number(s), Batch ID(s), or Production Series, Drawing Number, or Production Order Number must be provided",
-        );
-      }
+      const body = {
+        qrCodeNumbers: payload.qrCodeNumbers || [],
+        qrCodeStatusId: payload.qrCodeStatusId ?? 0,
+        searchQuery: payload.searchQuery || "",
+        generatedBy: Array.isArray(payload.generatedBy)
+          ? payload.generatedBy.map((id) => Number(id)).filter((n) => !isNaN(n))
+          : [],
+        prodSeries: payload.prodSeries || [],
+        fromDate: payload.fromDate || null,
+        toDate: payload.toDate || null,
+        selectedColumns: payload.selectedColumns || [],
+      };
 
-      // Prepare query parameters
-      const queryParams: {
-        QRCodeNumber?: string;
-        QRCodeNumbers?: string | string[];
-        BatchIdNumbers?: string[];
-        ProdSeriesId?: number;
-        DrawingNumberId?: number;
-        ProductionOrderNumber?: string;
-        qrCodeStatusId?: number;
-      } = {};
-
-      // Handle QR codes - if array, join with comma; if single, use as is
-      if (payload.qrCodeNumber) {
-        if (Array.isArray(payload.qrCodeNumber)) {
-          // For multiple QR codes, send as an array
-          queryParams.QRCodeNumbers = payload.qrCodeNumber;
-          // Also set single QRCodeNumber to first one for backward compatibility
-          queryParams.QRCodeNumber = payload.qrCodeNumber[0];
-        } else {
-          queryParams.QRCodeNumber = payload.qrCodeNumber;
-        }
-      }
-      if (payload.batchId && payload.batchId.length > 0) {
-        queryParams.BatchIdNumbers = payload.batchId;
-      }
-      if (payload.prodSeriesId) {
-        queryParams.ProdSeriesId = payload.prodSeriesId;
-      }
-      if (payload.drawingNumberId) {
-        queryParams.DrawingNumberId = payload.drawingNumberId;
-      }
-      if (payload.productionOrderNumber) {
-        queryParams.ProductionOrderNumber = payload.productionOrderNumber;
-      }
-      if (payload.qrCodeStatusId !== undefined) {
-        queryParams.qrCodeStatusId = payload.qrCodeStatusId;
-      }
-
-      const response = await api.post("/api/QRCode/ExportViewQrCode", queryParams, {
-        responseType: "blob",
-        headers: {
-          accept: "*/*",
-          "Content-Type": "application/json",
+      const response = await api.post(
+        `/api/QRCode/ExportViewQrCode?CreatedBy=${userId}`,
+        body,
+        {
+          responseType: "blob",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (response.data && response.data.size > 0) {
         const now = new Date();
@@ -976,7 +994,6 @@ export const exportViewQrCode = createAsyncThunk(
         const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
         const timestamp = `${dateStr}_${timeStr}`;
-        // Create download link for Excel file
         const url = window.URL.createObjectURL(
           new Blob([response.data], {
             type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -985,9 +1002,7 @@ export const exportViewQrCode = createAsyncThunk(
 
         const link = document.createElement("a");
         link.href = url;
-
-        // Fixed filename for View QR Code page download
-        const filename = `QRCode_download_${timestamp}.xls`;
+        const filename = `QRCode_Export_${timestamp}.xlsx`;
 
         link.setAttribute("download", filename);
         document.body.appendChild(link);
@@ -1200,7 +1215,20 @@ const qrcodeSlice = createSlice({
       })
       .addCase(getBarcodeDetailsWithParameters.fulfilled, (state, action) => {
         state.loading = false;
-        state.barcodeDetails = action.payload;
+        const payload = action.payload as any;
+        if (payload && Array.isArray(payload.data)) {
+          state.barcodeDetails = payload.data;
+          state.totalCount = payload.totalCount ?? payload.totalRecords ?? payload.total ?? payload.data.length;
+        } else if (payload && Array.isArray(payload.items)) {
+          state.barcodeDetails = payload.items;
+          state.totalCount = payload.totalCount ?? payload.totalRecords ?? payload.total ?? payload.items.length;
+        } else if (Array.isArray(payload)) {
+          state.barcodeDetails = payload;
+          state.totalCount = payload.length;
+        } else {
+          state.barcodeDetails = payload;
+          state.totalCount = payload?.totalCount ?? payload?.totalRecords ?? payload?.total ?? 0;
+        }
       })
       .addCase(getBarcodeDetailsWithParameters.rejected, (state, action) => {
         state.loading = false;

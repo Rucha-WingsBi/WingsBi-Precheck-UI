@@ -8,8 +8,6 @@ import {
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   Button,
   Dialog,
   DialogTitle,
@@ -21,19 +19,26 @@ import {
   Tabs,
   CircularProgress,
   Alert,
+  Menu,
   MenuItem,
   Snackbar,
   Paper,
   ClickAwayListener,
   Popper,
   InputAdornment,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Check as CheckIcon, Close as CloseIcon, Search as SearchIcon } from "@mui/icons-material";
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Check as CheckIcon, Close as CloseIcon, Search as SearchIcon, MoreVert as MoreVertIcon } from "@mui/icons-material";
 import { IconButton, Tooltip } from "@mui/material";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import { useQueryClient } from "@tanstack/react-query";
+import { adminDataGridSx } from "../../components/tableStyles";
+import { DataGridCustomPagination } from "../../components/CustomPagination";
 import {
   useUsers,
   useUnits,
@@ -87,15 +92,6 @@ interface ShapeRow {
   modifiedBy?: number | null;
   isActive?: number | boolean | null;
 }
-interface UploadSignatureRow {
-  id: number;
-  userId: number;
-  userName: string;
-  role: string;
-  department: string;
-  signature: string;
-  createdDate: string;
-}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -115,6 +111,60 @@ interface TabHandle {
   openAdd: () => void;
 }
 
+function RowActionMenu({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  return (
+    <>
+      <IconButton size="small" onClick={handleClick} sx={{ color: "text.secondary" }}>
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            onEdit();
+          }}
+          sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+        >
+          <EditIcon fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+          Edit
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            onDelete();
+          }}
+          sx={{ fontSize: "0.875rem", fontWeight: 500, color: "error.main" }}
+        >
+          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
+          Delete
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
+
 interface GenericTableProps<T extends { id: number }> {
   rows: T[];
   columns: GridColDef[];
@@ -127,63 +177,31 @@ function GenericTable<T extends { id: number }>({
   loading,
 }: GenericTableProps<T>) {
   return (
-    <Card
-      elevation={0}
-      sx={{
-        border: "1px solid #e2e8f0",
-        borderRadius: 3,
-        overflow: "hidden",
-        background: "white",
-      }}
-    >
-      <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-        <Box sx={{ width: "100%" }}>
-          <DataGrid
-            autoHeight
-            rows={rows}
-            columns={columns}
-            loading={loading}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 10 } },
-              sorting: {
-                sortModel: [{ field: "srNo", sort: "asc" }],
-              },
-            }}
-            pageSizeOptions={[5, 10, 25, 50]}
-            disableRowSelectionOnClick
-            sx={{
-              border: "none",
-              "& .MuiDataGrid-columnHeaders": {
-                backgroundColor: "#f8fafc",
-                borderBottom: "2px solid #e2e8f0",
-                color: "#1e293b",
-                fontWeight: 700,
-                fontSize: "0.75rem",
-              },
-              "& .MuiDataGrid-columnHeaderTitle": {
-                fontWeight: 700,
-                fontSize: "0.75rem",
-                color: "#1e293b",
-              },
-              "& .MuiDataGrid-cell": {
-                fontSize: "0.75rem",
-                color: "#1e293b",
-                borderBottom: "1px solid #e2e8f0",
-              },
-              "& .MuiDataGrid-row": {
-                "&:nth-of-type(even)": { backgroundColor: "#f8fafc" },
-                "&:hover": { backgroundColor: "#f1f5f9" },
-                transition: "background-color 0.2s ease",
-              },
-              "& .MuiDataGrid-cell:focus": { outline: "none" },
-              "& .MuiDataGrid-cell:focus-within": { outline: "none" },
-              "& .MuiDataGrid-columnHeader:focus": { outline: "none" },
-              "& .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
-            }}
-          />
-        </Box>
-      </CardContent>
-    </Card>
+    <Box sx={{ width: "100%" }}>
+      <DataGrid
+        autoHeight
+        rowHeight={42}
+        columnHeaderHeight={40}
+        rows={rows}
+        columns={columns}
+        loading={loading}
+        initialState={{
+          pagination: { paginationModel: { pageSize: 10 } },
+          sorting: {
+            sortModel: [{ field: "srNo", sort: "asc" }],
+          },
+        }}
+        pageSizeOptions={[10, 20, 50]}
+        disableRowSelectionOnClick
+        disableColumnMenu
+        disableColumnFilter
+        disableColumnSelector
+        slots={{
+          pagination: DataGridCustomPagination,
+        }}
+        sx={adminDataGridSx}
+      />
+    </Box>
   );
 }
 
@@ -258,12 +276,27 @@ function AddEditDialog({
   );
 }
 
+const getUserName = (userId: any, usersList: any[]) => {
+  if (userId === null || userId === undefined || userId === "") return "-";
+  const found = (usersList || []).find(
+    (u: any) => String(u.id) === String(userId) || String(u.userId) === String(userId)
+  );
+  return found?.userName || found?.username || found?.name || String(userId);
+};
+
+const formatDate = (val?: string | null) => {
+  if (!val) return "-";
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? "-" : d.toLocaleDateString();
+};
+
 //unit tab
 const UnitTab = forwardRef<
   TabHandle,
-  { createdBy: number; users: any[]; showSnackbar: (msg: string, severity?: "success" | "error") => void }
->(function UnitTab({ createdBy, users, showSnackbar }, ref) {
+  { createdBy: number; showSnackbar: (msg: string, severity?: "success" | "error") => void }
+>(function UnitTab({ createdBy, showSnackbar }, ref) {
   const { data: units = [], isLoading: loading, error: fetchError } = useUnits();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddUnit();
   const updateMutation = useUpdateUnit();
   const deleteMutation = useDeleteUnit();
@@ -347,74 +380,42 @@ const UnitTab = forwardRef<
         valueGetter: (params) =>
           rows.findIndex((r) => r.id === params.row.id) + 1,
       },
-      { field: "unitName", headerName: "Unit Name", flex: 1, minWidth: 100 },
-      // {
-      //   field: "isActive",
-      //   headerName: "Status",
-      //   width: 100,
-      //   align: "center",
-      //   headerAlign: "center",
-      //   renderCell: (params) => {
-      //     const isActive =
-      //       params.row.isActive === 1 || params.row.isActive === true;
-      //     return (
-      //       <Typography
-      //         variant="body2"
-      //         sx={{
-      //           color: isActive ? "success.main" : "error.main",
-      //           fontWeight: 600,
-      //         }}
-      //       >
-      //         {isActive ? "Active" : "Inactive"}
-      //       </Typography>
-      //     );
-      //   },
-      // },
-      {
-        field: "createdDate",
-        headerName: "Created Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.createdDate
-            ? new Date(params.row.createdDate).toLocaleString()
-            : "-",
-      },
-      {
-        field: "modifiedDate",
-        headerName: "Modified Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.modifiedDate
-            ? new Date(params.row.modifiedDate).toLocaleString()
-            : "-",
-      },
+      { field: "unitName", headerName: "Unit", flex: 1, minWidth: 120 },
       {
         field: "createdBy",
         headerName: "Created By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.createdBy);
-          return u ? u.userName : params.row.createdBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
       },
       {
         field: "modifiedBy",
         headerName: "Modified By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.modifiedBy);
-          return u ? u.userName : params.row.modifiedBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
+      },
+      {
+        field: "modifiedDate",
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
         headerName: "Actions",
-        width: 120,
+        width: 90,
         sortable: false,
         renderCell: (params) => {
           const isConfirming = deleteConfirmId === params.row.id;
           return (
-            <Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               {isConfirming ? (
                 <>
                   <Tooltip title="Confirm Delete">
@@ -437,26 +438,10 @@ const UnitTab = forwardRef<
                   </Tooltip>
                 </>
               ) : (
-                <>
-                  <Tooltip title="Edit">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleOpen(params.row)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => setDeleteConfirmId(params.row.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
+                <RowActionMenu
+                  onEdit={() => handleOpen(params.row)}
+                  onDelete={() => setDeleteConfirmId(params.row.id)}
+                />
               )}
             </Box>
           );
@@ -497,9 +482,10 @@ const STAGE_TYPES = ["IR", "MSN"] as const;
 
 const StageTab = forwardRef<
   TabHandle,
-  { createdBy: number; users: any[]; showSnackbar: (msg: string, severity?: "success" | "error") => void }
->(function StageTab({ createdBy, users, showSnackbar }, ref) {
+  { createdBy: number; stageFilter?: string; showSnackbar: (msg: string, severity?: "success" | "error") => void }
+>(function StageTab({ createdBy, stageFilter = "IR", showSnackbar }, ref) {
   const { data: allStages = [], isLoading: loading, error: fetchError } = useAllStages();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddStage();
   const updateMutation = useUpdateStage();
   const deleteMutation = useDeleteStage();
@@ -513,7 +499,7 @@ const StageTab = forwardRef<
   const handleOpen = (row?: StageRow) => {
     setError(null);
     setEditing(row ?? null);
-    setStageType(row?.stageType ?? "IR");
+    setStageType(row?.stageType ?? stageFilter);
     setDialogOpen(true);
   };
 
@@ -521,7 +507,9 @@ const StageTab = forwardRef<
     openAdd: () => handleOpen(),
   }));
 
-  const rows = allStages.filter((item: any) => item.isActive === 1 || item.isActive === true);
+  const rows = allStages
+    .filter((item: any) => item.isActive === 1 || item.isActive === true)
+    .filter((item: any) => (item.stageType || "").toUpperCase() === stageFilter.toUpperCase());
 
   const handleAddStage = async (stageName: string, type: string) => {
     setError(null);
@@ -590,76 +578,45 @@ const StageTab = forwardRef<
         field: "stageName",
         headerName: "Stage Name",
         flex: 1,
-        minWidth: 200,
+        minWidth: 160,
+        valueGetter: (params) => params.row.stageName || params.row.stage || "-",
       },
-      { field: "stageType", headerName: "Stage Type", width: 100 },
-      // {
-      //   field: "isActive",
-      //   headerName: "Status",
-      //   width: 100,
-      //   align: "center",
-      //   headerAlign: "center",
-      //   renderCell: (params) => {
-      //     const isActive =
-      //       params.row.isActive === 1 || params.row.isActive === true;
-      //     return (
-      //       <Typography
-      //         variant="body2"
-      //         sx={{
-      //           color: isActive ? "success.main" : "error.main",
-      //           fontWeight: 600,
-      //         }}
-      //       >
-      //         {isActive ? "Active" : "Inactive"}
-      //       </Typography>
-      //     );
-      //   },
-      // },
-      {
-        field: "createdDate",
-        headerName: "Created Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.createdDate
-            ? new Date(params.row.createdDate).toLocaleString()
-            : "-",
-      },
-      {
-        field: "modifiedDate",
-        headerName: "Modified Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.modifiedDate
-            ? new Date(params.row.modifiedDate).toLocaleString()
-            : "-",
-      },
+      { field: "stageType", headerName: "Stage Type", width: 110 },
       {
         field: "createdBy",
         headerName: "Created By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.createdBy);
-          return u ? u.userName : params.row.createdBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
       },
       {
         field: "modifiedBy",
         headerName: "Modified By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.modifiedBy);
-          return u ? u.userName : params.row.modifiedBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
+      },
+      {
+        field: "modifiedDate",
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
         headerName: "Actions",
-        width: 120,
+        width: 90,
         sortable: false,
         renderCell: (params) => {
           const isConfirming = deleteConfirmId === params.row.id;
           return (
-            <Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               {isConfirming ? (
                 <>
                   <Tooltip title="Confirm Delete">
@@ -682,26 +639,10 @@ const StageTab = forwardRef<
                   </Tooltip>
                 </>
               ) : (
-                <>
-                  <Tooltip title="Edit">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleOpen(params.row)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => setDeleteConfirmId(params.row.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
+                <RowActionMenu
+                  onEdit={() => handleOpen(params.row)}
+                  onDelete={() => setDeleteConfirmId(params.row.id)}
+                />
               )}
             </Box>
           );
@@ -752,12 +693,13 @@ const StageTab = forwardRef<
   );
 });
 
-// shape tab
-const ShapeTab = forwardRef<
+// material tab
+const MaterialTab = forwardRef<
   TabHandle,
-  { createdBy: number; users: any[]; showSnackbar: (msg: string, severity?: "success" | "error") => void }
->(function ShapeTab({ createdBy, users, showSnackbar }, ref) {
+  { createdBy: number; showSnackbar: (msg: string, severity?: "success" | "error") => void }
+>(function MaterialTab({ createdBy, showSnackbar }, ref) {
   const { data: shapes = [], isLoading: loading, error: fetchError } = useShapes();
+  const { data: users = [] } = useUsers();
   const addMutation = useAddShape();
   const updateMutation = useUpdateShape();
   const deleteMutation = useDeleteShape();
@@ -779,22 +721,22 @@ const ShapeTab = forwardRef<
 
   const rows = shapes.filter((item: any) => item.isActive === 1 || item.isActive === true);
 
-  const handleAddShape = async (shapeName: string) => {
+  const handleAddMaterial = async (shapeName: string) => {
     setError(null);
     try {
       await addMutation.mutateAsync({
         shapeName,
         createdBy,
       });
-      showSnackbar("Shape added successfully");
+      showSnackbar("Material added successfully");
       setDialogOpen(false);
       setEditing(null);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? "Failed to add shape.");
+      setError(err?.response?.data?.message ?? err?.message ?? "Failed to add material.");
     }
   };
 
-  const handleUpdateShape = async (id: number, shapeName: string) => {
+  const handleUpdateMaterial = async (id: number, shapeName: string) => {
     setError(null);
     try {
       await updateMutation.mutateAsync({
@@ -802,30 +744,30 @@ const ShapeTab = forwardRef<
         shapeName,
         modifiedBy: createdBy,
       });
-      showSnackbar("Shape updated successfully");
+      showSnackbar("Material updated successfully");
       setDialogOpen(false);
       setEditing(null);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? "Failed to update shape.");
+      setError(err?.response?.data?.message ?? err?.message ?? "Failed to update material.");
     }
   };
 
-  const handleDeleteShape = async (id: number) => {
+  const handleDeleteMaterial = async (id: number) => {
     try {
       await deleteMutation.mutateAsync(id);
-      showSnackbar("Shape deleted successfully");
+      showSnackbar("Material deleted successfully");
       setDeleteConfirmId(null);
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message ?? err?.message ?? "Failed to delete shape.";
+      const errMsg = err?.response?.data?.message ?? err?.message ?? "Failed to delete material.";
       showSnackbar(errMsg, "error");
     }
   };
 
   const handleSave = ({ name }: { name: string }) => {
     if (editing) {
-      handleUpdateShape(editing.id, name);
+      handleUpdateMaterial(editing.id, name);
     } else {
-      handleAddShape(name);
+      handleAddMaterial(name);
     }
   };
 
@@ -842,86 +784,54 @@ const ShapeTab = forwardRef<
           rows.findIndex((r) => r.id === params.row.id) + 1,
       },
       {
-        field: "shapeName",
-        headerName: "Shape Name",
+        field: "materialName",
+        headerName: "Material",
         flex: 1,
         minWidth: 140,
-        valueGetter: (params) => params.row.materialName || "-",
-      },
-      // {
-      //   field: "isActive",
-      //   headerName: "Status",
-      //   width: 100,
-      //   align: "center",
-      //   headerAlign: "center",
-      //   renderCell: (params) => {
-      //     const isActive =
-      //       params.row.isActive === 1 || params.row.isActive === true;
-      //     return (
-      //       <Typography
-      //         variant="body2"
-      //         sx={{
-      //           color: isActive ? "success.main" : "error.main",
-      //           fontWeight: 600,
-      //         }}
-      //       >
-      //         {isActive ? "Active" : "Inactive"}
-      //       </Typography>
-      //     );
-      //   },
-      // },
-      {
-        field: "createdDate",
-        headerName: "Created Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.createdDate
-            ? new Date(params.row.createdDate).toLocaleString()
-            : "-",
-      },
-      {
-        field: "modifiedDate",
-        headerName: "Modified Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.modifiedDate
-            ? new Date(params.row.modifiedDate).toLocaleString()
-            : "-",
+        valueGetter: (params) => params.row.materialName || params.row.shapeName || "-",
       },
       {
         field: "createdBy",
         headerName: "Created By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.createdBy);
-          return u ? u.userName : params.row.createdBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
+      },
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
       },
       {
         field: "modifiedBy",
         headerName: "Modified By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.modifiedBy);
-          return u ? u.userName : params.row.modifiedBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
+      },
+      {
+        field: "modifiedDate",
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
       },
       {
         field: "actions",
         headerName: "Actions",
-        width: 120,
+        width: 90,
         sortable: false,
         renderCell: (params) => {
           const isConfirming = deleteConfirmId === params.row.id;
           return (
-            <Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               {isConfirming ? (
                 <>
                   <Tooltip title="Confirm Delete">
                     <IconButton
                       size="small"
                       color="success"
-                      onClick={() => handleDeleteShape(params.row.id)}
+                      onClick={() => handleDeleteMaterial(params.row.id)}
                     >
                       <CheckIcon fontSize="small" />
                     </IconButton>
@@ -937,26 +847,10 @@ const ShapeTab = forwardRef<
                   </Tooltip>
                 </>
               ) : (
-                <>
-                  <Tooltip title="Edit">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleOpen(params.row)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => setDeleteConfirmId(params.row.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
+                <RowActionMenu
+                  onEdit={() => handleOpen(params.row)}
+                  onDelete={() => setDeleteConfirmId(params.row.id)}
+                />
               )}
             </Box>
           );
@@ -974,7 +868,7 @@ const ShapeTab = forwardRef<
       )}
       <GenericTable rows={rows} columns={columns} loading={loading} />
       <AddEditDialog
-        key={editing ? `shape-edit-${editing.id}` : "shape-add"}
+        key={editing ? `material-edit-${editing.id}` : "material-add"}
         open={dialogOpen}
         onClose={() => {
           setDialogOpen(false);
@@ -982,9 +876,9 @@ const ShapeTab = forwardRef<
           setError(null);
         }}
         onSave={handleSave}
-        title={editing ? "Edit Shape" : "Add Shape"}
-        nameLabel="Shape Name"
-        initialName={editing?.shapeName || editing?.materialName || ""}
+        title={editing ? "Edit Material" : "Add Material"}
+        nameLabel="Material Name"
+        initialName={editing?.materialName || editing?.shapeName || ""}
         saving={saving}
         error={error}
       />
@@ -995,11 +889,12 @@ const ShapeTab = forwardRef<
 // production series
 const ProductionSeriesTab = forwardRef<
   TabHandle,
-  { createdBy: number; users: any[]; showSnackbar: (msg: string, severity?: "success" | "error") => void }
->(function ProductionSeriesTab({ createdBy, users, showSnackbar }, ref) {
+  { createdBy: number; showSnackbar: (msg: string, severity?: "success" | "error") => void }
+>(function ProductionSeriesTab({ createdBy, showSnackbar }, ref) {
 
   const { data: productionSeries = [], isLoading: loading, error: fetchError } =
     useProductionSeries();
+  const { data: users = [] } = useUsers();
 
   const addMutation = useAddProductionSeries();
   const updateMutation = useUpdateProductionSeries();
@@ -1109,67 +1004,49 @@ const ProductionSeriesTab = forwardRef<
         valueGetter: (params) =>
           rows.findIndex((r: any) => r.id === params.row.id) + 1,
       },
-
       {
         field: "productionSeries",
         headerName: "Production Series",
         flex: 1,
-        minWidth: 180,
+        minWidth: 160,
         valueGetter: (params) =>
           params.row.productionSeries || "-",
       },
-
-      {
-        field: "createdDate",
-        headerName: "Created Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.createdDate
-            ? new Date(params.row.createdDate).toLocaleString()
-            : "-",
-      },
-
-      {
-        field: "modifiedDate",
-        headerName: "Modified Date",
-        width: 170,
-        renderCell: (params) =>
-          params.row.modifiedDate
-            ? new Date(params.row.modifiedDate).toLocaleString()
-            : "-",
-      },
-
       {
         field: "createdBy",
         headerName: "Created By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.createdBy);
-          return u ? u.userName : params.row.createdBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.createdBy, users),
       },
-
+      {
+        field: "createdDate",
+        headerName: "Created Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.createdDate),
+      },
       {
         field: "modifiedBy",
         headerName: "Modified By",
-        width: 170,
-        renderCell: (params) => {
-          const u = users.find((u) => u.id === params.row.modifiedBy);
-          return u ? u.userName : params.row.modifiedBy || "-";
-        },
+        flex: 1,
+        minWidth: 180,
+        renderCell: (params) => getUserName(params.row.modifiedBy, users),
       },
-
+      {
+        field: "modifiedDate",
+        headerName: "Modified Date",
+        width: 135,
+        renderCell: (params) => formatDate(params.row.modifiedDate),
+      },
       {
         field: "actions",
         headerName: "Actions",
-        width: 120,
+        width: 90,
         sortable: false,
-
         renderCell: (params) => {
           const isConfirming = deleteConfirmId === params.row.id;
-
           return (
-            <Box>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               {isConfirming ? (
                 <>
                   <Tooltip title="Confirm Delete">
@@ -1183,7 +1060,6 @@ const ProductionSeriesTab = forwardRef<
                       <CheckIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-
                   <Tooltip title="Cancel">
                     <IconButton
                       size="small"
@@ -1195,29 +1071,10 @@ const ProductionSeriesTab = forwardRef<
                   </Tooltip>
                 </>
               ) : (
-                <>
-                  <Tooltip title="Edit">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleOpen(params.row)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() =>
-                        setDeleteConfirmId(params.row.id)
-                      }
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
+                <RowActionMenu
+                  onEdit={() => handleOpen(params.row)}
+                  onDelete={() => setDeleteConfirmId(params.row.id)}
+                />
               )}
             </Box>
           );
@@ -1504,12 +1361,12 @@ const SignatureTab = forwardRef<
                           (u.departmentName || "").toLowerCase().includes(q)
                         );
                       }).length === 0 && (
-                      <MenuItem disabled>
-                        <Typography variant="body2" color="text.secondary">
-                          No users found
-                        </Typography>
-                      </MenuItem>
-                    )}
+                        <MenuItem disabled>
+                          <Typography variant="body2" color="text.secondary">
+                            No users found
+                          </Typography>
+                        </MenuItem>
+                      )}
                   </Paper>
                 </Popper>
               </Box>
@@ -1614,11 +1471,12 @@ const SignatureTab = forwardRef<
 
 
 // tab labels
-const TAB_LABELS = ["Unit", "Stage", "Shape", "Production Series", "Upload Signature"] as const;
+const TAB_LABELS = ["Unit", "Stage", "Material", "Production Series", "Upload Signature"] as const;
 
 // main page
-export default function AddComponents() {
+export default function AddComponents({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [activeTab, setActiveTab] = useState(0);
+  const [selectedStageFilter, setSelectedStageFilter] = useState<string>("IR");
   const unitRef = useRef<TabHandle>(null);
   const stageRef = useRef<TabHandle>(null);
   const shapeRef = useRef<TabHandle>(null);
@@ -1659,102 +1517,245 @@ export default function AddComponents() {
     if (activeTab === 4) signatureRef.current?.openAdd();
   };
 
+  // Fetch counts for tabs
+  const { data: units = [] } = useUnits();
+  const { data: stages = [] } = useAllStages();
+  const { data: shapes = [] } = useShapes();
+  const { data: productionSeries = [] } = useProductionSeries();
+  const { data: signatures = [] } = useUsersWithSignatures();
+
+  const activeUnitsCount = units.filter((u: any) => u.isActive === 1 || u.isActive === true).length;
+  const activeStagesCount = stages.filter(
+    (s: any) =>
+      (s.isActive === 1 || s.isActive === true) &&
+      (s.stageType || "").toUpperCase() === selectedStageFilter.toUpperCase()
+  ).length;
+  const activeShapesCount = shapes.filter((s: any) => s.isActive === 1 || s.isActive === true).length;
+  const activeSeriesCount = productionSeries.filter((p: any) => p.isActive === 1 || p.isActive === true).length;
+  const activeSignaturesCount = (signatures || []).length;
+
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Page heading */}
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 3 }}
-      >
-        <Typography
-          variant="h3"
-          sx={{ color: "primary.main", fontWeight: 600 }}
+    <Box sx={{ py: hideHeader ? 0 : { xs: 1.5, sm: 2 }, px: hideHeader ? 0 : { xs: 1.5, sm: 2.5 } }}>
+      {/* 1. Top Header Bar */}
+      {!hideHeader && (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 1.5 }}
         >
-          Add Components
-        </Typography>
-      </Stack>
-
-      {/* Tabs */}
-      <Card
-        elevation={0}
-        sx={{
-          mb: 0,
-          border: "1px solid #e2e8f0",
-          borderRadius: 3,
-          overflow: "hidden",
-          background: "white",
-        }}
-      >
-        {/* Tab bar with inline add on the right */}
-        <Box
-          sx={{
-            borderBottom: 1,
-            borderColor: "divider",
-            px: 2,
-            pt: 1,
-            backgroundColor: "#f8fafc",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <Tabs
-            value={activeTab}
-            onChange={(_e, newValue) => setActiveTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
-            aria-label="add components tabs"
-            sx={{
-              flexGrow: 1,
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                textTransform: "none",
-                minWidth: 100,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-            }}
-          >
-            <Tab id="tab-unit" aria-controls="tabpanel-unit" label="Unit" />
-            <Tab id="tab-stage" aria-controls="tabpanel-stage" label="Stage" />
-            <Tab id="tab-shape" aria-controls="tabpanel-shape" label="Shape" />
-            <Tab id="tab-productionSeries" aria-controls="tabpanel-productionSeries" label="Production Series" />
-            <Tab id="tab-Upload Signature" aria-controls="tabpanel-Upload Signature" label="Upload Signature" />
-
-          </Tabs>
-
-          {/* Add button */}
-          <Box sx={{ ml: 2, mb: 1 }}>
-            <Button
-              id="btn-add-tab-item"
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenAdd}
+          <Box>
+            <Typography
+              variant="h5"
               sx={{
-                fontWeight: 600,
-                textTransform: "none",
-                "&:focus": { outline: "none" },
-                whiteSpace: "nowrap",
+                fontWeight: 700,
+                color: "primary.main",
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
               }}
             >
-              {activeTab === 4 ? TAB_LABELS[activeTab] : `Add ${TAB_LABELS[activeTab]}`}
-            </Button>
+              Master Data
+            </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Manage system units, stages, materials, production series, and user signatures.
+            </Typography>
           </Box>
+        </Stack>
+      )}
+
+      {/* 2. Tabs Bar (Outside Container) */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid #EAECF0",
+          mb: 2,
+        }}
+      >
+        <Tabs
+          value={activeTab}
+          onChange={(_e, newValue) => setActiveTab(newValue)}
+          textColor="primary"
+          indicatorColor="primary"
+          aria-label="master data tabs"
+          sx={{
+            minHeight: 40,
+            "& .MuiTab-root": {
+              fontWeight: 600,
+              fontSize: "0.875rem",
+              textTransform: "none",
+              minWidth: 90,
+              py: 0.75,
+              px: 1.5,
+              minHeight: 40,
+              color: "#475467",
+            },
+            "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "primary.main",
+              height: 3,
+              borderRadius: "3px 3px 0 0",
+            },
+          }}
+        >
+          <Tab
+            id="tab-unit"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Units</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 0 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 0 ? "primary.main" : "#667085" }}>
+                  {activeUnitsCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-stage"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Stages</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 1 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 1 ? "primary.main" : "#667085" }}>
+                  {activeStagesCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-shape"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Materials</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 2 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 2 ? "primary.main" : "#667085" }}>
+                  {activeShapesCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-productionSeries"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Production Series</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 3 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 3 ? "primary.main" : "#667085" }}>
+                  {activeSeriesCount}
+                </Typography>
+              </Box>
+            }
+          />
+          <Tab
+            id="tab-Upload Signature"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>Signatures</span>
+                <Typography component="span" sx={{ fontSize: "0.75rem", fontWeight: 600, px: 0.8, py: 0.15, borderRadius: "12px", backgroundColor: activeTab === 4 ? "#F4EBFF" : "#F2F4F7", color: activeTab === 4 ? "primary.main" : "#667085" }}>
+                  {activeSignaturesCount}
+                </Typography>
+              </Box>
+            }
+          />
+        </Tabs>
+      </Box>
+
+      {/* 3. Main Single Container Card */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          backgroundColor: "#ffffff",
+          overflow: "hidden",
+          mb: 2,
+        }}
+      >
+        {/* Inside Container Toolbar: Stage Type Filter on Left, Add Button on Right */}
+        <Box
+          sx={{
+            p: 1.5,
+            px: 2,
+            display: "flex",
+            justifyContent: activeTab === 1 ? "space-between" : "flex-end",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 2,
+            borderBottom: "1px solid #EAECF0",
+          }}
+        >
+          {activeTab === 1 && (
+            <FormControl component="fieldset">
+              <RadioGroup
+                row
+                value={selectedStageFilter}
+                onChange={(e) => setSelectedStageFilter(e.target.value)}
+                sx={{ gap: 1.5, alignItems: "center" }}
+              >
+                <FormControlLabel
+                  value="IR"
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: selectedStageFilter === "IR" ? "primary.main" : "#D1D5DB",
+                        "&.Mui-checked": { color: "primary.main" },
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#344054" }}>
+                      IR
+                    </Typography>
+                  }
+                  sx={{ mr: 0.5 }}
+                />
+                <FormControlLabel
+                  value="MSN"
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: selectedStageFilter === "MSN" ? "primary.main" : "#D1D5DB",
+                        "&.Mui-checked": { color: "primary.main" },
+                      }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#344054" }}>
+                      MSN
+                    </Typography>
+                  }
+                  sx={{ mr: 0 }}
+                />
+              </RadioGroup>
+            </FormControl>
+          )}
+
+          <Button
+            id="btn-add-tab-item"
+            variant="contained"
+            size="small"
+            onClick={handleOpenAdd}
+            startIcon={<AddIcon fontSize="small" />}
+            sx={{
+              height: 34,
+              borderRadius: "6px",
+              backgroundColor: "primary.main",
+              color: "#ffffff",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+              "&:hover": { backgroundColor: "primary.dark" },
+            }}
+          >
+            {activeTab === 4 ? TAB_LABELS[activeTab] : `Add ${TAB_LABELS[activeTab]}`}
+          </Button>
         </Box>
 
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        {/* Tab Panels with Tables */}
+        <Box sx={{ width: "100%" }}>
           <TabPanel value={activeTab} index={0}>
             <UnitTab
               ref={unitRef}
               createdBy={createdBy}
-              users={users}
               showSnackbar={showSnackbar}
             />
           </TabPanel>
@@ -1762,15 +1763,14 @@ export default function AddComponents() {
             <StageTab
               ref={stageRef}
               createdBy={createdBy}
-              users={users}
+              stageFilter={selectedStageFilter}
               showSnackbar={showSnackbar}
             />
           </TabPanel>
           <TabPanel value={activeTab} index={2}>
-            <ShapeTab
+            <MaterialTab
               ref={shapeRef}
               createdBy={createdBy}
-              users={users}
               showSnackbar={showSnackbar}
             />
           </TabPanel>
@@ -1778,7 +1778,6 @@ export default function AddComponents() {
             <ProductionSeriesTab
               ref={productionSeriesRef}
               createdBy={createdBy}
-              users={users}
               showSnackbar={showSnackbar}
             />
           </TabPanel>
@@ -1790,12 +1789,12 @@ export default function AddComponents() {
               showSnackbar={showSnackbar}
             />
           </TabPanel>
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper>
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={snackbar.severity === "error" ? null : 6000}
+        autoHideDuration={snackbar.severity === "error" ? undefined : 6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
@@ -1806,3 +1805,4 @@ export default function AddComponents() {
     </Box>
   );
 }
+

@@ -116,7 +116,7 @@ export default function EditProductionOrder() {
         const response = await api.post("/api/ProductionOrder/GetAll", {});
         const allOrders = response.data?.data || (Array.isArray(response.data) ? response.data : []);
         const currentOrder = allOrders.find((po: any) => po.id === Number(id));
-        
+
         if (currentOrder) {
           const mappedData: EditProductionOrderFormData = {
             ...currentOrder,
@@ -142,7 +142,7 @@ export default function EditProductionOrder() {
         console.error("Failed to fetch production order details:", err);
       }
     };
-    
+
     fetchData();
   }, [id, reset]);
 
@@ -239,29 +239,18 @@ export default function EditProductionOrder() {
   };
 
   return (
-    <Box
-      sx={{
-        py: { xs: 1.5, sm: 2 },
-        px: { xs: 1.5, sm: 2.5 },
-        minHeight: "calc(100vh - 64px)",
-        backgroundColor: "#FAFAFA",
-        boxSizing: "border-box",
-      }}
-    >
+    <Box sx={{ py: 1.5, px: { xs: 1.5, sm: 2.5 }, bgcolor: 'background.paper', minHeight: '100vh' }}>
       {/* Header Section */}
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
         <IconButton
-          size="small"
           onClick={handleBack}
           sx={{
-            color: "#344054",
-            backgroundColor: "#ffffff",
-            border: "1px solid #D0D5DD",
-            borderRadius: "8px",
-            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+            color: "primary.main",
+            p: 0.5,
+            "&:hover": { backgroundColor: "grey.100" },
           }}
         >
-          <ArrowBackIcon fontSize="small" />
+          <ArrowBackIcon />
         </IconButton>
         <Typography
           variant="h5"
@@ -285,9 +274,10 @@ export default function EditProductionOrder() {
         elevation={0}
         sx={{
           borderRadius: "12px",
-          border: "1px solid #E9EAEB",
-          backgroundColor: "#ffffff",
-          p: { xs: 2, sm: 3 },
+          border: "1px solid",
+          borderColor: "neutral.border",
+          backgroundColor: "background.paper",
+          p: { xs: 2.5, sm: 3.5 },
         }}
       >
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -305,7 +295,6 @@ export default function EditProductionOrder() {
                     size="small"
                     disabled
                     sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                       "& .MuiInputBase-input.Mui-disabled": { WebkitTextFillColor: "#344054", fontWeight: 600 },
                     }}
                   />
@@ -324,7 +313,6 @@ export default function EditProductionOrder() {
                     size="small"
                     InputProps={{ readOnly: true }}
                     sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                       "& .MuiInputBase-input": { color: "#344054", fontWeight: 600 },
                     }}
                   />
@@ -343,7 +331,6 @@ export default function EditProductionOrder() {
                     size="small"
                     InputProps={{ readOnly: true }}
                     sx={{
-                      "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                       "& .MuiInputBase-input": { color: "#344054" },
                     }}
                   />
@@ -362,7 +349,6 @@ export default function EditProductionOrder() {
                     label="Project Code"
                     fullWidth
                     size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -377,7 +363,6 @@ export default function EditProductionOrder() {
                     label="Project Description"
                     fullWidth
                     size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -390,7 +375,6 @@ export default function EditProductionOrder() {
                 value={selectedProductionSeries?.productionSeries || ""}
                 InputProps={{ readOnly: true }}
                 sx={{
-                  "& .MuiOutlinedInput-root": { borderRadius: "8px", backgroundColor: "#F9FAFB" },
                   "& .MuiInputBase-input": { color: "#344054", fontWeight: 600 },
                 }}
               />
@@ -408,7 +392,6 @@ export default function EditProductionOrder() {
                     type="number"
                     fullWidth
                     size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -427,7 +410,6 @@ export default function EditProductionOrder() {
                     size="small"
                     error={!!errors.quantity}
                     helperText={errors.quantity?.message}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -443,7 +425,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -461,7 +442,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -477,7 +457,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -493,7 +472,6 @@ export default function EditProductionOrder() {
                     fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px" } }}
                   />
                 )}
               />
@@ -501,22 +479,22 @@ export default function EditProductionOrder() {
           </Grid>
 
           {/* Action Buttons */}
-          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ mt: 3, pt: 2, borderTop: "1px solid #EAECF0" }}>
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ mt: 3, pt: 2.5, borderTop: "1px solid", borderColor: "neutral.border" }}>
             <Button
               variant="outlined"
               size="small"
               onClick={handleBack}
               disabled={loading}
               sx={{
-                borderColor: "#D0D5DD",
-                color: "#344054",
+                height: 34,
+                minWidth: 100,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
                 fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2.5,
-                py: 0.75,
+                fontSize: "0.8rem",
                 textTransform: "none",
-                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                "&:hover": { borderColor: "grey.400", backgroundColor: "neutral.hoverBg" },
               }}
             >
               Cancel
@@ -527,22 +505,22 @@ export default function EditProductionOrder() {
               size="small"
               startIcon={
                 loading ? (
-                  <CircularProgress size={18} color="inherit" />
+                  <CircularProgress size={16} color="inherit" />
                 ) : (
-                  <SaveIcon sx={{ fontSize: 18 }} />
+                  <SaveIcon fontSize="small" />
                 )
               }
               disabled={loading}
               sx={{
+                height: 34,
+                minWidth: 120,
+                borderRadius: "6px",
                 backgroundColor: "primary.main",
-                color: "#ffffff",
+                color: "primary.contrastText",
                 fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 3,
-                py: 0.75,
+                fontSize: "0.8rem",
                 textTransform: "none",
-                boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
+                boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
             >

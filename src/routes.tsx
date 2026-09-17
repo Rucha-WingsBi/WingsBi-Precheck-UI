@@ -25,14 +25,13 @@ const ForgetPassword = lazy(() => import("./pages/auth/ForgetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 // Lazy-loaded Precheck Pages
-const Precheck = lazy(() => import("./pages/precheck/Precheck"));
 const ViewPrecheck = lazy(() => import("./pages/precheck/ViewPrecheck"));
 const MakePrecheck = lazy(() => import("./pages/precheck/MakePrecheck"));
 const StoreIn = lazy(() => import("./pages/precheck/StoreIn"));
 const StoredInComponents = lazy(
   () => import("./pages/precheck/StoredInComponents")
 );
-const MakeOrder = lazy(() => import("./pages/precheck/MakeOrder"));
+
 const ViewConsumedIn = lazy(() => import("./pages/precheck/ViewConsumedIn"));
 const AvailableInStore = lazy(
   () => import("./pages/precheck/AvailableInStore")
@@ -68,16 +67,11 @@ const ViewOrder = lazy(() => import("./pages/productionorder/ViewOrder"));
 const EditProductionOrder = lazy(
   () => import("./pages/productionorder/editproductionorder")
 );
-const PendingForPrecheck = lazy(
-  () => import("./pages/productionorder/PendingForPrecheck")
-);
+
 const UpdateComponents = lazy(
   () => import("./pages/adminmaster/UpdateComponents")
 );
-const UpdateDrawingNumber = lazy(
-  () => import("./pages/adminmaster/UpdateDrawingNumber")
-);
-const Archive = lazy(() => import("./pages/adminmaster/Archive"));
+
 const MaterialRequisition = lazy(
   () => import("./pages/materialrequisition/MaterialRequisition")
 );
@@ -102,6 +96,7 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forget-password" element={<ForgetPassword />} />
+        <Route path="/forgot-password" element={<ForgetPassword />} />
 
         {/* Protected Dashboard/App Routes */}
         <Route element={<ProtectedRoute />}>
@@ -111,20 +106,20 @@ export default function AppRoutes() {
 
             {/* Precheck Module */}
             <Route path="precheck">
-              <Route index element={<Precheck />} />
-              <Route path="make-order" element={<MakeOrder />} />
+              <Route index element={<MakePrecheck />} />
+              <Route path="make" element={<MakePrecheck />} />
+              <Route path="pending" element={<MakePrecheck />} />
+              <Route path="pending/*" element={<MakePrecheck />} />
               <Route path="available-store" element={<AvailableInStore />} />
               <Route path="available-in-store" element={<AvailableInStore />} />
               <Route path="view" element={<ViewPrecheck />} />
               <Route path="consumed" element={<ViewConsumedIn />} />
               <Route path="view-consumed" element={<ViewConsumedIn />} />
-              <Route path="make" element={<MakePrecheck />} />
               <Route path="store-in" element={<StoreIn />} />
               <Route path="stored-components" element={<StoredInComponents />} />
             </Route>
 
-            {/* Archive Module */}
-            <Route path="archive" element={<Archive />} />
+            
 
             {/* IR/MSN Module */}
             <Route path="irmsn">
@@ -169,21 +164,21 @@ export default function AppRoutes() {
               <Route path="upload" element={<ProductionOrderUpload />} />
               <Route path="view" element={<ViewOrder />} />
               <Route path="edit/:id" element={<EditProductionOrder />} />
-              <Route path="store" element={<PendingForPrecheck />} />
+             
             </Route>
 
             <Route path="adminmaster">
               <Route path="update-components" element={<UpdateComponents />} />
               <Route path="updatecomponents" element={<UpdateComponents />} />
               <Route path="updatecomponents/:id" element={<UpdateComponents />} />
-              <Route path="update-drawing" element={<UpdateDrawingNumber />} />
+             
               <Route path="add-components" element={<AddComponents />} />
               <Route path="addcomponents" element={<AddComponents />} />
               <Route path="user-management" element={<UserManagement />} />
               <Route path="usermanagement" element={<UserManagement />} />
               <Route path="role-management" element={<RoleManagement />} />
               <Route path="rolemanagement" element={<RoleManagement />} />
-              <Route path="archive" element={<Archive />} />
+              
             </Route>
 
             {/* Material Requisition Module */}

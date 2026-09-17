@@ -70,7 +70,7 @@ const Dashboard: React.FC = () => {
       description: "Upload and view Production Order details and status",
       icon: <ShoppingCartIcon sx={{ fontSize: 40 }} />,
       color: "#df2e78ff",
-      route: isAccessible("Upload Orders")
+      route: isAccessible("Production Order Management") || isAccessible("Upload Orders")
         ? "/production-order/upload"
         : isAccessible("Pending For Precheck")
           ? user?.role === "Store"
@@ -81,7 +81,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Generate IR, MSN",
-      pageName: "Create",
+      pageName: "New IR/MSN",
       description: "Access and manage gen. ir msn no. related tasks",
       icon: <QrCodeIcon sx={{ fontSize: 40 }} />,
       color: "#9C27B0",
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Generate QR Code",
-      pageName: "Generate QR Code",
+      pageName: "New QR Code",
       description: "Access and manage Barcode generation related tasks",
       icon: <QrCodeScannerIcon sx={{ fontSize: 40 }} />,
       color: "#FF9800",
@@ -105,7 +105,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "View Precheck",
-      pageName: "View Precheck",
+      pageName: "Precheck History",
       description: "Access and view precheck details and status",
       icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#3F51B5", // Indigo
@@ -131,7 +131,7 @@ const Dashboard: React.FC = () => {
 
     {
       title: "Generate SOP",
-      pageName: "View SOP",
+      pageName: "Assembly Explorer",
       description: "Access and manage SOP Generation related tasks",
       icon: <MenuBookIcon sx={{ fontSize: 40 }} />,
       color: "#F44336", // Red
@@ -139,11 +139,11 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Script Executor",
-      pageName:"Script Executor",
-      description:"Access and Manage Script related tasks",
-      icon:<TerminalIcon sx={{fontSize: 40 }}/>,
-      color:"#009688",
-      route:"/scriptexecutor",
+      pageName: "Bulk Import",
+      description: "Access and Manage Script related tasks",
+      icon: <TerminalIcon sx={{ fontSize: 40 }} />,
+      color: "#009688",
+      route: "/scriptexecutor",
     },
     // {
     //   title:"Testing",

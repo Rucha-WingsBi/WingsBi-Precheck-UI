@@ -36,7 +36,6 @@ import {
   ChevronRight as ChevronRightIcon,
   Dashboard as DashboardIcon,
   Assignment as AssignmentIcon,
-
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   ViewList as ViewListIcon,
@@ -44,13 +43,23 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Add as AddIcon,
-  Visibility as VisibilityIcon,
   Store as StoreIcon,
   ShoppingCart as ShoppingCartIcon,
-  Terminal as TerminalIcon,
   FactCheck as FactCheckIcon,
   MenuBook as MenuBookIcon,
   Category as CategoryIcon,
+  ListAlt as ListAltIcon,
+  History as HistoryIcon,
+  AccountTree as AccountTreeIcon,
+  Extension as ExtensionIcon,
+  CloudUpload as CloudUploadIcon,
+  People as PeopleIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Storage as StorageIcon,
+  PlayArrow as PlayArrowIcon,
+  Warehouse as WarehouseIcon,
+  MoveToInbox as MoveToInboxIcon,
+  Inventory as InventoryIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -78,6 +87,7 @@ const drawerCollapsedWidth = 60;
 
 interface MenuItem {
   text: string;
+  pageName?: string;
   icon: React.ReactNode;
   path: string;
   roles?: string[];
@@ -96,8 +106,8 @@ const Main = styled("main")(({ theme }) => ({
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   zIndex: theme.zIndex.drawer + 2,
-  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
-  boxShadow: "0 4px 15px rgba(107, 40, 138, 0.25)",
+  background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
+  boxShadow: "0 4px 15px rgba(109, 42, 143, 0.25)",
   [theme.breakpoints.up("lg")]: {
     paddingLeft: 0,
   },
@@ -137,8 +147,8 @@ const LogoBox = styled(Box, {
   display: "flex",
   alignItems: "center",
   padding: theme.spacing(0, 1),
-  minHeight: 64,
-  background: "linear-gradient(90deg, #6B288A 0%, #D82578 100%)",
+  minHeight: 56,
+  background: "linear-gradient(90deg, #6D2A8F 0%, #D82578 100%)",
   color: "white",
   cursor: "pointer",
   justifyContent: open ? "space-between" : "center",
@@ -147,7 +157,7 @@ const LogoBox = styled(Box, {
     duration: theme.transitions.duration.enteringScreen,
   }),
   "&:hover": {
-    background: "linear-gradient(90deg, #4A1964 0%, #9D1352 100%)",
+    background: "linear-gradient(90deg, #571F73 0%, #9D1352 100%)",
   },
 }));
 
@@ -190,36 +200,22 @@ export default function Layout() {
       path: "/dashboard",
     },
     {
+      text: "Bulk Import",
+      pageName: "Script Executor",
+      icon: <CloudUploadIcon />,
+      path: "/scriptexecutor",
+    },
+    {
       text: "Production Order",
       icon: <ShoppingCartIcon />,
       path: "/production-order",
       subItems: [
         {
-          text: "Upload Orders",
-          icon: <AddIcon />,
+          text: "Manage Orders",
+          pageName: "Manage Orders",
+          icon: <AssignmentIcon />,
           path: "/production-order/upload",
         },
-        // {
-        //   text: "Pending For Precheck",
-        //   icon: <PlaylistAddCheckIcon />,
-        //   path:
-        //     user?.role === STORE_ROLE
-        //       ? "/precheck/pending/store"
-        //       : "/precheck/pending/qc",
-
-        // },
-        // {
-        //   text: "View Order Details",
-        //   icon: <VisibilityIcon />,
-        //   path: "/production-order/view",
-
-        // },
-        // {
-        //   text: "Edit Order Details",
-        //   icon: <EditIcon />,
-        //   path: "/production-order/edit",
-
-        // },
       ],
     },
     {
@@ -228,15 +224,16 @@ export default function Layout() {
       path: "/irmsn",
       subItems: [
         {
-          text: "View All IR/MSN",
-          icon: <VisibilityIcon />,
+          text: "IR/MSN List",
+          pageName: "View All IR/MSN",
+          icon: <ListAltIcon />,
           path: "/irmsn/view",
         },
         {
-          text: "Create",
+          text: "New IR/MSN",
+          pageName: "Create",
           icon: <AddIcon />,
           path: "/irmsn/generate",
-
         },
       ],
     },
@@ -246,22 +243,17 @@ export default function Layout() {
       path: "/qrcode",
       subItems: [
         {
-          text: "View QR Code",
-          icon: <VisibilityIcon />,
+          text: "QR Code List",
+          pageName: "View QR Code",
+          icon: <ListAltIcon />,
           path: "/qrcode/view",
         },
         {
-          text: "Generate QR Code",
+          text: "New QR Code",
+          pageName: "Generate QR Code",
           icon: <AddIcon />,
           path: "/qrcode/generate",
-
         },
-        // {
-        //   text: "Generate STD QR Code",
-        //   icon: <AddIcon />,
-        //   path: "/qrcode/generate-new",
-
-        // },
       ],
     },
     {
@@ -270,123 +262,78 @@ export default function Layout() {
       path: "/precheck",
       subItems: [
         {
-          text: "View Precheck",
-          icon: <VisibilityIcon />,
+          text: "Precheck History",
+          pageName: "View Precheck",
+          icon: <HistoryIcon />,
           path: "/precheck/view",
         },
-        // {
-        //   text: "View Consumed In",
-        //   icon: <SearchIcon />,
-        //   path: "/precheck/consumed",
-        // },
-        // {
-        //   text: "Make Order",
-        //   icon: <ShoppingCartIcon />,
-        //   path: "/precheck/make-order",
-        //  
-        // },
-        // {
-        //   text: "Make Precheck",
-        //   icon: <AddIcon />,
-        //   path: "/precheck/make",
-
-        // },
+        {
+          text: "Run Precheck",
+          pageName: "Make Precheck",
+          icon: <PlayArrowIcon />,
+          path: "/precheck/make",
+        },
+      ],
+    },
+    {
+      text: "Store",
+      icon: <StoreIcon />,
+      path: "/store",
+      subItems: [
         {
           text: "Store In",
-          icon: <StoreIcon />,
+          pageName: "Store In",
+          icon: <MoveToInboxIcon />,
           path: "/precheck/store-in",
-
         },
         {
           text: "Available In Store",
-          icon: <VisibilityIcon />,
+          pageName: "Available In Store",
+          icon: <InventoryIcon />,
           path: "/precheck/available-in-store",
-
         },
-        // {
-        //   text: "Stored In Components",
-        //   icon: <VisibilityIcon />,
-        //   path: "/precheck/stored-components",
-
-        // },
       ],
     },
     {
-      text: "SOP",
+      text: "Assembly",
       icon: <MenuBookIcon />,
       path: "/sop",
       subItems: [
-        { text: "View SOP", icon: <VisibilityIcon />, path: "/sop/view" },
-        // {
-        //   text: "View BOM Details",
-        //   icon: <VisibilityIcon />,
-        //   path: "/sop/viewBOM",
-        // },
-      ],
-    },
-    {
-      text: "Components",
-      icon: <CategoryIcon />,
-      path: "/components",
-      subItems: [
         {
-          text: "View Components",
-          icon: <VisibilityIcon />,
+          text: "Assembly Explorer",
+          pageName: "View SOP",
+          icon: <AccountTreeIcon />,
+          path: "/sop/view",
+        },
+        {
+          text: "Components",
+          pageName: "View Components",
+          icon: <ExtensionIcon />,
           path: "/components",
         },
-        // {
-        //   text: "View Assembly",
-        //   icon: <VisibilityIcon />,
-        //   path: "/components/assembly",
-        // },
       ],
-    },
-    // {
-    //   text: "Material Requisition",
-    //   icon: <ReceiptLongIcon />,
-    //   path: "/materialrequisition",
-    // },
-    {
-      text: "Script Executor",
-      icon: <TerminalIcon />,
-      path: "/scriptexecutor",
     },
     {
       text: "Admin",
-      icon: <SettingsIcon />,
+      icon: <AdminPanelSettingsIcon />,
       path: "/adminmaster",
       subItems: [
-        // {
-        //   text: "Archive",
-        //   icon: <ArchiveIcon />,
-        //   path: "/adminmaster/archive",
-
-        // },
-        // {
-        //   text: "Update Components",
-        //   icon: <SettingsIcon />,
-        //   path: "/adminmaster/updatecomponents",
-
-        // },
         {
           text: "User Management",
-          icon: <AssignmentIcon />,
+          icon: <PeopleIcon />,
           path: "/adminmaster/usermanagement",
-
         },
         {
           text: "Role Management",
-          icon: <AssignmentIcon />,
+          icon: <SettingsIcon />,
           path: "/adminmaster/rolemanagement",
-
         },
         {
-          text: "Add Components",
-          icon: <AddIcon />,
+          text: "Master Data",
+          pageName: "Add Components",
+          icon: <StorageIcon />,
           path: "/adminmaster/addcomponents",
-
         },
-
       ],
     },
   ];
@@ -409,24 +356,25 @@ export default function Layout() {
 
     const isAccessible = (pageName: string): boolean => {
       const entry = accessMap[pageName.trim().toLowerCase()];
-
       if (!entry) return false;
-      // Always explicitly return boolean
-      if (!entry) return false;
-
-      return entry.fullAccess === true;
+      return entry.noAccess !== true;
     };
 
     return menuItems
       .map((item) => {
         // Case 1: No children → normal check
         if (!item.subItems) {
-          return isAccessible(item.text) ? item : null;
+          const hasAccess =
+            isAccessible(item.text) ||
+            (item.pageName ? isAccessible(item.pageName) : false);
+          return hasAccess ? item : null;
         }
 
         // Case 2: Has children → filter children first
-        const filteredSubItems = item.subItems.filter((subItem) =>
-          isAccessible(subItem.text),
+        const filteredSubItems = item.subItems.filter(
+          (subItem) =>
+            isAccessible(subItem.text) ||
+            (subItem.pageName ? isAccessible(subItem.pageName) : false)
         );
 
         // Show parent ONLY if at least one child is accessible
@@ -445,6 +393,23 @@ export default function Layout() {
       setMobileOpen(false);
     }
   }, [location.pathname, isMobile]);
+
+  // Auto-expand active parent menu item based on current route
+  useEffect(() => {
+    menuItems.forEach((item) => {
+      if (
+        item.subItems?.some(
+          (sub) =>
+            location.pathname === sub.path ||
+            location.pathname.startsWith(sub.path + "/")
+        )
+      ) {
+        setExpandedItems((prev) =>
+          prev.includes(item.text) ? prev : [...prev, item.text]
+        );
+      }
+    });
+  }, [location.pathname]);
 
   const handleDrawerToggle = () => {
     if (isDesktop) {
@@ -581,26 +546,28 @@ export default function Layout() {
                     borderRadius: 2,
                     transition: "all 0.2s ease",
                     "&:hover": {
-                      backgroundColor: "rgba(107, 40, 138, 0.08)",
+                      backgroundColor: "rgba(109, 42, 143, 0.08)",
                       transform: "translateX(4px)",
                     },
                     backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(107, 40, 138, 0.12)"
+                      ? "rgba(109, 42, 143, 0.12)"
                       : "transparent",
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 0,
-                      mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
-                      justifyContent: "center",
-                      color: location.pathname.startsWith(item.path)
-                        ? "#6B288A"
-                        : "text.secondary",
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
+                  {item.icon && (
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 0,
+                        mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
+                        justifyContent: "center",
+                        color: location.pathname.startsWith(item.path)
+                          ? "#6D2A8F"
+                          : "text.secondary",
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                  )}
                   <ListItemText
                     primary={item.text}
                     sx={{
@@ -613,8 +580,11 @@ export default function Layout() {
                           ? 600
                           : 500,
                         color: location.pathname.startsWith(item.path)
-                          ? "#6B288A"
+                          ? "#6D2A8F"
                           : "text.primary",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       },
                     }}
                   />
@@ -649,33 +619,36 @@ export default function Layout() {
                       key={subItem.text}
                       onClick={() => handleSubItemClick(subItem)}
                       sx={{
-                        pl: 5,
+                        pl: 3.5,
+                        pr: 1.5,
                         py: 1,
                         mx: 1,
                         mb: 0.5,
                         borderRadius: 2,
                         transition: "all 0.2s ease",
                         "&:hover": {
-                          backgroundColor: "rgba(107, 40, 138, 0.05)",
+                          backgroundColor: "rgba(109, 42, 143, 0.05)",
                           transform: "translateX(4px)",
                         },
                         backgroundColor:
                           location.pathname === subItem.path
-                            ? "rgba(107, 40, 138, 0.1)"
+                            ? "rgba(109, 42, 143, 0.1)"
                             : "transparent",
                       }}
                     >
-                      <ListItemIcon
-                        sx={{
-                          minWidth: 32,
-                          color:
-                            location.pathname === subItem.path
-                              ? "#6B288A"
-                              : "text.secondary",
-                        }}
-                      >
-                        {subItem.icon}
-                      </ListItemIcon>
+                      {subItem.icon && (
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 32,
+                            color:
+                              location.pathname === subItem.path
+                                ? "#6D2A8F"
+                                : "text.secondary",
+                          }}
+                        >
+                          {subItem.icon}
+                        </ListItemIcon>
+                      )}
                       <ListItemText
                         primary={subItem.text}
                         sx={{
@@ -685,8 +658,11 @@ export default function Layout() {
                               location.pathname === subItem.path ? 600 : 400,
                             color:
                               location.pathname === subItem.path
-                                ? "#6B288A"
+                                ? "#6D2A8F"
                                 : "text.secondary",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                           },
                         }}
                       />
@@ -707,14 +683,22 @@ export default function Layout() {
 
       {/* App Bar */}
       <StyledAppBar position="fixed">
-        <Toolbar sx={{ minHeight: 64, display: "flex", alignItems: "center" }}>
+        <Toolbar
+          sx={{
+            minHeight: "56px !important",
+            height: 56,
+            px: { xs: 1.5, sm: 2 },
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
           {/* Menu button */}
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 1, color: "white" }}
+            sx={{ mr: 1, color: "white", padding: "6px" }}
           >
             <MenuIcon />
           </IconButton>
@@ -729,7 +713,7 @@ export default function Layout() {
             <img
               src="/assets/logo.jpg"
               alt="Wingsbi Logo"
-              style={{ height: 32, marginRight: 8, borderRadius: 10 }}
+              style={{ height: 28, marginRight: 8, borderRadius: 8 }}
             />
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <Typography
@@ -738,6 +722,7 @@ export default function Layout() {
                 component="div"
                 sx={{
                   fontWeight: 600,
+                  fontSize: "1.05rem",
                   letterSpacing: 0.5,
                   color: "white",
                   display: "flex",
@@ -749,48 +734,34 @@ export default function Layout() {
             </Box>
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: "#ffe0f0",
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              letterSpacing: 0.5,
-              opacity: 0.85,
-              mr: 2,
-              mt: 2,
-              display: { xs: "none", sm: "block" },
-            }}
-          >
-            Precheck Version 9.6
-          </Typography>
 
           {/* User Profile */}
           {user && (
             <Box sx={{ display: "flex", alignItems: "center", ml: 2 }}>
               <Stack
                 alignItems="flex-end"
-                sx={{ mr: 2, display: { xs: "none", sm: "flex" } }}
+                sx={{ mr: 1.5, display: { xs: "none", sm: "flex" } }}
               >
                 <Typography
                   variant="body2"
-                  sx={{ fontWeight: 600, color: "white" }}
+                  sx={{ fontWeight: 600, color: "white", fontSize: "0.825rem", lineHeight: 1.2 }}
                 >
                   {user?.username}
                 </Typography>
                 <Typography
                   variant="caption"
-                  sx={{ color: "rgba(255,255,255,0.8)" }}
+                  sx={{ color: "rgba(255,255,255,0.8)", fontSize: "0.7rem", lineHeight: 1.1 }}
                 >
                   {user?.department} - {user?.role}
                 </Typography>
               </Stack>
               <IconButton
-                size="large"
+                size="small"
                 edge="end"
                 aria-label="account of current user"
                 onClick={handleProfileMenuOpen}
                 sx={{
+                  padding: "4px",
                   "&:hover": {
                     backgroundColor: "rgba(255, 255, 255, 0.1)",
                   },
@@ -798,13 +769,13 @@ export default function Layout() {
               >
                 <Avatar
                   sx={{
-                    width: 36,
-                    height: 36,
+                    width: 32,
+                    height: 32,
                     bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
-                    fontSize: "0.9rem",
+                    fontSize: "0.85rem",
                     fontWeight: 600,
-                    border: "2px solid rgba(255,255,255,0.3)",
+                    border: "1.5px solid rgba(255,255,255,0.3)",
                   }}
                 >
                   {user?.username?.substring(0, 2).toUpperCase() || "U"}
@@ -823,15 +794,6 @@ export default function Layout() {
                   },
                 }}
               >
-                <MenuItem onClick={() => navigate("/settings")}>
-                  <ListItemIcon>
-                    <SettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Settings"
-                    secondary={`User: ${user?.username}`}
-                  />
-                </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />
@@ -871,7 +833,7 @@ export default function Layout() {
       )}
 
       <Main>
-        <Toolbar />
+        <Toolbar sx={{ minHeight: "56px !important", height: 56 }} />
         <Box
           sx={{
             p: 0,

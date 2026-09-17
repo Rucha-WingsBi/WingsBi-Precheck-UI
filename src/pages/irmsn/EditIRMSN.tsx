@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
@@ -82,7 +82,7 @@ export default function EditIRMSN() {
 
   const [poSearchText, setPOSearchText] = useState("");
   const debouncedPOSearch = useDebounce(poSearchText, 500);
-  const { data: poNumbers = [] } = usePONumbers(debouncedPOSearch);
+  const { data: poNumbers = [], isLoading: isPOLoading } = usePONumbers(debouncedPOSearch);
 
   const stages = isIR ? irStages : msnStages;
 
@@ -104,15 +104,20 @@ export default function EditIRMSN() {
   const [selectedDrawing, setSelectedDrawing] = useState<any>(null);
   const [selectedStage, setSelectedStage] = useState<any>(null);
   const [selectedPO, setSelectedPO] = useState<any>(null);
+  const isInitialized = useRef(false);
 
-  // Initialize selections from data
+  // Initialize selections from data once on mount / master data ready
   useEffect(() => {
-    if (initialData) {
+    if (initialData && !isInitialized.current) {
       console.log("EditIRMSN initialData:", initialData);
 
       const getVal = (key: string) =>
         initialData[key] ||
         initialData[key.charAt(0).toUpperCase() + key.slice(1)];
+
+      let drawingDone = false;
+      let stageDone = false;
+      let poDone = false;
 
       // 1. Set Drawing
       const drawingId = getVal("drawingNumberId");
@@ -145,16 +150,22 @@ export default function EditIRMSN() {
             drawingName,
           });
         }
+        drawingDone = true;
       }
 
       // 2. Set Stage
       const stageName = getVal("stage");
-      if (stageName && stages.length > 0) {
-        const match = stages.find((s: { stage: any }) => s.stage === stageName);
-        if (match) {
-          setSelectedStage(match);
-          setValue("stage", match.stage);
+      if (stageName) {
+        if (stages.length > 0) {
+          const match = stages.find((s: { stage: any }) => s.stage === stageName);
+          if (match) {
+            setSelectedStage(match);
+            setValue("stage", match.stage);
+          }
+          stageDone = true;
         }
+      } else {
+        stageDone = true;
       }
 
       // 3. Set PO Number
@@ -171,6 +182,9 @@ export default function EditIRMSN() {
           });
         }
         setValue("productionOrderNumber", poNum);
+        poDone = true;
+      } else {
+        poDone = true;
       }
 
       // 4. Set other fields explicitly
@@ -188,6 +202,10 @@ export default function EditIRMSN() {
 
       const opNum = getVal("operationNumber");
       if (opNum) setValue("operationNumber", opNum);
+
+      if (drawingDone && stageDone && poDone) {
+        isInitialized.current = true;
+      }
     }
   }, [initialData, allDrawingNumbers, stages, poNumbers, setValue]);
 
@@ -297,20 +315,6 @@ export default function EditIRMSN() {
     }
   };
 
-  const readOnlyStyle = {
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "#F9FAFB",
-      borderRadius: "8px",
-      fontSize: "0.875rem",
-    },
-  };
-
-  const inputStyle = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius: "8px",
-      fontSize: "0.875rem",
-    },
-  };
 
   return (
     <Box
@@ -320,7 +324,7 @@ export default function EditIRMSN() {
         minHeight: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "background.default",
         width: "100%",
         boxSizing: "border-box",
       }}
@@ -334,15 +338,13 @@ export default function EditIRMSN() {
       >
         <IconButton
           onClick={() => navigate(-1)}
-          size="small"
           sx={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #D0D5DD",
-            color: "#344054",
-            "&:hover": { backgroundColor: "#F9FAFB", borderColor: "#98A2B3" },
+            color: "primary.main",
+            p: 0.5,
+            "&:hover": { backgroundColor: "grey.100" },
           }}
         >
-          <ArrowBackIcon fontSize="small" />
+          <ArrowBackIcon />
         </IconButton>
         <Typography
           variant="h5"
@@ -360,7 +362,7 @@ export default function EditIRMSN() {
       {apiError && (
         <Alert
           severity="error"
-          sx={{ mb: 2, borderRadius: "8px" }}
+          sx={{ mb: 2, borderRadius: "6px" }}
           onClose={() => dispatch(clearIrmsnError())}
         >
           {apiError}
@@ -373,8 +375,9 @@ export default function EditIRMSN() {
         sx={{
           p: { xs: 2, sm: 2.5, md: 3 },
           borderRadius: "10px",
-          border: "1px solid #EAECF0",
-          backgroundColor: "#ffffff",
+          border: "1px solid",
+          borderColor: "grey.200",
+          backgroundColor: "background.paper",
           flexGrow: 1,
         }}
       >
@@ -388,7 +391,6 @@ export default function EditIRMSN() {
                 fullWidth
                 disabled
                 size="small"
-                sx={readOnlyStyle}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
@@ -402,7 +404,6 @@ export default function EditIRMSN() {
                     disabled
                     fullWidth
                     size="small"
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -413,7 +414,13 @@ export default function EditIRMSN() {
               <Autocomplete
                 size="small"
                 options={allDrawingNumbers}
-                getOptionLabel={(option: any) => option.drawingNumber || ""}
+                isOptionEqualToValue={(option: any, value: any) =>
+                  (option?.id && value?.id && option.id === value.id) ||
+                  option?.drawingNumber === value?.drawingNumber
+                }
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" ? option : option?.drawingNumber || ""
+                }
                 value={selectedDrawing}
                 loading={isDrgLoading}
                 onChange={(_, newValue) => {
@@ -434,8 +441,64 @@ export default function EditIRMSN() {
                     setValue("componentType", "");
                   }
                 }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  const drawingNo =
+                    typeof option === "string"
+                      ? option
+                      : option?.drawingNumber || "";
+                  const lnCode =
+                    typeof option === "string" ? "" : option?.lnItemCode;
+                  const nomenclature =
+                    typeof option === "string" ? "" : option?.nomenclature;
+                  const compType =
+                    typeof option === "string" ? "" : option?.componentType;
+
+                  const details = [
+                    lnCode ? `LN: ${lnCode}` : null,
+                    nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                    compType ? `Component Type: ${compType}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" | ");
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          py: 0.5,
+                          width: "100%",
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                        >
+                          {drawingNo.startsWith("Drawing:")
+                            ? drawingNo
+                            : `Drawing: ${drawingNo}`}
+                        </Typography>
+                        {details && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: "0.75rem",
+                              lineHeight: 1.35,
+                              color: "text.secondary",
+                            }}
+                          >
+                            {details}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  );
+                }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Drawing Number" fullWidth sx={inputStyle} />
+                  <TextField {...params} label="Drawing Number" fullWidth />
                 )}
               />
             </Grid>
@@ -450,7 +513,6 @@ export default function EditIRMSN() {
                     fullWidth
                     size="small"
                     disabled
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -469,7 +531,6 @@ export default function EditIRMSN() {
                     size="small"
                     disabled
                     InputLabelProps={{ shrink: true }}
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -486,7 +547,6 @@ export default function EditIRMSN() {
                     size="small"
                     disabled
                     InputLabelProps={{ shrink: true }}
-                    sx={readOnlyStyle}
                   />
                 )}
               />
@@ -497,10 +557,19 @@ export default function EditIRMSN() {
               <Autocomplete
                 size="small"
                 options={poNumbers}
-                getOptionLabel={(option: any) =>
-                  option.productionOrderNumber || ""
+                loading={isPOLoading}
+                isOptionEqualToValue={(option: any, value: any) =>
+                  option?.productionOrderNumber === value?.productionOrderNumber ||
+                  (option?.id && value?.id && option.id === value.id)
                 }
-                onInputChange={(_, value) => setPOSearchText(value)}
+                getOptionLabel={(option: any) =>
+                  typeof option === "string" ? option : option?.productionOrderNumber || ""
+                }
+                onInputChange={(_, value, reason) => {
+                  if (reason === "input" || reason === "clear") {
+                    setPOSearchText(value);
+                  }
+                }}
                 value={selectedPO}
                 onChange={(_, newValue: ProductionOrderMaster | null) => {
                   setSelectedPO(newValue);
@@ -527,8 +596,73 @@ export default function EditIRMSN() {
                     setValue("productionOrderNumber", null);
                   }
                 }}
+                renderOption={(props: any, option: any) => {
+                  const { key, ...optionProps } = props;
+                  if (typeof option === "string") {
+                    return (
+                      <li {...optionProps} key={key}>
+                        {option}
+                      </li>
+                    );
+                  }
+                  const poNum = option.productionOrderNumber || "";
+                  const details = [
+                    option.lnItemCode ? `LN: ${option.lnItemCode}` : null,
+                    option.drawingNumber ? `Drawing: ${option.drawingNumber}` : null,
+                    option.nomenclature ? `Nomenclature: ${option.nomenclature}` : null,
+                    option.componentType ? `Component Type: ${option.componentType}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" | ");
+
+                  return (
+                    <li {...optionProps} key={key}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          py: 0.5,
+                          width: "100%",
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight="600"
+                          sx={{ fontSize: "0.875rem", color: "primary.main" }}
+                        >
+                          {poNum.startsWith("PO:") ? poNum : `PO: ${poNum}`}
+                        </Typography>
+                        {details && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: "0.75rem",
+                              lineHeight: 1.35,
+                              color: "text.secondary",
+                            }}
+                          >
+                            {details}
+                          </Typography>
+                        )}
+                      </Box>
+                    </li>
+                  );
+                }}
                 renderInput={(params) => (
-                  <TextField {...params} label="PO Number" fullWidth sx={inputStyle} />
+                  <TextField
+                    {...params}
+                    label="PO Number"
+                    fullWidth
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {isPOLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
                 )}
               />
             </Grid>
@@ -549,7 +683,6 @@ export default function EditIRMSN() {
                     size="small"
                     error={!!errors.quantity}
                     helperText={errors.quantity?.message}
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -565,8 +698,12 @@ export default function EditIRMSN() {
                   <Autocomplete
                     size="small"
                     options={stages}
+                    isOptionEqualToValue={(option: any, value: any) =>
+                      (option?.id && value?.id && option.id === value.id) ||
+                      option?.stage === value?.stage
+                    }
                     getOptionLabel={(option: any) =>
-                      typeof option === "string" ? option : option.stage || ""
+                      typeof option === "string" ? option : option?.stage || ""
                     }
                     value={selectedStage}
                     onChange={(_, newValue) => {
@@ -582,7 +719,6 @@ export default function EditIRMSN() {
                         error={!!error}
                         helperText={error?.message}
                         inputRef={field.ref}
-                        sx={inputStyle}
                       />
                     )}
                   />
@@ -601,7 +737,6 @@ export default function EditIRMSN() {
                     label="ID Number Range"
                     fullWidth
                     size="small"
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -616,7 +751,6 @@ export default function EditIRMSN() {
                     label="Operation Number"
                     fullWidth
                     size="small"
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -635,7 +769,6 @@ export default function EditIRMSN() {
                     size="small"
                     multiline
                     rows={1}
-                    sx={inputStyle}
                   />
                 )}
               />
@@ -650,8 +783,8 @@ export default function EditIRMSN() {
                   onClick={() => navigate(-1)}
                   disabled={isSubmitting}
                   sx={{
-                    borderColor: "#D0D5DD",
-                    color: "#344054",
+                    borderColor: "grey.300",
+                    color: "text.secondary",
                     fontWeight: 600,
                     fontSize: "0.8rem",
                     borderRadius: "6px",
@@ -659,7 +792,7 @@ export default function EditIRMSN() {
                     py: 0.5,
                     height: 34,
                     textTransform: "none",
-                    "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                    "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
                   }}
                 >
                   Cancel

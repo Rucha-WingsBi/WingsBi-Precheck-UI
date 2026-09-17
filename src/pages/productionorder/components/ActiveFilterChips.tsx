@@ -48,9 +48,9 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({
         alignItems: { xs: "flex-start", sm: "center" },
         justifyContent: "space-between",
         gap: 1,
-        py: 0.5,
+        py: 0.1,
         px: 0.5,
-        mb: 0.25,
+        mb: 0,
       }}
     >
       <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">

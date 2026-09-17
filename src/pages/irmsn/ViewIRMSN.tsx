@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
@@ -15,7 +15,7 @@ import {
   CircularProgress,
   Button,
   FormControl,
-  Autocomplete,
+  InputLabel,
   Alert,
   Checkbox,
   InputAdornment,
@@ -27,6 +27,14 @@ import {
   Stack,
   Select,
   MenuItem as SelectMenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  Grid,
   Tooltip,
 } from "@mui/material";
 import {
@@ -34,40 +42,63 @@ import {
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
   CheckBox as CheckBoxIcon,
   Clear as ClearIcon,
-  Refresh as RefreshIcon,
   Edit as EditIcon,
   FileDownload as DownloadIcon,
   Add as AddIcon,
-  KeyboardArrowDown as ArrowDownIcon,
   Article as ArticleIcon,
+  MoreVert as MoreVertIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
+import { CustomPagination } from "../../components/CustomPagination";
+
 import {
-  fetchIRMSNList,
+  fetchViewIrMsn,
   clearTables,
-  fetchMSNList,
   setSearchParams,
 } from "../../store/slices/irmsnSlice";
 import {
   useDepartments,
   useProductionSeries,
+  usePageAccess,
 } from "../../hooks/useMasterData";
+import { isPageAccessible } from "../../utils/accessUtils";
+import { useHasPermission } from "../../hooks/useHasPermission";
 import type { RootState, AppDispatch } from "../../store/store";
 import { useNavigate } from "react-router-dom";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import api from "../../services/api";
+import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
+import { COLOUR_ROLES, commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
+import EmptyState from "@/components/EmptyState";
 
-const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
-const checkedIcon = <CheckBoxIcon fontSize="small" />;
+const ALL_IRMSN_EXPORT_COLUMNS = [
+  { key: "displayNumber", label: "IR/MSN No." },
+  { key: "recordType", label: "Type" },
+  { key: "orderNumber", label: "PO Number" },
+  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "drawingNumberIdName", label: "Drawing No." },
+  { key: "idNumberRange", label: "ID Number" },
+  { key: "mrirNumber", label: "MRIR" },
+  { key: "createdDate", label: "Date" },
+  { key: "userName", label: "UserName" },
+  { key: "departmentName", label: "Department" },
+  { key: "stage", label: "Stage" },
+  { key: "buildNumber", label: "Build No" },
+];
 
 const ViewIRMSN: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { irmsnList, msnList, loading, lastSearchParams } = useSelector(
+  const { irmsnList, totalCount: reduxTotalCount, loading, lastSearchParams } = useSelector(
     (state: RootState) => state.irmsn
   );
   const navigate = useNavigate();
   const hasRestored = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hasCreateAccess = useHasPermission("New IR/MSN");
 
   // Local state - Unified Search Bar
   const [drawingOrLnSearch, setDrawingOrLnSearch] = useState<string>("");
@@ -85,11 +116,57 @@ const ViewIRMSN: React.FC = () => {
 
   // Pagination State
   const [page, setPage] = useState<number>(0);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(20);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
-  // Export Menu State
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  // Export Menu & Options Dialog State
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+  const [exportReportType, setExportReportType] = useState<"IR" | "MSN" | "BOTH">("BOTH");
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
+
+  const handleOpenExportDialog = (type: "IR" | "MSN" | "BOTH" = "BOTH") => {
+    setExportReportType(type);
+    setExportMode("all");
+    setSelectedExportColumns(ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key));
+    setExportDialogOpen(true);
+  };
+
+  const handleToggleColumn = (colKey: string) => {
+    if (selectedExportColumns.includes(colKey)) {
+      setSelectedExportColumns(selectedExportColumns.filter((k) => k !== colKey));
+    } else {
+      setSelectedExportColumns([...selectedExportColumns, colKey]);
+    }
+  };
+
+  const handleToggleSelectAllColumns = () => {
+    if (selectedExportColumns.length === ALL_IRMSN_EXPORT_COLUMNS.length) {
+      setSelectedExportColumns([]);
+    } else {
+      setSelectedExportColumns(ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key));
+    }
+  };
+
+  // Row Action Menu State
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<{
+    anchorEl: HTMLElement;
+    item: any;
+  } | null>(null);
 
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error" | "info" | null;
@@ -100,7 +177,14 @@ const ViewIRMSN: React.FC = () => {
   const { data: departments = [] } = useDepartments();
   const { data: productionSeries = [] } = useProductionSeries();
 
-  const isLoadingCommon = !departments.length || !productionSeries.length;
+  const prodSeriesOptions = useMemo(
+    () => productionSeries.map((p: any) => (typeof p === "string" ? p : p.productionSeries)).filter(Boolean),
+    [productionSeries]
+  );
+  const deptOptions = useMemo(
+    () => departments.map((d: any) => ({ id: d.id, label: d.name || d.departmentName || d.label })),
+    [departments]
+  );
 
   useEffect(() => {
     if (statusMessage.type) {
@@ -112,6 +196,72 @@ const ViewIRMSN: React.FC = () => {
     }
   }, [statusMessage]);
 
+  const executeFetch = useCallback(
+    async (
+      targetPage: number,
+      targetRowsPerPage: number,
+      overrides?: {
+        search?: string;
+        series?: any[];
+        depts?: any[];
+        type?: string;
+        fDate?: Date | null;
+        tDate?: Date | null;
+      }
+    ) => {
+      const searchVal = overrides?.search !== undefined ? overrides.search : drawingOrLnSearch;
+      const seriesVal = overrides?.series !== undefined ? overrides.series : selectedProductionSeries;
+      const deptsVal = overrides?.depts !== undefined ? overrides.depts : selectedDepartments;
+      const typeVal = overrides?.type !== undefined ? overrides.type : typeFilter;
+      const fromDVal = overrides?.fDate !== undefined ? overrides.fDate : fromDate;
+      const toDVal = overrides?.tDate !== undefined ? overrides.tDate : toDate;
+
+      const docTypes = typeVal === "All" ? [] : [typeVal];
+
+      const payload = {
+        pageNumber: targetPage + 1,
+        pageSize: targetRowsPerPage,
+        searchQuery: searchVal.trim(),
+        productionSeries: seriesVal
+          .map((ps: any) => (typeof ps === "string" ? ps : ps.productionSeries))
+          .filter(Boolean),
+        departmentTypeId: deptsVal
+          .map((d: any) => (typeof d === "object" && d !== null ? d.id : d))
+          .filter(Boolean),
+        fromDate: fromDVal ? format(fromDVal, "yyyy-MM-dd") : null,
+        toDate: toDVal ? format(toDVal, "yyyy-MM-dd") : null,
+        documentType: docTypes,
+      };
+
+      dispatch(setSearchParams(payload));
+
+      try {
+        const result = await dispatch(fetchViewIrMsn(payload));
+        if (fetchViewIrMsn.fulfilled.match(result)) {
+          const resPayload = result.payload;
+          const count =
+            resPayload?.totalCount ??
+            resPayload?.totalRecords ??
+            (Array.isArray(resPayload) ? resPayload.length : resPayload?.data?.length || 0);
+
+          if (count === 0) {
+            setStatusMessage({
+              type: "info",
+              message: "No records found for the selected criteria.",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching IR/MSN records:", err);
+        setStatusMessage({
+          type: "error",
+          message: "Failed to load IR/MSN records. Please try again.",
+        });
+      }
+    },
+    [dispatch, drawingOrLnSearch, selectedProductionSeries, selectedDepartments, typeFilter, fromDate, toDate]
+  );
+
   // Restore filters and auto-search on mount
   useEffect(() => {
     if (
@@ -120,51 +270,43 @@ const ViewIRMSN: React.FC = () => {
       productionSeries.length &&
       !hasRestored.current
     ) {
-      const restoreAndFetch = async () => {
-        hasRestored.current = true;
+      hasRestored.current = true;
+      if (lastSearchParams.searchQuery) setDrawingOrLnSearch(lastSearchParams.searchQuery);
+      if (lastSearchParams.productionSeries && Array.isArray(lastSearchParams.productionSeries)) {
+        const matchedSeries = productionSeries.filter((ps: any) =>
+          lastSearchParams.productionSeries.includes(ps.productionSeries)
+        );
+        setSelectedProductionSeries(matchedSeries);
+      }
+      if (lastSearchParams.departmentTypeId && Array.isArray(lastSearchParams.departmentTypeId)) {
+        const matchedDepts = departments.filter((d: any) =>
+          lastSearchParams.departmentTypeId.includes(d.id)
+        );
+        setSelectedDepartments(matchedDepts);
+      }
+      if (lastSearchParams.fromDate) setFromDate(new Date(lastSearchParams.fromDate));
+      if (lastSearchParams.toDate) setToDate(new Date(lastSearchParams.toDate));
+      if (lastSearchParams.documentType && lastSearchParams.documentType.length === 1) {
+        setTypeFilter(lastSearchParams.documentType[0]);
+      }
 
-        if (lastSearchParams.drawingNumber || lastSearchParams.lnItemCode) {
-          setDrawingOrLnSearch(
-            lastSearchParams.drawingNumber || lastSearchParams.lnItemCode || ""
-          );
-        }
-
-        if (lastSearchParams.productionSeries) {
-          const seriesArr = lastSearchParams.productionSeries.split(",");
-          const matchedSeries = productionSeries.filter((ps: any) =>
-            seriesArr.includes(ps.productionSeries)
-          );
-          setSelectedProductionSeries(matchedSeries);
-        }
-
-        if (lastSearchParams.departmentTypeId) {
-          const deptIds = String(lastSearchParams.departmentTypeId)
-            .split(",")
-            .map(Number);
-          const matchedDepts = departments.filter((d: any) =>
-            deptIds.includes(d.id)
-          );
-          setSelectedDepartments(matchedDepts);
-        }
-
-        if (lastSearchParams.fromDate)
-          setFromDate(new Date(lastSearchParams.fromDate));
-        if (lastSearchParams.toDate) setToDate(new Date(lastSearchParams.toDate));
-
-        try {
-          await Promise.all([
-            dispatch(fetchIRMSNList(lastSearchParams)),
-            dispatch(fetchMSNList(lastSearchParams)),
-          ]);
-        } catch (e) {
-          console.error("Auto-fetch failed", e);
-        }
+      dispatch(fetchViewIrMsn(lastSearchParams));
+    } else if (!lastSearchParams && !hasRestored.current) {
+      hasRestored.current = true;
+      const initialPayload = {
+        pageNumber: 1,
+        pageSize: 20,
+        searchQuery: "",
+        productionSeries: [],
+        departmentTypeId: [],
+        fromDate: null,
+        toDate: null,
+        documentType: [],
       };
-
-      restoreAndFetch();
+      dispatch(setSearchParams(initialPayload));
+      dispatch(fetchViewIrMsn(initialPayload));
     }
   }, [departments, productionSeries, lastSearchParams, dispatch]);
-
   const handleReset = () => {
     setDrawingOrLnSearch("");
     setSelectedDepartments([]);
@@ -174,248 +316,191 @@ const ViewIRMSN: React.FC = () => {
     setToDate(null);
     setPage(0);
 
-    dispatch(clearTables());
-    dispatch(setSearchParams(null));
+    executeFetch(0, rowsPerPage, {
+      search: "",
+      series: [],
+      depts: [],
+      type: "All",
+      fDate: null,
+      tDate: null,
+    });
   };
 
-  const handleSearch = async () => {
-    if (
-      !(fromDate && toDate) &&
-      selectedProductionSeries.length === 0 &&
-      !drawingOrLnSearch.trim() &&
-      selectedDepartments.length === 0
-    ) {
-      setStatusMessage({
-        type: "error",
-        message:
-          "Please enter search criteria or select Production Series / Department or Date Range",
-      });
-      return;
+  const handleSearch = () => {
+    setPage(0);
+    executeFetch(0, rowsPerPage);
+  };
+
+  // Debounced auto-search: trigger API when 3+ chars typed, or when cleared
+  useEffect(() => {
+    // Skip during restore
+    if (!hasRestored.current && lastSearchParams) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
-    try {
-      const params: any = {
-        drawingNumber: drawingOrLnSearch.trim(),
-        productionSeries: selectedProductionSeries
-          .map((ps: any) => ps.productionSeries)
-          .join(","),
-        stage: "",
-        lnItemCode: drawingOrLnSearch.trim(),
-        fromDate: fromDate ? format(fromDate, "yyyy-MM-dd") : undefined,
-        toDate: toDate ? format(addDays(toDate, 1), "yyyy-MM-dd") : undefined,
-        departmentTypeId: selectedDepartments
-          .map((d: any) => d.id)
-          .join(","),
-      };
+    if (drawingOrLnSearch.trim().length >= 3) {
+      debounceTimerRef.current = setTimeout(() => {
+        setPage(0);
+        executeFetch(0, rowsPerPage, { search: drawingOrLnSearch });
+      }, 500);
+    } else if (drawingOrLnSearch.trim().length === 0 && irmsnList.length > 0) {
+      // Re-fetch without search when cleared
+      debounceTimerRef.current = setTimeout(() => {
+        setPage(0);
+        executeFetch(0, rowsPerPage, { search: "" });
+      }, 300);
+    }
 
-      dispatch(setSearchParams(params));
-      setPage(0);
-
-      const [irRes, msnRes] = await Promise.all([
-        dispatch(fetchIRMSNList(params)),
-        dispatch(fetchMSNList(params)),
-      ]);
-
-      const irCount = irRes.payload?.length || 0;
-      const msnCount = msnRes.payload?.length || 0;
-      const totalCount = irCount + msnCount;
-
-      if (totalCount > 0) {
-        setStatusMessage({
-          type: "success",
-          message: `Data loaded successfully. Total Records: ${totalCount} (IR: ${irCount}, MSN: ${msnCount})`,
-        });
-      } else {
-        setStatusMessage({
-          type: "info",
-          message: "No records found for the selected criteria.",
-        });
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
-    } catch (error) {
-      console.error("Error loading IR/MSN numbers:", error);
-      setStatusMessage({
-        type: "error",
-        message: "Error loading IR/MSN numbers. Please try again.",
-      });
-    }
-  };
-
-  // Export handler connecting to ExportIR and ExportMSN APIs
-  const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setExportMenuAnchor(event.currentTarget);
-  };
+    };
+  }, [drawingOrLnSearch]);
 
   const handleExportClose = () => {
     setExportMenuAnchor(null);
   };
 
-  const executeExport = async (type: "IR" | "MSN" | "BOTH") => {
-    handleExportClose();
+  const handleConfirmExportData = async () => {
+    setExportDialogOpen(false);
     setIsExporting(true);
 
     try {
-      const params: any = {};
-      if (selectedProductionSeries.length > 0) {
-        params.Productionseries = selectedProductionSeries
-          .map((ps: any) => ps.productionSeries)
-          .join(",");
-      }
-      if (selectedDepartments.length > 0) {
-        params.DepartmentTypeId = selectedDepartments
-          .map((d: any) => d.id)
-          .join(",");
-      }
-      if (drawingOrLnSearch.trim()) {
-        params.DrawingNumber = drawingOrLnSearch.trim();
-        params.LnItemCode = drawingOrLnSearch.trim();
-      }
-      if (fromDate) {
-        params.FromDate = format(fromDate, "yyyy-MM-dd");
-      }
-      if (toDate) {
-        params.ToDate = format(toDate, "yyyy-MM-dd");
-      }
+      let docTypes: string[] = [];
+      if (exportReportType === "IR") docTypes = ["IR"];
+      else if (exportReportType === "MSN") docTypes = ["MSN"];
+      else if (typeFilter === "IR") docTypes = ["IR"];
+      else if (typeFilter === "MSN") docTypes = ["MSN"];
+      else docTypes = ["IR", "MSN"];
 
-      const downloadBlob = async (endpoint: string, defaultFilename: string) => {
-        const response = await api.get(endpoint, {
-          params,
-          responseType: "blob",
-        });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+      const payload = {
+        searchQuery: drawingOrLnSearch.trim(),
+        productionSeries: selectedProductionSeries
+          .map((ps: any) => (typeof ps === "object" ? ps.productionSeries || ps.name || String(ps) : String(ps)))
+          .filter(Boolean),
+        departmentTypeId: selectedDepartments
+          .map((d: any) => (typeof d === "object" && d !== null ? Number(d.id || d.departmentTypeId || d) : Number(d)))
+          .filter((id: number) => !isNaN(id) && id > 0),
+        fromDate: fromDate ? fromDate.toISOString() : null,
+        toDate: toDate ? toDate.toISOString() : null,
+        documentType: docTypes,
+        selectedColumns:
+          exportMode === "custom"
+            ? ALL_IRMSN_EXPORT_COLUMNS.filter((col) => selectedExportColumns.includes(col.key)).map((col) => col.key)
+            : ALL_IRMSN_EXPORT_COLUMNS.map((col) => col.key),
+      };
+
+      const response = await api.post("/api/reports/ExportIrMsn", payload, {
+        responseType: "blob",
+        headers: {
+          accept: "*/*",
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data && response.data.size > 0) {
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+        const filename = `IR_MSN_Report_${timestamp}.xlsx`;
+
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          })
+        );
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", `${defaultFilename}_${Date.now()}.xlsx`);
+        link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         link.remove();
         window.URL.revokeObjectURL(url);
-      };
 
-      if (type === "IR" || type === "BOTH") {
-        await downloadBlob("/api/reports/ExportIR", "IR_Report");
+        setStatusMessage({
+          type: "success",
+          message: "Export downloaded successfully.",
+        });
+      } else {
+        throw new Error("No content received from export API");
       }
-      if (type === "MSN" || type === "BOTH") {
-        await downloadBlob("/api/reports/ExportMSN", "MSN_Report");
-      }
-
-      setStatusMessage({
-        type: "success",
-        message: "Export downloaded successfully.",
-      });
     } catch (err: any) {
-      console.error("Export failed:", err);
+      console.error("Export error:", err);
       setStatusMessage({
         type: "error",
-        message: err.response?.data?.message || "Failed to download export report.",
+        message: err.response?.data?.message || err.message || "Failed to download export report.",
       });
     } finally {
       setIsExporting(false);
     }
   };
 
-  const isFilterApplied = !!(
-    drawingOrLnSearch.trim() ||
+  const isDropdownFilterSelected = !!(
     selectedDepartments.length > 0 ||
     selectedProductionSeries.length > 0 ||
     fromDate ||
     toDate ||
-    typeFilter !== "All"
+    (typeFilter && typeFilter !== "All")
+  );
+
+  const isFilterApplied = !!(
+    drawingOrLnSearch.trim() ||
+    isDropdownFilterSelected
   );
 
   const isResetEnabled = !!(
     isFilterApplied ||
-    irmsnList.length > 0 ||
-    msnList.length > 0
+    irmsnList.length > 0
   );
 
-  // Combine IR and MSN lists into one single list with distinct type
-  const combinedList = useMemo(() => {
-    const irs = (irmsnList || []).map((item: any) => ({
+  const displayList = useMemo(() => {
+    return (irmsnList || []).map((item: any) => ({
       ...item,
-      recordType: "IR" as const,
-      displayNumber: item.irNumber,
-      orderNumber:
-        item.purchaseOrderNumber || item.poNumber || item.productionOrderNumber || "",
+      recordType: item.recordType || item.documentType || (item.irNumber ? "IR" : "MSN"),
+      displayNumber: item.displayNumber || item.irNumber || item.msnNumber || "-",
+      orderNumber: item.orderNumber || item.purchaseOrderNumber || item.poNumber || item.productionOrderNumber || "-",
     }));
-    const msns = (msnList || []).map((item: any) => ({
-      ...item,
-      recordType: "MSN" as const,
-      displayNumber: item.msnNumber,
-      orderNumber:
-        item.productionOrderNumber || item.purchaseOrderNumber || item.poNumber || "",
-    }));
+  }, [irmsnList]);
 
-    let list: any[] = [...irs, ...msns];
+  const sortedDisplayList = useMemo(() => {
+    if (!sortColumn) return displayList;
+    return [...displayList].sort((a: any, b: any) => {
+      let aVal = a[sortColumn];
+      let bVal = b[sortColumn];
 
-    if (typeFilter !== "All") {
-      list = list.filter((item) => item.recordType === typeFilter);
-    }
+      if (sortColumn === "lineItemCode" || sortColumn === "lnItemCode") {
+        aVal = a.lnItemCode || a.lineItemCode || "";
+        bVal = b.lnItemCode || b.lineItemCode || "";
+      } else if (sortColumn === "drawingNumber") {
+        aVal = a.drawingNumberIdName || a.drawingNumber || "";
+        bVal = b.drawingNumberIdName || b.drawingNumber || "";
+      } else if (sortColumn === "date") {
+        aVal = new Date(a.createdDate || a.date || 0).getTime();
+        bVal = new Date(b.createdDate || b.date || 0).getTime();
+      } else if (sortColumn === "displayNumber" || sortColumn === "id") {
+        aVal = a.displayNumber || a.irNumber || a.msnNumber || a.id || "";
+        bVal = b.displayNumber || b.irNumber || b.msnNumber || b.id || "";
+      }
 
-    if (drawingOrLnSearch.trim()) {
-      const searchLower = drawingOrLnSearch.trim().toLowerCase();
-      list = list.filter(
-        (item) =>
-          item.drawingNumber?.toLowerCase().includes(searchLower) ||
-          item.drawingNumberIdName?.toLowerCase().includes(searchLower) ||
-          item.lnItemCode?.toLowerCase().includes(searchLower) ||
-          item.displayNumber?.toLowerCase().includes(searchLower) ||
-          item.irNumber?.toLowerCase().includes(searchLower) ||
-          item.msnNumber?.toLowerCase().includes(searchLower) ||
-          item.orderNumber?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (selectedDepartments.length > 0) {
-      const deptIds = selectedDepartments.map((d: any) => d.id);
-      const deptNames = selectedDepartments.map((d: any) =>
-        d.name?.toLowerCase()
-      );
-      list = list.filter(
-        (item) =>
-          deptIds.includes(item.departmentId) ||
-          (item.departmentName &&
-            deptNames.includes(item.departmentName.toLowerCase()))
-      );
-    }
-
-    if (selectedProductionSeries.length > 0) {
-      const seriesNames = selectedProductionSeries.map((ps: any) =>
-        ps.productionSeries?.toLowerCase()
-      );
-      const seriesIds = selectedProductionSeries.map((ps: any) => ps.id);
-      list = list.filter(
-        (item) =>
-          seriesIds.includes(item.prodSeriesId) ||
-          (item.productionSeries &&
-            seriesNames.includes(item.productionSeries.toLowerCase())) ||
-          (item.productionSeriesName &&
-            seriesNames.includes(item.productionSeriesName.toLowerCase()))
-      );
-    }
-
-    return list;
-  }, [
-    irmsnList,
-    msnList,
-    typeFilter,
-    drawingOrLnSearch,
-    selectedDepartments,
-    selectedProductionSeries,
-  ]);
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const strA = String(aVal || "").toLowerCase().trim();
+      const strB = String(bVal || "").toLowerCase().trim();
+      return sortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [displayList, sortColumn, sortDirection]);
 
   // Reset page to 0 if pagination exceeds list range
   useEffect(() => {
     setPage(0);
   }, [drawingOrLnSearch, selectedDepartments, selectedProductionSeries, typeFilter, fromDate, toDate]);
 
-  const paginatedList = useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    return combinedList.slice(startIndex, startIndex + rowsPerPage);
-  }, [combinedList, page, rowsPerPage]);
-
-  const totalCount = combinedList.length;
-  const startRow = totalCount > 0 ? page * rowsPerPage + 1 : 0;
-  const endRow = Math.min((page + 1) * rowsPerPage, totalCount);
+  const totalCount = reduxTotalCount || displayList.length;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -437,7 +522,7 @@ const ViewIRMSN: React.FC = () => {
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", sm: "center" }}
           spacing={2}
-          sx={{ mb: 1.5 }}
+          sx={{ mb: 1 }}
         >
           <Box>
             <Typography
@@ -450,6 +535,9 @@ const ViewIRMSN: React.FC = () => {
             >
               IR/MSN List
             </Typography>
+            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
+              Search, filter, export, and manage Inspection Report (IR) and Memo Stage Number (MSN) records.
+            </Typography>
           </Box>
 
           <Stack direction="row" spacing={1.5} alignItems="center">
@@ -457,26 +545,25 @@ const ViewIRMSN: React.FC = () => {
             <Button
               variant="outlined"
               size="small"
-              onClick={handleExportClick}
-              disabled={isExporting || !isFilterApplied}
+              onClick={() => handleOpenExportDialog("BOTH")}
+              disabled={isExporting}
               startIcon={
                 isExporting ? (
                   <CircularProgress size={16} color="inherit" />
                 ) : (
-                  <DownloadIcon sx={{ fontSize: 18 }} />
+                  <DownloadIcon fontSize="small" />
                 )
               }
-              endIcon={<ArrowDownIcon sx={{ fontSize: 16 }} />}
               sx={{
-                borderColor: "#D0D5DD",
-                color: "#344054",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2,
-                py: 0.75,
+                height: 34,
+                borderRadius: "6px",
+                borderColor: "grey.300",
+                color: "text.secondary",
                 textTransform: "none",
-                "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
+                fontWeight: 600,
+                fontSize: "0.8rem",
+                backgroundColor: "background.paper",
+                "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
               }}
             >
               Export
@@ -485,47 +572,95 @@ const ViewIRMSN: React.FC = () => {
               anchorEl={exportMenuAnchor}
               open={Boolean(exportMenuAnchor)}
               onClose={handleExportClose}
+              transitionDuration={0}
+              disableRestoreFocus
+              transformOrigin={{ horizontal: "right", vertical: "top" }}
+              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               PaperProps={{
-                elevation: 3,
-                sx: { minWidth: 180, borderRadius: 2, mt: 0.5 },
+                elevation: 0,
+                sx: {
+                  minWidth: 150,
+                  borderRadius: "6px",
+                  py: 0.25,
+                  px: 0.25,
+                  mt: 0.5,
+                  border: "1px solid #EAECF0",
+                  boxShadow: "0px 4px 12px rgba(16, 24, 40, 0.08)",
+                },
               }}
             >
-              <MenuItem onClick={() => executeExport("IR")}>
-                <ListItemIcon>
-                  <ArticleIcon fontSize="small" sx={{ color: "primary.main" }} />
+              <MenuItem
+                onClick={() => {
+                  handleExportClose();
+                  handleOpenExportDialog("IR");
+                }}
+                sx={{
+                  borderRadius: "4px",
+                  py: 0.4,
+                  px: 1,
+                  minHeight: "30px !important",
+                  color: "#344054",
+                  "&:hover": { backgroundColor: "#F9FAFB", color: "primary.main" },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "auto !important", mr: 1, color: "primary.main" }}>
+                  <ArticleIcon sx={{ fontSize: 16 }} />
                 </ListItemIcon>
-                <ListItemText primary="Export IR Report" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+                <ListItemText primary="Export IR Report" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
               </MenuItem>
-              <MenuItem onClick={() => executeExport("MSN")}>
-                <ListItemIcon>
-                  <ArticleIcon fontSize="small" sx={{ color: "#0078D4" }} />
+              <MenuItem
+                onClick={() => {
+                  handleExportClose();
+                  handleOpenExportDialog("MSN");
+                }}
+                sx={{
+                  borderRadius: "4px",
+                  py: 0.4,
+                  px: 1,
+                  minHeight: "30px !important",
+                  color: "#344054",
+                  "&:hover": { backgroundColor: "#F9FAFB", color: "#0078D4" },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "auto !important", mr: 1, color: "#0078D4" }}>
+                  <ArticleIcon sx={{ fontSize: 16 }} />
                 </ListItemIcon>
-                <ListItemText primary="Export MSN Report" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+                <ListItemText primary="Export MSN Report" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
               </MenuItem>
-             
             </Menu>
 
             {/* New IR/MSN Action Button */}
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-              onClick={() => navigate("/irmsn/generate")}
-              sx={{
-                backgroundColor: "primary.main",
-                color: "#ffffff",
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                borderRadius: "8px",
-                px: 2.5,
-                py: 0.75,
-                textTransform: "none",
-                boxShadow: "0px 1px 2px rgba(16, 24, 40, 0.05)",
-                "&:hover": { backgroundColor: "primary.dark" },
-              }}
+            <Tooltip
+              title={!hasCreateAccess ? "You do not have access to create IR/MSN page" : ""}
+              arrow
             >
-              New IR/MSN
-            </Button>
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddIcon fontSize="small" />}
+                  disabled={!hasCreateAccess}
+                  onClick={() => navigate("/irmsn/generate")}
+                  sx={{
+                    height: 34,
+                    borderRadius: "6px",
+                    backgroundColor: "primary.main",
+                    color: "#ffffff",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                    "&.Mui-disabled": {
+                      backgroundColor: "#EAECF0",
+                      color: "#98A2B3",
+                    },
+                  }}
+                >
+                  New IR/MSN
+                </Button>
+              </span>
+            </Tooltip>
           </Stack>
         </Stack>
 
@@ -540,645 +675,564 @@ const ViewIRMSN: React.FC = () => {
           </Alert>
         )}
 
-        {/* Filter Card / Controls */}
+        {/* ── Unified Single Paper Container ────────────────────────────── */}
         <Paper
           elevation={0}
           sx={{
-            p: 1.5,
-            mb: 1,
-            borderRadius: "10px",
-            border: "1px solid #EAECF0",
-            backgroundColor: "#ffffff",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 1.25,
-              alignItems: "center",
-            }}
-          >
-            {/* Search Bar */}
-            <TextField
-              size="small"
-              sx={{
-                flex: { xs: "1 1 100%", md: "1 1 240px" },
-                minWidth: 200,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                  fontSize: "0.875rem",
-                },
-              }}
-              placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
-              value={drawingOrLnSearch}
-              onChange={(e) => setDrawingOrLnSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18, color: "#667085" }} />
-                  </InputAdornment>
-                ),
-                endAdornment: drawingOrLnSearch ? (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={() => setDrawingOrLnSearch("")}
-                      edge="end"
-                    >
-                      <ClearIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-            />
-
-            {/* Production Series Filter */}
-            <FormControl
-              sx={{ flex: { xs: "1 1 45%", md: "0 1 170px" }, minWidth: 140 }}
-              size="small"
-            >
-              <Autocomplete
-                multiple
-                size="small"
-                options={productionSeries}
-                disableCloseOnSelect
-                renderTags={() => null}
-                getOptionLabel={(option: any) =>
-                  typeof option === "string" ? option : option.productionSeries || ""
-                }
-                value={selectedProductionSeries}
-                loading={isLoadingCommon}
-                onChange={(_, newValue) => setSelectedProductionSeries(newValue)}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <Box
-                      component="li"
-                      key={key}
-                      {...optionProps}
-                      sx={{
-                        py: "4px !important",
-                        px: "8px !important",
-                        minHeight: "28px !important",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      <Checkbox
-                        icon={icon}
-                        checkedIcon={checkedIcon}
-                        sx={{ p: "2px", mr: 0.5 }}
-                        checked={selected}
-                        size="small"
-                      />
-                      <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                        {option.productionSeries}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={`Prod. Series `}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                      },
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLoadingCommon ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            {/* Department / Type Multi-select */}
-            <FormControl
-              sx={{ flex: { xs: "1 1 45%", md: "0 1 170px" }, minWidth: 140 }}
-              size="small"
-            >
-              <Autocomplete
-                multiple
-                size="small"
-                options={departments}
-                disableCloseOnSelect
-                renderTags={() => null}
-                getOptionLabel={(option: any) =>
-                  typeof option === "string" ? option : option.name || ""
-                }
-                value={selectedDepartments}
-                loading={isLoadingCommon}
-                onChange={(_, newValue) => setSelectedDepartments(newValue)}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderOption={(props, option, { selected }) => {
-                  const { key, ...optionProps } = props;
-                  return (
-                    <Box
-                      component="li"
-                      key={key}
-                      {...optionProps}
-                      sx={{
-                        py: "4px !important",
-                        px: "8px !important",
-                        minHeight: "28px !important",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      <Checkbox
-                        icon={icon}
-                        checkedIcon={checkedIcon}
-                        sx={{ p: "2px", mr: 0.5 }}
-                        checked={selected}
-                        size="small"
-                      />
-                      <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                        {option.name}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={`Dept Type`}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                      },
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLoadingCommon ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-            </FormControl>
-
-            {/* Document Type Selector (All / IR / MSN) */}
-            <FormControl size="small" sx={{ minWidth: 140, flex: "0 0 auto" }}>
-              <Select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                displayEmpty
-                renderValue={(selected) => {
-                  if (!selected || selected === "All") {
-                    return (
-                      <Box component="span" sx={{ color: "text.secondary" }}>
-                        Document Type
-                      </Box>
-                    );
-                  }
-                  return selected;
-                }}
-                endAdornment={
-                  typeFilter !== "All" ? (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTypeFilter("All");
-                      }}
-                      sx={{ mr: 1, p: 0.25, color: "text.secondary" }}
-                    >
-                      <ClearIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  ) : null
-                }
-                sx={{
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  height: 38,
-                }}
-              >
-                <SelectMenuItem value="IR">IR</SelectMenuItem>
-                <SelectMenuItem value="MSN">MSN</SelectMenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Date Range Pickers */}
-            <DatePicker
-              label="From Date"
-              value={fromDate}
-              onChange={(newValue) => setFromDate(newValue)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  sx: {
-                    minWidth: 135,
-                    width: 145,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "8px",
-                      fontSize: "0.85rem",
-                    },
-                  },
-                },
-              }}
-            />
-            <DatePicker
-              label="To Date"
-              value={toDate}
-              onChange={(newValue) => setToDate(newValue)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  sx: {
-                    minWidth: 135,
-                    width: 145,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "8px",
-                      fontSize: "0.85rem",
-                    },
-                  },
-                },
-              }}
-            />
-
-            {/* Action Buttons: Apply & Clear */}
-            <Button
-              variant="contained"
-              size="small"
-              onClick={handleSearch}
-              disabled={
-                (!(fromDate && toDate) &&
-                  selectedProductionSeries.length === 0 &&
-                  !drawingOrLnSearch.trim() &&
-                  selectedDepartments.length === 0) ||
-                loading
-              }
-              sx={{
-                minWidth: 80,
-                height: 38,
-                borderRadius: "8px",
-                backgroundColor: "primary.main",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "none",
-                boxShadow: "none",
-                "&:hover": { backgroundColor: "primary.dark" },
-              }}
-            >
-              Apply
-            </Button>
-            <Button
-              variant="text"
-              size="small"
-              onClick={handleReset}
-              disabled={!isResetEnabled}
-              sx={{
-                minWidth: 60,
-                height: 38,
-                color: "#667085",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "none",
-                "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
-              }}
-            >
-              Clear
-            </Button>
-          </Box>
-        </Paper>
-
-        {/* Active Filter Chips & Counter Bar */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 1,
-            mb: 1.25,
-            px: 0.5,
-          }}
-        >
-          {/* Active Chips */}
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
-            {selectedProductionSeries.map((item: any) => {
-              const label = typeof item === "string" ? item : item.productionSeries;
-              return (
-                <Chip
-                  key={`series-${item.id || label}`}
-                  label={`Series: ${label}`}
-                  size="small"
-                  onDelete={() => {
-                    setSelectedProductionSeries((prev) =>
-                      prev.filter((s: any) => (s.id || s) !== (item.id || item))
-                    );
-                  }}
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.75rem",
-                    borderRadius: "6px",
-                  }}
-                />
-              );
-            })}
-            {selectedDepartments.map((item: any) => {
-              const label = typeof item === "string" ? item : item.name;
-              return (
-                <Chip
-                  key={`dept-${item.id || label}`}
-                  label={`Dept: ${label}`}
-                  size="small"
-                  onDelete={() => {
-                    setSelectedDepartments((prev) =>
-                      prev.filter((d: any) => (d.id || d) !== (item.id || item))
-                    );
-                  }}
-                  sx={{
-                    backgroundColor: "#F2F4F7",
-                    color: "#344054",
-                    fontWeight: 600,
-                    fontSize: "0.75rem",
-                    borderRadius: "6px",
-                  }}
-                />
-              );
-            })}
-            {typeFilter !== "All" && (
-              <Chip
-                label={`Type: ${typeFilter}`}
-                size="small"
-                onDelete={() => setTypeFilter("All")}
-                sx={{
-                  backgroundColor: "#F2F4F7",
-                  color: "#344054",
-                  fontWeight: 600,
-                  fontSize: "0.75rem",
-                  borderRadius: "6px",
-                }}
-              />
-            )}
-            {(selectedDepartments.length > 0 ||
-              selectedProductionSeries.length > 0 ||
-              typeFilter !== "All") && (
-              <Button
-                size="small"
-                color="error"
-                variant="text"
-                onClick={() => {
-                  setSelectedDepartments([]);
-                  setSelectedProductionSeries([]);
-                  setTypeFilter("All");
-                }}
-                sx={{
-                  fontSize: "0.75rem",
-                  py: 0,
-                  px: 1,
-                  height: "24px",
-                  minWidth: "auto",
-                  fontWeight: 600,
-                  textTransform: "none",
-                }}
-              >
-                Clear all
-              </Button>
-            )}
-          </Box>
-
-          {/* Results Count Display */}
-          <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
-            {totalCount} {totalCount === 1 ? "result" : "results"}
-          </Typography>
-        </Box>
-
-        {/* Data Table Container */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: "10px",
+            borderRadius: "12px",
             border: "1px solid #EAECF0",
             backgroundColor: "#ffffff",
             overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            flexGrow: 1,
+            mb: 2,
           }}
         >
-          <TableContainer sx={{ maxHeight: "calc(100vh - 290px)", overflow: "auto" }}>
-            <Table stickyHeader size="small">
+          {/* Section 1: Filter Card / Controls */}
+          <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #EAECF0" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 1,
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                pt: 1.5,
+                pb: 0.5,
+                "&::-webkit-scrollbar": { display: "none" },
+              }}
+            >
+              {/* Search Bar */}
+              <TextField
+                size="small"
+                placeholder="Search IR/MSN No., PO Number, LN Item Code, Dr..."
+                value={drawingOrLnSearch}
+                onChange={(e) => setDrawingOrLnSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: drawingOrLnSearch ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setDrawingOrLnSearch("");
+                          setPage(0);
+                          executeFetch(0, rowsPerPage, { search: "" });
+                        }}
+                        edge="end"
+                        sx={{ p: 0.25, color: "#98A2B3", "&:hover": { color: "#344054" } }}
+                      >
+                        <ClearIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+                sx={{
+                  flex: "1 1 200px",
+                  minWidth: 160,
+                }}
+              />
+
+              {/* Production Series Filter */}
+              <MultiSelectFilter
+                label="Prod Series"
+                value={selectedProductionSeries}
+                options={prodSeriesOptions}
+                onChange={(newValue) => setSelectedProductionSeries(newValue)}
+                flex="0 0 130px"
+                minWidth={105}
+              />
+
+              {/* Department / Type Multi-select */}
+              <MultiSelectFilter
+                label="Dept Type"
+                value={selectedDepartments}
+                options={deptOptions}
+                onChange={(newValue) => setSelectedDepartments(newValue)}
+                flex="0 0 115px"
+                minWidth={95}
+              />
+
+              {/* Document Type Selector (IR / MSN) */}
+              <FormControl size="small" sx={{ flex: "0 0 125px", minWidth: 105 }}>
+                <Select
+                  value={typeFilter === "All" ? "" : typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value || "All")}
+                  displayEmpty
+                  renderValue={(selected) => {
+                    if (!selected || selected === "All") {
+                      return (
+                        <Box component="span" sx={{ color: "#98A2B3", fontSize: "0.82rem" }}>
+                          Document Type
+                        </Box>
+                      );
+                    }
+                    return (
+                      <Box component="span" sx={{ color: "#344054", fontWeight: 600, fontSize: "0.82rem" }}>
+                        {selected}
+                      </Box>
+                    );
+                  }}
+                  endAdornment={
+                    typeFilter !== "All" && typeFilter !== "" ? (
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTypeFilter("All");
+                        }}
+                        sx={{ mr: 1, p: 0.25, color: "#98A2B3" }}
+                      >
+                        <ClearIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    ) : null
+                  }
+                  sx={{
+                    fontSize: "0.82rem",
+                    height: 38,
+                    borderRadius: "6px",
+                  }}
+                >
+                  <SelectMenuItem value="IR" sx={{ fontSize: "0.82rem" }}>
+                    IR
+                  </SelectMenuItem>
+                  <SelectMenuItem value="MSN" sx={{ fontSize: "0.82rem" }}>
+                    MSN
+                  </SelectMenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Date From */}
+              <TextField
+                size="small"
+                type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                placeholder="From Date"
+                value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFromDate(val ? new Date(val) : null);
+                  setPage(0);
+                }}
+                inputProps={{ title: "From Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: fromDate ? "#344054" : "#98A2B3",
+                  },
+                }}
+              />
+
+              {/* Date To */}
+              <TextField
+                size="small"
+                type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                placeholder="To Date"
+                value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setToDate(val ? new Date(val) : null);
+                  setPage(0);
+                }}
+                inputProps={{ title: "To Date" }}
+                sx={{
+                  flex: "0 0 148px",
+                  minWidth: 140,
+                  "& .MuiOutlinedInput-root": {
+                    height: 38,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontSize: "0.75rem",
+                    bgcolor: "#ffffff",
+                    px: 0.5,
+                    color: "#667085",
+                    "&.Mui-focused": { color: "primary.main" },
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    py: "8.5px",
+                    px: 1.5,
+                    fontSize: "0.82rem",
+                    color: toDate ? "#344054" : "#98A2B3",
+                  },
+                }}
+              />
+
+              {/* Action Buttons: Apply & Clear */}
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleSearch}
+                disabled={!isDropdownFilterSelected || loading}
+                sx={{
+                  flex: "0 0 auto",
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  borderRadius: "6px",
+                  px: 1.75,
+                  height: 38,
+                  textTransform: "none",
+                  boxShadow: "none",
+                  minWidth: 65,
+                  "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                }}
+              >
+                Apply
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleReset}
+                disabled={!isResetEnabled}
+                sx={{
+                  flex: "0 0 auto",
+                  color: "#667085",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  height: 38,
+                  px: 1,
+                  minWidth: 50,
+                  textTransform: "none",
+                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+
+            {/* Active Filter Chips & Counter Bar */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 1,
+                mt: 1.25,
+                pt: 1,
+                borderTop: "1px solid #F2F4F7",
+              }}
+            >
+              {/* Active Chips */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, alignItems: "center" }}>
+                {drawingOrLnSearch.trim() && (
+                  <Chip
+                    key="chip-search"
+                    label={`Search: "${drawingOrLnSearch.trim()}"`}
+                    size="small"
+                    onDelete={() => {
+                      setDrawingOrLnSearch("");
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { search: "" });
+                    }}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
+                {selectedProductionSeries.map((item: any) => {
+                  const label = typeof item === "string" ? item : item.productionSeries;
+                  return (
+                    <Chip
+                      key={`series-${item.id || label}`}
+                      label={`Series: ${label}`}
+                      size="small"
+                      onDelete={() => {
+                        const nextSeries = selectedProductionSeries.filter(
+                          (s: any) => (s.id || s) !== (item.id || item)
+                        );
+                        setSelectedProductionSeries(nextSeries);
+                        setPage(0);
+                        executeFetch(0, rowsPerPage, { series: nextSeries });
+                      }}
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        border: "1px solid #E4E7EC",
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        height: "26px",
+                        "& .MuiChip-deleteIcon": {
+                          fontSize: "14px",
+                          color: "#667085",
+                          "&:hover": { color: "#101828" },
+                        },
+                      }}
+                    />
+                  );
+                })}
+                {selectedDepartments.map((item: any) => {
+                  let label = "";
+                  let itemId = item;
+                  if (typeof item === "object" && item !== null) {
+                    label = item.label || item.name || item.departmentName || "";
+                    itemId = item.id;
+                  } else {
+                    itemId = item;
+                    const deptObj: any = departments.find((d: any) => String(d.id) === String(item));
+                    label = deptObj ? (deptObj.name || deptObj.departmentName || deptObj.label) : String(item);
+                  }
+                  return (
+                    <Chip
+                      key={`dept-${itemId}`}
+                      label={`Dept: ${label}`}
+                      size="small"
+                      onDelete={() => {
+                        const nextDepts = selectedDepartments.filter((d: any) => {
+                          const dId = typeof d === "object" && d !== null ? d.id : d;
+                          return String(dId) !== String(itemId);
+                        });
+                        setSelectedDepartments(nextDepts);
+                        setPage(0);
+                        executeFetch(0, rowsPerPage, { depts: nextDepts });
+                      }}
+                      sx={{
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
+                        border: "1px solid #E4E7EC",
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        borderRadius: "16px",
+                        height: "26px",
+                        "& .MuiChip-deleteIcon": {
+                          fontSize: "14px",
+                          color: "#667085",
+                          "&:hover": { color: "#101828" },
+                        },
+                      }}
+                    />
+                  );
+                })}
+                {typeFilter !== "All" && (
+                  <Chip
+                    key="type-filter"
+                    label={`Type: ${typeFilter}`}
+                    size="small"
+                    onDelete={() => {
+                      setTypeFilter("All");
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { type: "All" });
+                    }}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
+                {fromDate && (
+                  <Chip
+                    key="from-date"
+                    label={`From: ${format(fromDate, "dd/MM/yyyy")}`}
+                    size="small"
+                    onDelete={() => {
+                      setFromDate(null);
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { fDate: null });
+                    }}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
+                {toDate && (
+                  <Chip
+                    key="to-date"
+                    label={`To: ${format(toDate, "dd/MM/yyyy")}`}
+                    size="small"
+                    onDelete={() => {
+                      setToDate(null);
+                      setPage(0);
+                      executeFetch(0, rowsPerPage, { tDate: null });
+                    }}
+                    sx={{
+                      backgroundColor: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #E4E7EC",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      borderRadius: "16px",
+                      height: "26px",
+                      "& .MuiChip-deleteIcon": {
+                        fontSize: "14px",
+                        color: "#667085",
+                        "&:hover": { color: "#101828" },
+                      },
+                    }}
+                  />
+                )}
+                {isFilterApplied && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={handleReset}
+                    sx={{
+                      color: "primary.main",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      textTransform: "none",
+                      p: 0,
+                      height: "26px",
+                      minWidth: "auto",
+                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" },
+                    }}
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </Box>
+
+              {/* Results Count Display */}
+              <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500, ml: "auto" }}>
+                {totalCount} {totalCount === 1 ? "result" : "results"}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Section 2: Table */}
+          <TableContainer
+            sx={{
+              borderTop: "1px solid #EAECF0",
+              minHeight: 320,
+              maxHeight: "calc(100vh - 310px)",
+              overflow: "auto",
+            }}
+          >
+            <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1200 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell
+                  <SortableTableHeader
+                    label="Sr.No"
+                    sortKey="id"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                      width: 50,
-                    }}
-                  >
-                    Sr.No
-                  </TableCell>
-                  <TableCell
+                    minWidth={60}
+                  />
+                  <SortableTableHeader
+                    label="IR/MSN No."
+                    sortKey="displayNumber"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    IR/MSN No.
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                      width: 70,
-                    }}
-                  >
+                    minWidth={130}
+                  />
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 70 }}>
                     Type
                   </TableCell>
-                  <TableCell
+                  <SortableTableHeader
+                    label="PO Number"
+                    sortKey="orderNumber"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    PO Number
-                  </TableCell>
-                  <TableCell
+                    minWidth={120}
+                  />
+                  <SortableTableHeader
+                    label="LN Item Code"
+                    sortKey="lineItemCode"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    LN Item Code
-                  </TableCell>
-                  <TableCell
+                    minWidth={130}
+                  />
+                  <SortableTableHeader
+                    label="Drawing No."
+                    sortKey="drawingNumber"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    Drawing No.
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                    minWidth={150}
+                  />
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 90 }}>
                     ID Number
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 90 }}>
                     MRIR
                   </TableCell>
-                  <TableCell
+                  <SortableTableHeader
+                    label="Date"
+                    sortKey="date"
+                    activeSortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
                     align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
-                    Date
-                  </TableCell>
-                  <TableCell
-                    align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                    minWidth={130}
+                  />
+                  <TableCell align="left" sx={{ ...commonTableHeaderStyle, minWidth: 100 }}>
                     UserName
                   </TableCell>
-                  <TableCell
-                    align="left"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="left" sx={{ ...commonTableHeaderStyle, minWidth: 110 }}>
                     Department
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 70 }}>
                     Stage
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                    }}
-                  >
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 80 }}>
                     Build No
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      fontWeight: 700,
-                      backgroundColor: "#F9FAFB",
-                      color: "#475467",
-                      fontSize: "0.8rem",
-                      borderBottom: "1px solid #EAECF0",
-                      py: 1,
-                      px: 1.5,
-                      width: 70,
-                    }}
-                  >
+                  <TableCell align="center" sx={{ ...commonTableHeaderStyle, minWidth: 70 }}>
                     Actions
                   </TableCell>
                 </TableRow>
@@ -1187,27 +1241,27 @@ const ViewIRMSN: React.FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={14} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                    <TableCell colSpan={14} align="center" sx={{ height: 280, borderBottom: "none" }}>
                       <CircularProgress size={32} color="primary" />
                       <Typography variant="body2" sx={{ color: "#667085", mt: 1 }}>
                         Loading IR/MSN records...
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : paginatedList.length > 0 ? (
-                  paginatedList.map((item, index) => (
+                ) : sortedDisplayList.length > 0 ? (
+                  sortedDisplayList.map((item, index) => (
                     <TableRow
                       key={`${item.recordType}-${item.id}`}
                       hover
                       sx={{
-                        height: 40,
+                        height: 28,
                         "&:hover": { backgroundColor: "#F9FAFB" },
                         "& td": {
                           borderBottom: "1px solid #F2F4F7",
-                          fontSize: "0.85rem",
+                          fontSize: "0.775rem",
                           color: "#344054",
-                          py: 0.75,
-                          px: 1.5,
+                          py: 0.15,
+                          px: 0.75,
                         },
                       }}
                     >
@@ -1252,12 +1306,12 @@ const ViewIRMSN: React.FC = () => {
                       <TableCell align="center">
                         {item.createdDate
                           ? new Date(item.createdDate).toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
                           : "-"}
                       </TableCell>
                       <TableCell align="left">{item.userName || "-"}</TableCell>
@@ -1265,125 +1319,258 @@ const ViewIRMSN: React.FC = () => {
                       <TableCell align="center">{item.stage || "-"}</TableCell>
                       <TableCell align="center">{item.buildNumber || "-"}</TableCell>
                       <TableCell align="center">
-                        <Tooltip title={`Edit ${item.recordType} Number`}>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              navigate(
-                                `/irmsn/edit/${item.recordType}/${encodeURIComponent(
-                                  item.displayNumber || ""
-                                )}`,
-                                { state: item }
-                              )
-                            }
-                            sx={{
-                              color: "primary.main",
-                              "&:hover": { backgroundColor: "rgba(168, 0, 90, 0.08)" },
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <IconButton
+                          size="small"
+                          onClick={(e) =>
+                            setActionMenuAnchor({
+                              anchorEl: e.currentTarget,
+                              item,
+                            })
+                          }
+                          sx={{
+                            color: "#667085",
+                            "&:hover": {
+                              backgroundColor: "#F2F4F7",
+                              color: "#101828",
+                            },
+                          }}
+                        >
+                          <MoreVertIcon fontSize="small" />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={14} align="center" sx={{ py: 6, borderBottom: "none" }}>
-                      <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
-                        No records found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
+                  <EmptyState colSpan={14} />
                 )}
               </TableBody>
             </Table>
           </TableContainer>
 
-          {/* Pagination Footer */}
-          <Box
+          {/* Section 3: Pagination Footer */}
+          <CustomPagination
+            page={page}
+            pageSize={rowsPerPage}
+            totalCount={totalCount}
+            disabled={loading}
+            onPageChange={(newPage) => {
+              setPage(newPage);
+              executeFetch(newPage, rowsPerPage);
+            }}
+            onPageSizeChange={(newRowsPerPage) => {
+              setRowsPerPage(newRowsPerPage);
+              setPage(0);
+              executeFetch(0, newRowsPerPage);
+            }}
+          />
+
+        </Paper>
+        {/* Row Action Menu */}
+        <Menu
+          anchorEl={actionMenuAnchor?.anchorEl}
+          open={Boolean(actionMenuAnchor)}
+          onClose={() => setActionMenuAnchor(null)}
+          transitionDuration={0}
+          disableRestoreFocus
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          PaperProps={{
+            elevation: 0,
+            sx: {
+              minWidth: 90,
+              borderRadius: "6px",
+              py: 0.25,
+              px: 0.25,
+              border: "1px solid #EAECF0",
+              boxShadow: "0px 4px 12px rgba(16, 24, 40, 0.08)",
+            },
+          }}
+        >
+          <MenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              const targetItem = actionMenuAnchor?.item;
+              setActionMenuAnchor(null);
+              if (targetItem) {
+                setTimeout(() => {
+                  navigate(
+                    `/irmsn/edit/${targetItem.recordType}/${encodeURIComponent(
+                      targetItem.displayNumber || ""
+                    )}`,
+                    { state: targetItem }
+                  );
+                }, 0);
+              }
+            }}
+            sx={{
+              borderRadius: "4px",
+              py: 0.35,
+              px: 0.85,
+              minHeight: "28px !important",
+              color: "#344054",
+              transition: "all 0.15s ease-in-out",
+              "&:hover": {
+                backgroundColor: "#F9FAFB",
+                color: "primary.main",
+                "& .MuiListItemIcon-root": { color: "primary.main" },
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: "auto !important", mr: 0.85, color: "#667085" }}>
+              <EditIcon sx={{ fontSize: 14 }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Edit"
+              primaryTypographyProps={{ fontSize: "0.775rem", fontWeight: 500 }}
+            />
+          </MenuItem>
+        </Menu>
+
+        {/* Export Options Dialog */}
+        <Dialog
+          open={exportDialogOpen}
+          onClose={() => !isExporting && setExportDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: { borderRadius: "16px", p: 1 },
+          }}
+        >
+          <DialogTitle
             sx={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              p: 1.5,
-              px: 2,
-              borderTop: "1px solid #EAECF0",
-              backgroundColor: "#ffffff",
-              flexWrap: "wrap",
-              gap: 1,
+              fontWeight: 700,
+              color: "#101828",
+              fontSize: "1.1rem",
+              pb: 1,
             }}
           >
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem" }}>
-                Rows per page
-              </Typography>
-              <Select
-                value={rowsPerPage}
-                onChange={(e) => {
-                  setRowsPerPage(Number(e.target.value));
-                  setPage(0);
-                }}
-                size="small"
-                sx={{
-                  height: 32,
-                  fontSize: "0.85rem",
-                  borderRadius: "6px",
-                  "& .MuiSelect-select": { py: 0.5, px: 1 },
-                }}
-              >
-                <SelectMenuItem value={10}>10</SelectMenuItem>
-                <SelectMenuItem value={20}>20</SelectMenuItem>
-                <SelectMenuItem value={50}>50</SelectMenuItem>
-                <SelectMenuItem value={100}>100</SelectMenuItem>
-              </Select>
-            </Stack>
+            Export {exportReportType === "BOTH" ? "IR / MSN Reports" : `${exportReportType} Report`}
+            <IconButton size="small" onClick={() => setExportDialogOpen(false)} disabled={isExporting}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
 
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem" }}>
-                {totalCount > 0
-                  ? `${startRow}–${endRow} of ${totalCount}`
-                  : "0–0 of 0"}
+          <DialogContent dividers sx={{ py: 2 }}>
+            <FormControl component="fieldset" sx={{ width: "100%" }}>
+              <Typography variant="subtitle2" fontWeight="600" color="#475467" sx={{ mb: 1 }}>
+                Choose Export Option:
               </Typography>
-              <Stack direction="row" spacing={0.5}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  disabled={page === 0 || loading}
-                  onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+
+              <RadioGroup
+                value={exportMode}
+                onChange={(e) => {
+                  const newMode = e.target.value as "all" | "custom";
+                  setExportMode(newMode);
+                  if (newMode === "custom") {
+                    setSelectedExportColumns(ALL_IRMSN_EXPORT_COLUMNS.map((c) => c.key));
+                  }
+                }}
+                sx={{ mb: 2 }}
+              >
+                <FormControlLabel
+                  value="all"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Export All Columns</Typography>}
+                />
+                <FormControlLabel
+                  value="custom"
+                  control={<Radio size="small" sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }} />}
+                  label={<Typography variant="body2" fontWeight="600">Select Specific Columns to Export</Typography>}
+                />
+              </RadioGroup>
+
+              {exportMode === "custom" && (
+                <Box
                   sx={{
-                    minWidth: 32,
-                    width: 32,
-                    height: 32,
-                    p: 0,
-                    borderColor: "#D0D5DD",
-                    color: "#344054",
-                    borderRadius: "6px",
+                    p: 2,
+                    borderRadius: "12px",
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #e2e8f0",
                   }}
                 >
-                  ‹
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  disabled={(page + 1) * rowsPerPage >= totalCount || loading}
-                  onClick={() => setPage((prev) => prev + 1)}
-                  sx={{
-                    minWidth: 32,
-                    width: 32,
-                    height: 32,
-                    p: 0,
-                    borderColor: "#D0D5DD",
-                    color: "#344054",
-                    borderRadius: "6px",
-                  }}
-                >
-                  ›
-                </Button>
-              </Stack>
-            </Stack>
-          </Box>
-        </Paper>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5} pb={1} borderBottom="1px solid #e2e8f0">
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={selectedExportColumns.length === ALL_IRMSN_EXPORT_COLUMNS.length}
+                          indeterminate={
+                            selectedExportColumns.length > 0 &&
+                            selectedExportColumns.length < ALL_IRMSN_EXPORT_COLUMNS.length
+                          }
+                          onChange={handleToggleSelectAllColumns}
+                          sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" fontWeight="700">
+                          {selectedExportColumns.length === ALL_IRMSN_EXPORT_COLUMNS.length ? "Deselect All" : "Select All Columns"}
+                        </Typography>
+                      }
+                    />
+                    <Chip
+                      label={`${selectedExportColumns.length} / ${ALL_IRMSN_EXPORT_COLUMNS.length} selected`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderColor: "primary.main", color: "primary.main" }}
+                    />
+                  </Box>
+
+                  <Grid container spacing={1}>
+                    {ALL_IRMSN_EXPORT_COLUMNS.map((col) => (
+                      <Grid item xs={6} sm={4} key={col.key}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={selectedExportColumns.includes(col.key)}
+                              onChange={() => handleToggleColumn(col.key)}
+                              sx={{ color: "primary.main", "&.Mui-checked": { color: "primary.main" } }}
+                            />
+                          }
+                          label={<Typography variant="body2" sx={{ fontSize: "0.85rem" }}>{col.label}</Typography>}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+            </FormControl>
+          </DialogContent>
+
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              onClick={() => setExportDialogOpen(false)}
+              disabled={isExporting}
+              sx={{ minWidth: 110, fontWeight: 600, borderRadius: "8px", textTransform: "none" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={isExporting ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon />}
+              onClick={handleConfirmExportData}
+              disabled={isExporting || (exportMode === "custom" && selectedExportColumns.length === 0)}
+              sx={{
+                minWidth: 110,
+                fontWeight: 600,
+                borderRadius: "8px",
+                textTransform: "none",
+                backgroundColor: "primary.main",
+                "&:hover": { backgroundColor: "primary.dark" },
+              }}
+            >
+              {isExporting ? "Exporting..." : "Export"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );
