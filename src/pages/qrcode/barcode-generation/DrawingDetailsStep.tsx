@@ -403,128 +403,45 @@ function DrawingDetailsStep({
             <Controller
               name="lnItemCode"
               control={control}
-              render={({ field: { onChange }, fieldState: { error } }) => (
-                <Autocomplete
-                  open={openLN}
-                  onOpen={() => setOpenLN(true)}
-                  onClose={() => setOpenLN(false)}
-                  options={allDrawingNumbers || []}
-                  openOnFocus={true}
-                  selectOnFocus={true}
-                  forcePopupIcon={true}
-                  ListboxProps={{ style: { maxHeight: "300px" } }}
-                  getOptionLabel={(option) =>
-                    typeof option === "string" ? option : option.lnItemCode || ""
-                  }
-                  value={selectedDrawing}
-                  loading={isLnSearchLoading || isLnSearchFetching}
+              render={({ field: { value } }) => (
+                <FormControl
                   size="small"
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options.slice(0, 100);
-                    const searchLower = inputValue.toLowerCase();
-                    const selectedLn = (selectedDrawing?.lnItemCode || "").toLowerCase();
-                    if (searchLower === selectedLn) return options.slice(0, 100);
-                    return options
-                      .filter(
-                        (option) =>
-                          option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                          option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                          option.nomenclature?.toLowerCase().includes(searchLower),
-                      )
-                      .slice(0, 100);
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      height: 40,
+                      backgroundColor: "#F9FAFB",
+                      borderRadius: "6px",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.875rem",
+                      color: "#667085",
+                      bgcolor: "transparent",
+                      px: 0.5,
+                      "&.MuiInputLabel-shrink": {
+                        fontSize: "0.75rem",
+                        color: "#667085",
+                        bgcolor: "#ffffff",
+                      },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      fontSize: "0.875rem",
+                      color: "#344054",
+                      fontWeight: 500,
+                    },
                   }}
-                  onInputChange={(_, value, reason) => {
-                    if (reason === "input") {
-                      updateDebouncedLnSearch(value);
-                    }
-                  }}
-                  onChange={(_, newValue) => {
-                    setOpenLN(false);
-                    if (newValue && typeof newValue !== "string") {
-                      setSelectedDrawing(newValue);
-                      setValue("drawingNumber", newValue.drawingNumber, { shouldValidate: true, shouldDirty: true });
-                      setValue("lnItemCode", newValue.lnItemCode || "", { shouldValidate: true, shouldDirty: true });
-                      setValue("nomenclature", newValue.nomenclature);
-                      setValue("unit", newValue.unitName || "");
-                      setValue("location", newValue.location || "");
-                      setValue(
-                        "partAssemblyId",
-                        newValue.parentDrawingNumbers?.[0] || "",
-                      );
-                      if (newValue.componentType) {
-                        updateComponentAndQrType(newValue.componentType);
-                      }
-                      if (clearErrors) clearErrors(["drawingNumber", "lnItemCode"]);
-                      onChange(newValue.lnItemCode || newValue.drawingNumber);
-                    } else {
-                      setSelectedDrawing(null);
-                      setValue("drawingNumber", "");
-                      setValue("lnItemCode", "");
-                      setValue("nomenclature", "");
-                      setValue("unit", "");
-                      setValue("partAssemblyId", "");
-                      setValue("location", "");
-                      onChange("");
-                    }
-                  }}
-                  renderOption={(props, option) => {
-                    const { key, ...optionProps } = props;
-                    const lnCode = typeof option === "string" ? option : (option.lnItemCode || option.drawingNumber || "");
-                    const drawingNo = typeof option === "string" ? "" : option.drawingNumber;
-                    const nomenclature = typeof option === "string" ? "" : option.nomenclature;
-                    const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
-
-                    const details = [
-                      drawingNo ? `Drawing: ${drawingNo}` : null,
-                      nomenclature,
-                      compType,
-                    ].filter(Boolean).join(" | ");
-
-                    return (
-                      <li {...optionProps} key={key}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            py: 0.5,
-                            width: "100%",
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            fontWeight="700"
-                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
-                          >
-                            {lnCode}
-                          </Typography>
-                          {details && (
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: "#64748B" }}
-                            >
-                              {details}
-                            </Typography>
-                          )}
-                        </Box>
-                      </li>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="LN Item Code *"
-                      fullWidth
-                      size="small"
-                      onClick={() => setOpenLN(true)}
-                      onFocus={(e) => {
-                        setOpenLN(true);
-                        (e.target as HTMLInputElement)?.select?.();
-                      }}
-                      error={!!error || !!errors.lnItemCode || !!errors.drawingNumber}
-                      helperText={error?.message || errors.lnItemCode?.message || errors.drawingNumber?.message}
-                    />
-                  )}
-                />
+                >
+                  <TextField
+                    size="small"
+                    label="LN Item Code"
+                    value={value || selectedDrawing?.lnItemCode || (selectedPO as any)?.lnItemCode || ""}
+                    placeholder="Auto-populated"
+                    variant="outlined"
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                  />
+                </FormControl>
               )}
             />
           </Grid>
@@ -533,130 +450,45 @@ function DrawingDetailsStep({
             <Controller
               name="drawingNumber"
               control={control}
-              rules={{ required: "Drawing Number or LN Item Code is required" }}
-              render={({ field: { onChange, ref }, fieldState: { error } }) => (
-                <Autocomplete
-                  open={openDrawing}
-                  onOpen={() => setOpenDrawing(true)}
-                  onClose={() => setOpenDrawing(false)}
-                  options={allDrawingNumbers || []}
-                  openOnFocus={true}
-                  selectOnFocus={true}
-                  forcePopupIcon={true}
-                  ListboxProps={{ style: { maxHeight: "300px" } }}
-                  getOptionLabel={(option) =>
-                    typeof option === "string" ? option : option.drawingNumber || ""
-                  }
-                  value={selectedDrawing}
-                  loading={isLnSearchLoading || isLnSearchFetching}
+              render={({ field: { value } }) => (
+                <FormControl
                   size="small"
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options.slice(0, 100);
-                    const searchLower = inputValue.toLowerCase();
-                    const selectedDrw = (selectedDrawing?.drawingNumber || "").toLowerCase();
-                    if (searchLower === selectedDrw) return options.slice(0, 100);
-                    return options
-                      .filter(
-                        (option) =>
-                          option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                          option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                          option.nomenclature?.toLowerCase().includes(searchLower),
-                      )
-                      .slice(0, 100);
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      height: 40,
+                      backgroundColor: "#F9FAFB",
+                      borderRadius: "6px",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.875rem",
+                      color: "#667085",
+                      bgcolor: "transparent",
+                      px: 0.5,
+                      "&.MuiInputLabel-shrink": {
+                        fontSize: "0.75rem",
+                        color: "#667085",
+                        bgcolor: "#ffffff",
+                      },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      fontSize: "0.875rem",
+                      color: "#344054",
+                      fontWeight: 500,
+                    },
                   }}
-                  onInputChange={(_, value, reason) => {
-                    if (reason === "input") {
-                      updateDebouncedLnSearch(value);
-                    }
-                  }}
-                  onChange={(_, newValue) => {
-                    setOpenDrawing(false);
-                    if (newValue && typeof newValue !== "string") {
-                      setSelectedDrawing(newValue);
-                      setValue("drawingNumber", newValue.drawingNumber, { shouldValidate: true, shouldDirty: true });
-                      setValue("lnItemCode", newValue.lnItemCode || "", { shouldValidate: true, shouldDirty: true });
-                      setValue("nomenclature", newValue.nomenclature);
-                      setValue("unit", newValue.unitName || "");
-                      setValue("location", newValue.location || "");
-                      setValue(
-                        "partAssemblyId",
-                        newValue.parentDrawingNumbers?.[0] || "",
-                      );
-                      if (newValue.componentType) {
-                        updateComponentAndQrType(newValue.componentType);
-                      }
-                      if (clearErrors) clearErrors(["drawingNumber", "lnItemCode"]);
-                      onChange(newValue.drawingNumber);
-                    } else {
-                      setSelectedDrawing(null);
-                      setValue("drawingNumber", "");
-                      setValue("lnItemCode", "");
-                      setValue("nomenclature", "");
-                      setValue("unit", "");
-                      setValue("partAssemblyId", "");
-                      setValue("location", "");
-                      onChange("");
-                    }
-                  }}
-                  renderOption={(props, option) => {
-                    const { key, ...optionProps } = props;
-                    const drawingNo = typeof option === "string" ? option : (option.drawingNumber || option.lnItemCode || "");
-                    const lnCode = typeof option === "string" ? "" : option.lnItemCode;
-                    const nomenclature = typeof option === "string" ? "" : option.nomenclature;
-                    const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
-
-                    const details = [
-                      lnCode ? `LN: ${lnCode}` : null,
-                      nomenclature,
-                      compType,
-                    ].filter(Boolean).join(" | ");
-
-                    return (
-                      <li {...optionProps} key={key}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            py: 0.5,
-                            width: "100%",
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            fontWeight="700"
-                            sx={{ fontSize: "0.875rem", color: "primary.main" }}
-                          >
-                            {drawingNo}
-                          </Typography>
-                          {details && (
-                            <Typography
-                              variant="caption"
-                              sx={{ fontSize: "0.75rem", lineHeight: 1.35, color: "#64748B" }}
-                            >
-                              {details}
-                            </Typography>
-                          )}
-                        </Box>
-                      </li>
-                    );
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Drawing No. *"
-                      fullWidth
-                      size="small"
-                      inputRef={ref}
-                      onClick={() => setOpenDrawing(true)}
-                      onFocus={(e) => {
-                        setOpenDrawing(true);
-                        (e.target as HTMLInputElement)?.select?.();
-                      }}
-                      error={!!error || !!errors.drawingNumber}
-                      helperText={error?.message || errors.drawingNumber?.message}
-                    />
-                  )}
-                />
+                >
+                  <TextField
+                    size="small"
+                    label="Drawing Number"
+                    value={value || selectedDrawing?.drawingNumber || (selectedPO as any)?.drawingNumber || ""}
+                    placeholder="Auto-populated"
+                    variant="outlined"
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                  />
+                </FormControl>
               )}
             />
           </Grid>
