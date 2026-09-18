@@ -570,7 +570,7 @@ function DrawingDetailsStep({
             )} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="irNumber" control={control} render={({ field, fieldState: { error } }) => (
+            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
               <Autocomplete
                 {...field}
                 open={openIR}
@@ -609,14 +609,14 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="IR Number"
+                    label="IR Number *"
                     onClick={() => setOpenIR(true)}
                     onFocus={(e) => {
                       setOpenIR(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!error}
-                    helperText={error?.message}
+                    error={!!error || !!errors.irNumber}
+                    helperText={error?.message || errors.irNumber?.message}
                   />
                 )}
               />
@@ -929,7 +929,7 @@ function DrawingDetailsStep({
             )} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="irNumber" control={control} render={({ field, fieldState: { error } }) => (
+            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
               <Autocomplete
                 {...field}
                 open={openIR}
@@ -968,14 +968,14 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="IR Number"
+                    label="IR Number *"
                     onClick={() => setOpenIR(true)}
                     onFocus={(e) => {
                       setOpenIR(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!error}
-                    helperText={error?.message}
+                    error={!!error || !!errors.irNumber}
+                    helperText={error?.message || errors.irNumber?.message}
                   />
                 )}
               />
@@ -1299,7 +1299,7 @@ function DrawingDetailsStep({
             )} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="irNumber" control={control} render={({ field, fieldState: { error } }) => (
+            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
               <Autocomplete
                 {...field}
                 open={openIR}
@@ -1338,14 +1338,14 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="IR Number"
+                    label="IR Number *"
                     onClick={() => setOpenIR(true)}
                     onFocus={(e) => {
                       setOpenIR(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!error}
-                    helperText={error?.message}
+                    error={!!error || !!errors.irNumber}
+                    helperText={error?.message || errors.irNumber?.message}
                   />
                 )}
               />

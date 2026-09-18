@@ -5,45 +5,52 @@ import type { RootState } from '../store/store';
 import { usePageAccess } from '../hooks/useMasterData';
 import { isPageAccessible } from '../utils/accessUtils';
 
-// Map routes to API page names (supports multiple page name aliases)
-const routeToPageMap: Record<string, string | string[]> = {
-  '/irmsn/generate': ['New IR/MSN', 'Create'],
-  '/irmsn/view': ['IR/MSN List', 'View All IR/MSN'],
-  '/qrcode/generate': ['New QR Code', 'Generate QR Code'],
-  '/qrcode/generate-new': ['New QR Code', 'Generate STD QR Code'],
-  '/qrcode/view': ['QR Code List', 'View QR Code'],
-  '/precheck/view': ['Precheck History', 'View Precheck'],
-  '/precheck/make': ['Run Precheck', 'Make Precheck'],
-  '/precheck/store-in': ['Store In'],
-  '/precheck/stored-components': ['Store In', 'Stored In Components'],
-  '/precheck/available-in-store': ['Available In Store'],
-  '/precheck/available-store': ['Available In Store'],
-  '/precheck/consumed': ['Available In Store'],
-  '/precheck/view-consumed': ['Available In Store'],
+// Map routes to exact API page names
+const routeToPageMap: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/scriptexecutor': 'Bulk Import',
+  '/script-executor': 'Bulk Import',
 
-  '/precheck/pending': ['Run Precheck', 'Pending For Precheck'],
-  '/production-order/upload': ['Manage Orders', 'Production Order'],
-  '/production-order/view': ['Manage Orders', 'Production Order', 'View Order Details'],
-  '/production-order/edit': ['Manage Orders', 'Production Order', 'Run Precheck'],
-  '/production-order': ['Manage Orders', 'Production Order'],
-  '/adminmaster/archive': ['Master Data', 'Archive'],
-  '/adminmaster/updatecomponents': ['Master Data', 'Update Components'],
-  '/adminmaster/update-components': ['Master Data', 'Update Components'],
-  '/adminmaster/usermanagement': ['User Management'],
-  '/adminmaster/user-management': ['User Management'],
-  '/adminmaster/rolemanagement': ['Role Management'],
-  '/adminmaster/role-management': ['Role Management'],
-  '/adminmaster/addcomponents': ['Master Data', 'Add Components'],
-  '/adminmaster/add-components': ['Master Data', 'Add Components'],
-  '/materialrequisition': ['Run Precheck', 'Material Requisition'],
-  '/material-requisition': ['Run Precheck', 'Material Requisition'],
-  '/scriptexecutor': ['Bulk Import', 'Script Executor'],
-  '/script-executor': ['Bulk Import', 'Script Executor'],
-  '/sop/view': ['Assembly Explorer', 'View SOP'],
-  '/sop/viewBOM': ['Assembly Explorer', 'View BOM Details'],
-  '/components/view-assembly': ['Components', 'View Components'],
-  '/components/assembly': ['Components', 'View Components'],
-  '/components': ['Components', 'View Components'],
+  '/irmsn/generate': 'New IR/MSN',
+  '/irmsn/view': 'IR/MSN List',
+
+  '/qrcode/generate': 'New QR Code',
+  '/qrcode/generate-new': 'New QR Code',
+  '/qrcode/view': 'QR Code List',
+
+  '/precheck/view': 'Precheck History',
+  '/precheck/make': 'Run Precheck',
+  '/precheck/pending': 'Run Precheck',
+  '/precheck/store-in': 'Store In',
+  '/precheck/stored-components': 'Store In',
+  '/precheck/available-in-store': 'Available In Store',
+  '/precheck/available-store': 'Available In Store',
+  '/precheck/consumed': 'Available In Store',
+  '/precheck/view-consumed': 'Available In Store',
+
+  '/production-order/upload': 'Manage Orders',
+  '/production-order/view': 'Manage Orders',
+  '/production-order/edit': 'Manage Orders',
+  '/production-order': 'Manage Orders',
+
+  '/adminmaster/archive': 'Master Data',
+  '/adminmaster/updatecomponents': 'Master Data',
+  '/adminmaster/update-components': 'Master Data',
+  '/adminmaster/usermanagement': 'User Management',
+  '/adminmaster/user-management': 'User Management',
+  '/adminmaster/rolemanagement': 'Role Management',
+  '/adminmaster/role-management': 'Role Management',
+  '/adminmaster/addcomponents': 'Master Data',
+  '/adminmaster/add-components': 'Master Data',
+
+  '/materialrequisition': 'Run Precheck',
+  '/material-requisition': 'Run Precheck',
+
+  '/sop/view': 'Assembly Explorer',
+  '/sop/viewBOM': 'Assembly Explorer',
+  '/components/view-assembly': 'Components',
+  '/components/assembly': 'Components',
+  '/components': 'Components',
 };
 
 interface ProtectedRouteProps {
@@ -92,27 +99,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     .sort((a, b) => b.length - a.length)[0];
 
   if (matchingRoute) {
-    const rawPageNames = routeToPageMap[matchingRoute];
-    const pageNames = Array.isArray(rawPageNames) ? rawPageNames : [rawPageNames];
-    let hasAccess = pageNames.some((pName) => isPageAccessible(pageAccessData, pName));
+    const targetPageName = routeToPageMap[matchingRoute];
+    let hasAccess = isPageAccessible(pageAccessData, targetPageName);
 
     // Bypass page access for Update Components page
     if (matchingRoute === '/adminmaster/updatecomponents') {
       hasAccess = true;
     }
 
-    // Special case for Production Order Edit:
-    // Allow if user has access to either "Upload Orders" or "Pending For Precheck"
-    if (matchingRoute === '/production-order/edit' && !hasAccess) {
-      hasAccess = isPageAccessible(pageAccessData, 'Pending For Precheck');
-    }
-
-    if (!hasAccess) {
-      // If user doesn't have required access, redirect to dashboard
-      // Avoid redirect loops if dashboard itself is restricted (though usually it's not)
-      if (currentPath !== '/dashboard') {
-        return <Navigate to="/dashboard" replace />;
-      }
+    if (!hasAccess && currentPath !== '/dashboard') {
+      return <Navigate to="/dashboard" replace />;
     }
   }
 
