@@ -88,10 +88,7 @@ export default function GenerateIRMSN() {
 
   const currentAuthUser = useSelector((state: RootState) => state.auth.user);
 
-  const isQCOrAdmin = useMemo(() => {
-    const role = currentAuthUser?.role?.toLowerCase() || "";
-    return role === "qc" || role === "admin";
-  }, [currentAuthUser]);
+  const isQCOrAdmin = true;
 
   const [poSearchText, setPOSearchText] = useState("");
   const debouncedPOSearchText = useDebounce(poSearchText, 500);

@@ -646,7 +646,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
               px: 2.5,
             }}
           >
-            {saving ? "Saving..." : "Save changes"}
+            {saving ? "Saving..." : "Save "}
           </Button>
         </Stack>
       </Box>

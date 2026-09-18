@@ -408,17 +408,21 @@ export default function UserManagement() {
     {
       field: "srNo",
       headerName: "Sr No",
-      width: 70,
+      width: 80,
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) =>
         params.api.getSortedRowIds().indexOf(params.id) + 1,
     },
-    { field: "userName", headerName: "Full Name", flex: 1.5, minWidth: 150 },
-    { field: "email", headerName: "User Email", width: 200 },
-    { field: "userId", headerName: "User ID", width: 150 },
+    { field: "userName", headerName: "Full Name", flex: 1.5, minWidth: 150, align: "left", headerAlign: "left" },
+    { field: "email", headerName: "User Email", width: 200, align: "left", headerAlign: "left" },
+    { field: "userId", headerName: "User ID", width: 150, align: "left", headerAlign: "left" },
     {
       field: "plantName",
       headerName: "Plant",
       width: 120,
+      align: "left",
+      headerAlign: "left",
       valueGetter: (params: any) => {
         const row = params.row || params;
         const plant = plants.find((p: any) => p.id === row.plantId);
@@ -429,6 +433,8 @@ export default function UserManagement() {
       field: "role",
       headerName: "Role",
       width: 120,
+      align: "left",
+      headerAlign: "left",
       valueGetter: (params: any) => {
         const row = params.row || params;
         if (row.role) return row.role;
@@ -440,6 +446,8 @@ export default function UserManagement() {
       field: "departmentName",
       headerName: "Department",
       width: 150,
+      align: "left",
+      headerAlign: "left",
       valueGetter: (params: any) => {
         const row = params.row || params;
         if (row.departmentName) return row.departmentName;
@@ -451,62 +459,70 @@ export default function UserManagement() {
       field: "isActive",
       headerName: "Status",
       width: 150,
+      align: "center",
+      headerAlign: "center",
       renderCell: () => (
-        <Typography
-          variant="body2"
-          sx={{
-            color: "warning.main",
-            fontWeight: 600,
-          }}
-        >
-          Pending Approval
-        </Typography>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "warning.main",
+              fontWeight: 600,
+            }}
+          >
+            Pending Approval
+          </Typography>
+        </Box>
       ),
     },
     {
       field: "approveUser",
       headerName: "Approve User",
       width: 130,
+      align: "center",
+      headerAlign: "center",
       sortable: false,
       renderCell: (params: any) => {
         const isAdmin = userRole === "Admin";
 
         return (
-          <Tooltip title={!isAdmin ? "Only administrators can approve users" : ""}>
-            <span>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => handleApproveUser(params.row)}
-                disabled={!isAdmin || approveUserMutation.isPending}
-                sx={{
-                  fontWeight: 600,
-                  backgroundColor: "primary.main",
-                  "&.Mui-disabled": {
-                    backgroundColor: "rgba(0, 0, 0, 0.12)",
-                  },
-                  "&:hover": { backgroundColor: "primary.dark" },
-                  textTransform: "none",
-                  borderRadius: 1,
-                  px: 2,
-                }}
-              >
-                Approve
-              </Button>
-            </span>
-          </Tooltip>
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+            <Tooltip title={!isAdmin ? "Only administrators can approve users" : ""}>
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleApproveUser(params.row)}
+                  disabled={!isAdmin || approveUserMutation.isPending}
+                  sx={{
+                    fontWeight: 600,
+                    backgroundColor: "primary.main",
+                    "&.Mui-disabled": {
+                      backgroundColor: "rgba(0, 0, 0, 0.12)",
+                    },
+                    "&:hover": { backgroundColor: "primary.dark" },
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 2,
+                  }}
+                >
+                  Approve
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
         );
       },
     },
-  ].map((c) => ({ ...c, align: "center", headerAlign: "center" }));
+  ];
 
   const userColumns: GridColDef[] = [
     {
       field: "srNo",
       headerName: "Sr No",
       width: 80,
-      align: "center",
-      headerAlign: "center",
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) =>
         params.api.getSortedRowIds().indexOf(params.id) + 1,
     },
@@ -515,6 +531,8 @@ export default function UserManagement() {
       headerName: "User",
       flex: 1.5,
       minWidth: 180,
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) => (
         <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
           {params.value || "-"}
@@ -526,6 +544,8 @@ export default function UserManagement() {
       headerName: "Email",
       flex: 1.5,
       minWidth: 200,
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) => (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {params.value || "-"}
@@ -536,6 +556,8 @@ export default function UserManagement() {
       field: "role",
       headerName: "Role",
       width: 140,
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) => (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {params.value || "-"}
@@ -546,6 +568,8 @@ export default function UserManagement() {
       field: "departmentName",
       headerName: "Department",
       width: 150,
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) => (
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           {params.value || "-"}
@@ -554,14 +578,14 @@ export default function UserManagement() {
     },
     {
       field: "modifiedDate",
-      headerName: "Last Active ↑",
-      width: 150,
-      align: "center",
-      headerAlign: "center",
+      headerName: "Last Active",
+      width: 140,
+      align: "left",
+      headerAlign: "left",
       renderCell: (params: any) => {
         const val = params.row.modifiedDate || params.row.createdDate;
         return (
-          <Typography variant="body2" sx={{ color: "text.muted" }}>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {val ? new Date(val).toLocaleDateString() : "-"}
           </Typography>
         );
@@ -578,13 +602,15 @@ export default function UserManagement() {
         const isSelf = Number(params.row.id) === Number(currentUser?.id);
 
         return (
-          <Switch
-            checked={Boolean(params.row.isActive)}
-            disabled={!isAdmin || isSelf}
-            onChange={(e) => handleToggleUserStatus(params.row, e.target.checked)}
-            color="primary"
-            size="small"
-          />
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+            <Switch
+              checked={Boolean(params.row.isActive)}
+              disabled={!isAdmin || isSelf}
+              onChange={(e) => handleToggleUserStatus(params.row, e.target.checked)}
+              color="primary"
+              size="small"
+            />
+          </Box>
         );
       },
     },
@@ -600,12 +626,14 @@ export default function UserManagement() {
         const isActive = Boolean(params.row.isActive);
 
         return (
-          <UserActionMenu
-            row={params.row}
-            isAdmin={isAdmin}
-            isActive={isActive}
-            onEdit={handleUserDialogOpen}
-          />
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+            <UserActionMenu
+              row={params.row}
+              isAdmin={isAdmin}
+              isActive={isActive}
+              onEdit={handleUserDialogOpen}
+            />
+          </Box>
         );
       },
     },
@@ -1261,7 +1289,7 @@ export default function UserManagement() {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={handleUserDialogClose} variant="outlined" color="secondary" size="small">
+          <Button onClick={handleUserDialogClose} variant="outlined"  size="small">
             Cancel
           </Button>
           <Button
@@ -1283,7 +1311,7 @@ export default function UserManagement() {
             {dialogMode === "edit"
               ? updateUserMutation.isPending
                 ? "Saving..."
-                : "Save Changes"
+                : "Save "
               : activeTab === 0
                 ? registerUserMutation.isPending
                   ? "Creating..."

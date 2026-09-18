@@ -804,9 +804,7 @@ export default function EditIRMSN() {
                   startIcon={
                     isSubmitting ? (
                       <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <SaveIcon sx={{ fontSize: 16 }} />
-                    )
+                    ) : undefined
                   }
                   disabled={isSubmitting}
                   sx={{

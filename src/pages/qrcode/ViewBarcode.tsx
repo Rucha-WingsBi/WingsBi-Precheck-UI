@@ -48,6 +48,7 @@ import CallSplitIcon from '@mui/icons-material/CallSplit';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
 import { getBarcodeDetailsWithParameters, clearBarcodeDetails, exportViewQrCode, disableQRCode, clearError } from '../../store/slices/qrcodeSlice';
 import { useProductionSeries, useUsers } from '../../hooks/useMasterData';
@@ -510,6 +511,8 @@ const ViewBarcode: React.FC = () => {
   const [appliedGeneratedBy, setAppliedGeneratedBy] = useState<(number | string)[]>([]);
   const [appliedFromDate, setAppliedFromDate] = useState<Date | null>(null);
   const [appliedToDate, setAppliedToDate] = useState<Date | null>(null);
+  const [fromDateFocused, setFromDateFocused] = useState(false);
+  const [toDateFocused, setToDateFocused] = useState(false);
 
   const [selectedQRCodes, setSelectedQRCodes] = useState<string[]>([]);
 
@@ -1319,7 +1322,7 @@ const ViewBarcode: React.FC = () => {
           }}
         >
           {/* Section 1: Filter Bar & Active Chips */}
-          <Box sx={{ pt: 1.5, px: 1, pb: 0.5, borderBottom: "1px solid #eaecf0" }}>
+          <Box sx={{ pt: 0.5, px: 1, pb: 0.5, borderBottom: "1px solid #eaecf0" }}>
             {/* Single Row Filter Controls */}
             <Box
               sx={{
@@ -1406,27 +1409,74 @@ const ViewBarcode: React.FC = () => {
               {/* From Date */}
               <TextField
                 size="small"
-                type="date"
+                type={fromDateFocused || Boolean(fromDate) ? "date" : "text"}
                 label="From Date"
-                InputLabelProps={{ shrink: true }}
-                placeholder="From Date"
+                InputLabelProps={{ shrink: Boolean(fromDateFocused || fromDate) }}
                 value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+                onFocus={() => setFromDateFocused(true)}
+                onBlur={() => setFromDateFocused(false)}
                 onChange={(e) => {
                   const val = e.target.value;
                   handleFromDateChange(val ? new Date(val) : null);
                 }}
                 inputProps={{ title: "From Date" }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                      <CalendarTodayIcon
+                        sx={{ fontSize: 16, color: "#667085" }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setFromDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch {}
+                              }
+                            }, 10);
+                          }
+                        }}
+                        onClick={(e) => {
+                          setFromDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch {}
+                              }
+                            }, 10);
+                          }
+                        }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   flex: "0 0 148px",
                   minWidth: 140,
+                  position: "relative",
                   "& .MuiOutlinedInput-root": {
                     height: 38,
+                    backgroundColor: "background.paper",
+                    borderRadius: "6px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                   },
                   "& .MuiInputLabel-root": {
-                    fontSize: "0.75rem",
+                    fontSize: "0.82rem",
                     bgcolor: "#ffffff",
                     px: 0.5,
-                    color: "#667085",
+                    color: "#98A2B3",
+                    "&.MuiInputLabel-shrink": {
+                      fontSize: "0.75rem",
+                      color: "#667085",
+                    },
                     "&.Mui-focused": { color: "primary.main" },
                   },
                   "& .MuiOutlinedInput-input": {
@@ -1435,33 +1485,89 @@ const ViewBarcode: React.FC = () => {
                     fontSize: "0.82rem",
                     color: fromDate ? "#344054" : "#98A2B3",
                   },
+                  "& input::-webkit-calendar-picker-indicator": {
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    width: 24,
+                    height: 24,
+                    opacity: 0,
+                    cursor: "pointer",
+                  },
                 }}
               />
 
               {/* To Date */}
               <TextField
                 size="small"
-                type="date"
+                type={toDateFocused || Boolean(toDate) ? "date" : "text"}
                 label="To Date"
-                InputLabelProps={{ shrink: true }}
-                placeholder="To Date"
+                InputLabelProps={{ shrink: Boolean(toDateFocused || toDate) }}
                 value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+                onFocus={() => setToDateFocused(true)}
+                onBlur={() => setToDateFocused(false)}
                 onChange={(e) => {
                   const val = e.target.value;
                   handleToDateChange(val ? new Date(val) : null);
                 }}
                 inputProps={{ title: "To Date" }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                      <CalendarTodayIcon
+                        sx={{ fontSize: 16, color: "#667085" }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setToDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch {}
+                              }
+                            }, 10);
+                          }
+                        }}
+                        onClick={(e) => {
+                          setToDateFocused(true);
+                          const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                          const input = root?.querySelector("input") as HTMLInputElement | null;
+                          if (input) {
+                            input.type = "date";
+                            input.focus();
+                            setTimeout(() => {
+                              if ("showPicker" in input) {
+                                try { (input as any).showPicker(); } catch {}
+                              }
+                            }, 10);
+                          }
+                        }}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   flex: "0 0 148px",
                   minWidth: 140,
+                  position: "relative",
                   "& .MuiOutlinedInput-root": {
                     height: 38,
+                    backgroundColor: "background.paper",
+                    borderRadius: "6px",
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
                   },
                   "& .MuiInputLabel-root": {
-                    fontSize: "0.75rem",
+                    fontSize: "0.82rem",
                     bgcolor: "#ffffff",
                     px: 0.5,
-                    color: "#667085",
+                    color: "#98A2B3",
+                    "&.MuiInputLabel-shrink": {
+                      fontSize: "0.75rem",
+                      color: "#667085",
+                    },
                     "&.Mui-focused": { color: "primary.main" },
                   },
                   "& .MuiOutlinedInput-input": {
@@ -1469,6 +1575,15 @@ const ViewBarcode: React.FC = () => {
                     px: 1.5,
                     fontSize: "0.82rem",
                     color: toDate ? "#344054" : "#98A2B3",
+                  },
+                  "& input::-webkit-calendar-picker-indicator": {
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    width: 24,
+                    height: 24,
+                    opacity: 0,
+                    cursor: "pointer",
                   },
                 }}
               />
@@ -1492,6 +1607,10 @@ const ViewBarcode: React.FC = () => {
                   boxShadow: "none",
                   minWidth: 65,
                   "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#EAECF0",
+                    color: "#98A2B3",
+                  },
                 }}
               >
                 Apply
@@ -1500,19 +1619,26 @@ const ViewBarcode: React.FC = () => {
               {/* Clear Link */}
               <Button
                 size="small"
-                variant="text"
+                variant="outlined"
                 onClick={handleReset}
                 disabled={!isResetEnabled}
                 sx={{
                   flex: "0 0 auto",
                   color: "#667085",
+                  borderColor: "#D0D5DD",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "6px",
                   fontWeight: 600,
                   fontSize: "0.82rem",
                   height: 38,
-                  px: 1,
+                  px: 1.5,
                   minWidth: 55,
                   textTransform: "none",
-                  "&:hover": { color: "#101828", backgroundColor: "transparent" },
+                  "&:hover": {
+                    borderColor: "#98A2B3",
+                    backgroundColor: "#F9FAFB",
+                    color: "#101828",
+                  },
                 }}
               >
                 Clear

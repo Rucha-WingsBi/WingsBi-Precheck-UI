@@ -265,6 +265,7 @@ export interface BarcodeDetails {
 export interface QRCodeFormData {
   productionOrderNumber: string;
   drawingNumber: string;
+  lnItemCode?: string;
   nomenclature: string;
   productionSeries: string;
   componentType: "ID" | "BATCH" | "Batch" | "FIM" | "SI";

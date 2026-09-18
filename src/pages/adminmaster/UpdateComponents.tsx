@@ -139,8 +139,7 @@ export default function InsertMappings() {
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [, setIsReadOnly] = useState(false);
 
-  // Check if user is admin
-  const isAdmin = user?.role === "Admin";
+  const isEditAllowed = true;
 
   // Form
   const {
@@ -148,6 +147,7 @@ export default function InsertMappings() {
     handleSubmit,
     setValue,
     reset,
+    watch,
     formState: { errors },
   } = useForm<InsertMappingsFormData>({
     defaultValues: {
@@ -169,6 +169,31 @@ export default function InsertMappings() {
       modifiedDate: "",
     },
   });
+
+  const watchLnItemCode = watch("lnItemCode");
+  const watchDrawingNumber = watch("drawingNumber");
+
+  const lnItemValue = useMemo(() => {
+    if (!watchLnItemCode) return null;
+    if (selectedDrawing && selectedDrawing.lnItemCode === watchLnItemCode) {
+      return selectedDrawing;
+    }
+    return (
+      (drawingNumbers || []).find((d: any) => d.lnItemCode === watchLnItemCode) ||
+      ({ lnItemCode: watchLnItemCode } as any)
+    );
+  }, [watchLnItemCode, selectedDrawing, drawingNumbers]);
+
+  const drawingNumberValue = useMemo(() => {
+    if (!watchDrawingNumber) return null;
+    if (selectedDrawing && selectedDrawing.drawingNumber === watchDrawingNumber) {
+      return selectedDrawing;
+    }
+    return (
+      (drawingNumbers || []).find((d: any) => d.drawingNumber === watchDrawingNumber) ||
+      ({ drawingNumber: watchDrawingNumber } as any)
+    );
+  }, [watchDrawingNumber, selectedDrawing, drawingNumbers]);
 
   const handleAssemblyNumberChange = (newValue: DrawingNumber | null) => {
     setSelectedAssemblyDrawing(newValue);
@@ -240,6 +265,7 @@ export default function InsertMappings() {
     if (drawing) {
       // Pre-fill fields if they exist
       setValue("lnItemCode", drawing.lnItemCode || "");
+      setValue("drawingNumber", drawing.drawingNumber || "");
       setValue("nomenclature", drawing.nomenclature || "");
       setValue("rackLocation", drawing.location || "");
       const normComponentType = (drawing.componentType || "").toUpperCase();
@@ -272,19 +298,8 @@ export default function InsertMappings() {
       // If in edit mode, ensure we set everything needed
       fillForm(drawing);
 
-      // Check if all fields are already filled (read-only mode)
-      const hasAllFields = Boolean(
-        drawing.lnItemCode &&
-        drawing.nomenclature &&
-        drawing.location &&
-        drawing.componentType &&
-        drawing.unitName
-      );
-
-      setIsReadOnly(hasAllFields && !isAdmin);
+      setIsReadOnly(false);
     } else {
-      // Clear all fields
-      reset();
       setIsReadOnly(false);
     }
   };
@@ -562,9 +577,9 @@ export default function InsertMappings() {
                               : option.lnItemCode || ""
                           }
                           isOptionEqualToValue={(option: any, value: any) =>
-                            option.id === value?.id
+                            option.id && value?.id ? option.id === value.id : option.lnItemCode === value?.lnItemCode
                           }
-                          value={selectedDrawing}
+                          value={lnItemValue}
                           loading={loading || loadingDrawings}
                           size="small"
                           onInputChange={(_, value) => {
@@ -577,8 +592,10 @@ export default function InsertMappings() {
                           onChange={(_, newValue) => {
                             if (newValue && typeof newValue !== "string") {
                               handleDrawingNumberChange(newValue);
+                            } else if (typeof newValue === "string") {
+                              setValue("lnItemCode", newValue);
                             } else {
-                              handleDrawingNumberChange(null);
+                              setValue("lnItemCode", "");
                             }
                           }}
                           renderOption={(props, option) => {
@@ -676,20 +693,20 @@ export default function InsertMappings() {
                             drawingNumbers
                               ? drawingNumbers.filter(
                                 (d) =>
-                                  !selectedDrawing?.lnItemCode ||
-                                  d.lnItemCode === selectedDrawing.lnItemCode
+                                  !watchLnItemCode ||
+                                  d.lnItemCode === watchLnItemCode
                               )
                               : []
                           }
                           loading={loading || loadingDrawings}
-                          value={selectedDrawing}
+                          value={drawingNumberValue}
                           getOptionLabel={(option: any) =>
                             typeof option === "string"
                               ? option
                               : option.drawingNumber || ""
                           }
                           isOptionEqualToValue={(option: any, value: any) =>
-                            option.id === value?.id
+                            option.id && value?.id ? option.id === value.id : option.drawingNumber === value?.drawingNumber
                           }
                           onInputChange={(_, value) => {
                             if (value.length >= 3) {
@@ -702,8 +719,9 @@ export default function InsertMappings() {
                             if (value && typeof value !== "string") {
                               handleDrawingNumberChange(value);
                               field.onChange(value.drawingNumber);
+                            } else if (typeof value === "string") {
+                              field.onChange(value);
                             } else {
-                              handleDrawingNumberChange(null);
                               field.onChange("");
                             }
                           }}
@@ -1224,17 +1242,11 @@ export default function InsertMappings() {
                   startIcon={
                     loading ? (
                       <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      <SaveIcon />
-                    )
+                    ) : undefined
                   }
                   sx={{ minWidth: 100, height: 32 }}
                 >
-                  {loading
-                    ? "Saving..."
-                    : isEditMode
-                      ? "Update"
-                      : "Save "}
+                  {loading ? "Saving..." : "Save"}
                 </Button>
               </Box>
             </form>
@@ -1245,7 +1257,7 @@ export default function InsertMappings() {
       {/* Add to Production Orders Confirmation Dialog */}
       <Dialog
         open={precheckDialogOpen}
-        onClose={() => {}}
+        onClose={() => { }}
         maxWidth="sm"
         fullWidth
         PaperProps={{
