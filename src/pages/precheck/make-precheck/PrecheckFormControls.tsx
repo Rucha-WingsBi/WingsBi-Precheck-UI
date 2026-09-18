@@ -330,7 +330,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       >
         <TextField
           size="small"
-          label="Drawing Number"
+          label="Part Number"
           value={drawingNumberValue}
           placeholder="Auto-populated"
           variant="outlined"
@@ -371,7 +371,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       >
         <TextField
           size="small"
-          label="LN Item Code"
+          label="Item Code"
           value={lnItemCodeValue}
           placeholder="Auto-populated"
           variant="outlined"

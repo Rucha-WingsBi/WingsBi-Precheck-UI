@@ -381,7 +381,7 @@ const ViewOrder: React.FC = () => {
         <TableHead>
           <TableRow>
             <SortableTableHeader label="Sr" sortKey="sr" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-            <SortableTableHeader label="Item code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+            <SortableTableHeader label="Item Code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
             <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
             <TableCell sx={{ ...commonTableHeaderStyle, width: 55 }}>Unit</TableCell>
             <TableCell sx={{ ...commonTableHeaderStyle, width: 70 }} align="center">Qty / <br /> Assm</TableCell>
@@ -658,7 +658,7 @@ const ViewOrder: React.FC = () => {
           >
             <TextField
               size="small"
-              label="Drawing Number"
+              label="Part Number"
               value={drawingNumberValue}
               placeholder="Auto-populated"
               variant="outlined"
@@ -699,7 +699,7 @@ const ViewOrder: React.FC = () => {
           >
             <TextField
               size="small"
-              label="LN Item Code"
+              label="Item Code"
               value={lnItemCodeValue}
               placeholder="Auto-populated"
               variant="outlined"

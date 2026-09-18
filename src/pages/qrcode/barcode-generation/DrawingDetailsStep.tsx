@@ -434,7 +434,7 @@ function DrawingDetailsStep({
                 >
                   <TextField
                     size="small"
-                    label="LN Item Code"
+                    label="Item Code"
                     value={value || selectedDrawing?.lnItemCode || (selectedPO as any)?.lnItemCode || ""}
                     placeholder="Auto-populated"
                     variant="outlined"
@@ -481,7 +481,7 @@ function DrawingDetailsStep({
                 >
                   <TextField
                     size="small"
-                    label="Drawing Number"
+                    label="Part Number"
                     value={value || selectedDrawing?.drawingNumber || (selectedPO as any)?.drawingNumber || ""}
                     placeholder="Auto-populated"
                     variant="outlined"

@@ -471,7 +471,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     const exportData = displayData.map((row, idx) => ({
       "Sr No": idx + 1,
       "Drawing Number": row.drawingNumber || "",
-      "LN Item Code": row.lnItemCode || "",
+      "Item Code": row.lnItemCode || "",
       "Nomenclature": row.nomenclature || "",
       "Component Type": row.componentType || "",
       "Component Code": row.componentCode || "",
