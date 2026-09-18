@@ -570,7 +570,10 @@ export default function BarcodeGeneration() {
     // 4. Unit (required for all)
     if (!watchUnit) count++;
 
-    // 5. MSN Number (required for all)
+    // 5. IR Number (required for all)
+    if (!watchIrNumber) count++;
+
+    // 6. MSN Number (required for all)
     if (!watchMsnNumber) count++;
 
     // 6. MFG Date (required for all)
