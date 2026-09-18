@@ -165,6 +165,21 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
     return base;
   }, [productionSeriesData, selectedProductionSeries]);
 
+  const drawingNumberValue = useMemo(() => {
+    if (typeof selectedDrawing === "string") return selectedDrawing;
+    return selectedDrawing?.drawingNumber || "";
+  }, [selectedDrawing]);
+
+  const lnItemCodeValue = useMemo(() => {
+    if (typeof selectedDrawing === "string") return selectedDrawing;
+    return selectedDrawing?.lnItemCode || selectedDrawing?.lnitemcode || "";
+  }, [selectedDrawing]);
+
+  const prodSeriesValue = useMemo(() => {
+    if (typeof selectedProductionSeries === "string") return selectedProductionSeries;
+    return selectedProductionSeries?.productionSeries || "";
+  }, [selectedProductionSeries]);
+
   const slicedIdOptions = useMemo(() => {
     const base = Array.isArray(idOptions) ? idOptions.slice(0, 200) : [];
     if (idNumber && !base.includes(idNumber)) {
@@ -195,6 +210,27 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
         sx={{
           flex: { xs: "1 1 100%", sm: "1 1 160px", lg: 1.2 },
           minWidth: { xs: "100%", sm: 140 },
+          "& .MuiOutlinedInput-root": {
+            height: 38,
+            backgroundColor: "background.paper",
+            borderRadius: "6px",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+          },
+          "& .MuiInputLabel-root": {
+            fontSize: "0.82rem",
+            color: "#98A2B3",
+            bgcolor: "transparent",
+            px: 0.5,
+            "&.MuiInputLabel-shrink": {
+              fontSize: "0.75rem",
+              color: "#667085",
+              bgcolor: "#ffffff",
+            },
+            "&.Mui-focused": { color: "primary.main" },
+          },
+          "& .MuiOutlinedInput-input": {
+            fontSize: "0.82rem",
+          },
         }}
         size="small"
       >
@@ -257,271 +293,131 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
             style: { maxHeight: "300px" },
           }}
           renderInput={(params) => (
-            <TextField {...params} label="PO Number" fullWidth size="small" />
+            <TextField {...params} label="PO Number *" fullWidth size="small" />
           )}
         />
       </FormControl>
 
-      {/* LN Item Code Field */}
+      {/* Drawing Number Field (Read-only, auto-populated on PO selection) */}
       <FormControl
-        sx={{
-          flex: { xs: "1 1 100%", sm: "1 1 180px", lg: 1.4 },
-          minWidth: { xs: "100%", sm: 160 },
-        }}
         size="small"
-      >
-        <Autocomplete
-          size="small"
-          options={lnOptions}
-          groupBy={(option: any) => option.lnItemCode || "No LN Code"}
-          getOptionLabel={(option: any) => {
-            if (typeof option === "string") return option;
-            return option.lnItemCode || "";
-          }}
-          value={selectedDrawing}
-          loading={isLnSearchLoading}
-          freeSolo={false}
-          onInputChange={(_, value) => {
-            onLnSearchChange(value);
-          }}
-          onChange={(_: any, value: any) => {
-            if (value) {
-              onDrawingChange(value);
-            } else {
-              onDrawingChange(null);
-            }
-          }}
-          filterOptions={(options, { inputValue }) => {
-            if (!inputValue) return options.slice(0, 100);
-            const searchLower = inputValue.toLowerCase();
-            const filtered = options.filter(
-              (option: any) =>
-                option.lnItemCode?.toLowerCase().includes(searchLower) ||
-                option.drawingNumber?.toLowerCase().includes(searchLower) ||
-                option.nomenclature?.toLowerCase().includes(searchLower),
-            );
-            return filtered.slice(0, 100);
-          }}
-          isOptionEqualToValue={(option, value) => {
-            if (!value) return false;
-            if (option.id && value.id) return option.id === value.id;
-            if (option.drawingNumber && value.drawingNumber) {
-              return option.drawingNumber.trim().toLowerCase() === value.drawingNumber.trim().toLowerCase();
-            }
-            if (option.lnItemCode && value.lnItemCode) {
-              return option.lnItemCode.trim().toLowerCase() === value.lnItemCode.trim().toLowerCase();
-            }
-            return false;
-          }}
-          renderOption={(props, option: any) => {
-            const { key, ...optionProps } = props;
-            return (
-              <li {...optionProps} key={key}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    py: 0.5,
-                    width: "100%",
-                  }}
-                >
-                  <Typography
-                    variant="body2"
-                    fontWeight="500"
-                    sx={{ fontSize: "0.85rem", color: "text.primary" }}
-                  >
-                    Drawing: {option.drawingNumber}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.72rem" }}
-                  >
-                    {option.nomenclature} | Type: {option.componentType}
-                  </Typography>
-                </Box>
-              </li>
-            );
-          }}
-          renderGroup={(params) => (
-            <li key={params.key}>
-              <Typography
-                variant="subtitle2"
-                fontWeight="800"
-                sx={{
-                  px: 2,
-                  py: 0.5,
-                  backgroundColor: "grey.200",
-                  color: "primary.main",
-                  fontSize: "0.95rem",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                LN CODE: {params.group}
-              </Typography>
-              <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
-            </li>
-          )}
-          ListboxProps={{
-            style: { maxHeight: "300px" },
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="LN Item Code"
-              placeholder="Type to search..."
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {isLnSearchLoading ? (
-                      <CircularProgress color="inherit" size={16} />
-                    ) : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              }}
-            />
-          )}
-        />
-      </FormControl>
-
-      {/* Drawing Number Field */}
-      <FormControl
         sx={{
-          flex: { xs: "1 1 100%", sm: "1 1 180px", lg: 1.4 },
-          minWidth: { xs: "100%", sm: 160 },
+          flex: { xs: "1 1 100%", sm: "1 1 160px", lg: 1.2 },
+          minWidth: { xs: "100%", sm: 140 },
+          "& .MuiOutlinedInput-root": {
+            height: 38,
+            backgroundColor: "#F9FAFB",
+            borderRadius: "6px",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+          },
+          "& .MuiInputLabel-root": {
+            fontSize: "0.82rem",
+            color: "#667085",
+            bgcolor: "transparent",
+            px: 0.5,
+            "&.MuiInputLabel-shrink": {
+              fontSize: "0.75rem",
+              color: "#667085",
+              bgcolor: "#ffffff",
+            },
+          },
+          "& .MuiOutlinedInput-input": {
+            fontSize: "0.82rem",
+            color: "#344054",
+            fontWeight: 500,
+          },
         }}
-        size="small"
       >
-        <Autocomplete
+        <TextField
           size="small"
-          options={drawingOptions}
-          getOptionLabel={(option) =>
-            typeof option === "string" ? option : option.drawingNumber || ""
-          }
-          value={selectedDrawing}
-          loading={drawingLoading}
-          onInputChange={(_, newValue) => {
-            if (newValue.length >= 3) {
-              onDrawingSearchChange(newValue);
-            } else if (newValue.length === 0) {
-              onDrawingSearchChange("");
-            }
-          }}
-          onChange={(_: any, value: any) => {
-            onDrawingChange(value);
-          }}
-          isOptionEqualToValue={(option, value) => {
-            if (!value) return false;
-            if (option.id && value.id) return option.id === value.id;
-            if (option.drawingNumber && value.drawingNumber) {
-              return option.drawingNumber.trim().toLowerCase() === value.drawingNumber.trim().toLowerCase();
-            }
-            if (option.lnItemCode && value.lnItemCode) {
-              return option.lnItemCode.trim().toLowerCase() === value.lnItemCode.trim().toLowerCase();
-            }
-            return false;
-          }}
-          renderOption={(props: any, option: any) => (
-            <li {...props}>
-              <Box sx={{ display: "flex", flexDirection: "column", py: 0.5 }}>
-                <Typography variant="body2">
-                  {option.drawingNumber}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {option.nomenclature || ""} | {option.componentType || ""}
-                </Typography>
-              </Box>
-            </li>
-          )}
-          ListboxProps={{
-            style: { maxHeight: "300px" },
-          }}
-          renderInput={(params: any) => (
-            <TextField
-              {...params}
-              label="Drawing Number *"
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {drawingLoading ? (
-                      <CircularProgress color="inherit" size={16} />
-                    ) : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              }}
-            />
-          )}
+          label="Drawing Number"
+          value={drawingNumberValue}
+          placeholder="Auto-populated"
+          variant="outlined"
+          fullWidth
+          InputProps={{ readOnly: true }}
         />
       </FormControl>
 
-      {/* Production Series Field */}
+      {/* LN Item Code Field (Read-only, auto-populated on PO selection) */}
       <FormControl
+        size="small"
+        sx={{
+          flex: { xs: "1 1 100%", sm: "1 1 160px", lg: 1.2 },
+          minWidth: { xs: "100%", sm: 140 },
+          "& .MuiOutlinedInput-root": {
+            height: 38,
+            backgroundColor: "#F9FAFB",
+            borderRadius: "6px",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+          },
+          "& .MuiInputLabel-root": {
+            fontSize: "0.82rem",
+            color: "#667085",
+            bgcolor: "transparent",
+            px: 0.5,
+            "&.MuiInputLabel-shrink": {
+              fontSize: "0.75rem",
+              color: "#667085",
+              bgcolor: "#ffffff",
+            },
+          },
+          "& .MuiOutlinedInput-input": {
+            fontSize: "0.82rem",
+            color: "#344054",
+            fontWeight: 500,
+          },
+        }}
+      >
+        <TextField
+          size="small"
+          label="LN Item Code"
+          value={lnItemCodeValue}
+          placeholder="Auto-populated"
+          variant="outlined"
+          fullWidth
+          InputProps={{ readOnly: true }}
+        />
+      </FormControl>
+
+      {/* Prod Series Field (Read-only, auto-populated on PO selection) */}
+      <FormControl
+        size="small"
         sx={{
           flex: { xs: "1 1 100%", sm: "1 1 110px", lg: 0.9 },
           minWidth: { xs: "100%", sm: 95 },
+          "& .MuiOutlinedInput-root": {
+            height: 38,
+            backgroundColor: "#F9FAFB",
+            borderRadius: "6px",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+          },
+          "& .MuiInputLabel-root": {
+            fontSize: "0.82rem",
+            color: "#667085",
+            bgcolor: "transparent",
+            px: 0.5,
+            "&.MuiInputLabel-shrink": {
+              fontSize: "0.75rem",
+              color: "#667085",
+              bgcolor: "#ffffff",
+            },
+          },
+          "& .MuiOutlinedInput-input": {
+            fontSize: "0.82rem",
+            color: "#344054",
+            fontWeight: 500,
+          },
         }}
-        size="small"
       >
-        <Autocomplete
+        <TextField
           size="small"
-          options={prodSeriesOptions}
-          getOptionLabel={(option) => {
-            if (typeof option === "string") return option;
-            return option.productionSeries || "";
-          }}
-          value={selectedProductionSeries}
-          loading={prodSeriesLoading}
-          onInputChange={(_, value) => {
-            if (value.length >= 1) {
-              onProdSeriesSearchChange();
-            }
-          }}
-          onChange={(_, value) => {
-            onProdSeriesChange(value);
-          }}
-          isOptionEqualToValue={(option, value) => {
-            if (!value) return false;
-            if (option.id && value.id) return option.id === value.id;
-            if (option.productionSeries && value.productionSeries) {
-              return String(option.productionSeries).trim().toLowerCase() === String(value.productionSeries).trim().toLowerCase();
-            }
-            return false;
-          }}
-          renderOption={(props, option) => (
-            <li {...props}>
-              <Typography variant="body2">
-                {option.productionSeries}
-              </Typography>
-            </li>
-          )}
-          ListboxProps={{
-            style: { maxHeight: "300px" },
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Prod Series *"
-              InputLabelProps={{
-                ...params.InputLabelProps,
-                shrink: true,
-              }}
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <>
-                    {prodSeriesLoading ? (
-                      <CircularProgress color="inherit" size={16} />
-                    ) : null}
-                    {params.InputProps.endAdornment}
-                  </>
-                ),
-              }}
-            />
-          )}
+          label="Prod Series"
+          value={prodSeriesValue}
+          placeholder="Auto-populated"
+          variant="outlined"
+          fullWidth
+          InputProps={{ readOnly: true }}
         />
       </FormControl>
 
@@ -530,6 +426,27 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
         sx={{
           flex: { xs: "1 1 100%", sm: "1 1 120px", lg: 0.9 },
           minWidth: { xs: "100%", sm: 100 },
+          "& .MuiOutlinedInput-root": {
+            height: 38,
+            backgroundColor: "background.paper",
+            borderRadius: "6px",
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+          },
+          "& .MuiInputLabel-root": {
+            fontSize: "0.82rem",
+            color: "#98A2B3",
+            bgcolor: "transparent",
+            px: 0.5,
+            "&.MuiInputLabel-shrink": {
+              fontSize: "0.75rem",
+              color: "#667085",
+              bgcolor: "#ffffff",
+            },
+            "&.Mui-focused": { color: "primary.main" },
+          },
+          "& .MuiOutlinedInput-input": {
+            fontSize: "0.82rem",
+          },
         }}
         size="small"
       >

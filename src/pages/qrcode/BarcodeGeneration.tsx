@@ -393,6 +393,7 @@ export default function BarcodeGeneration() {
     defaultValues: {
       qrType: "ID",
       drawingNumber: "",
+      lnItemCode: "",
       nomenclature: "",
       productionSeries: "",
       componentType: "ID",
@@ -1341,7 +1342,11 @@ export default function BarcodeGeneration() {
 
       if (matchingDrawing) {
         setSelectedDrawing(matchingDrawing);
-        setValue("drawingNumber", matchingDrawing.drawingNumber || "", {
+        setValue("drawingNumber", matchingDrawing.drawingNumber || newValue.drawingNumber || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        setValue("lnItemCode", matchingDrawing.lnItemCode || newValue.lnItemCode || "", {
           shouldValidate: true,
           shouldDirty: true,
         });
@@ -1370,6 +1375,14 @@ export default function BarcodeGeneration() {
         }
       } else {
         // If drawing not found, still map the fields from PO
+        setValue("drawingNumber", newValue.drawingNumber || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+        setValue("lnItemCode", newValue.lnItemCode || "", {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
         if (newValue.nomenclature) {
           setValue("nomenclature", newValue.nomenclature, { shouldDirty: true });
         }
@@ -1387,6 +1400,7 @@ export default function BarcodeGeneration() {
     clearErrors([
       "poNumber",
       "drawingNumber",
+      "lnItemCode",
       "productionSeries",
       "unit",
       "mrirNumber",
