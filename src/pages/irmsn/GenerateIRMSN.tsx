@@ -1530,14 +1530,18 @@ export default function GenerateIRMSN() {
             </Grid>
 
             <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Operation"
-                value={watch("operationNumber") || ""}
-                fullWidth
-                size="small"
-                InputProps={{ readOnly: true }}
-                InputLabelProps={{ shrink: true }}
-                sx={readOnlyInputStyle}
+              <Controller
+                name="operationNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Operation"
+                    fullWidth
+                    size="small"
+                    sx={standardInputStyle}
+                  />
+                )}
               />
             </Grid>
 
