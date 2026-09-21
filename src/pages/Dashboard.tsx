@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
   const dashboardCards: DashboardCard[] = [
     {
       title: "Production Order",
-      pageName: "Production Order",
+      pageName: "Manage Orders",
       description: "Upload and view Production Order details and status",
       icon: <ShoppingCartIcon sx={{ fontSize: 40 }} />,
       color: "#df2e78ff",
@@ -74,8 +74,8 @@ const Dashboard: React.FC = () => {
       route: "/qrcode/generate",
     },
     {
-      title: "Make Pre-check",
-      pageName: "Make Precheck",
+      title: "Run Precheck",
+      pageName: "Run Precheck",
       description: "Access and manage make pre-check related tasks",
       icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#2196F3",
@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Material Requisition",
-      pageName: "Material Requisition",
+      pageName: "Run Precheck",
       description: "Add and view Material Requisition details",
       icon: <ReceiptLongIcon sx={{ fontSize: 40 }} />,
       color: "#3fb1b5ff",

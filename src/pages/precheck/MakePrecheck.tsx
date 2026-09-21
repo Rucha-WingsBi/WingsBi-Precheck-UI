@@ -68,7 +68,6 @@ import RejectDialog from "./make-precheck/RejectDialog";
 import AddQrCodeDialog from "./make-precheck/AddQrCodeDialog";
 import {
   BatchWarningDialog,
-  ReloadConfirmationDialog,
   CameraPermissionDialog,
 } from "./make-precheck/ConfirmationDialogs";
 import QrScannerDialog from "./make-precheck/QrScannerDialog";
