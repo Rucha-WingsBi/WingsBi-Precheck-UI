@@ -637,7 +637,7 @@ const ViewBarcode: React.FC = () => {
       }
       if (returnFilters.lastSearchParams !== undefined) setLastSearchParams(returnFilters.lastSearchParams);
 
-      navigate(location.pathname, { replace: true, state: null });
+      window.history.replaceState(null, "");
 
       if (returnFilters.lastSearchParams) {
         dispatch(getBarcodeDetailsWithParameters(returnFilters.lastSearchParams));

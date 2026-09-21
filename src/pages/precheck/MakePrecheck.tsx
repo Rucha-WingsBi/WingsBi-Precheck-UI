@@ -46,7 +46,6 @@ import {
 } from "../../store/slices/qrcodeSlice";
 import {
   useProductionSeries,
-  useDrawingNumbers,
   useLnItemCodeSearch,
   useAllDrawingNumbers,
 } from "../../hooks/useMasterData";
@@ -196,9 +195,8 @@ const MakePrecheck: React.FC = () => {
   // TanStack Query Hooks
   const { data: productionSeriesData = [], isLoading: prodSeriesLoading } =
     useProductionSeries();
-  const { data: drawingNumbersData = [], isLoading: drawingLoading } =
-    useDrawingNumbers("", drawingSearchText);
-  const { data: allDrawingNumbers = [] } = useAllDrawingNumbers();
+  const { data: allDrawingNumbers = [], isLoading: drawingLoading } = useAllDrawingNumbers();
+  const drawingNumbersData = allDrawingNumbers;
   const { isLoading: isLnSearchLoading } =
     useLnItemCodeSearch(debouncedLnSearch);
   const { data: poNumbers = [], isLoading: poLoading } =
@@ -700,17 +698,6 @@ const MakePrecheck: React.FC = () => {
 
   const handleMakePrecheck = async () => {
     if (!validateInputs()) return;
-
-    // Check if there are pending scans before overwriting
-    const hasPending = searchResults.some(
-      (item) => item.isUpdated && !item.isSubmitted,
-    );
-
-    if (hasPending) {
-      setPendingAction("reload");
-      setShowReloadConfirmation(true);
-      return;
-    }
 
     await executeMakePrecheck();
   };
@@ -1646,6 +1633,7 @@ const MakePrecheck: React.FC = () => {
       isSubmitted: false,
       componentType: item.componentType,
       username: item.username,
+      rejectedUserName: item.rejectedUserName || item.rejectedByUsername || item.rejectedUser || "",
       modifiedDate: item.modifiedDate,
       remarks: item.remarks,
       productionOrderNumber: item.productionOrderNumber,
@@ -1661,7 +1649,7 @@ const MakePrecheck: React.FC = () => {
       materialRequisitionStatus: item.materialRequisitionStatus,
       remainingQuantity: item.remainingQuantity,
       qrCode: item.qrCodeNumber || item.qrCode || item.QRCodeNumber,
-      precheckStatus: item.precheckStatus,
+      precheckStatus: (item.isRejected || item.precheckStatus?.toLowerCase() === "rejected") ? "Rejected" : item.precheckStatus,
       originalRowId: item.originalRowId,
       duplicateRowId: item.duplicateRowId,
       sr: index + 1,
@@ -1918,11 +1906,11 @@ const MakePrecheck: React.FC = () => {
         onClose={() => setBatchWarningOpen(false)}
       />
 
-      {/* Reload/Reset Confirmation Dialog */}
-      <ReloadConfirmationDialog
+      {/* Reload/Reset Confirmation Dialog (Disabled as requested) */}
+      {/* <ReloadConfirmationDialog
         open={showReloadConfirmation}
         onClose={() => setShowReloadConfirmation(false)}
-      />
+      /> */}
 
       {/* Camera Permission Dialog */}
       <CameraPermissionDialog

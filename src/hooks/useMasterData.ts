@@ -289,7 +289,16 @@ export const useApproveUser = () => {
 
 
 
-export const useDrawingNumbers = (componentType = "", search = "") => {
+export const useDrawingNumbers = (
+  componentType = "",
+  search = "",
+  enabledArg?: boolean
+) => {
+  const isEnabled =
+    enabledArg !== undefined
+      ? enabledArg
+      : Boolean((search && search.trim()) || (componentType && componentType.trim()));
+
   return useQuery<DrawingNumber[]>({
     queryKey: ["drawingNumbers", componentType, search],
     queryFn: async () => {
@@ -301,7 +310,7 @@ export const useDrawingNumbers = (componentType = "", search = "") => {
       });
       return response.data;
     },
-    enabled: true, // Fetch automatically
+    enabled: isEnabled,
     staleTime: 1000 * 60 * 5, // 5 minutes for drawing numbers as they might change more often
   });
 };

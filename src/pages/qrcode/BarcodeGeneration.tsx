@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Snackbar,
 } from "@mui/material";
 
 import {
@@ -313,6 +314,19 @@ export default function BarcodeGeneration() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState<string>("");
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "info" | "warning";
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
   const [openExistingDialog, setOpenExistingDialog] = useState(false);
   const [existingItems, setExistingItems] = useState<any[]>([]);
   const [poInputValue, setPoInputValue] = useState("");
@@ -1083,14 +1097,34 @@ export default function BarcodeGeneration() {
           (item: any) => item.isNewQrCode !== false,
         ).length;
         if (newCount > 0) {
-          setSuccessMessage(
-            `Successfully generated ${newCount} new QR code(s)!`,
-          );
+          const msg = `Successfully generated ${newCount} new QR code(s)!`;
+          setSuccessMessage(msg);
+          setSnackbar({
+            open: true,
+            message: msg,
+            severity: "success",
+          });
+        } else if (response && response.length > 0) {
+          const msg = "QR Code(s) generated successfully!";
+          setSuccessMessage(msg);
+          setSnackbar({
+            open: true,
+            message: msg,
+            severity: "success",
+          });
         }
       }
-    } catch (error) {
-      // Error is now handled by the Redux store and displayed by QRCodeErrorDisplay
+    } catch (error: any) {
       console.error("Error generating QR codes:", error);
+      const errorMsg =
+        typeof error === "string"
+          ? error
+          : error?.message || error?.payload || "Error generating QR codes.";
+      setSnackbar({
+        open: true,
+        message: errorMsg,
+        severity: "error",
+      });
     }
   };
 
@@ -2120,6 +2154,17 @@ export default function BarcodeGeneration() {
           </Dialog>
         </>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 }

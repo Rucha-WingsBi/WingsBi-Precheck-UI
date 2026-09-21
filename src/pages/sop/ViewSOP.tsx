@@ -56,8 +56,8 @@ const ALL_SOP_EXPORT_COLUMNS = [
   { key: "drawingNumber", label: "Drawing Number" },
   { key: "nomenclature", label: "Nomenclature" },
   { key: "quantity", label: "Qty/Assy" },
-  { key: "unit", label: "Unit" },
   { key: "componentType", label: "Component Type" },
+  { key: "unit", label: "Unit" },
   { key: "idNumber", label: "ID No" },
   { key: "irNumber", label: "IR Number" },
   { key: "msnNumber", label: "MSN Number" },
@@ -263,6 +263,24 @@ const ViewSOP: React.FC = () => {
           </Typography>
         );
       },
+    },
+    {
+      id: "componentType",
+      label: "Component Type",
+      minWidth: 130,
+      align: "center" as const,
+      format: (value: any, row: any) => (
+        <Typography
+          variant="body2"
+          sx={{
+            fontSize: "0.8rem",
+            color: !value && !row?.componentType ? "#98A2B3" : row.level === 0 ? "#344054" : "#667085",
+            fontWeight: row.level === 0 ? 600 : 400,
+          }}
+        >
+          {value || row?.componentType || "-"}
+        </Typography>
+      ),
     },
     {
       id: "unit",
