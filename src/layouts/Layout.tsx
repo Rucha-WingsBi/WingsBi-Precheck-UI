@@ -23,12 +23,7 @@ import {
   MenuItem,
   Stack,
   Collapse,
-  DialogContentText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+ 
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -47,7 +42,6 @@ import {
   ShoppingCart as ShoppingCartIcon,
   FactCheck as FactCheckIcon,
   MenuBook as MenuBookIcon,
-  Category as CategoryIcon,
   ListAlt as ListAltIcon,
   History as HistoryIcon,
   AccountTree as AccountTreeIcon,
@@ -367,7 +361,7 @@ export default function Layout() {
     const isAccessible = (pageName: string): boolean => {
       const entry = accessMap[pageName.trim().toLowerCase()];
       if (!entry) return false;
-      return entry.noAccess !== true;
+      return entry.fullAccess === true;
     };
 
     const checkItemAccess = (item: MenuItem): boolean => {
@@ -871,30 +865,6 @@ export default function Layout() {
         </Box>
       </Main>
 
-      {/* Navigation Guard Dialog */}
-      <Dialog
-        open={navigationDialogOpen}
-        onClose={() => setNavigationDialogOpen(false)}
-      >
-        <DialogTitle>Unsubmitted Changes</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Please submit remaining precheck before leaving this page.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setNavigationDialogOpen(false)}
-            variant="outlined"
-            size="small"
-          >
-            Stay
-          </Button>
-          {/* <Button onClick={confirmNavigation} variant="contained" color="error">
-            Leave
-          </Button> */}
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
