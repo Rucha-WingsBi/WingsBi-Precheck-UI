@@ -29,35 +29,73 @@ export const getErrorMessage = (
   if (serverData) {
     // Custom backend message: { message: "..." }
     if (typeof serverData.message === "string" && serverData.message.trim()) {
-      return serverData.message;
+      return sanitizeTechnicalMessage(serverData.message);
     }
     // ASP.NET Core Validation errors dictionary: { errors: { Field: ["Error..."] } }
     if (serverData.errors && typeof serverData.errors === "object") {
       const firstErrList = Object.values(serverData.errors)[0];
       if (Array.isArray(firstErrList) && firstErrList[0]) {
-        return String(firstErrList[0]);
+        return sanitizeTechnicalMessage(String(firstErrList[0]));
       }
       if (typeof firstErrList === "string") {
-        return firstErrList;
+        return sanitizeTechnicalMessage(firstErrList);
       }
     }
     // ProblemDetails title: { title: "..." }
     if (typeof serverData.title === "string" && serverData.title.trim()) {
-      return serverData.title;
+      return sanitizeTechnicalMessage(serverData.title);
     }
     // Plain string error response
     if (typeof serverData === "string" && serverData.trim()) {
-      return serverData;
+      return sanitizeTechnicalMessage(serverData);
     }
   }
 
   // 4. Axios error message or provided string
   if (typeof error === "string" && error.trim()) {
-    return error;
+    return sanitizeTechnicalMessage(error);
   }
   if (typeof error.message === "string" && error.message.trim()) {
-    return error.message;
+    return sanitizeTechnicalMessage(error.message);
   }
 
   return defaultFallback;
+};
+
+/**
+ * Detects raw technical/SQL error strings and replaces them with a user-friendly message.
+ * Any string that looks like a database error, stack trace, or internal exception
+ * is sanitized so end users never see raw technical details.
+ */
+const TECHNICAL_ERROR_PATTERNS = [
+  /cannot insert the value null/i,
+  /column does not allow nulls/i,
+  /violation of.*constraint/i,
+  /error executing scalar query/i,
+  /error executing.*query/i,
+  /the statement has been terminated/i,
+  /invalid object name/i,
+  /invalid column name/i,
+  /conversion failed when converting/i,
+  /arithmetic overflow/i,
+  /divide by zero/i,
+  /deadlock/i,
+  /timeout expired/i,
+  /at system\./i,
+  /at microsoft\./i,
+  /stacktrace/i,
+  /exception:/i,
+  /sqlexception/i,
+  /dbo\./i,
+  /inner exception/i,
+];
+
+const sanitizeTechnicalMessage = (message: string): string => {
+  const isTechnical = TECHNICAL_ERROR_PATTERNS.some((pattern) =>
+    pattern.test(message)
+  );
+  if (isTechnical) {
+    return "An unexpected error occurred. Something went wrong. Please refresh and try again.";
+  }
+  return message;
 };

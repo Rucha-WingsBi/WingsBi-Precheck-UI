@@ -321,7 +321,8 @@ export const useFetchAllDrawingNumbers = (
   pageSize = 20,
   componentType = "",
   prodSeries: string[] = [],
-  unit: string[] = []
+  unit: string[] = [],
+  enabled = true
 ) => {
   return useQuery<DrawingNumber[]>({
     queryKey: [
@@ -333,6 +334,7 @@ export const useFetchAllDrawingNumbers = (
       prodSeries,
       unit,
     ],
+    enabled,
     queryFn: async () => {
       try {
         const payload = {
