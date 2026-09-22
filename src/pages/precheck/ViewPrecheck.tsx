@@ -96,8 +96,8 @@ interface ColumnDef {
 const PRECHECK_COLUMNS: ColumnDef[] = [
   { field: "sr", headerName: "SR", minWidth: 60, align: "center", sortable: true },
   { field: "productionOrderNumber", headerName: "PO Number", minWidth: 140, align: "left", sortable: true },
-  { field: "lnItemCode", headerName: "LN Item Code", minWidth: 140, align: "left", sortable: true },
-  { field: "drawingNumber", headerName: "Drawing No.", minWidth: 150, align: "left", sortable: true },
+  { field: "lnItemCode", headerName: "Item Code", minWidth: 140, align: "left", sortable: true },
+  { field: "drawingNumber", headerName: "Part Number", minWidth: 150, align: "left", sortable: true },
   { field: "productionSeries", headerName: "Prod Series", minWidth: 110, align: "center", sortable: true },
   { field: "quantity", headerName: "Qty", minWidth: 70, align: "center", sortable: true },
   { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
@@ -111,7 +111,7 @@ const PRECHECK_COLUMNS: ColumnDef[] = [
 const CONSUMED_IN_COLUMNS: ColumnDef[] = [
   { field: "sr", headerName: "Sr No", minWidth: 60, align: "center", sortable: true },
   { field: "idNumber", headerName: "ID Number", minWidth: 110, align: "center", sortable: true },
-  { field: "consumedInDrawingNumber", headerName: "Consumed IN Drawing Number", minWidth: 220, align: "left", sortable: true },
+  { field: "consumedInDrawingNumber", headerName: "Consumed IN Part Number", minWidth: 220, align: "left", sortable: true },
   { field: "quantity", headerName: "Quantity", minWidth: 80, align: "center", sortable: true },
   { field: "poNumber", headerName: "PO Number", minWidth: 140, align: "left", sortable: true },
   { field: "irNumber", headerName: "IR Number", minWidth: 100, align: "center", sortable: false },
@@ -124,10 +124,10 @@ const CONSUMED_IN_COLUMNS: ColumnDef[] = [
 
 const ALL_PRECHECK_EXPORT_COLUMNS = [
   { key: "productionOrderNumber", label: "PO Number" },
-  { key: "lnItemCode", label: "LN Item Code" },
-  { key: "drawingNumber", label: "Drawing No." },
+  { key: "lnItemCode", label: "Item Code" },
+  { key: "drawingNumber", label: "Part Number" },
   { key: "productionSeries", label: "Prod Series" },
-  { key: "nomenclature", label: "Nomenclature" },
+  { key: "nomenclature", label: "Item Description" },
   { key: "quantity", label: "Qty" },
   { key: "idNumber", label: "ID Number" },
   { key: "irNumber", label: "IR Number" },
@@ -139,7 +139,7 @@ const ALL_PRECHECK_EXPORT_COLUMNS = [
 
 const ALL_CONSUMED_EXPORT_COLUMNS = [
   { key: "idNumber", label: "ID Number" },
-  { key: "consumedInDrawingNumber", label: "Consumed IN Drawing" },
+  { key: "consumedInDrawingNumber", label: "Consumed IN Part" },
   { key: "quantity", label: "Quantity" },
   { key: "poNumber", label: "PO Number" },
   { key: "irNumber", label: "IR Number" },
@@ -958,7 +958,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               {/* Combined Search */}
               <TextField
                 size="small"
-                placeholder="Search PO No. , Drawing No. , LN Item Code…"
+                placeholder="Search PO No. , Part Number , Item Code…"
                 value={combinedSearch}
                 onChange={(e) => { setCombinedSearch(e.target.value); setPage(0); }}
                 InputProps={{
@@ -1320,7 +1320,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         </Typography>
                         {dwgNum ? (
                           <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
-                            Drawing: {dwgNum}
+                            Part No: {dwgNum}
                           </Typography>
                         ) : null}
                       </Box>
@@ -1341,7 +1341,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    placeholder="LN Item Code *"
+                    placeholder="Item Code *"
                     size="small"
                     variant="outlined"
                     sx={{
@@ -1403,7 +1403,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         </Typography>
                         {lnCode ? (
                           <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.72rem", lineHeight: 1.2 }}>
-                            LN: {lnCode}
+                            Item Code: {lnCode}
                           </Typography>
                         ) : null}
                       </Box>
@@ -1424,7 +1424,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    placeholder="Drawing No. *"
+                    placeholder="Part Number *"
                     size="small"
                     variant="outlined"
                     sx={{
@@ -1876,7 +1876,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                                           textAlign: "center",
                                         }}
                                       >
-                                        Nomenclature
+                                        Item Description
                                       </TableCell>
                                       <TableCell
                                         sx={{

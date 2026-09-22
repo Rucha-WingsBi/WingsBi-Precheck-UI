@@ -229,7 +229,7 @@ function DrawingDetailsStep({
       {/* Standard Manufacturing Item Form (ID & BATCH) */}
       {(componentType === "ID" || componentType === "BATCH") && (
         <Grid container rowSpacing={1.5} columnSpacing={2} sx={{ mb: 1 }}>
-          {/* Row 1: PO Number *, LN Item Code *, Drawing No. * */}
+          {/* Row 1: PO Number *, Item Code *, Drawing No. * */}
           <Grid item xs={12} md={4}>
             <Controller
               name="poNumber"
@@ -339,7 +339,7 @@ function DrawingDetailsStep({
                       );
                     }
                     const details = [
-                      option.lnItemCode ? `LN: ${option.lnItemCode}` : null,
+                      option.lnItemCode ? `Item Code: ${option.lnItemCode}` : null,
                       option.nomenclature || option.drawingNumber
                         ? `${option.drawingNumber || ""} ${option.nomenclature || ""}`.trim()
                         : null,
@@ -434,7 +434,7 @@ function DrawingDetailsStep({
                 >
                   <TextField
                     size="small"
-                    label="LN Item Code"
+                    label="Item Code"
                     value={value || selectedDrawing?.lnItemCode || (selectedPO as any)?.lnItemCode || ""}
                     placeholder="Auto-populated"
                     variant="outlined"
@@ -481,7 +481,7 @@ function DrawingDetailsStep({
                 >
                   <TextField
                     size="small"
-                    label="Drawing Number"
+                    label="Part Number"
                     value={value || selectedDrawing?.drawingNumber || (selectedPO as any)?.drawingNumber || ""}
                     placeholder="Auto-populated"
                     variant="outlined"
@@ -743,12 +743,12 @@ function DrawingDetailsStep({
       {/* FIM Item Form */}
       {componentType === "FIM" && (
         <Grid container rowSpacing={1.5} columnSpacing={2} sx={{ mb: 1 }}>
-          {/* Row 1: RM Drawing Number *, RM Item Code, Production Series * */}
+          {/* Row 1: RM Part Number *, RM Item Code, Production Series * */}
           <Grid item xs={12} md={4}>
             <Controller
               name="drawingNumber"
               control={control}
-              rules={{ required: "RM Drawing Number is required" }}
+              rules={{ required: "RM Part Number is required" }}
               render={({ field: { onChange, ref }, fieldState: { error } }) => (
                 <Autocomplete
                   open={openDrawing}
@@ -870,7 +870,7 @@ function DrawingDetailsStep({
                     const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
 
                     const details = [
-                      lnCode ? `LN: ${lnCode}` : null,
+                      lnCode ? `Item Code: ${lnCode}` : null,
                       nomenclature,
                       compType,
                     ].filter(Boolean).join(" | ");
@@ -908,7 +908,7 @@ function DrawingDetailsStep({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="RM Drawing Number *"
+                      label="RM Part Number *"
                       inputRef={ref}
                       onClick={() => setOpenDrawing(true)}
                       onFocus={(e) => {
@@ -1200,12 +1200,12 @@ function DrawingDetailsStep({
       {/* SI / Purchase Item Form */}
       {(componentType === "SI" || componentType === "Purchase Item" || componentType === "PURCHASE ITEM") && (
         <Grid container rowSpacing={1.5} columnSpacing={2} sx={{ mb: 1 }}>
-          {/* Row 1: RM Drawing Number *, RM Item Code, Production Series * */}
+          {/* Row 1: RM Part Number *, RM Item Code, Production Series * */}
           <Grid item xs={12} md={4}>
             <Controller
               name="drawingNumber"
               control={control}
-              rules={{ required: "RM Drawing Number is required" }}
+              rules={{ required: "RM Part Number is required" }}
               render={({ field: { onChange, ref }, fieldState: { error } }) => (
                 <Autocomplete
                   open={openDrawing}
@@ -1327,7 +1327,7 @@ function DrawingDetailsStep({
                     const compType = typeof option === "string" ? "" : formatComponentType(option.componentType);
 
                     const details = [
-                      lnCode ? `LN: ${lnCode}` : null,
+                      lnCode ? `Item Code: ${lnCode}` : null,
                       nomenclature,
                       compType,
                     ].filter(Boolean).join(" | ");
@@ -1365,7 +1365,7 @@ function DrawingDetailsStep({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="RM Drawing Number *"
+                      label="RM Part Number *"
                       inputRef={ref}
                       onClick={() => setOpenDrawing(true)}
                       onFocus={(e) => {

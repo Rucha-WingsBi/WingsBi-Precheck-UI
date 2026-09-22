@@ -61,7 +61,7 @@ const ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS = [
   { key: "requestId", label: "Request ID" },
   { key: "poNumber", label: "PO Number" },
   { key: "drawingNumber", label: "Drawing Number" },
-  { key: "materialCode", label: "LN Item Code" },
+  { key: "materialCode", label: "Item Code" },
   { key: "quantity", label: "Quantity" },
   { key: "itemDescription", label: "Item Description" },
   { key: "status", label: "Status" },
@@ -1319,7 +1319,7 @@ const MaterialRequisition: React.FC = () => {
                       { label: "Request ID", width: 120, align: "left" },
                       { label: "PO Number", width: 130, align: "left" },
                       { label: "Drawing Number", width: 140, align: "left" },
-                      { label: "LN Item Code", width: 120, align: "left" },
+                      { label: "Item Code", width: 120, align: "left" },
                       { label: "Quantity", width: 90, align: "center" },
                       { label: "Item Description", width: 180, align: "left" },
                       { label: "Status", width: 140, align: "center" },
@@ -1605,7 +1605,7 @@ const MaterialRequisition: React.FC = () => {
                           {...field}
                           fullWidth
                           size="small"
-                          label="LN item code"
+                          label="Item Code"
                           variant="outlined"
                         />
                       )}
@@ -2298,9 +2298,9 @@ const MaterialRequisition: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Drawing Number *"
+                      label="Part Number *"
                       fullWidth
-                      placeholder="Select Drawing Number to Swap"
+                      placeholder="Select Part Number to Swap"
                     />
                   )}
                 />
@@ -2453,7 +2453,7 @@ const MaterialRequisition: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Rejected part Drawing No *"
+                      label="Rejected part Part Number *"
                       fullWidth
                     />
                   )}
@@ -2464,7 +2464,7 @@ const MaterialRequisition: React.FC = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Rejected part Nomenclature"
+                  label="Rejected part Item Description"
                   value={newRequisition.nomenclature || ""}
                 />
               </Grid>
@@ -2645,7 +2645,7 @@ const MaterialRequisition: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Assembly Drawing Number"
+                      label="Assembly Part Number"
                       fullWidth
                       size="small"
                     />

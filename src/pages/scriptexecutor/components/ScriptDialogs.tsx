@@ -109,12 +109,12 @@ export const ResultDialog: React.FC<ResultDialogProps> = ({
             </Box>
             <Divider />
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography variant="caption" color="text.secondary">New drawings (child)</Typography>
+              <Typography variant="caption" color="text.secondary">New parts (child)</Typography>
               <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{assemblyStats.childDrawings}</Typography>
             </Box>
             <Divider />
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography variant="caption" color="text.secondary">New drawings (parent)</Typography>
+              <Typography variant="caption" color="text.secondary">New parts (parent)</Typography>
               <Typography variant="caption" sx={{ fontWeight: 700, color: "success.main" }}>{assemblyStats.parentDrawings}</Typography>
             </Box>
             <Divider />
@@ -249,7 +249,7 @@ export const ValidationErrorDialog: React.FC<ValidationErrorDialogProps> = ({
           </Alert>
         )}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.5 }}>
-          Both <strong>Master Data Assembly</strong> and <strong>Master Data Drawing</strong> files are mandatory to upload.
+          Both <strong>Master Data Assembly</strong> and <strong>Master Data Parts</strong> files are mandatory to upload.
         </Typography>
 
         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
@@ -306,14 +306,14 @@ export const LNValidationErrorDialog: React.FC<LNValidationErrorDialogProps> = (
       <DialogTitle sx={{ pb: 1, display: "flex", alignItems: "center", gap: 1.5 }}>
         <WarningIcon sx={{ color: "error.main", fontSize: 28 }} />
         <Typography variant="h6" sx={{ fontWeight: 700, color: "error.main" }}>
-          LN Item Code Mismatch
+          Item Code Mismatch
         </Typography>
       </DialogTitle>
       <DialogContent sx={{ py: 1.5 }}>
         {lnValidationErrors?.missingInDrawing && lnValidationErrors.missingInDrawing.length > 0 && (
           <Box sx={{ mb: (lnValidationErrors?.missingInAssembly?.length ?? 0) > 0 ? 3 : 0 }}>
             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, lineHeight: 1.6, color: "text.primary" }}>
-              The following LN Item Codes are present in the Master Drawing Assembly file ({lnValidationErrors?.assemblyFileName}) but do not exist in the Master Drawing file ({lnValidationErrors?.drawingFileName}):
+              The following Item Codes are present in the Master Parts Assembly file ({lnValidationErrors?.assemblyFileName}) but do not exist in the Master Parts file ({lnValidationErrors?.drawingFileName}):
             </Typography>
 
             <Box sx={{
@@ -335,7 +335,7 @@ export const LNValidationErrorDialog: React.FC<LNValidationErrorDialogProps> = (
             </Box>
 
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-              Please ensure all Assembly LN Item Codes and Child Part Item Codes are available in the Master Drawing file.
+              Please ensure all Assembly Item Codes and Child Part Item Codes are available in the Master Parts file.
             </Typography>
           </Box>
         )}
@@ -344,7 +344,7 @@ export const LNValidationErrorDialog: React.FC<LNValidationErrorDialogProps> = (
           <Box>
             {(lnValidationErrors?.missingInDrawing?.length ?? 0) > 0 && <Divider sx={{ my: 2.5 }} />}
             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, lineHeight: 1.6, color: "text.primary" }}>
-              The following LN Item Codes are present in the Master Drawing file ({lnValidationErrors?.drawingFileName}) but do not exist in the Master Drawing Assembly file ({lnValidationErrors?.assemblyFileName}):
+              The following Item Codes are present in the Master Parts file ({lnValidationErrors?.drawingFileName}) but do not exist in the Master Parts Assembly file ({lnValidationErrors?.assemblyFileName}):
             </Typography>
 
             <Box sx={{
@@ -366,7 +366,7 @@ export const LNValidationErrorDialog: React.FC<LNValidationErrorDialogProps> = (
             </Box>
 
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-              Please ensure all LN Item Codes from the Master Drawing file are mapped as either Assembly LN Item Codes or Child Part Item Codes in the Master Drawing Assembly file.
+              Please ensure all Item Codes from the Master Parts file are mapped as either Assembly Item Codes or Child Part Item Codes in the Master Parts Assembly file.
             </Typography>
           </Box>
         )}

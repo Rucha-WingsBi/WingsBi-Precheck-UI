@@ -70,11 +70,11 @@ import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 const ALL_EXPORTABLE_COLUMNS = [
   { key: "qrCodeNumber", label: "QRCode ID" },
   { key: "productionSeries", label: "Prod Series" },
-  { key: "lnItemCode", label: "LN Item Code" },
-  { key: "drawingNumber", label: "Drawing Number" },
-  { key: "nomenclature", label: "Nomenclature" },
+  { key: "lnItemCode", label: "Item Code" },
+  { key: "drawingNumber", label: "Part Number" },
+  { key: "nomenclature", label: "Item Description" },
   { key: "componentType", label: "Component Type" },
-  { key: "consumedInDrawing", label: "Consumed In Drawing" },
+  { key: "consumedInDrawing", label: "Consumed In Part" },
   { key: "idNumber", label: "ID Number" },
   { key: "batchId", label: "Batch ID" },
   { key: "qrCodeStatus", label: "Status" },
@@ -1343,7 +1343,7 @@ const ViewBarcode: React.FC = () => {
               {/* Search Input */}
               <TextField
                 size="small"
-                placeholder="Search QR Code Number, PO No. Drawing No. Ln Item Code..."
+                placeholder="Search QR Code Number, PO No. Part No. Item Code..."
                 value={searchQuery}
                 onChange={(e) => {
                   if (error) dispatch(clearError());
@@ -1968,11 +1968,11 @@ const ViewBarcode: React.FC = () => {
 
                   <TableHeaderSortable label="QRCode Number" columnKey="qrCodeNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="140px" />
                   <TableHeaderSortable label="Prod Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
-                  <TableHeaderSortable label="LN Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
-                  <TableHeaderSortable label="Drawing Number" columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="150px" />
-                  <TableHeaderSortable label="Nomenclature" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="160px" />
+                  <TableHeaderSortable label="Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
+                  <TableHeaderSortable label="Part Number" columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="150px" />
+                  <TableHeaderSortable label="Item Description" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="160px" />
                   <TableHeaderSortable label="Component Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="130px" />
-                  <TableHeaderSortable label="Consumed In Drawing" columnKey="consumedInDrawing" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="150px" />
+                  <TableHeaderSortable label="Consumed In Part" columnKey="consumedInDrawing" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="150px" />
                   <TableHeaderSortable label="ID Number" columnKey="idNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="130px" />
 
                   {showBatchIdColumn && (

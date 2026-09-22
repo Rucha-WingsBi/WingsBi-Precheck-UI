@@ -112,11 +112,11 @@ const ALL_STORED_IN_EXPORT_COLUMNS = [
   { key: "productionOrderNumber", label: "PO Number" },
   { key: "projectNumber", label: "Project Number" },
   { key: "productionSeries", label: "Prod Series" },
-  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "drawingNumber", label: "Part Number" },
   { key: "idNumber", label: "ID Number" },
   { key: "quantity", label: "Qty" },
-  { key: "nomenclature", label: "Nomenclature" },
-  { key: "consumedInDrawing", label: "Consumed in Drawing" },
+  { key: "nomenclature", label: "Item Description" },
+  { key: "consumedInDrawing", label: "Consumed in Part" },
   { key: "qrCodeStatus", label: "Status" },
   { key: "irNumber", label: "IR Number" },
   { key: "msnNumber", label: "MSN Number" },
@@ -463,7 +463,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
       });
       setDrawingOptions(response.data || []);
     } catch (error) {
-      console.error("Failed to fetch drawing numbers:", error);
+      console.error("Failed to fetch Part Numbers:", error);
       setDrawingOptions([]);
     } finally {
       setLoadingDrawings(false);
@@ -483,7 +483,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     const hasValidDate = date instanceof Date && !isNaN(date.getTime());
     const formattedDate = hasValidDate ? format(date, "dd/MM/yyyy") : "";
 
-    // Set selected drawing number immediately for instant UI feedback
+    // Set selected Part Number immediately for instant UI feedback
     setSelectedDrawingNo(currentQuery);
 
     try {
@@ -709,7 +709,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Search components..."
+                      placeholder="Search Part Number..."
                       onPaste={(e) => {
                         const pastedText = e.clipboardData.getData('text');
                         if (pastedText) {
@@ -816,10 +816,10 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                       <SortableTableHeader label="PO Number" sortKey="poNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
                       <TableCell align="left" sx={commonTableHeaderStyle}>Project Number</TableCell>
                       <SortableTableHeader label="Prod Series" sortKey="productionSeries" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-                      <SortableTableHeader label="Drawing Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
                       <TableCell align="center" sx={commonTableHeaderStyle}>ID</TableCell>
                       <TableCell align="center" sx={commonTableHeaderStyle}>Qty</TableCell>
-                      <SortableTableHeader label="Nomenclature" sortKey="nomenclature" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <SortableTableHeader label="Item Description" sortKey="nomenclature" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
                       <TableCell align="center" sx={commonTableHeaderStyle}>Actions</TableCell>
                     </TableRow>
                   </TableHead>

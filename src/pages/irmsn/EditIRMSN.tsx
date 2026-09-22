@@ -409,7 +409,7 @@ export default function EditIRMSN() {
               />
             </Grid>
 
-            {/* Row 2: Drawing Number Autocomplete & LN Item Code */}
+            {/* Row 2: Part Number Autocomplete & Item Code */}
             <Grid item xs={12} sm={6} md={4}>
               <Autocomplete
                 size="small"
@@ -455,8 +455,8 @@ export default function EditIRMSN() {
                     typeof option === "string" ? "" : option?.componentType;
 
                   const details = [
-                    lnCode ? `LN: ${lnCode}` : null,
-                    nomenclature ? `Nomenclature: ${nomenclature}` : null,
+                    lnCode ? `Item Code: ${lnCode}` : null,
+                    nomenclature ? `Part No.: ${nomenclature}` : null,
                     compType ? `Component Type: ${compType}` : null,
                   ]
                     .filter(Boolean)
@@ -498,7 +498,7 @@ export default function EditIRMSN() {
                   );
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Drawing Number" fullWidth />
+                  <TextField {...params} label="Part Number" fullWidth />
                 )}
               />
             </Grid>
@@ -509,7 +509,7 @@ export default function EditIRMSN() {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="LN Item Code"
+                    label="Item Code"
                     fullWidth
                     size="small"
                     disabled
@@ -526,7 +526,7 @@ export default function EditIRMSN() {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Nomenclature"
+                    label="Item Description"
                     fullWidth
                     size="small"
                     disabled
@@ -607,9 +607,9 @@ export default function EditIRMSN() {
                   }
                   const poNum = option.productionOrderNumber || "";
                   const details = [
-                    option.lnItemCode ? `LN: ${option.lnItemCode}` : null,
-                    option.drawingNumber ? `Drawing: ${option.drawingNumber}` : null,
-                    option.nomenclature ? `Nomenclature: ${option.nomenclature}` : null,
+                    option.lnItemCode ? `Item Code: ${option.lnItemCode}` : null,
+                    option.drawingNumber ? `Part No: ${option.drawingNumber}` : null,
+                    option.nomenclature ? `Description: ${option.nomenclature}` : null,
                     option.componentType ? `Component Type: ${option.componentType}` : null,
                   ]
                     .filter(Boolean)

@@ -153,9 +153,9 @@ const ALL_EXPORTABLE_COLUMNS = [
   { key: "productionOrderNumber", label: "PO Number" },
   { key: "projectNumber", label: "Project" },
   { key: "projectDescription", label: "Project Description" },
-  { key: "lnItemCode", label: "LN Item Code" },
+  { key: "lnItemCode", label: "Item Code" },
   { key: "itemDescription", label: "Item Description" },
-  { key: "drawingNumber", label: "Drawing Number" },
+  { key: "drawingNumber", label: "Part Number" },
   { key: "productionSeries", label: "Prod Series" },
   { key: "quantity", label: "Qty" },
   { key: "startIdNumber", label: "Start ID" },
@@ -1244,13 +1244,13 @@ const ProductionOrderUpload: React.FC = () => {
                 rowData["Project Description"] = row.projectDescription || row.projectdescription || "-";
                 break;
               case "lnItemCode":
-                rowData["LN Item Code"] = row.lnItemCode || row.itemcode || "-";
+                rowData["Item Code"] = row.lnItemCode || row.itemcode || "-";
                 break;
               case "itemDescription":
                 rowData["Item Description"] = row.itemDescription || row.itemdescription || "-";
                 break;
               case "drawingNumber":
-                rowData["Drawing Number"] = row.drawingNumber || row.drawingnumber || "-";
+                rowData["Part Number"] = row.drawingNumber || row.drawingnumber || "-";
                 break;
               case "productionSeries":
                 rowData["Prod Series"] = row.productionSeries || row.series || "-";
@@ -1489,7 +1489,7 @@ const ProductionOrderUpload: React.FC = () => {
     },
     {
       field: "lnItemCode",
-      headerName: "LN Item",
+      headerName: "Item Code",
       flex: 1,
       minWidth: 140,
       headerAlign: "left",
@@ -1497,7 +1497,7 @@ const ProductionOrderUpload: React.FC = () => {
     },
     {
       field: "drawingNumber",
-      headerName: "Drawing No.",
+      headerName: "Part Number",
       flex: 1,
       minWidth: 150,
       headerAlign: "left",
@@ -2120,7 +2120,7 @@ const ProductionOrderUpload: React.FC = () => {
               >
                 {/* Search Field */}
                 <TextField
-                  placeholder="Search PO, LN Item Code, Drawing No..."
+                  placeholder="Search PO, Item Code, Part No..."
                   variant="outlined"
                   size="small"
                   value={searchQuery}

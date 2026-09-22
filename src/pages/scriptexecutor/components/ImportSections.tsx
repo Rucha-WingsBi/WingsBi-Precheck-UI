@@ -53,7 +53,7 @@ export const ImportTypeSelector: React.FC<ImportTypeSelectorProps> = ({ activeTa
     {
       tab: TABS.MASTER_DATA,
       title: "Master data",
-      subtitle: "Drawing & assembly mappings",
+      subtitle: "Parts & assembly mappings",
     },
     {
       tab: TABS.QR_CODE,

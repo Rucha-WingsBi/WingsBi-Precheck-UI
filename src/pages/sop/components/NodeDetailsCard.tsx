@@ -129,7 +129,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
 
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>
-            LN Item Code
+            Item Code
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, color: "#101828", fontSize: "0.8rem" }}>
             {lnCode}

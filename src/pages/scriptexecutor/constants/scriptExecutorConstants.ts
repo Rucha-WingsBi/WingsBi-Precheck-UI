@@ -19,20 +19,20 @@ export const TAB_METADATA = {
   [TABS.MASTER_DATA]: {
     templateName: "Master_Data_Template.xlsx",
     instructions: [
-      "**Note:** Both **Master Data Assembly** and **Master Data Drawing** files are mandatory to upload. The script upload will not proceed unless both fields are uploaded.",
+      "**Note:** Both **Master Data Assembly** and **Master Data Parts** files are mandatory to upload. The script upload will not proceed unless both fields are uploaded.",
       "Ensure all data is accurate and validated before execution.",
-      "Verify that the correct Drawing Number and LN Item are selected.",
+      "Verify that the correct Part Number and Item Code are selected.",
     ],
     downloadEndpoints: [
       { endpoint: "/api/Script/DownloadTemplate/masterdata1", label: "Master Data Assembly", fileName: "MasterData_Drawing_Assembly_Template.xlsx" },
-      { endpoint: "/api/Script/DownloadTemplate/masterdata2", label: "Master Data Drawing", fileName: "MasterData_Drawing_Template.xlsx" },
+      { endpoint: "/api/Script/DownloadTemplate/masterdata2", label: "Master Data Parts", fileName: "MasterData_Drawing_Template.xlsx" },
     ],
   },
   [TABS.QR_CODE]: {
     templateName: "QR_Code_Template.xlsx",
     instructions: [
       "Ensure all data is accurate and validated before execution.",
-      "Verify that the correct Drawing Number and LN Item are selected.",
+      "Verify that the correct Part Number and Item Code are selected.",
       "Ensure the Quantity value is greater than 0.",
       "Confirm that the Quantity and Remaining Quantity fields contain the same value.",
     ],
@@ -53,7 +53,7 @@ export const detectTemplateType = (headers: string[], fileName?: string): { type
       return { type: "masterdata-drawing-assembly", templateName: "Master Data Assembly Template" };
     }
     if (normName.includes("masterdatadrawing")) {
-      return { type: "masterdata-drawing", templateName: "Master Data Drawing Template" };
+      return { type: "masterdata-drawing", templateName: "Master Data Parts Template" };
     }
     if (normName.includes("qrcodesample") || normName.includes("qrcodetemplate") || normName.includes("oldqr") || normName.includes("qr")) {
       return { type: "qrcodesample", templateName: "QR Code Template" };
@@ -74,7 +74,7 @@ export const detectTemplateType = (headers: string[], fileName?: string): { type
     return { type: "masterdata-drawing-assembly", templateName: "Master Data Assembly Template" };
   }
   if (hasLnItemCode && !hasAssemblyLN && !hasChildPart) {
-    return { type: "masterdata-drawing", templateName: "Master Data Drawing Template" };
+    return { type: "masterdata-drawing", templateName: "Master Data Parts Template" };
   }
   if (hasDrawingNumber && hasLnItem && hasQuantity && hasRemainingQuantity) {
     return { type: "qrcodesample", templateName: "QR Code Template" };
@@ -94,7 +94,7 @@ export const isTemplateValidForTab = (detectedType: string, tabIndex: number): b
 
 export const getExpectedTemplateName = (tabIndex: number): string => {
   if (tabIndex === TABS.MASTER_DATA) {
-    return "Master Data Assembly Template and Master Data Drawing Template";
+    return "Master Data Assembly Template and Master Data Parts Template";
   } else if (tabIndex === TABS.QR_CODE) {
     return "QR Code Template";
   }
@@ -104,8 +104,8 @@ export const getExpectedTemplateName = (tabIndex: number): string => {
 export const parseAssemblyStats = (output: string): AssemblyStats => {
   const defaultStats = { childDrawings: 0, parentDrawings: 0, updatedMappings: 0 };
   if (!output) return defaultStats;
-  const childMatch = output.match(/New drawings\s*\(child\):\s*(\d+)/i);
-  const parentMatch = output.match(/New drawings\s*\(parent\):\s*(\d+)/i);
+  const childMatch = output.match(/New (?:drawings|parts)\s*\(child\):\s*(\d+)/i);
+  const parentMatch = output.match(/New (?:drawings|parts)\s*\(parent\):\s*(\d+)/i);
   const updatedMappingsMatch = output.match(/Updated assembly mappings:\s*(\d+)/i);
 
   return {

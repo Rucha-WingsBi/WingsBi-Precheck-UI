@@ -277,11 +277,11 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
                     PO: {option.productionOrderNumber}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {option.lnItemCode && `LN: ${option.lnItemCode}`}
+                    {option.lnItemCode && `Item Code: ${option.lnItemCode}`}
                     {option.drawingNumber &&
-                      ` | Drawing: ${option.drawingNumber}`}
+                      ` | Part Number: ${option.drawingNumber}`}
                     {option.nomenclature &&
-                      ` | Nomenclature: ${option.nomenclature}`}
+                      ` | Item Description: ${option.nomenclature}`}
                     {option.componentType &&
                       ` | Component Type: ${option.componentType}`}
                   </Typography>
@@ -330,7 +330,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       >
         <TextField
           size="small"
-          label="Drawing Number"
+          label="Part Number"
           value={drawingNumberValue}
           placeholder="Auto-populated"
           variant="outlined"
@@ -371,7 +371,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
       >
         <TextField
           size="small"
-          label="LN Item Code"
+          label="Item Code"
           value={lnItemCodeValue}
           placeholder="Auto-populated"
           variant="outlined"

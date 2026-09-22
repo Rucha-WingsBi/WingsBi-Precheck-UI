@@ -151,7 +151,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
     },
     {
       id: "childDrawingNumber",
-      label: "Drawing Number",
+      label: "Part Number",
       minWidth: 160,
       format: (value: any, row: any) => (
         <Box
@@ -195,7 +195,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
     },
     {
       id: "nomenclature",
-      label: "Nomenclature",
+      label: "Item Description",
       minWidth: 150,
       format: (value: any) => (
         <Typography variant="body2" sx={{ fontSize: "0.775rem" }}>
@@ -205,7 +205,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
     },
     {
       id: "lnItemCode",
-      label: "LN Item Code",
+      label: "Item Code",
       minWidth: 120,
       format: (value: any) => (
         <Typography

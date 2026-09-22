@@ -922,10 +922,10 @@ const StoreIn: React.FC = () => {
                   "PO Number",
                   "Project Number",
                   "Prod Series",
-                  "Drawing Number",
+                  "Part Number",
                   "ID",
                   "Qty",
-                  "Nomenclature",
+                  "Item Description",
                   "Details",
                 ].map((col) => (
                   <TableCell
@@ -1035,7 +1035,7 @@ const StoreIn: React.FC = () => {
                               <TableHead>
                                 <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
                                   {[
-                                    "Consumed in Drawing",
+                                    "Consumed in Part",
                                     "Status",
                                     "IR Number",
                                     "MSN Number",
@@ -1046,7 +1046,7 @@ const StoreIn: React.FC = () => {
                                   ].map((subCol) => (
                                     <TableCell
                                       key={subCol}
-                                      align={subCol === "Consumed in Drawing" ? "left" : "center"}
+                                      align={subCol === "Consumed in Part" ? "left" : "center"}
                                       sx={{
                                         fontWeight: 600,
                                         color: "#344054",
@@ -1178,7 +1178,7 @@ const StoreIn: React.FC = () => {
           >
             <TextField
               size="small"
-              placeholder="Search PO, Drawing No., ID Number..."
+              placeholder="Search PO, Part Number, ID Number..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -1550,7 +1550,7 @@ const StoreIn: React.FC = () => {
               <TableRow sx={{ height: 42 }}>
                 {[
                   "S.No.",
-                  "Drawing Number",
+                  "Part Number",
                   "PO Number",
                   "Prod Series",
                   "ID Number",

@@ -126,7 +126,7 @@ const LabelPreviewPanel = ({
             }}
           >
             <Typography variant="caption" sx={{ color: "#64748B" }}>
-              Nomenclature
+              Item Description
             </Typography>
             <Typography
               variant="body2"
@@ -489,7 +489,7 @@ const LabelPreviewPanel = ({
                   variant="caption"
                   sx={{ color: "#64748B", display: "block", fontSize: "0.725rem", lineHeight: 1.3 }}
                 >
-                  <strong>LN:</strong> {fetchedPreviewItem?.lnItemCode || fetchedPreviewItem?.LnItemCode || fetchedPreviewItem?.lnCode || fetchedPreviewItem?.LnCode || selectedDrawing?.lnItemCode || "—"}
+                  <strong>Item Code:</strong> {fetchedPreviewItem?.lnItemCode || fetchedPreviewItem?.LnItemCode || fetchedPreviewItem?.lnCode || fetchedPreviewItem?.LnCode || selectedDrawing?.lnItemCode || "—"}
                 </Typography>
                 <Typography
                   variant="caption"

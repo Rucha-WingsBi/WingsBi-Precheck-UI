@@ -1338,7 +1338,7 @@ export default function BarcodeGeneration() {
       if (event.key === "Tab") {
         setTimeout(() => {
           const drawingField = document.querySelector(
-            'input[aria-label*="LN Item Code"]',
+            'input[aria-label*="Item Code"]',
           ) as HTMLInputElement;
           if (drawingField) {
             drawingField.focus();

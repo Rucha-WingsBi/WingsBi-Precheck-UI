@@ -303,7 +303,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       if (containsInactive) {
         setSnackbar({
           open: true,
-          message: "Drawing number is not active",
+          message: "Part Number is not active",
           severity: "warning",
         });
       }
@@ -357,7 +357,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
       if (containsInactive) {
         setSnackbar({
           open: true,
-          message: "Drawing number is not active",
+          message: "Part Number is not active",
           severity: "warning",
         });
       }
@@ -753,8 +753,8 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Assembly Number / LN Item Code"
-                    placeholder="Search assembly number or LN item..."
+                    label="Assembly Number / Item Code"
+                    placeholder="Search assembly number or Item Code..."
                     sx={{
                       "& .MuiInputBase-root": {
                         height: 40,
@@ -887,7 +887,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                   align="center"
                 />
                 <SortableTableHeader
-                  label="Drawing No."
+                  label="Part Number"
                   sortKey="drawingNumber"
                   activeSortColumn={sortColumn}
                   sortDirection={sortDirection}
@@ -895,10 +895,10 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                   align="left"
                 />
                 <TableCell sx={commonTableHeaderStyle}>
-                  Nomenclature
+                  Item Description
                 </TableCell>
                 <SortableTableHeader
-                  label="LN Item Code"
+                  label="Item Code"
                   sortKey="lnItemCode"
                   activeSortColumn={sortColumn}
                   sortDirection={sortDirection}
@@ -973,13 +973,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                 <EmptyState
                   colSpan={9}
                   title="Search to view assembly details"
-                  subtitle="Enter an assembly number or LN item code above to search."
+                  subtitle="Enter an assembly number or Item Code above to search."
                 />
               ) : (
                 <EmptyState
                   colSpan={9}
                   title="No Matching Records found"
-                  subtitle="No child drawing numbers found matching the specified search criteria."
+                  subtitle="No child Part Numbers found matching the specified search criteria."
                 />
               )}
             </TableBody>
@@ -1108,7 +1108,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                       {opt.drawingNumber}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
-                      LN: {lnCode}
+                      Item Code: {lnCode}
                     </Typography>
                   </Box>
                 );
@@ -1116,8 +1116,8 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Parent Drawing Number"
-                  placeholder="Select or search parent drawing"
+                  label="Parent Part Number"
+                  placeholder="Select or search parent Part Number"
                   required
                   InputProps={{
                     ...params.InputProps,
@@ -1177,7 +1177,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                       {opt.drawingNumber}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", textAlign: "left", width: "100%" }}>
-                      LN: {lnCode}
+                      Item Code: {lnCode}
                     </Typography>
                   </Box>
                 );
@@ -1185,7 +1185,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Child Drawing Number"
+                  label="Child Part Number"
                   placeholder="Type at least 3 characters..."
                   required
                   InputProps={{
@@ -1247,12 +1247,12 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
         PaperProps={{ sx: { borderRadius: "12px" } }}
       >
         <DialogTitle sx={{ fontWeight: 700, color: "primary.main", fontSize: "1.1rem" }}>
-          Edit Drawing
+          Edit Part Number
         </DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
             <TextField
-              label="Drawing Number"
+              label="Part Number"
               value={selectedDrawing?.drawingNumber || ""}
               disabled
               fullWidth
@@ -1324,7 +1324,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
         </DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child drawing <strong>{selectedDrawing?.drawingNumber}</strong>?
+            Are you sure you want to delete the parent assembly mapping <strong>{deletingParentDwg}</strong> for child Part Number <strong>{selectedDrawing?.drawingNumber}</strong>?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>

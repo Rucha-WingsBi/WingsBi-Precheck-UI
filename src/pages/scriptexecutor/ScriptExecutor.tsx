@@ -404,17 +404,17 @@ export default function ScriptExecutor() {
     if (executionStats.errors <= 0) return [];
     const rows = [];
     const sampleIssues = [
-      "Invalid LN Item Code format",
+      "Invalid Item Code format",
       "Quantity must be greater than 0",
-      "LN Item Code missing in Master",
+      "Item Code missing in Master",
       "Duplicate record found",
       "MRIR Number mismatch",
     ];
-    const fields = ["LN Item Code", "Quantity", "Drawing Number", "MRIR Number", "HT Lot No"];
+    const fields = ["Item Code", "Quantity", "Part Number", "MRIR Number", "HT Lot No"];
 
     for (let i = 0; i < Math.min(executionStats.errors, 5); i++) {
       const rowNum = 12 + i * 4;
-      const keyVal = parsedData[i]?.["lnitemcode"] || parsedData[i]?.["Drawing Number"] || parsedData[i]?.["assemblylnitemcode"] || `ITEM-00${i + 1}`;
+      const keyVal = parsedData[i]?.["itemcode"] || parsedData[i]?.["lnitemcode"] || parsedData[i]?.["Part Number"] || parsedData[i]?.["Drawing Number"] || parsedData[i]?.["assemblylnitemcode"] || `ITEM-00${i + 1}`;
       rows.push({
         row: rowNum,
         key: String(keyVal),
@@ -523,7 +523,7 @@ export default function ScriptExecutor() {
     });
     const missing: string[] = [];
     if (!hasAssembly) missing.push("Master Data Assembly");
-    if (!hasDrawing) missing.push("Master Data Drawing");
+    if (!hasDrawing) missing.push("Master Data Parts");
     return missing;
   }, [selectedFiles, activeTab]);
 
@@ -789,11 +789,11 @@ export default function ScriptExecutor() {
           setLnValidationErrors({
             missingInDrawing: uniqueMissingInDrawing,
             missingInAssembly: uniqueMissingInAssembly,
-            assemblyFileName: assemblyFile?.name || "Master Drawing Assembly File",
-            drawingFileName: drawingFile?.name || "Master Drawing File",
+            assemblyFileName: assemblyFile?.name || "Master Parts Assembly File",
+            drawingFileName: drawingFile?.name || "Master Parts File",
           });
           setShowLNValidationErrorDialog(true);
-          addLog("LN Item Code validation failed. Upload aborted.", "error");
+          addLog("Item Code validation failed. Upload aborted.", "error");
           return;
         }
       }
@@ -813,7 +813,7 @@ export default function ScriptExecutor() {
       });
 
       if (!assemblyFile || !drawingFile) {
-        addLog("Error: Both Assembly and Drawing files are required for Master Data upload.", "error");
+        addLog("Error: Both Assembly and Parts files are required for Master Data upload.", "error");
         setIsUploading(false);
         return;
       }
