@@ -167,7 +167,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
             <TableRow sx={{ backgroundColor: COLOUR_ROLES.headerBg }}>
               <SortableTableHeader label="Sr. No." columnKey="sr" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={45} />
               <SortableTableHeader label="Position No" columnKey="findNo" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={20} />
-              <SortableTableHeader label="Line Item Code" columnKey="lnItemCode" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
+              <SortableTableHeader label="LN Item Code" columnKey="lnItemCode" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={110} />
               <SortableTableHeader label="Drawing No." columnKey="drawingNumber" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={140} />
               <SortableTableHeader label="Nomenclature" columnKey="nomenclature" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={95} />
               <SortableTableHeader label="Unit" columnKey="unit" sortColumn={orderBy} sortDirection={order} onSort={onRequestSort} align="center" minWidth={90} />
@@ -490,6 +490,18 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                       textAlign: "center",
                                     }}
                                   >
+                                    Rejected By
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      fontWeight: 600,
+                                      color: "text.primary",
+                                      fontSize: "0.75rem",
+                                      py: 0.5,
+                                      px: 1.5,
+                                      textAlign: "center",
+                                    }}
+                                  >
                                     Date
                                   </TableCell>
                                   <TableCell
@@ -550,6 +562,17 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                       textAlign: "center",
                                     }}
                                   >
+                                    {item.rejectedUserName || "-"}
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      fontSize: "0.75rem",
+                                      color: "#344054",
+                                      py: 0.5,
+                                      px: 1.5,
+                                      textAlign: "center",
+                                    }}
+                                  >
                                     {formatDate(item.modifiedDate || "")}
                                   </TableCell>
                                   <TableCell
@@ -561,48 +584,47 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                                       textAlign: "center",
                                     }}
                                   >
-                                    {item.precheckStatus ? (
-                                      <Chip
-                                        label={item.precheckStatus}
-                                        size="small"
-                                        variant="outlined"
-                                        sx={{
-                                          fontSize: "0.7rem",
-                                          height: 20,
-                                          fontWeight: 600,
-                                          borderRadius: "12px",
-                                          backgroundColor:
-                                            item.precheckStatus.toLowerCase() === "completed" ||
-                                              item.precheckStatus.toLowerCase() === "verified"
-                                              ? "#ECFDF5"
-                                              : item.precheckStatus.toLowerCase() === "updated"
-                                                ? "#FFF7ED"
-                                                : item.precheckStatus.toLowerCase() === "rejected"
-                                                  ? "#FEF2F2"
-                                                  : "#F3F4F6",
-                                          color:
-                                            item.precheckStatus.toLowerCase() === "completed" ||
-                                              item.precheckStatus.toLowerCase() === "verified"
-                                              ? "#027A48"
-                                              : item.precheckStatus.toLowerCase() === "updated"
-                                                ? "#B45309"
-                                                : item.precheckStatus.toLowerCase() === "rejected"
-                                                  ? "#B42318"
-                                                  : "#374151",
-                                          borderColor:
-                                            item.precheckStatus.toLowerCase() === "completed" ||
-                                              item.precheckStatus.toLowerCase() === "verified"
-                                              ? "#A7F3D0"
-                                              : item.precheckStatus.toLowerCase() === "updated"
-                                                ? "#D97706"
-                                                : item.precheckStatus.toLowerCase() === "rejected"
-                                                  ? "#FCA5A5"
-                                                  : "#E5E7EB",
-                                        }}
-                                      />
-                                    ) : (
-                                      "-"
-                                    )}
+                                    {(() => {
+                                      const statusStr = (item.isRejected || item.precheckStatus?.toLowerCase() === "rejected")
+                                        ? "Rejected"
+                                        : (item.precheckStatus || "-");
+                                      if (statusStr === "-") return "-";
+                                      const statusLower = statusStr.toLowerCase();
+                                      let bg = "#F3F4F6";
+                                      let color = "#374151";
+                                      let borderColor = "#E5E7EB";
+
+                                      if (statusLower === "rejected") {
+                                        bg = "#FEF2F2";
+                                        color = "#B42318";
+                                        borderColor = "#FCA5A5";
+                                      } else if (statusLower === "completed" || statusLower === "verified") {
+                                        bg = "#ECFDF5";
+                                        color = "#027A48";
+                                        borderColor = "#A7F3D0";
+                                      } else if (statusLower === "updated") {
+                                        bg = "#FFF7ED";
+                                        color = "#B45309";
+                                        borderColor = "#D97706";
+                                      }
+
+                                      return (
+                                        <Chip
+                                          label={statusStr}
+                                          size="small"
+                                          variant="outlined"
+                                          sx={{
+                                            fontSize: "0.7rem",
+                                            height: 20,
+                                            fontWeight: 600,
+                                            borderRadius: "12px",
+                                            backgroundColor: bg,
+                                            color: color,
+                                            borderColor: borderColor,
+                                          }}
+                                        />
+                                      );
+                                    })()}
                                   </TableCell>
                                 </TableRow>
                               </TableBody>

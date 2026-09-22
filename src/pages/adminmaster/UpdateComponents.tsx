@@ -88,7 +88,15 @@ export default function InsertMappings() {
   const { data: units = [] } = useUnits();
   const [searchQuery, setSearchQuery] = useState("");
   const { data: drawingNumbers = [], isLoading: loadingDrawings } =
-    useFetchAllDrawingNumbers(searchQuery, 1, 50);
+    useFetchAllDrawingNumbers(
+      searchQuery,
+      1,
+      50,
+      "",
+      [],
+      [],
+      !isEditMode || !editRow || searchQuery.length >= 2
+    );
   const user = useSelector((state: RootState) => state.auth.user);
 
   // Add to production orders dialog state
@@ -106,15 +114,24 @@ export default function InsertMappings() {
     null
   );
 
-  // Manual fetch for edit mode if state is missing
-  const { data: allDrawings = [] } = useFetchAllDrawingNumbers("", 1, 100);
+  // Fallback fetch for edit mode when no state was passed (e.g. hard refresh).
+  // Only fires when we actually need it — not on every normal edit navigation.
+  const { data: allDrawings = [] } = useFetchAllDrawingNumbers(
+    "", 1, 100, "", [], [],
+    isEditMode && !editRow // only fetch when there's no editRow from navigation state
+  );
 
   const [selectedAssemblyDrawing, setSelectedAssemblyDrawing] = useState<DrawingNumber | null>(
     null
   );
   const [assemblySearchQuery, setAssemblySearchQuery] = useState("");
+  // Only search when the user has actually typed something — avoid a redundant
+  // call on mount (assemblySearchQuery starts as "", same key as hook #1).
   const { data: assemblyDrawingNumbers = [], isLoading: loadingAssemblyDrawings } =
-    useFetchAllDrawingNumbers(assemblySearchQuery, 1, 50);
+    useFetchAllDrawingNumbers(
+      assemblySearchQuery, 1, 50, "", [], [],
+      assemblySearchQuery.length >= 2 // only fire when user is actively searching
+    );
 
 
   const debouncedAssemblySearch = useMemo(
@@ -313,11 +330,17 @@ export default function InsertMappings() {
 
     try {
       let payload: any = {
-        id: isEditMode && id ? Number(id) : 0,
-        drawingNumberId: selectedDrawing?.id || 0,
         userId: user?.id ? parseInt(user.id) : 0,
         ModifiedDate: new Date().toISOString(),
       };
+
+      if (selectedDrawing?.id) {
+        payload.drawingNumberId = selectedDrawing.id;
+      }
+
+      if (isEditMode && id) {
+        payload.id = Number(id);
+      }
 
       if (!isEditMode) {
         payload = {
@@ -417,11 +440,11 @@ export default function InsertMappings() {
       }
 
       await dispatch(insertDrawingMappings(payload)).unwrap();
-      await queryClient.invalidateQueries({ queryKey: ["drawingNumbers"] });
-      await queryClient.invalidateQueries({ queryKey: ["allDrawingNumbers"] });
-      await queryClient.invalidateQueries({ queryKey: ["fetchAllDrawingNumbers"] });
-      await queryClient.refetchQueries({ queryKey: ["allDrawingNumbers"] });
-      await queryClient.refetchQueries({ queryKey: ["fetchAllDrawingNumbers"] });
+      // Invalidate stale queries so the list page re-fetches fresh data when
+      // it mounts. Pass refetchType: "none" to avoid an immediate refetch while on the edit page.
+      queryClient.invalidateQueries({ queryKey: ["drawingNumbers"], refetchType: "none" });
+      queryClient.invalidateQueries({ queryKey: ["allDrawingNumbers"], refetchType: "none" });
+      queryClient.invalidateQueries({ queryKey: ["fetchAllDrawingNumbers"], refetchType: "none" });
       setSuccessMessage(
         isEditMode
           ? "Drawing mappings updated successfully!"

@@ -108,9 +108,9 @@ export default function GenerateIRMSN() {
     useState<string>("");
   const [generatedNumberPurchase, setGeneratedNumberPurchase] =
     useState<string>("");
-  const [stages, setStages] = useState<Array<{ id: number; stage: string }>>(
-    []
-  );
+  const [stages, setStages] = useState<
+    Array<{ id: number; stage: string; stageName?: string; stageId?: number }>
+  >([]);
   const [, setSearchTerm] = useState("");
   const [stagesLoading, setStagesLoading] = useState(false);
 
@@ -296,61 +296,40 @@ export default function GenerateIRMSN() {
 
   const documentType = watch("documentType");
 
+  const lastFetchedStageRef = useRef<string>("");
+
   useEffect(() => {
+    const key = `${documentType}_${formMode}`;
+    if (lastFetchedStageRef.current === key) return;
+
     const fetchStages = async () => {
       if (!documentType) {
         setStages([]);
         return;
       }
 
+      lastFetchedStageRef.current = key;
       setStagesLoading(true);
       try {
-        let fetchedStages: Array<{ id: number; stage: string }> = [];
+        const endpoint =
+          documentType === "IR"
+            ? "/api/Common/GetIRStages"
+            : "/api/Common/GetMSNStages";
 
-        if (formMode === "PurchaseItem") {
-          const [irRes, msnRes] = await Promise.all([
-            api.get("/api/Common/GetIRStages"),
-            api.get("/api/Common/GetMSNStages"),
-          ]);
+        const response = await api.get(endpoint);
+        const raw = Array.isArray(response.data) ? response.data : [];
+        const fetchedStages = raw.map((s: any) => ({
+          id: s.id ?? s.stageId ?? 0,
+          stage: (s.stage || s.stageName || s.name || "").trim(),
+          ...s,
+        }));
 
-          const combined = [
-            ...(Array.isArray(irRes.data) ? irRes.data : []),
-            ...(Array.isArray(msnRes.data) ? msnRes.data : []),
-          ];
-
-          const stageMap = new Map();
-          combined.forEach((s) => {
-            if (s && s.stage && !stageMap.has(s.stage)) {
-              stageMap.set(s.stage, s);
-            }
-          });
-          fetchedStages = Array.from(stageMap.values());
-        } else {
-          const endpoint =
-            documentType === "IR"
-              ? "/api/Common/GetIRStages"
-              : "/api/Common/GetMSNStages";
-
-          const response = await api.get(endpoint);
-          fetchedStages = Array.isArray(response.data) ? response.data : [];
-        }
-
-        let filteredStages = fetchedStages;
-        if (formMode === "PurchaseItem") {
-          filteredStages = fetchedStages.filter(
-            (s: any) => s.stage === "RM Incoming" || s.stage === "Other"
-          );
-        } else if (formMode === "ManufacturingItem") {
-          filteredStages = fetchedStages.filter(
-            (s: any) => s.stage !== "RM Incoming" && s.stage !== "Other"
-          );
-        }
-
-        setStages(filteredStages);
+        setStages(fetchedStages);
         setValue("stage", "");
       } catch (error) {
         console.error("Error fetching stages:", error);
         setStages([]);
+        lastFetchedStageRef.current = "";
       } finally {
         setStagesLoading(false);
       }
@@ -421,14 +400,29 @@ export default function GenerateIRMSN() {
 
       if (result && (result.irNumber || result.msnNumber)) {
         const generatedNumberValue = result.irNumber || result.msnNumber;
+        const docLabel = result.irNumber ? "IR" : "MSN";
         if (formMode === "ManufacturingItem") {
           setGeneratedNumberManufacturing(generatedNumberValue);
         } else {
           setGeneratedNumberPurchase(generatedNumberValue);
         }
+        setSnackbar({
+          open: true,
+          message: `${docLabel} Number ${generatedNumberValue} generated successfully!`,
+          severity: "success",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating number:", error);
+      const errorMsg =
+        typeof error === "string"
+          ? error
+          : error?.message || error?.payload || "Failed to generate IR/MSN number.";
+      setSnackbar({
+        open: true,
+        message: errorMsg,
+        severity: "error",
+      });
     }
   };
 
@@ -1359,14 +1353,18 @@ export default function GenerateIRMSN() {
 
               {/* Row 2: Project, Purchase Order No, Production Series */}
               <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  label="Project"
-                  value={watchedProjectNumber || ""}
-                  fullWidth
-                  size="small"
-                  InputProps={{ readOnly: true }}
-                  InputLabelProps={{ shrink: true }}
-                  sx={readOnlyInputStyle}
+                <Controller
+                  name="projectNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Project"
+                      fullWidth
+                      size="small"
+                      sx={standardInputStyle}
+                    />
+                  )}
                 />
               </Grid>
 
@@ -1458,15 +1456,31 @@ export default function GenerateIRMSN() {
             </Grid>
 
             <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Build No."
-                value={watchedBuildNumber || ""}
-                fullWidth
-                size="small"
-                InputProps={{ readOnly: true }}
-                InputLabelProps={{ shrink: true }}
-                sx={readOnlyInputStyle}
-              />
+              {formMode === "PurchaseItem" ? (
+                <Controller
+                  name="buildNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Build No."
+                      fullWidth
+                      size="small"
+                      sx={standardInputStyle}
+                    />
+                  )}
+                />
+              ) : (
+                <TextField
+                  label="Build No."
+                  value={watchedBuildNumber || ""}
+                  fullWidth
+                  size="small"
+                  InputProps={{ readOnly: true }}
+                  InputLabelProps={{ shrink: true }}
+                  sx={readOnlyInputStyle}
+                />
+              )}
             </Grid>
           </Grid>
         </Paper>
@@ -1499,17 +1513,19 @@ export default function GenerateIRMSN() {
                     options={Array.isArray(stages) ? stages : []}
                     loading={stagesLoading}
                     getOptionLabel={(option) =>
-                      typeof option === "string" ? option : option?.stage || ""
+                      typeof option === "string" ? option : option?.stage || option?.stageName || ""
                     }
                     value={
                       Array.isArray(stages)
-                        ? stages.find((s) => s.stage === value) || null
+                        ? stages.find((s) => (s.stage || s.stageName) === value) || null
                         : null
                     }
                     onChange={(_, newValue) => {
                       if (newValue && typeof newValue !== "string") {
-                        onChange(newValue.stage);
-                        setValue("stageId", newValue.id);
+                        const stageLabel = newValue.stage || newValue.stageName || "";
+                        const stId = newValue.id ?? newValue.stageId;
+                        onChange(stageLabel);
+                        setValue("stageId", stId);
                       } else {
                         onChange("");
                         setValue("stageId", undefined);
@@ -1530,14 +1546,18 @@ export default function GenerateIRMSN() {
             </Grid>
 
             <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Operation"
-                value={watch("operationNumber") || ""}
-                fullWidth
-                size="small"
-                InputProps={{ readOnly: true }}
-                InputLabelProps={{ shrink: true }}
-                sx={readOnlyInputStyle}
+              <Controller
+                name="operationNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Operation"
+                    fullWidth
+                    size="small"
+                    sx={standardInputStyle}
+                  />
+                )}
               />
             </Grid>
 
@@ -1654,7 +1674,7 @@ export default function GenerateIRMSN() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
           {snackbar.message}

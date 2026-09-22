@@ -335,8 +335,8 @@ export const usePrecheckScanning = ({
             existingGridIdx !== -1
               ? existingGridIdx
               : searchResults.findIndex(
-                  (r) => r.precheckDetailsId === existingPrecheckId
-                );
+                (r) => r.precheckDetailsId === existingPrecheckId
+              );
           const existingGridItem =
             resolvedIdx !== -1
               ? searchResults[resolvedIdx]
@@ -346,9 +346,22 @@ export const usePrecheckScanning = ({
 
           if (existingGridItem && finalIdx >= 0) {
             const remainQty =
-              existingVPRow?.remainingQuantity ??
               existingGridItem.remainingQuantity ??
+              existingVPRow?.remainingQuantity ??
               0;
+
+            if (
+              remainQty <= 0 ||
+              existingGridItem.isPrecheckComplete ||
+              (existingVPRow && Number(existingVPRow.remainingQuantity) <= 0)
+            ) {
+              showAlertMessage(
+                "Precheck is already completed.",
+                "warning"
+              );
+              return;
+            }
+
             const qrAvailQty =
               qrCodeDetails.remainingQuantity ?? qrCodeDetails.quantity ?? 0;
             setMaxQuantity(remainQty);
@@ -374,7 +387,7 @@ export const usePrecheckScanning = ({
                 isMatchingDrawing(row) &&
                 Boolean(
                   (row.qrCodeNumber && String(row.qrCodeNumber).trim() !== "") ||
-                    (row.qrCode && String(row.qrCode).trim() !== "")
+                  (row.qrCode && String(row.qrCode).trim() !== "")
                 )
             ) ||
             searchResults.some(
@@ -395,8 +408,8 @@ export const usePrecheckScanning = ({
 
             if (!sourceMatch) {
               showAlertMessage(
-                `All components with drawing number ${qrCodeDetails.drawingNumber} have been fully processed.`,
-                "info"
+                "QR code is already scanned or precheck is completed.",
+                "warning"
               );
               return;
             }
@@ -426,8 +439,8 @@ export const usePrecheckScanning = ({
 
             if (!sourceMatch) {
               showAlertMessage(
-                `All components with drawing number ${qrCodeDetails.drawingNumber} have been fully processed.`,
-                "info"
+                "QR code is already scanned or precheck is completed.",
+                "warning"
               );
               return;
             }
@@ -448,78 +461,78 @@ export const usePrecheckScanning = ({
                 })
               ).unwrap();
 
-            const newPrecheckDetailsId = remainingResult.newPrecheckDetailsId;
+              const newPrecheckDetailsId = remainingResult.newPrecheckDetailsId;
 
-            // Insert the new empty row immediately below the scanned source row
-            setSearchResults((prev) => {
-              let sourceIdx = prev.findIndex(
-                (r) =>
-                  (r.precheckDetailsId &&
-                    sourceMatch.item.precheckDetailsId &&
-                    r.precheckDetailsId === sourceMatch.item.precheckDetailsId) ||
-                  (r.duplicateRowId &&
-                    sourceMatch.item.duplicateRowId &&
-                    r.duplicateRowId === sourceMatch.item.duplicateRowId)
-              );
+              // Insert the new empty row immediately below the scanned source row
+              setSearchResults((prev) => {
+                let sourceIdx = prev.findIndex(
+                  (r) =>
+                    (r.precheckDetailsId &&
+                      sourceMatch.item.precheckDetailsId &&
+                      r.precheckDetailsId === sourceMatch.item.precheckDetailsId) ||
+                    (r.duplicateRowId &&
+                      sourceMatch.item.duplicateRowId &&
+                      r.duplicateRowId === sourceMatch.item.duplicateRowId)
+                );
 
-              if (sourceIdx === -1) {
-                sourceIdx = sourceMatch.index;
-              }
+                if (sourceIdx === -1) {
+                  sourceIdx = sourceMatch.index;
+                }
 
-              const newRow: GridItem = {
-                ...sourceMatch.item,
-                qrCode: "",
-                idNumber: "",
-                ir: "",
-                msn: "",
-                mrirNumber: "",
-                remarks: "",
-                isUpdated: false,
-                isSubmitted: false,
-                isPrecheckComplete: false,
-                scannedQuantity: 0,
-                isAddDisabled: false,
-                duplicateRowId: `${Date.now()}`,
-                precheckDetailsId: newPrecheckDetailsId,
-              };
+                const newRow: GridItem = {
+                  ...sourceMatch.item,
+                  qrCode: "",
+                  idNumber: "",
+                  ir: "",
+                  msn: "",
+                  mrirNumber: "",
+                  remarks: "",
+                  isUpdated: false,
+                  isSubmitted: false,
+                  isPrecheckComplete: false,
+                  scannedQuantity: 0,
+                  isAddDisabled: false,
+                  duplicateRowId: `${Date.now()}`,
+                  precheckDetailsId: newPrecheckDetailsId,
+                };
 
-              const updated = [...prev];
-              if (sourceIdx >= 0 && sourceIdx < updated.length) {
-                updated[sourceIdx] = { ...updated[sourceIdx], isAddDisabled: true };
-                updated.splice(sourceIdx + 1, 0, newRow);
-              } else {
-                updated.splice(sourceMatch.index + 1, 0, newRow);
-              }
-              return updated.map((r, i) => ({ ...r, sr: i + 1 }));
-            });
+                const updated = [...prev];
+                if (sourceIdx >= 0 && sourceIdx < updated.length) {
+                  updated[sourceIdx] = { ...updated[sourceIdx], isAddDisabled: true };
+                  updated.splice(sourceIdx + 1, 0, newRow);
+                } else {
+                  updated.splice(sourceMatch.index + 1, 0, newRow);
+                }
+                return updated.map((r, i) => ({ ...r, sr: i + 1 }));
+              });
 
-            // Open QuantityDialog; new row is resolved at confirm-time (safe)
-            const qrAvailQty =
-              qrCodeDetails.remainingQuantity ?? qrCodeDetails.quantity ?? 0;
-            const neededQty =
-              sourceMatch.item.remainingQuantity ??
-              sourceMatch.item.quantity ??
-              0;
-            setMaxQuantity(qrAvailQty);
-            setSelectedQuantity(Math.min(qrAvailQty, neededQty));
-            setPendingBarcodeData({
-              qrCodeDetails,
-              matchingItem: null,
-              isNewRow: true,
-              newPrecheckDetailsId,
-            });
-            setQuantityDialogOpen(true);
-          } catch (rmError: any) {
-            const errMsg =
-              rmError?.payload ||
-              rmError?.message ||
-              "Failed to create new row";
-            showAlertMessage(`Error creating new row: ${errMsg}`, "error");
+              // Open QuantityDialog; new row is resolved at confirm-time (safe)
+              const qrAvailQty =
+                qrCodeDetails.remainingQuantity ?? qrCodeDetails.quantity ?? 0;
+              const neededQty =
+                sourceMatch.item.remainingQuantity ??
+                sourceMatch.item.quantity ??
+                0;
+              setMaxQuantity(qrAvailQty);
+              setSelectedQuantity(Math.min(qrAvailQty, neededQty));
+              setPendingBarcodeData({
+                qrCodeDetails,
+                matchingItem: null,
+                isNewRow: true,
+                newPrecheckDetailsId,
+              });
+              setQuantityDialogOpen(true);
+            } catch (rmError: any) {
+              const errMsg =
+                rmError?.payload ||
+                rmError?.message ||
+                "Failed to create new row";
+              showAlertMessage(`Error creating new row: ${errMsg}`, "error");
+            }
           }
         }
+        return; // BATCH / FIM / SI fully handled — skip the code below
       }
-      return; // BATCH / FIM / SI fully handled — skip the code below
-    }
       // ────────────────────────────────────────────────────────────────────────
 
       // Find the first unprocessed item from potential matches
@@ -830,7 +843,7 @@ export const usePrecheckScanning = ({
             setBarcodeText(decodedText);
             setOpenScanner(false);
           },
-          () => {}
+          () => { }
         );
         setScannerReady(true);
       } catch (err: any) {

@@ -8,6 +8,7 @@ import {
   CardContent,
   Typography,
   Avatar,
+  CircularProgress,
 } from "@mui/material";
 import {
   Assignment as AssignmentIcon,
@@ -24,10 +25,11 @@ import {
   MenuBook as MenuBookIcon,
   Category as CategoryIcon,
   ReceiptLong as ReceiptLongIcon,
+  CloudUpload as CloudUploadIcon,
 } from "@mui/icons-material";
 import type { RootState } from "../store/store";
 import { usePageAccess } from "../hooks/useMasterData";
-import type { PageAccessItem } from "../types";
+import { isPageAccessible } from "../utils/accessUtils";
 
 interface DashboardCard {
   title: string;
@@ -42,36 +44,18 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
 
-  const { data: pageAccessData } = usePageAccess(
+  const { data: pageAccessData, isLoading } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null,
   );
-
-  // Build flat access map from API — sole authority
-  const accessMap: Record<string, PageAccessItem> = {};
-  if (pageAccessData) {
-    const walk = (items: PageAccessItem[]) => {
-      items.forEach((item) => {
-        accessMap[item.pageName] = item;
-        if (item.children?.length) walk(item.children);
-      });
-    };
-    walk(pageAccessData);
-  }
-
-  const isAccessible = (pageName: string): boolean => {
-    const entry = accessMap[pageName];
-    return !!entry && entry.fullAccess;
-  };
 
   const dashboardCards: DashboardCard[] = [
     {
       title: "Production Order",
-      pageName: "Production Order",
+      pageName: "Manage Orders",
       description: "Upload and view Production Order details and status",
       icon: <ShoppingCartIcon sx={{ fontSize: 40 }} />,
       color: "#df2e78ff",
       route: "/production-order/upload",
-
     },
     {
       title: "Generate IR, MSN",
@@ -90,8 +74,8 @@ const Dashboard: React.FC = () => {
       route: "/qrcode/generate",
     },
     {
-      title: "Make Pre-check",
-      pageName: "Make Precheck",
+      title: "Run Precheck",
+      pageName: "Run Precheck",
       description: "Access and manage make pre-check related tasks",
       icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#2196F3",
@@ -102,18 +86,17 @@ const Dashboard: React.FC = () => {
       pageName: "Precheck History",
       description: "Access and view precheck details and status",
       icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
-      color: "#3F51B5", // Indigo
+      color: "#3F51B5",
       route: "/precheck/view",
     },
     {
       title: "Material Requisition",
-      pageName: "Material Requisition",
+      pageName: "Run Precheck",
       description: "Add and view Material Requisition details",
       icon: <ReceiptLongIcon sx={{ fontSize: 40 }} />,
       color: "#3fb1b5ff",
       route: "/materialrequisition",
     },
-
     {
       title: "Store Consumption",
       pageName: "Store In",
@@ -122,62 +105,62 @@ const Dashboard: React.FC = () => {
       color: "#4CAF50",
       route: "/precheck/store-in",
     },
-
     {
-      title: "Generate SOP",
+      title: "Assembly Explorer",
       pageName: "Assembly Explorer",
-      description: "Access and manage SOP Generation related tasks",
+      description: "Access and manage Assembly related tasks",
       icon: <MenuBookIcon sx={{ fontSize: 40 }} />,
-      color: "#F44336", // Red
+      color: "#F44336",
       route: "/sop/view",
     },
     {
-      title: "Script Executor",
+      title: "Bulk Import",
       pageName: "Bulk Import",
-      description: "Access and Manage Script related tasks",
-      icon: <TerminalIcon sx={{ fontSize: 40 }} />,
+      description: "Access and Manage Bulk Import related tasks",
+      icon: <CloudUploadIcon sx={{ fontSize: 40 }} />,
       color: "#009688",
       route: "/scriptexecutor",
     },
-    // {
-    //   title:"Testing",
-    //   pageName:"Testing Offering",
-    //   description:"Access and manage Testing related tasks",
-    //   icon:<ScienceIcon sx={{frontSize:40}}/>,
-    //   color:"#ec5e5eff",
-    //   route:"/testing/offering",
-    // },
     {
       title: "Components",
       pageName: "Components",
       description: "Access and manage Components related tasks",
       icon: <CategoryIcon sx={{ fontSize: 40 }} />,
       color: "#f1b40bff",
-      route: "/components/assembly",
+      route: "/components",
     },
     {
       title: "Admin Master",
       pageName: "Role Management",
-      description: "Access and manage Admin  related tasks",
+      description: "Access and manage Admin related tasks",
       icon: <SettingIcon sx={{ fontSize: 40 }} />,
       color: "#3F51B5",
       route: "/adminmaster/rolemanagement",
-    }
+    },
   ];
-
-
-  // Filter cards — API is sole authority; hide all until data is loaded
-  const dashboardAccessible = isAccessible("Dashboard");
-
-  const filteredCards = !pageAccessData
-    ? []
-    : dashboardCards.filter((card) => isAccessible(card.pageName));
 
   const handleCardClick = (route: string) => {
     navigate(route);
   };
 
-  if (pageAccessData && !dashboardAccessible) {
+  if (isLoading || !pageAccessData) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "70vh",
+        }}
+      >
+        <CircularProgress size={48} color="primary" />
+      </Box>
+    );
+  }
+
+  const dashboardAccessible = isPageAccessible(pageAccessData, "Dashboard");
+
+  if (!dashboardAccessible) {
     return (
       <Box sx={{ flexGrow: 1, p: 3, display: "flex", justifyContent: "center", alignItems: "center", height: "80vh" }}>
         <Typography variant="h5" color="error" sx={{ fontWeight: 600 }}>
@@ -186,6 +169,10 @@ const Dashboard: React.FC = () => {
       </Box>
     );
   }
+
+  const filteredCards = dashboardCards.filter((card) =>
+    isPageAccessible(pageAccessData, card.pageName)
+  );
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>

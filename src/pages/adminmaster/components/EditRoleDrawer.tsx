@@ -14,6 +14,7 @@ import {
   Alert,
   Chip,
   Collapse,
+  Tooltip,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -56,6 +57,10 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
   const [saving, setSaving] = useState(false);
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const isAdmin =
+    currentUser?.role?.toLowerCase() === "admin" ||
+    (currentUser as any)?.userRoleId === 1 ||
+    Number(currentUser?.roleid) === 1;
   const { data: users = [] } = useUsers();
   const { data: pageAccessData, isLoading: isAccessLoading, error: accessError } = usePageAccess(
     role?.id ?? null
@@ -181,7 +186,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
   };
 
   const handleSave = async () => {
-    if (!role) return;
+    if (!role || !isAdmin) return;
     setSaving(true);
 
     try {
@@ -341,6 +346,12 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
 
       {/* Drawer Body Content */}
       <Box sx={{ flex: 1, overflowY: "auto", p: 2, px: 2.5 }}>
+        {!isAdmin && (
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2, fontSize: "0.8rem" }}>
+            Only Admin role users have permission to edit role details and page access settings.
+          </Alert>
+        )}
+
         {/* Tab 0: Details */}
         {activeTab === 0 && (
           <Stack spacing={2}>
@@ -348,6 +359,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
               label="Role Name"
               fullWidth
               size="small"
+              disabled={!isAdmin}
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             />
@@ -357,6 +369,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
               multiline
               rows={3}
               size="small"
+              disabled={!isAdmin}
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
@@ -490,6 +503,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
                           <Switch
                             size="small"
                             color="primary"
+                            disabled={!isAdmin}
                             checked={isParentFull}
                             onChange={() =>
                               handleToggleAccess(parent, accessState[parent.id] || "none")
@@ -565,6 +579,7 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
                                       <Switch
                                         size="small"
                                         color="primary"
+                                        disabled={!isAdmin}
                                         checked={isChildFull}
                                         onChange={() =>
                                           handleToggleAccess(
@@ -632,22 +647,26 @@ const EditRoleDrawer: React.FC<EditRoleDrawerProps> = ({
           >
             Cancel
           </Button>
-          <Button
-            size="small"
-            variant="contained"
-            onClick={handleSave}
-            disabled={!formData.role.trim() || saving}
-            sx={{
-              backgroundColor: "primary.main",
-              "&:hover": { backgroundColor: "primary.dark" },
-              textTransform: "none",
-              fontWeight: 600,
-              borderRadius: 1.5,
-              px: 2.5,
-            }}
-          >
-            {saving ? "Saving..." : "Save "}
-          </Button>
+          <Tooltip title={!isAdmin ? "Only administrators can save role changes" : ""}>
+            <span>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleSave}
+                disabled={!formData.role.trim() || saving || !isAdmin}
+                sx={{
+                  backgroundColor: "primary.main",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                  textTransform: "none",
+                  fontWeight: 600,
+                  borderRadius: 1.5,
+                  px: 2.5,
+                }}
+              >
+                {saving ? "Saving..." : "Save "}
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
       </Box>
     </Drawer>

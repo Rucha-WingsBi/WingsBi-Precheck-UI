@@ -24,6 +24,11 @@ export interface MaterialRequisitionRecord {
   unit?: string;
   componentType?: string;
   rejectedIdNumber?: string;
+  createdDate?: string | null;
+  createdBy?: number | null;
+  modifiedDate?: string | null;
+  modifiedBy?: number | null;
+  username?: string | null;
 }
 
 // Interface for creating new material requisition
@@ -49,6 +54,7 @@ export interface UpdateMaterialRequisitionRequest {
   requestOwner?: string;
   outPONo?: string;
   minDate?: string;
+  status?: string;
   statusId?: number;
 }
 

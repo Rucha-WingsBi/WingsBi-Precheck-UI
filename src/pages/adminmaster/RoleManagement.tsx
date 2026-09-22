@@ -108,11 +108,12 @@ interface TabProps {
 // 3-Dots Action Menu for Rows
 interface RoleRowActionMenuProps {
   row: any;
+  isAdmin?: boolean;
   onEdit: (row: any) => void;
   onDelete: (id: number) => void;
 }
 
-function RoleRowActionMenu({ row, onEdit, onDelete }: RoleRowActionMenuProps) {
+function RoleRowActionMenu({ row, isAdmin = true, onEdit, onDelete }: RoleRowActionMenuProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const open = Boolean(anchorEl);
@@ -184,32 +185,38 @@ function RoleRowActionMenu({ row, onEdit, onDelete }: RoleRowActionMenuProps) {
           },
         }}
       >
-        <MenuItem
-          onClick={() => {
-            handleClose();
-            onEdit(row);
-          }}
-          disabled={isInactive}
-          sx={{ fontSize: "0.85rem", py: 1 }}
-        >
-          <ListItemIcon>
-            <EditIcon fontSize="small" color="primary" />
-          </ListItemIcon>
-          <ListItemText primary="Edit Role / Access " />
-        </MenuItem>
+        <Tooltip title={!isAdmin ? "Only administrators can edit role access" : ""}>
+          <span>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                onEdit(row);
+              }}
+              disabled={isInactive || !isAdmin}
+              sx={{ fontSize: "0.85rem", py: 1 }}
+            >
+              <ListItemIcon>
+                <EditIcon fontSize="small" color={!isAdmin ? "disabled" : "primary"} />
+              </ListItemIcon>
+              <ListItemText primary="Edit Role / Access " />
+            </MenuItem>
+          </span>
+        </Tooltip>
 
-
-
-        <MenuItem
-          onClick={() => setIsConfirmingDelete(true)}
-          disabled={isInactive}
-          sx={{ fontSize: "0.85rem", py: 1, color: "error.main" }}
-        >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText primary="Delete" />
-        </MenuItem>
+        <Tooltip title={!isAdmin ? "Only administrators can delete roles" : ""}>
+          <span>
+            <MenuItem
+              onClick={() => setIsConfirmingDelete(true)}
+              disabled={isInactive || !isAdmin}
+              sx={{ fontSize: "0.85rem", py: 1, color: !isAdmin ? "text.disabled" : "error.main" }}
+            >
+              <ListItemIcon>
+                <DeleteIcon fontSize="small" color={!isAdmin ? "disabled" : "error"} />
+              </ListItemIcon>
+              <ListItemText primary="Delete" />
+            </MenuItem>
+          </span>
+        </Tooltip>
       </Menu>
     </>
   );
@@ -231,6 +238,10 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
   });
 
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const isAdmin =
+    currentUser?.role?.toLowerCase() === "admin" ||
+    (currentUser as any)?.userRoleId === 1 ||
+    Number(currentUser?.roleid) === 1;
 
   const handleOpen = (role?: UserRoleInput) => {
     if (role) {
@@ -347,6 +358,7 @@ const RoleTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) => {
       renderCell: (params) => (
         <RoleRowActionMenu
           row={params.row}
+          isAdmin={isAdmin}
           onEdit={handleOpen}
           onDelete={handleDelete}
         />
@@ -476,6 +488,10 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
 
   const saving = addMutation.isPending || updateMutation.isPending;
   const currentUser = useSelector((state: RootState) => state.auth.user);
+  const isAdmin =
+    currentUser?.role?.toLowerCase() === "admin" ||
+    (currentUser as any)?.userRoleId === 1 ||
+    Number(currentUser?.roleid) === 1;
 
   const handleOpen = (dept?: any) => {
     if (dept) {
@@ -607,6 +623,7 @@ const DepartmentTab = forwardRef<TabHandle, TabProps>(({ showSnackbar }, ref) =>
       renderCell: (params) => (
         <RoleRowActionMenu
           row={params.row}
+          isAdmin={isAdmin}
           onEdit={handleOpen}
           onDelete={handleDelete}
         />
@@ -727,6 +744,10 @@ export default function RoleManagement() {
   const deptRef = useRef<TabHandle>(null);
 
   const user = useSelector((state: RootState) => state.auth.user);
+  const isAdmin =
+    user?.role?.toLowerCase() === "admin" ||
+    (user as any)?.userRoleId === 1 ||
+    Number(user?.roleid) === 1;
   const { data: pageAccessData, isLoading: isAccessLoading } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null
   );
@@ -791,7 +812,13 @@ export default function RoleManagement() {
         </Box>
 
         <Tooltip
-          title={!hasRoleManagementAccess ? `You do not have access to manage ${TAB_LABELS[activeTab].toLowerCase()}` : ""}
+          title={
+            !isAdmin
+              ? "Only administrators can add or edit roles/departments"
+              : !hasRoleManagementAccess
+              ? `You do not have access to manage ${TAB_LABELS[activeTab].toLowerCase()}`
+              : ""
+          }
           arrow
         >
           <span>
@@ -800,7 +827,7 @@ export default function RoleManagement() {
               variant="contained"
               size="small"
               onClick={handleOpenAdd}
-              disabled={!hasRoleManagementAccess}
+              disabled={!isAdmin || !hasRoleManagementAccess}
               startIcon={<AddIcon fontSize="small" />}
               sx={{
                 height: 34,

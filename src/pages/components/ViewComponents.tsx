@@ -43,7 +43,6 @@ import { useFetchAllDrawingNumbers, useProductionSeries, useUnits } from "../../
 import { useHasPermission } from "../../hooks/useHasPermission";
 import { useDebounce } from "../../hooks/useDebounce";
 import api from "../../services/api";
-import * as XLSX from "xlsx";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
 import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
@@ -329,13 +328,22 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     }
   };
 
-  // Reset page when search query or filter states change
+  // Reset page when search query or filter states change (skip initial mount to preserve restored page)
+  const isFirstRender = useRef(true);
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setPage(0);
   }, [debouncedSearchQuery, selectedSeries, selectedTypes, selectedUnits]);
 
   // Pass debouncedSearchQuery, pageNumber (page + 1), pageSize (rowsPerPage), componentType, prodSeries, and unit filters directly to FetchAllDrawingNumbers API
-  const componentTypeFilter = selectedTypes.length > 0 ? selectedTypes.join(",") : "";
+  // Memoize to keep queryKey stable and avoid unnecessary re-fetches
+  const componentTypeFilter = useMemo(
+    () => (selectedTypes.length > 0 ? selectedTypes.join(",") : ""),
+    [selectedTypes]
+  );
   const {
     data: drawingNumbersData = [],
     isLoading,
@@ -362,10 +370,9 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     [unitsList]
   );
 
-  // Refetch latest component master data whenever page mounts
-  React.useEffect(() => {
-    refetch();
-  }, [refetch]);
+  // NOTE: No manual refetch on mount — React Query automatically re-fetches
+  // when the cache is stale (staleTime: 5 min). Calling refetch() here would
+  // bypass the cache and fire a network request on every navigation back.
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -463,32 +470,6 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
     return { displayData: finalDisplayData, totalCount: finalTotalCount };
   }, [drawingNumbersData, sortColumn, sortOrder, page, rowsPerPage]);
 
-  const handleExport = () => {
-    if (displayData.length === 0) {
-      setSnackbar({ open: true, message: "No components to export", severity: "error" });
-      return;
-    }
-    const exportData = displayData.map((row, idx) => ({
-      "Sr No": idx + 1,
-      "Drawing Number": row.drawingNumber || "",
-      "LN Item Code": row.lnItemCode || "",
-      "Nomenclature": row.nomenclature || "",
-      "Component Type": row.componentType || "",
-      "Component Code": row.componentCode || "",
-      "Available For": row.availableFor || "",
-      "Unit Name": row.unitName || "",
-      "Location": row.location || "",
-      "Assembly Number": row.parentDrawingNumbers?.join(", ") || row.assemblyNumber || "",
-      "Has Expiry": row.isExpiry ? "Yes" : "No",
-      "Created Date": row.createdDate || "",
-      "Modified Date": row.modifiedDate || "",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Components");
-    XLSX.writeFile(workbook, `Components_Export_${Date.now()}.xlsx`);
-  };
 
   React.useEffect(() => {
     if (error) {
