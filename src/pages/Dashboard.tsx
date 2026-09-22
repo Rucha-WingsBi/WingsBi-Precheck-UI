@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
@@ -9,27 +9,28 @@ import {
   Typography,
   Avatar,
   CircularProgress,
+  Button,
+  ButtonGroup,
+  Paper,
 } from "@mui/material";
 import {
-  Assignment as AssignmentIcon,
   QrCode as QrCodeIcon,
   Inventory as InventoryIcon,
   QrCodeScanner as QrCodeScannerIcon,
-  Description as DescriptionIcon,
-  FolderOpen as ProjectIcon,
   ShoppingCart as ShoppingCartIcon,
   Settings as SettingIcon,
-  Science as ScienceIcon,
-  Terminal as TerminalIcon,
   FactCheck as FactCheckIcon,
   MenuBook as MenuBookIcon,
   Category as CategoryIcon,
   ReceiptLong as ReceiptLongIcon,
   CloudUpload as CloudUploadIcon,
+  Assessment as AssessmentIcon,
+  GridView as GridViewIcon,
 } from "@mui/icons-material";
 import type { RootState } from "../store/store";
 import { usePageAccess } from "../hooks/useMasterData";
 import { isPageAccessible } from "../utils/accessUtils";
+import { KpiDashboard } from "./KpiDashboard";
 
 interface DashboardCard {
   title: string;
@@ -43,6 +44,7 @@ interface DashboardCard {
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
+  const [viewMode, setViewMode] = useState<"kpi" | "shortcuts">("kpi");
 
   const { data: pageAccessData, isLoading } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null,
@@ -175,79 +177,129 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography
-        variant="h4"
+    <Box sx={{ flexGrow: 1, p: { xs: 1, md: 2 } }}>
+      {/* Top Navigation Mode Toggle Bar */}
+      <Paper
+        elevation={0}
         sx={{
-          fontWeight: 600,
-          color: "primary.main",
-          fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
-          mb: 1,
+          p: 1.5,
+          px: 2.5,
+          mb: 2,
+          borderRadius: 2,
+          bgcolor: "#fff",
+          border: "1px solid #e2e8f0",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 1,
         }}
       >
-        Dashboard
-      </Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#0f172a" }}>
+          Manufacturing Intelligence Center
+        </Typography>
 
-      <Grid container spacing={2}>
-        {filteredCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card
-              sx={{
-                height: "100%",
-                cursor: "pointer",
-                transition: "all 0.3s ease-in-out",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: 6,
-                },
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-              onClick={() => handleCardClick(card.route)}
-            >
-              <CardContent
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  p: 3,
-                }}
-              >
-                <Avatar
+        <ButtonGroup variant="outlined" size="small">
+          <Button
+            startIcon={<AssessmentIcon />}
+            variant={viewMode === "kpi" ? "contained" : "outlined"}
+            onClick={() => setViewMode("kpi")}
+            sx={{ fontWeight: 700 }}
+          >
+            KPI Dashboard
+          </Button>
+          <Button
+            startIcon={<GridViewIcon />}
+            variant={viewMode === "shortcuts" ? "contained" : "outlined"}
+            onClick={() => setViewMode("shortcuts")}
+            sx={{ fontWeight: 700 }}
+          >
+            Navigation Shortcuts
+          </Button>
+        </ButtonGroup>
+      </Paper>
+
+      {/* Primary KPI Analytics Dashboard View */}
+      {viewMode === "kpi" ? (
+        <KpiDashboard />
+      ) : (
+        /* Legacy Shortcuts Portal View */
+        <Box sx={{ p: 2 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 600,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.5rem" },
+              mb: 2,
+            }}
+          >
+            Quick Navigation Shortcuts
+          </Typography>
+
+          <Grid container spacing={2}>
+            {filteredCards.map((card, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <Card
                   sx={{
-                    bgcolor: card.color,
-                    width: 56,
-                    height: 56,
-                    mb: 2,
-                    "& .MuiSvgIcon-root": {
-                      fontSize: "2rem",
+                    height: "100%",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease-in-out",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 6,
                     },
+                    border: "1px solid",
+                    borderColor: "divider",
                   }}
+                  onClick={() => handleCardClick(card.route)}
                 >
-                  {card.icon}
-                </Avatar>
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  gutterBottom
-                  sx={{ fontWeight: 600 }}
-                >
-                  {card.title}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ flex: 1 }}
-                >
-                  {card.description}
-                </Typography>
-              </CardContent>
-            </Card>
+                  <CardContent
+                    sx={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      p: 3,
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        bgcolor: card.color,
+                        width: 56,
+                        height: 56,
+                        mb: 2,
+                        "& .MuiSvgIcon-root": {
+                          fontSize: "2rem",
+                        },
+                      }}
+                    >
+                      {card.icon}
+                    </Avatar>
+                    <Typography
+                      variant="h6"
+                      component="h2"
+                      gutterBottom
+                      sx={{ fontWeight: 600 }}
+                    >
+                      {card.title}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ flex: 1 }}
+                    >
+                      {card.description}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
+        </Box>
+      )}
     </Box>
   );
 };
 
 export default Dashboard;
+

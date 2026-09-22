@@ -23,6 +23,9 @@ const ForgetPassword = lazy(() => import("./pages/auth/ForgetPassword"));
 
 // Lazy-loaded Main Pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const KpiDashboard = lazy(() =>
+  import("./pages/KpiDashboard").then((m) => ({ default: m.KpiDashboard }))
+);
 
 // Lazy-loaded Precheck Pages
 const ViewPrecheck = lazy(() => import("./pages/precheck/ViewPrecheck"));
@@ -103,6 +106,7 @@ export default function AppRoutes() {
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/kpi-dashboard" element={<KpiDashboard />} />
 
             {/* Precheck Module */}
             <Route path="precheck">
