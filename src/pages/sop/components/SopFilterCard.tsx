@@ -251,8 +251,12 @@ export const SopFilterCard: React.FC<SopFilterCardProps> = ({
                 </Box>
               );
             }}
+            loading={isDrawingNumbersLoading}
+            loadingText="Loading drawings..."
             noOptionsText={
-              drwDisplayText.length < 3
+              isDrawingNumbersLoading
+                ? "Loading drawings..."
+                : drwDisplayText.length < 3
                 ? "Type 3+ characters"
                 : "No drawings found"
             }

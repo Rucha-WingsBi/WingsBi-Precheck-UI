@@ -499,78 +499,108 @@ function DrawingDetailsStep({
               name="productionSeries"
               control={control}
               rules={{ required: "Production Series is required" }}
-              render={({ field: { onChange, value, ref }, fieldState: { error } }) => (
-                <Autocomplete
-                  size="small"
-                  open={openProdSeries}
-                  onOpen={() => setOpenProdSeries(true)}
-                  onClose={() => setOpenProdSeries(false)}
-                  openOnFocus={true}
-                  selectOnFocus={true}
-                  forcePopupIcon={true}
-                  options={productionSeries || []}
-                  getOptionLabel={(option) => typeof option === "string" ? option : option.productionSeries || ""}
-                  value={(productionSeries || []).find((s) => s.productionSeries === value) || (value ? (value as any) : null)}
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options;
-                    const searchLower = inputValue.toLowerCase();
-                    if (value && searchLower === String(value).toLowerCase()) return options;
-                    return options.filter((s: any) =>
-                      (s.productionSeries || s).toLowerCase().includes(searchLower)
-                    );
-                  }}
-                  onChange={(_, newValue) => {
-                    setOpenProdSeries(false);
-                    const val = newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "";
-                    setValue("productionSeries", val);
-                    onChange(val);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Production Series *"
-                      inputRef={ref}
-                      onClick={() => setOpenProdSeries(true)}
-                      onFocus={(e) => {
-                        setOpenProdSeries(true);
-                        (e.target as HTMLInputElement)?.select?.();
-                      }}
-                      error={!!error || !!errors.productionSeries}
-                      helperText={error?.message || errors.productionSeries?.message}
-                    />
-                  )}
-                />
-              )}
+              render={({ field: { onChange, value, ref }, fieldState: { error } }) => {
+                const selectedOption =
+                  (productionSeries || []).find((s: any) => {
+                    const sName = typeof s === "string" ? s : s.productionSeries || s.name || "";
+                    return sName.trim().toLowerCase() === String(value || "").trim().toLowerCase();
+                  }) || (value ? (typeof value === "string" ? value : (value as any).productionSeries || "") : null);
+
+                return (
+                  <Autocomplete
+                    size="small"
+                    open={openProdSeries}
+                    onOpen={() => setOpenProdSeries(true)}
+                    onClose={() => setOpenProdSeries(false)}
+                    openOnFocus={true}
+                    selectOnFocus={true}
+                    forcePopupIcon={true}
+                    options={productionSeries || []}
+                    getOptionLabel={(option) =>
+                      typeof option === "string" ? option : option.productionSeries || option.name || ""
+                    }
+                    isOptionEqualToValue={(option, val) => {
+                      if (!val) return false;
+                      const optStr = typeof option === "string" ? option : option.productionSeries || option.name || "";
+                      const valStr = typeof val === "string" ? val : val.productionSeries || val.name || "";
+                      return optStr.trim().toLowerCase() === valStr.trim().toLowerCase();
+                    }}
+                    value={selectedOption}
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const searchLower = inputValue.toLowerCase();
+                      if (value && searchLower === String(value).toLowerCase()) return options;
+                      return options.filter((s: any) =>
+                        (typeof s === "string" ? s : s.productionSeries || s.name || "")
+                          .toLowerCase()
+                          .includes(searchLower)
+                      );
+                    }}
+                    onChange={(_, newValue) => {
+                      setOpenProdSeries(false);
+                      const val = newValue
+                        ? typeof newValue === "string"
+                          ? newValue
+                          : newValue.productionSeries || newValue.name || ""
+                        : "";
+                      setValue("productionSeries", val);
+                      onChange(val);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Production Series *"
+                        inputRef={ref}
+                        onClick={() => setOpenProdSeries(true)}
+                        onFocus={(e) => {
+                          setOpenProdSeries(true);
+                          (e.target as HTMLInputElement)?.select?.();
+                        }}
+                        error={!!error || !!errors.productionSeries}
+                        helperText={error?.message || errors.productionSeries?.message}
+                      />
+                    )}
+                  />
+                );
+              }}
             />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth error={!!error || !!errors.unit} size="small">
-                <InputLabel>Unit *</InputLabel>
-                <Select
-                  {...field}
-                  label="Unit *"
-                  onChange={(e) => {
-                    field.onChange(e);
-                    if (e.target.value) {
-                      clearErrors("unit");
-                    }
-                  }}
-                >
-                  {units.map((u) => (
-                    <MenuItem key={u.id} value={u.unitName}>
-                      {u.unitName}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {(error || errors.unit) && (
-                  <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
-                )}
-              </FormControl>
-            )} />
+            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => {
+              const currentUnitVal =
+                (units || []).find(
+                  (u: any) => (u.unitName || "").trim().toLowerCase() === String(field.value || "").trim().toLowerCase()
+                )?.unitName || field.value || "";
+
+              return (
+                <FormControl fullWidth error={!!error || !!errors.unit} size="small">
+                  <InputLabel>Unit *</InputLabel>
+                  <Select
+                    {...field}
+                    value={currentUnitVal}
+                    label="Unit *"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (e.target.value) {
+                        clearErrors("unit");
+                      }
+                    }}
+                  >
+                    {units.map((u) => (
+                      <MenuItem key={u.id} value={u.unitName}>
+                        {u.unitName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {(error || errors.unit) && (
+                    <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
+                  )}
+                </FormControl>
+              );
+            }} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="irNumber" control={control} render={({ field, fieldState: { error } }) => (
+            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
               <Autocomplete
                 {...field}
                 open={openIR}
@@ -609,14 +639,14 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="IR Number"
+                    label="IR Number *"
                     onClick={() => setOpenIR(true)}
                     onFocus={(e) => {
                       setOpenIR(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!error}
-                    helperText={error?.message}
+                    error={!!error || !!errors.irNumber}
+                    helperText={error?.message || errors.irNumber?.message}
                   />
                 )}
               />
@@ -761,8 +791,64 @@ function DrawingDetailsStep({
                     if (value) {
                       setValue("nomenclature", value.nomenclature);
                       setValue("location", value.location || "");
-                      setValue("unit", value.unitName || "");
+
+                      const rawUnit =
+                        value.unitName ||
+                        (value as any).unit ||
+                        (value as any).unit_name ||
+                        (value as any).unitCode ||
+                        "";
+                      const matchedUnit = (units || []).find((u: any) => {
+                        if (value.unitId && (u.id === value.unitId || u.unitId === value.unitId)) return true;
+                        if ((value as any).unit_id && u.id === (value as any).unit_id) return true;
+                        const uName = (u.unitName || u.unit || u.name || "").toString().trim().toLowerCase();
+                        const rName = rawUnit.toString().trim().toLowerCase();
+                        if (!uName || !rName) return false;
+                        return uName === rName || uName.replace(/\./g, "") === rName.replace(/\./g, "");
+                      });
+                      const unitVal = matchedUnit ? matchedUnit.unitName : (rawUnit || "");
+                      if (unitVal) {
+                        setValue("unit", unitVal);
+                        clearErrors("unit");
+                      }
+
                       setValue("rmItemCode", value.lnItemCode || "");
+
+                      const rawSeries =
+                        value.productionSeries ||
+                        (value as any).productionSeriesName ||
+                        (value as any).prodSeries ||
+                        (Array.isArray(value.availableSeries) && value.availableSeries.length > 0
+                          ? typeof value.availableSeries[0] === "string"
+                            ? value.availableSeries[0]
+                            : value.availableSeries[0]?.productionSeries || value.availableSeries[0]?.name || ""
+                          : "");
+                      const rawSeriesId =
+                        (value as any).productionSeriesId ||
+                        (value as any).prodSeriesId ||
+                        (Array.isArray(value.availableSeriesId) && value.availableSeriesId.length > 0
+                          ? value.availableSeriesId[0]
+                          : undefined);
+
+                      const matchedPS = (productionSeries || []).find((s: any) => {
+                        if (rawSeriesId && s.id === rawSeriesId) return true;
+                        const sName = (typeof s === "string" ? s : s.productionSeries || s.name || "").toString().trim().toLowerCase();
+                        const rName = rawSeries.toString().trim().toLowerCase();
+                        if (!sName || !rName) return false;
+                        return sName === rName || sName.replace(/[-_ ]/g, "") === rName.replace(/[-_ ]/g, "");
+                      });
+
+                      const prodSeriesVal = matchedPS
+                        ? typeof matchedPS === "string"
+                          ? matchedPS
+                          : matchedPS.productionSeries || matchedPS.name || ""
+                        : rawSeries;
+
+                      if (prodSeriesVal) {
+                        setValue("productionSeries", prodSeriesVal);
+                        clearErrors("productionSeries");
+                      }
+
                       if (value.componentType) {
                         updateComponentAndQrType(value.componentType);
                       }
@@ -773,6 +859,7 @@ function DrawingDetailsStep({
                       setValue("unit", "");
                       setValue("rmItemCode", "");
                       setValue("partAssemblyId", "");
+                      setValue("productionSeries", "");
                     }
                   }}
                   renderOption={(props, option) => {
@@ -856,80 +943,110 @@ function DrawingDetailsStep({
               name="productionSeries"
               control={control}
               rules={{ required: "Production Series is required" }}
-              render={({ field: { onChange, value, ref }, fieldState: { error } }) => (
-                <Autocomplete
-                  size="small"
-                  open={openProdSeries}
-                  onOpen={() => setOpenProdSeries(true)}
-                  onClose={() => setOpenProdSeries(false)}
-                  openOnFocus={true}
-                  selectOnFocus={true}
-                  forcePopupIcon={true}
-                  options={productionSeries || []}
-                  getOptionLabel={(option) => typeof option === "string" ? option : option.productionSeries || ""}
-                  value={(productionSeries || []).find((s) => s.productionSeries === value) || (value ? (value as any) : null)}
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options;
-                    const searchLower = inputValue.toLowerCase();
-                    if (value && searchLower === String(value).toLowerCase()) return options;
-                    return options.filter((s: any) =>
-                      (s.productionSeries || s).toLowerCase().includes(searchLower)
-                    );
-                  }}
-                  onChange={(_, newValue) => {
-                    setOpenProdSeries(false);
-                    const val = newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "";
-                    setValue("productionSeries", val);
-                    onChange(val);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Production Series *"
-                      inputRef={ref}
-                      onClick={() => setOpenProdSeries(true)}
-                      onFocus={(e) => {
-                        setOpenProdSeries(true);
-                        (e.target as HTMLInputElement)?.select?.();
-                      }}
-                      error={!!error || !!errors.productionSeries}
-                      helperText={error?.message || errors.productionSeries?.message}
-                    />
-                  )}
-                />
-              )}
+              render={({ field: { onChange, value, ref }, fieldState: { error } }) => {
+                const selectedOption =
+                  (productionSeries || []).find((s: any) => {
+                    const sName = typeof s === "string" ? s : s.productionSeries || s.name || "";
+                    return sName.trim().toLowerCase() === String(value || "").trim().toLowerCase();
+                  }) || (value ? (typeof value === "string" ? value : (value as any).productionSeries || "") : null);
+
+                return (
+                  <Autocomplete
+                    size="small"
+                    open={openProdSeries}
+                    onOpen={() => setOpenProdSeries(true)}
+                    onClose={() => setOpenProdSeries(false)}
+                    openOnFocus={true}
+                    selectOnFocus={true}
+                    forcePopupIcon={true}
+                    options={productionSeries || []}
+                    getOptionLabel={(option) =>
+                      typeof option === "string" ? option : option.productionSeries || option.name || ""
+                    }
+                    isOptionEqualToValue={(option, val) => {
+                      if (!val) return false;
+                      const optStr = typeof option === "string" ? option : option.productionSeries || option.name || "";
+                      const valStr = typeof val === "string" ? val : val.productionSeries || val.name || "";
+                      return optStr.trim().toLowerCase() === valStr.trim().toLowerCase();
+                    }}
+                    value={selectedOption}
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const searchLower = inputValue.toLowerCase();
+                      if (value && searchLower === String(value).toLowerCase()) return options;
+                      return options.filter((s: any) =>
+                        (typeof s === "string" ? s : s.productionSeries || s.name || "")
+                          .toLowerCase()
+                          .includes(searchLower)
+                      );
+                    }}
+                    onChange={(_, newValue) => {
+                      setOpenProdSeries(false);
+                      const val = newValue
+                        ? typeof newValue === "string"
+                          ? newValue
+                          : newValue.productionSeries || newValue.name || ""
+                        : "";
+                      setValue("productionSeries", val);
+                      onChange(val);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Production Series *"
+                        inputRef={ref}
+                        onClick={() => setOpenProdSeries(true)}
+                        onFocus={(e) => {
+                          setOpenProdSeries(true);
+                          (e.target as HTMLInputElement)?.select?.();
+                        }}
+                        error={!!error || !!errors.productionSeries}
+                        helperText={error?.message || errors.productionSeries?.message}
+                      />
+                    )}
+                  />
+                );
+              }}
             />
           </Grid>
 
           {/* Row 2: Unit *, IR Number, MSN Number * */}
           <Grid item xs={12} md={4}>
-            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth error={!!error || !!errors.unit} size="small">
-                <InputLabel>Unit *</InputLabel>
-                <Select
-                  {...field}
-                  label="Unit *"
-                  onChange={(e) => {
-                    field.onChange(e);
-                    if (e.target.value) {
-                      clearErrors("unit");
-                    }
-                  }}
-                >
-                  {units.map((u) => (
-                    <MenuItem key={u.id} value={u.unitName}>
-                      {u.unitName}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {(error || errors.unit) && (
-                  <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
-                )}
-              </FormControl>
-            )} />
+            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => {
+              const currentUnitVal =
+                (units || []).find(
+                  (u: any) => (u.unitName || "").trim().toLowerCase() === String(field.value || "").trim().toLowerCase()
+                )?.unitName || field.value || "";
+
+              return (
+                <FormControl fullWidth error={!!error || !!errors.unit} size="small">
+                  <InputLabel>Unit *</InputLabel>
+                  <Select
+                    {...field}
+                    value={currentUnitVal}
+                    label="Unit *"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (e.target.value) {
+                        clearErrors("unit");
+                      }
+                    }}
+                  >
+                    {units.map((u) => (
+                      <MenuItem key={u.id} value={u.unitName}>
+                        {u.unitName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {(error || errors.unit) && (
+                    <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
+                  )}
+                </FormControl>
+              );
+            }} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="irNumber" control={control} render={({ field, fieldState: { error } }) => (
+            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
               <Autocomplete
                 {...field}
                 open={openIR}
@@ -968,14 +1085,14 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="IR Number"
+                    label="IR Number *"
                     onClick={() => setOpenIR(true)}
                     onFocus={(e) => {
                       setOpenIR(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!error}
-                    helperText={error?.message}
+                    error={!!error || !!errors.irNumber}
+                    helperText={error?.message || errors.irNumber?.message}
                   />
                 )}
               />
@@ -1131,8 +1248,64 @@ function DrawingDetailsStep({
                     if (value) {
                       setValue("nomenclature", value.nomenclature);
                       setValue("location", value.location || "");
-                      setValue("unit", value.unitName || "");
+
+                      const rawUnit =
+                        value.unitName ||
+                        (value as any).unit ||
+                        (value as any).unit_name ||
+                        (value as any).unitCode ||
+                        "";
+                      const matchedUnit = (units || []).find((u: any) => {
+                        if (value.unitId && (u.id === value.unitId || u.unitId === value.unitId)) return true;
+                        if ((value as any).unit_id && u.id === (value as any).unit_id) return true;
+                        const uName = (u.unitName || u.unit || u.name || "").toString().trim().toLowerCase();
+                        const rName = rawUnit.toString().trim().toLowerCase();
+                        if (!uName || !rName) return false;
+                        return uName === rName || uName.replace(/\./g, "") === rName.replace(/\./g, "");
+                      });
+                      const unitVal = matchedUnit ? matchedUnit.unitName : (rawUnit || "");
+                      if (unitVal) {
+                        setValue("unit", unitVal);
+                        clearErrors("unit");
+                      }
+
                       setValue("rmItemCode", value.lnItemCode || "");
+
+                      const rawSeries =
+                        value.productionSeries ||
+                        (value as any).productionSeriesName ||
+                        (value as any).prodSeries ||
+                        (Array.isArray(value.availableSeries) && value.availableSeries.length > 0
+                          ? typeof value.availableSeries[0] === "string"
+                            ? value.availableSeries[0]
+                            : value.availableSeries[0]?.productionSeries || value.availableSeries[0]?.name || ""
+                          : "");
+                      const rawSeriesId =
+                        (value as any).productionSeriesId ||
+                        (value as any).prodSeriesId ||
+                        (Array.isArray(value.availableSeriesId) && value.availableSeriesId.length > 0
+                          ? value.availableSeriesId[0]
+                          : undefined);
+
+                      const matchedPS = (productionSeries || []).find((s: any) => {
+                        if (rawSeriesId && s.id === rawSeriesId) return true;
+                        const sName = (typeof s === "string" ? s : s.productionSeries || s.name || "").toString().trim().toLowerCase();
+                        const rName = rawSeries.toString().trim().toLowerCase();
+                        if (!sName || !rName) return false;
+                        return sName === rName || sName.replace(/[-_ ]/g, "") === rName.replace(/[-_ ]/g, "");
+                      });
+
+                      const prodSeriesVal = matchedPS
+                        ? typeof matchedPS === "string"
+                          ? matchedPS
+                          : matchedPS.productionSeries || matchedPS.name || ""
+                        : rawSeries;
+
+                      if (prodSeriesVal) {
+                        setValue("productionSeries", prodSeriesVal);
+                        clearErrors("productionSeries");
+                      }
+
                       if (value.componentType) {
                         updateComponentAndQrType(value.componentType);
                       }
@@ -1143,6 +1316,7 @@ function DrawingDetailsStep({
                       setValue("unit", "");
                       setValue("rmItemCode", "");
                       setValue("partAssemblyId", "");
+                      setValue("productionSeries", "");
                     }
                   }}
                   renderOption={(props, option) => {
@@ -1226,80 +1400,110 @@ function DrawingDetailsStep({
               name="productionSeries"
               control={control}
               rules={{ required: "Production Series is required" }}
-              render={({ field: { onChange, value, ref }, fieldState: { error } }) => (
-                <Autocomplete
-                  size="small"
-                  open={openProdSeries}
-                  onOpen={() => setOpenProdSeries(true)}
-                  onClose={() => setOpenProdSeries(false)}
-                  openOnFocus={true}
-                  selectOnFocus={true}
-                  forcePopupIcon={true}
-                  options={productionSeries || []}
-                  getOptionLabel={(option) => typeof option === "string" ? option : option.productionSeries || ""}
-                  value={(productionSeries || []).find((s) => s.productionSeries === value) || (value ? (value as any) : null)}
-                  filterOptions={(options, { inputValue }) => {
-                    if (!inputValue) return options;
-                    const searchLower = inputValue.toLowerCase();
-                    if (value && searchLower === String(value).toLowerCase()) return options;
-                    return options.filter((s: any) =>
-                      (s.productionSeries || s).toLowerCase().includes(searchLower)
-                    );
-                  }}
-                  onChange={(_, newValue) => {
-                    setOpenProdSeries(false);
-                    const val = newValue ? (typeof newValue === "string" ? newValue : newValue.productionSeries) : "";
-                    setValue("productionSeries", val);
-                    onChange(val);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Production Series *"
-                      inputRef={ref}
-                      onClick={() => setOpenProdSeries(true)}
-                      onFocus={(e) => {
-                        setOpenProdSeries(true);
-                        (e.target as HTMLInputElement)?.select?.();
-                      }}
-                      error={!!error || !!errors.productionSeries}
-                      helperText={error?.message || errors.productionSeries?.message}
-                    />
-                  )}
-                />
-              )}
+              render={({ field: { onChange, value, ref }, fieldState: { error } }) => {
+                const selectedOption =
+                  (productionSeries || []).find((s: any) => {
+                    const sName = typeof s === "string" ? s : s.productionSeries || s.name || "";
+                    return sName.trim().toLowerCase() === String(value || "").trim().toLowerCase();
+                  }) || (value ? (typeof value === "string" ? value : (value as any).productionSeries || "") : null);
+
+                return (
+                  <Autocomplete
+                    size="small"
+                    open={openProdSeries}
+                    onOpen={() => setOpenProdSeries(true)}
+                    onClose={() => setOpenProdSeries(false)}
+                    openOnFocus={true}
+                    selectOnFocus={true}
+                    forcePopupIcon={true}
+                    options={productionSeries || []}
+                    getOptionLabel={(option) =>
+                      typeof option === "string" ? option : option.productionSeries || option.name || ""
+                    }
+                    isOptionEqualToValue={(option, val) => {
+                      if (!val) return false;
+                      const optStr = typeof option === "string" ? option : option.productionSeries || option.name || "";
+                      const valStr = typeof val === "string" ? val : val.productionSeries || val.name || "";
+                      return optStr.trim().toLowerCase() === valStr.trim().toLowerCase();
+                    }}
+                    value={selectedOption}
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue) return options;
+                      const searchLower = inputValue.toLowerCase();
+                      if (value && searchLower === String(value).toLowerCase()) return options;
+                      return options.filter((s: any) =>
+                        (typeof s === "string" ? s : s.productionSeries || s.name || "")
+                          .toLowerCase()
+                          .includes(searchLower)
+                      );
+                    }}
+                    onChange={(_, newValue) => {
+                      setOpenProdSeries(false);
+                      const val = newValue
+                        ? typeof newValue === "string"
+                          ? newValue
+                          : newValue.productionSeries || newValue.name || ""
+                        : "";
+                      setValue("productionSeries", val);
+                      onChange(val);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Production Series *"
+                        inputRef={ref}
+                        onClick={() => setOpenProdSeries(true)}
+                        onFocus={(e) => {
+                          setOpenProdSeries(true);
+                          (e.target as HTMLInputElement)?.select?.();
+                        }}
+                        error={!!error || !!errors.productionSeries}
+                        helperText={error?.message || errors.productionSeries?.message}
+                      />
+                    )}
+                  />
+                );
+              }}
             />
           </Grid>
 
           {/* Row 2: Unit *, IR Number, MSN Number * */}
           <Grid item xs={12} md={4}>
-            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth error={!!error || !!errors.unit} size="small">
-                <InputLabel>Unit *</InputLabel>
-                <Select
-                  {...field}
-                  label="Unit *"
-                  onChange={(e) => {
-                    field.onChange(e);
-                    if (e.target.value) {
-                      clearErrors("unit");
-                    }
-                  }}
-                >
-                  {units.map((u) => (
-                    <MenuItem key={u.id} value={u.unitName}>
-                      {u.unitName}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {(error || errors.unit) && (
-                  <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
-                )}
-              </FormControl>
-            )} />
+            <Controller name="unit" control={control} rules={{ required: "Unit is required" }} render={({ field, fieldState: { error } }) => {
+              const currentUnitVal =
+                (units || []).find(
+                  (u: any) => (u.unitName || "").trim().toLowerCase() === String(field.value || "").trim().toLowerCase()
+                )?.unitName || field.value || "";
+
+              return (
+                <FormControl fullWidth error={!!error || !!errors.unit} size="small">
+                  <InputLabel>Unit *</InputLabel>
+                  <Select
+                    {...field}
+                    value={currentUnitVal}
+                    label="Unit *"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      if (e.target.value) {
+                        clearErrors("unit");
+                      }
+                    }}
+                  >
+                    {units.map((u) => (
+                      <MenuItem key={u.id} value={u.unitName}>
+                        {u.unitName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {(error || errors.unit) && (
+                    <FormHelperText error>{error?.message || errors.unit?.message}</FormHelperText>
+                  )}
+                </FormControl>
+              );
+            }} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <Controller name="irNumber" control={control} render={({ field, fieldState: { error } }) => (
+            <Controller name="irNumber" control={control} rules={{ required: "IR Number is required" }} render={({ field, fieldState: { error } }) => (
               <Autocomplete
                 {...field}
                 open={openIR}
@@ -1338,14 +1542,14 @@ function DrawingDetailsStep({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="IR Number"
+                    label="IR Number *"
                     onClick={() => setOpenIR(true)}
                     onFocus={(e) => {
                       setOpenIR(true);
                       (e.target as HTMLInputElement)?.select?.();
                     }}
-                    error={!!error}
-                    helperText={error?.message}
+                    error={!!error || !!errors.irNumber}
+                    helperText={error?.message || errors.irNumber?.message}
                   />
                 )}
               />

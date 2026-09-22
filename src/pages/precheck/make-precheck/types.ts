@@ -15,6 +15,7 @@ export interface GridItem {
   qrCode?: string;
   componentType?: string;
   username?: string;
+  rejectedUserName?: string;
   modifiedDate?: string;
   remarks?: string;
   expanded?: boolean;

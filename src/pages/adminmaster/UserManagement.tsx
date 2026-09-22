@@ -1368,14 +1368,16 @@ export default function UserManagement() {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={snackbar.severity === 'error' ? null : 6000}
+        autoHideDuration={snackbar.severity === "error" ? null : 6000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{ zIndex: 1500 }}
       >
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbar.severity}
-          sx={{ width: "100%" }}
+          variant="filled"
+          sx={{ width: "100%", fontWeight: 500 }}
         >
           {snackbar.message}
         </Alert>

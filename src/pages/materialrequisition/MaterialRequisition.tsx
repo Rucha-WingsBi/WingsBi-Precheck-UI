@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -34,7 +34,7 @@ import {
 import { CustomPagination } from "../../components/CustomPagination";
 
 import {
-  Save as SaveIcon,
+ 
   Close as CloseIcon,
   Download as DownloadIcon,
   SwapHoriz as SwapHorizIcon,
@@ -69,11 +69,15 @@ const ALL_MATERIAL_REQUISITION_EXPORT_COLUMNS = [
   { key: "minDate", label: "MIN Date" },
   { key: "reasonForRejection", label: "Reason / Remarks" },
   { key: "createdDate", label: "Created Date" },
+  { key: "createdBy", label: "Created By" },
+  { key: "modifiedDate", label: "Modified Date" },
+  { key: "modifiedBy", label: "Modified By" },
 ];
 
 import type {
   MaterialRequisitionRecord,
   CreateMaterialRequisitionRequest,
+  UpdateMaterialRequisitionRequest,
 } from "../../store/slices/materialRequisitionSlice";
 import {
   useProductionSeries,
@@ -127,6 +131,11 @@ interface RequestListItem {
   poNumber?: string;
   assemblyId?: string;
   rejectedComponentId?: number;
+  createdDate?: string | null;
+  createdBy?: number | null;
+  modifiedDate?: string | null;
+  modifiedBy?: number | null;
+  username?: string | null;
 }
 
 // Map API response to component interface
@@ -151,6 +160,11 @@ const mapApiRecordToListItem = (
     requestOwner: record.requestOwner,
     //assemblyId: record.idNumber,
     rejectedComponentId: record.rejectedComponentId,
+    createdDate: record.createdDate,
+    createdBy: record.createdBy,
+    modifiedDate: record.modifiedDate,
+    modifiedBy: record.modifiedBy,
+    username: record.username,
   };
 };
 
@@ -288,6 +302,14 @@ const MaterialRequisition: React.FC = () => {
   } = useSelector((state: RootState) => state.materialRequisition);
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: users = [] } = useUsers();
+
+  const getUserDisplayName = (userId?: number | null, fallbackUsername?: string | null) => {
+    if (userId) {
+      const found = users.find((u) => u.id === userId);
+      if (found?.userName) return found.userName;
+    }
+    return fallbackUsername || "N/A";
+  };
 
   // Get user access permissions dynamically
   const hasRequisitionPermission = useHasPermission("Material Requisition");
@@ -490,8 +512,13 @@ const MaterialRequisition: React.FC = () => {
     },
   });
 
+  const lastFetchedFilterRef = useRef<string | null | undefined>(undefined);
+
   // Load data from API on component mount and when filter changes
   useEffect(() => {
+    const currentFilterVal = selectedFilter || null;
+    if (lastFetchedFilterRef.current === currentFilterVal) return;
+    lastFetchedFilterRef.current = currentFilterVal;
     dispatch(fetchMaterialRequisitions(selectedFilter || undefined));
   }, [dispatch, selectedFilter]);
 
@@ -604,10 +631,18 @@ const MaterialRequisition: React.FC = () => {
       }
 
 
-      const payload = {
+      const payload: UpdateMaterialRequisitionRequest = {
         materialRequisitionId: selectedMaterialRequisitionId,
         remarks: data.reasonForRejection || undefined,
-        // status: newStatus || undefined,
+        hwno: data.hwNo || undefined,
+        requestOwner: data.requestOwner || undefined,
+        outPONo: data.outPONo || undefined,
+        minDate: data.minDate
+          ? (isNaN(new Date(data.minDate).getTime())
+            ? data.minDate
+            : new Date(data.minDate).toISOString())
+          : undefined,
+        status: data.status || undefined,
         statusId: statusId,
       };
 
@@ -1288,6 +1323,10 @@ const MaterialRequisition: React.FC = () => {
                       { label: "Quantity", width: 90, align: "center" },
                       { label: "Item Description", width: 180, align: "left" },
                       { label: "Status", width: 140, align: "center" },
+                      { label: "Created Date", width: 110, align: "center" },
+                      { label: "Created By", width: 120, align: "left" },
+                      { label: "Modified Date", width: 110, align: "center" },
+                      { label: "Modified By", width: 120, align: "left" },
                       { label: "Action", width: 100, align: "center" },
                     ].map((col) => (
                       <TableCell
@@ -1362,6 +1401,17 @@ const MaterialRequisition: React.FC = () => {
                         <TableCell align="center">{item.quantity}</TableCell>
                         <TableCell align="left">{item.itemDescription}</TableCell>
                         <TableCell align="center">{renderStatusBadge(item.status)}</TableCell>
+                        <TableCell align="center">{formatDate(item.createdDate)}</TableCell>
+                        <TableCell align="left">
+                          {getUserDisplayName(item.createdBy, item.username)}
+                        </TableCell>
+                        <TableCell align="center">{formatDate(item.modifiedDate)}</TableCell>
+                        <TableCell align="left">
+                          {getUserDisplayName(
+                            item.modifiedBy,
+                            item.modifiedBy && item.createdBy === item.modifiedBy ? item.username : null
+                          )}
+                        </TableCell>
                         <TableCell align="center">
                           <Button
                             variant="text"
@@ -1396,7 +1446,7 @@ const MaterialRequisition: React.FC = () => {
                   })}
                   {requestList.length === 0 && !apiLoading && (
                     <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 4, borderBottom: "none" }}>
+                      <TableCell colSpan={13} align="center" sx={{ py: 4, borderBottom: "none" }}>
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
                           No data available
                         </Typography>

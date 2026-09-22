@@ -665,8 +665,58 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               View, search, and manage component assembly mappings and bill of materials.
             </Typography>
           </Box>
+          <Box sx={{ ml: "auto" }}>
+            <Tooltip
+              title={!hasEditAccess ? "You do not have access to manage assembly mappings" : ""}
+              arrow
+            >
+              <span>
+                <Button
+                  type="button"
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  disabled={!hasEditAccess || !selectedDrawing}
+                  onClick={() => {
+                    setChildDrawingInput("");
+                    setChildLnInput("");
+                    setSelectedChildDwg(null);
+                    setFilteredChildDrawingOptions([]);
+
+                    const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
+                    const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
+
+                    setParentDrawingInput(parentDwg);
+                    setParentLnInput(parentLn);
+                    setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
+                    setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
+
+                    setFindNo("");
+                    setConsumedProdSeriesId("");
+                    setQuantity(0);
+                    setOpenAddDialog(true);
+                  }}
+                  sx={{
+                    height: 36,
+                    whiteSpace: "nowrap",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    textTransform: "none",
+                    borderRadius: "8px",
+                    px: 2,
+                    boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                    "&:hover": { backgroundColor: "primary.dark" },
+                    "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
+                  }}
+                >
+                  Add
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
         </Box>
       )}
+
 
       {/* Filter Card */}
       <Paper
@@ -737,8 +787,11 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                     </Typography>
                   </li>
                 )}
+                loadingText="Loading drawings..."
                 noOptionsText={
-                  drawingInput.length < 3
+                  isSearchingOptions
+                    ? "Loading drawings..."
+                    : drawingInput.length < 3
                     ? "Type at least 3 characters"
                     : "No drawings found"
                 }
@@ -748,104 +801,58 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
 
             <Grid item xs={12} sm={12} md={5} sx={{ display: "flex", gap: 1 }}>
               <Button
+                size="small"
+                type="submit"
+                variant="contained"
+
+                disabled={isSearching || (!drawingInput.trim() && !lnInput.trim())}
+                sx={{
+                  height: 40,
+                  flexGrow: 0,
+                  whiteSpace: "nowrap",
+                  minWidth: "fit-content",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  backgroundColor: "primary.main",
+                  color: "#ffffff",
+                  borderRadius: "6px",
+                  px: 1.5,
+                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
+                  "&:hover": { backgroundColor: "primary.dark" },
+                  "&:disabled": { backgroundColor: "grey.300" },
+                }}
+              >
+                Apply
+              </Button>
+              <Button
                 type="button"
                 variant="outlined"
-                startIcon={<RefreshIcon />}
+
                 onClick={handleClear}
                 size="small"
                 sx={{
                   height: 40,
-                  flexGrow: 1,
+                  flexGrow: 0,
                   whiteSpace: "nowrap",
                   minWidth: "fit-content",
                   borderColor: "#D0D5DD",
                   color: "#344054",
-                  fontSize: "0.8rem",
+                  fontSize: "0.75rem",
                   fontWeight: 600,
                   textTransform: "none",
                   borderRadius: "6px",
+                  px: 1.5,
                   "&:hover": {
                     borderColor: "grey.400",
                     backgroundColor: "#F9FAFB",
                   },
                 }}
               >
-                Reset
+                Clear
               </Button>
-              <Button
-                size="small"
-                type="submit"
-                variant="contained"
-                startIcon={<SearchIcon />}
-                disabled={isSearching || (!drawingInput.trim() && !lnInput.trim())}
-                sx={{
-                  height: 40,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                  minWidth: "fit-content",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  textTransform: "none",
-                  backgroundColor: "primary.main",
-                  color: "#ffffff",
-                  borderRadius: "6px",
-                  boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-                  "&:hover": { backgroundColor: "primary.dark" },
-                  "&:disabled": { backgroundColor: "grey.300" },
-                }}
-              >
-                Search
-              </Button>
-              <Tooltip
-                title={!hasEditAccess ? "You do not have access to manage assembly mappings" : ""}
-                arrow
-              >
-                <span>
-                  <Button
-                    type="button"
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    disabled={!hasEditAccess || !selectedDrawing}
-                    onClick={() => {
-                      setChildDrawingInput("");
-                      setChildLnInput("");
-                      setSelectedChildDwg(null);
-                      setFilteredChildDrawingOptions([]);
 
-                      const parentDwg = selectedDrawingOption?.drawingNumber || drawingInput || "";
-                      const parentLn = selectedDrawingOption?.lnItemCode || lnInput || "";
 
-                      setParentDrawingInput(parentDwg);
-                      setParentLnInput(parentLn);
-                      setSelectedParentDwg(parentDwg ? { drawingNumber: parentDwg, lnItemCode: parentLn } : null);
-                      setFilteredParentDrawingOptions(parentDwg ? [{ drawingNumber: parentDwg, lnItemCode: parentLn }] : []);
-
-                      setFindNo("");
-                      setConsumedProdSeriesId("");
-                      setQuantity(0);
-                      setOpenAddDialog(true);
-                    }}
-                    sx={{
-                      height: 40,
-                      flexGrow: 1,
-                      whiteSpace: "nowrap",
-                      minWidth: "fit-content",
-                      fontSize: "0.8rem",
-                      fontWeight: 600,
-                      textTransform: "none",
-                      backgroundColor: "primary.main",
-                      color: "#ffffff",
-                      borderRadius: "6px",
-                      boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-                      "&:hover": { backgroundColor: "primary.dark" },
-                      "&.Mui-disabled": { backgroundColor: "#EAECF0", color: "#98A2B3" },
-                    }}
-                  >
-                    Add
-                  </Button>
-                </span>
-              </Tooltip>
             </Grid>
           </Grid>
         </form>
@@ -1084,10 +1091,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               }}
               filterOptions={(options) => options}
               loading={isSearchingParent}
+              loadingText="Loading drawings..."
               noOptionsText={
-                (parentDrawingInput || "").trim().length < 3
-                  ? "Type at least 3 characters to search"
-                  : "No drawings found"
+                isSearchingParent
+                  ? "Loading drawings..."
+                  : (parentDrawingInput || "").trim().length < 3
+                    ? "Type at least 3 characters to search"
+                    : "No drawings found"
               }
               renderOption={(props, option) => {
                 const opt = option as any;
@@ -1150,10 +1160,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               }}
               filterOptions={(options) => options}
               loading={isSearchingChild}
+              loadingText="Loading drawings..."
               noOptionsText={
-                (childDrawingInput || "").trim().length < 3
-                  ? "Type at least 3 characters to search"
-                  : "No drawings found"
+                isSearchingChild
+                  ? "Loading drawings..."
+                  : (childDrawingInput || "").trim().length < 3
+                    ? "Type at least 3 characters to search"
+                    : "No drawings found"
               }
               renderOption={(props, option) => {
                 const opt = option as any;
@@ -1293,7 +1306,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             }}
             size="small"
           >
-            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Update"}
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Save"}
           </Button>
         </DialogActions>
       </Dialog>

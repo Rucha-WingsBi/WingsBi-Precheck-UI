@@ -9,11 +9,7 @@ import {
   Typography,
   CircularProgress,
 } from "@mui/material";
-import {
-  Search as SearchIcon,
-  Refresh as ResetIcon,
-  GetApp as ExportIcon,
-} from "@mui/icons-material";
+
 
 interface AssemblyOption {
   id: number;
@@ -138,10 +134,13 @@ export const BomFilterCard: React.FC<BomFilterCardProps> = ({
               );
             }}
             noOptionsText={
-              assemblyInputValue.length < 3
+              isSearchingAssembly
+                ? "Loading drawings..."
+                : assemblyInputValue.length < 3
                 ? "Type at least 3 characters"
-                : "No assemblies found"
+                : "No drawings found"
             }
+            loadingText="Loading drawings..."
             freeSolo={false}
           />
         </Grid>

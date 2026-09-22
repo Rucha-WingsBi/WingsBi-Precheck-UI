@@ -376,8 +376,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
 
   const isDropdownFilterSelected = selectedSeries.length > 0 || selectedDocumentType.length > 0 || selectedUnits.length > 0;
 
+  const initialTabFetchedRef = useRef<number | null>(null);
+
   // Automatically search when tab changes or component mounts
   useEffect(() => {
+    if (initialTabFetchedRef.current === activeTab) return;
+    initialTabFetchedRef.current = activeTab;
     prevSearchQueryRef.current = searchQuery.trim();
     handleSearch(searchQuery, activeTab, selectedSeries);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -114,7 +114,8 @@ export const getComponentTypeChip = (
 };
 
 export const getStatusBadgeChip = (item: any) => {
-  if (item.isRejected || item.precheckStatus?.toLowerCase() === "rejected") {
+  const isRejected = Boolean(item.isRejected || item.precheckStatus?.toLowerCase() === "rejected");
+  if (isRejected) {
     return (
       <Chip
         label="Rejected"
@@ -125,6 +126,7 @@ export const getStatusBadgeChip = (item: any) => {
           fontWeight: 600,
           fontSize: "0.75rem",
           height: 24,
+          border: "1px solid #F87171",
         }}
       />
     );

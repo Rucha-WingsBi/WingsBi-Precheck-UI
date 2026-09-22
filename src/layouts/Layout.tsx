@@ -23,12 +23,7 @@ import {
   MenuItem,
   Stack,
   Collapse,
-  DialogContentText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+ 
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -47,7 +42,6 @@ import {
   ShoppingCart as ShoppingCartIcon,
   FactCheck as FactCheckIcon,
   MenuBook as MenuBookIcon,
-  Category as CategoryIcon,
   ListAlt as ListAltIcon,
   History as HistoryIcon,
   AccountTree as AccountTreeIcon,
@@ -196,17 +190,19 @@ export default function Layout() {
   const menuItems: MenuItem[] = [
     {
       text: "Dashboard",
+      pageName: "Dashboard",
       icon: <DashboardIcon />,
       path: "/dashboard",
     },
     {
       text: "Bulk Import",
-      pageName: "Script Executor",
+      pageName: "Bulk Import",
       icon: <CloudUploadIcon />,
       path: "/scriptexecutor",
     },
     {
       text: "Production Order",
+      pageName: "Production Order",
       icon: <ShoppingCartIcon />,
       path: "/production-order",
       subItems: [
@@ -220,18 +216,19 @@ export default function Layout() {
     },
     {
       text: "IR/MSN Number",
+      pageName: "IR/MSN Number",
       icon: <ViewListIcon />,
       path: "/irmsn",
       subItems: [
         {
           text: "IR/MSN List",
-          pageName: "View All IR/MSN",
+          pageName: "IR/MSN List",
           icon: <ListAltIcon />,
           path: "/irmsn/view",
         },
         {
           text: "New IR/MSN",
-          pageName: "Create",
+          pageName: "New IR/MSN",
           icon: <AddIcon />,
           path: "/irmsn/generate",
         },
@@ -239,18 +236,19 @@ export default function Layout() {
     },
     {
       text: "QR Code",
+      pageName: "QR Code",
       icon: <QrCodeIcon />,
       path: "/qrcode",
       subItems: [
         {
           text: "QR Code List",
-          pageName: "View QR Code",
+          pageName: "QR Code List",
           icon: <ListAltIcon />,
           path: "/qrcode/view",
         },
         {
           text: "New QR Code",
-          pageName: "Generate QR Code",
+          pageName: "New QR Code",
           icon: <AddIcon />,
           path: "/qrcode/generate",
         },
@@ -258,18 +256,19 @@ export default function Layout() {
     },
     {
       text: "Precheck",
+      pageName: "Precheck",
       icon: <FactCheckIcon />,
       path: "/precheck",
       subItems: [
         {
           text: "Precheck History",
-          pageName: "View Precheck",
+          pageName: "Precheck History",
           icon: <HistoryIcon />,
           path: "/precheck/view",
         },
         {
           text: "Run Precheck",
-          pageName: "Make Precheck",
+          pageName: "Run Precheck",
           icon: <PlayArrowIcon />,
           path: "/precheck/make",
         },
@@ -277,6 +276,7 @@ export default function Layout() {
     },
     {
       text: "Store",
+      pageName: "Store",
       icon: <StoreIcon />,
       path: "/store",
       subItems: [
@@ -296,18 +296,19 @@ export default function Layout() {
     },
     {
       text: "Assembly",
+      pageName: "Assembly",
       icon: <MenuBookIcon />,
       path: "/sop",
       subItems: [
         {
           text: "Assembly Explorer",
-          pageName: "View SOP",
+          pageName: "Assembly Explorer",
           icon: <AccountTreeIcon />,
           path: "/sop/view",
         },
         {
           text: "Components",
-          pageName: "View Components",
+          pageName: "Components",
           icon: <ExtensionIcon />,
           path: "/components",
         },
@@ -315,22 +316,25 @@ export default function Layout() {
     },
     {
       text: "Admin",
+      pageName: "Admin",
       icon: <AdminPanelSettingsIcon />,
       path: "/adminmaster",
       subItems: [
         {
           text: "User Management",
+          pageName: "User Management",
           icon: <PeopleIcon />,
           path: "/adminmaster/usermanagement",
         },
         {
           text: "Role Management",
+          pageName: "Role Management",
           icon: <SettingsIcon />,
           path: "/adminmaster/rolemanagement",
         },
         {
           text: "Master Data",
-          pageName: "Add Components",
+          pageName: "Master Data",
           icon: <StorageIcon />,
           path: "/adminmaster/addcomponents",
         },
@@ -357,24 +361,24 @@ export default function Layout() {
     const isAccessible = (pageName: string): boolean => {
       const entry = accessMap[pageName.trim().toLowerCase()];
       if (!entry) return false;
-      return entry.noAccess !== true;
+      return entry.fullAccess === true;
+    };
+
+    const checkItemAccess = (item: MenuItem): boolean => {
+      const pageNameToCheck = (typeof item.pageName === "string" ? item.pageName : item.text) || item.text;
+      return isAccessible(pageNameToCheck);
     };
 
     return menuItems
       .map((item) => {
         // Case 1: No children → normal check
         if (!item.subItems) {
-          const hasAccess =
-            isAccessible(item.text) ||
-            (item.pageName ? isAccessible(item.pageName) : false);
-          return hasAccess ? item : null;
+          return checkItemAccess(item) ? item : null;
         }
 
         // Case 2: Has children → filter children first
-        const filteredSubItems = item.subItems.filter(
-          (subItem) =>
-            isAccessible(subItem.text) ||
-            (subItem.pageName ? isAccessible(subItem.pageName) : false)
+        const filteredSubItems = item.subItems.filter((subItem) =>
+          checkItemAccess(subItem)
         );
 
         // Show parent ONLY if at least one child is accessible
@@ -382,7 +386,7 @@ export default function Layout() {
           return { ...item, subItems: filteredSubItems };
         }
 
-        return null;
+        return checkItemAccess(item) ? item : null;
       })
       .filter((item): item is MenuItem => item !== null);
   };
@@ -861,30 +865,6 @@ export default function Layout() {
         </Box>
       </Main>
 
-      {/* Navigation Guard Dialog */}
-      <Dialog
-        open={navigationDialogOpen}
-        onClose={() => setNavigationDialogOpen(false)}
-      >
-        <DialogTitle>Unsubmitted Changes</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Please submit remaining precheck before leaving this page.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setNavigationDialogOpen(false)}
-            variant="outlined"
-            size="small"
-          >
-            Stay
-          </Button>
-          {/* <Button onClick={confirmNavigation} variant="contained" color="error">
-            Leave
-          </Button> */}
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

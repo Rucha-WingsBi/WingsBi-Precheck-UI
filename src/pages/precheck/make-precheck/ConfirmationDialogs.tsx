@@ -53,58 +53,6 @@ export const BatchWarningDialog: React.FC<BatchWarningDialogProps> = ({
   );
 };
 
-// ── Reload/Reset Confirmation Dialog ──
-interface ReloadConfirmationDialogProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export const ReloadConfirmationDialog: React.FC<ReloadConfirmationDialogProps> = ({
-  open,
-  onClose,
-}) => {
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="xs"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          p: 1,
-          width: "300px",
-        },
-      }}
-    >
-      <DialogTitle sx={{ fontSize: "1rem", p: 1 }}>
-        Unsubmitted Changes
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 1 }}>
-        <DialogContentText sx={{ fontSize: "0.85rem" }}>
-          Please submit remaining precheck.
-        </DialogContentText>
-      </DialogContent>
-
-      <DialogActions sx={{ p: 1 }}>
-        <Button
-          onClick={onClose}
-          variant="outlined"
-          size="small"
-          sx={{
-            px: 1.5,
-            py: 0.3,
-            fontSize: "0.75rem",
-            minWidth: "auto",
-          }}
-        >
-          OK
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
 
 // ── Camera Permission Dialog ──
 interface CameraPermissionDialogProps {
