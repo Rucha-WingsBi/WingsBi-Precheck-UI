@@ -330,11 +330,17 @@ export default function InsertMappings() {
 
     try {
       let payload: any = {
-        id: isEditMode && id ? Number(id) : 0,
-        drawingNumberId: selectedDrawing?.id || 0,
         userId: user?.id ? parseInt(user.id) : 0,
         ModifiedDate: new Date().toISOString(),
       };
+
+      if (selectedDrawing?.id) {
+        payload.drawingNumberId = selectedDrawing.id;
+      }
+
+      if (isEditMode && id) {
+        payload.id = Number(id);
+      }
 
       if (!isEditMode) {
         payload = {

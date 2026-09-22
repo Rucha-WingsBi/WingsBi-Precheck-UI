@@ -220,6 +220,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
       id: "componentType",
       label: "Component Type",
       minWidth: 120,
+      align: "center" as const,
       format: (value: any) => (
         <ComponentTypeChip type={value || "Standard"} />
       ),

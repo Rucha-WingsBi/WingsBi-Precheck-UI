@@ -787,8 +787,11 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                     </Typography>
                   </li>
                 )}
+                loadingText="Loading drawings..."
                 noOptionsText={
-                  drawingInput.length < 3
+                  isSearchingOptions
+                    ? "Loading drawings..."
+                    : drawingInput.length < 3
                     ? "Type at least 3 characters"
                     : "No drawings found"
                 }
@@ -797,11 +800,11 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             </Grid>
 
             <Grid item xs={12} sm={12} md={5} sx={{ display: "flex", gap: 1 }}>
-               <Button
+              <Button
                 size="small"
                 type="submit"
                 variant="contained"
-                
+
                 disabled={isSearching || (!drawingInput.trim() && !lnInput.trim())}
                 sx={{
                   height: 40,
@@ -825,7 +828,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               <Button
                 type="button"
                 variant="outlined"
-                
+
                 onClick={handleClear}
                 size="small"
                 sx={{
@@ -848,8 +851,8 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               >
                 Clear
               </Button>
-             
-              
+
+
             </Grid>
           </Grid>
         </form>
@@ -1088,10 +1091,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               }}
               filterOptions={(options) => options}
               loading={isSearchingParent}
+              loadingText="Loading drawings..."
               noOptionsText={
-                (parentDrawingInput || "").trim().length < 3
-                  ? "Type at least 3 characters to search"
-                  : "No drawings found"
+                isSearchingParent
+                  ? "Loading drawings..."
+                  : (parentDrawingInput || "").trim().length < 3
+                    ? "Type at least 3 characters to search"
+                    : "No drawings found"
               }
               renderOption={(props, option) => {
                 const opt = option as any;
@@ -1154,10 +1160,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               }}
               filterOptions={(options) => options}
               loading={isSearchingChild}
+              loadingText="Loading drawings..."
               noOptionsText={
-                (childDrawingInput || "").trim().length < 3
-                  ? "Type at least 3 characters to search"
-                  : "No drawings found"
+                isSearchingChild
+                  ? "Loading drawings..."
+                  : (childDrawingInput || "").trim().length < 3
+                    ? "Type at least 3 characters to search"
+                    : "No drawings found"
               }
               renderOption={(props, option) => {
                 const opt = option as any;
@@ -1297,7 +1306,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             }}
             size="small"
           >
-            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Update"}
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : "Save"}
           </Button>
         </DialogActions>
       </Dialog>
