@@ -51,7 +51,7 @@ export interface RejectionReasonItem {
 }
 
 export interface IrMsnAnalyticsItem {
-  key: "FOUND_OK" | "IR_GENERATED" | "MSN_GENERATED";
+  key: "FOUND_OK" | "REJECTED" | "IR_GENERATED" | "MSN_GENERATED";
   label: string;
   count: number;
   percentage: number;
@@ -180,11 +180,11 @@ export const INITIAL_REJECTION_REASONS: RejectionReasonItem[] = [
 
 export const INITIAL_IRMSN_ANALYTICS: IrMsnAnalyticsItem[] = [
   {
-    key: "FOUND_OK",
-    label: "Found OK (Direct BOM Pass)",
+    key: "REJECTED",
+    label: "Rejected",
     count: 5364,
     percentage: 60.0,
-    color: "#15803d",
+   color: "#be123c",
     bgColor: "#f0fdf4",
     borderColor: "#bbf7d0",
     description: "60.0% of BOM parts verified directly against live BOM specification",
@@ -204,7 +204,7 @@ export const INITIAL_IRMSN_ANALYTICS: IrMsnAnalyticsItem[] = [
     label: "IR No. Generated (% of BOM)",
     count: 1430,
     percentage: 16.0,
-    color: "#be123c",
+    color: "#15803d",
     bgColor: "#fff1f2",
     borderColor: "#fecdd3",
     description: "16.0% of BOM parts assigned unique IR tracking numbers for QR encoding",
