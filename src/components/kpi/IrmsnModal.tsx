@@ -87,7 +87,7 @@ export const IrmsnModal: React.FC<IrmsnModalProps> = ({ open, onClose, document 
               Digital Traceability Artifact
             </Typography>
             <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-              {document.docType === "IR" ? "Defect Report " : "Material Transfer Note"} #{document.docNumber}
+              {document.docType === "IR" ? "Inspection Record (IR) " : "Material Serial Record (MSN) "} #{document.docNumber}
             </Typography>
           </Box>
         </Box>

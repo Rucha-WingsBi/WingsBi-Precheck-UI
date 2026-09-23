@@ -29,7 +29,7 @@ export interface TimeSeriesPoint {
   rejectedCount: number;
   swappedCount: number;
   inProgressCount?: number;
-  verifiedRate: number; // percentage
+  verifiedRate: number; 
   rejectedRate: number;
   swappedRate: number;
   inProgressRate?: number;
@@ -49,6 +49,30 @@ export interface RejectionReasonItem {
   percentage: number;
   color: string;
 }
+
+export interface IrMsnAnalyticsItem {
+  key: "FOUND_OK" | "IR_GENERATED" | "MSN_GENERATED";
+  label: string;
+  count: number;
+  percentage: number;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  description: string;
+}
+
+export interface QrLifecycleAnalyticsItem {
+  key: "GENERATED" | "SCANNED" | "STORED_IN" | "NOT_STORED_IN" | "REJECTED" | "UNSCANNED";
+  label: string;
+  count: number;
+  percentage: number;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  iconType: string;
+  description: string;
+}
+
 
 export interface MaterialRequisitionItem {
   id: string;
@@ -148,12 +172,104 @@ export const INITIAL_COMPONENT_MIX: ComponentTypeMixItem[] = [
 ];
 
 export const INITIAL_REJECTION_REASONS: RejectionReasonItem[] = [
-  { reason: "Rejected", count: 63, percentage: 38, color: "#F44336" },
-  { reason: "Rework", count: 40, percentage: 24, color: "#FF9800" },
-  { reason: "Misplaced", count: 30, percentage: 18, color: "#9C27B0" },
-  { reason: "Raw Material Defect", count: 20, percentage: 12, color: "#00BCD4" },
-
+  { reason: "Rejected", count: 63, percentage: 41.2, color: "#F44336" },
+  { reason: "Rework", count: 40, percentage: 26.1, color: "#FF9800" },
+  { reason: "Misplaced", count: 30, percentage: 19.6, color: "#9C27B0" },
+  { reason: "Raw Material Defect", count: 20, percentage: 13.1, color: "#00BCD4" },
 ];
+
+export const INITIAL_IRMSN_ANALYTICS: IrMsnAnalyticsItem[] = [
+  {
+    key: "FOUND_OK",
+    label: "Found OK (Direct BOM Pass)",
+    count: 5364,
+    percentage: 60.0,
+    color: "#15803d",
+    bgColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+    description: "60.0% of BOM parts verified directly against live BOM specification",
+  },
+  {
+    key: "MSN_GENERATED",
+    label: "MSN No. Generated (% of BOM)",
+    count: 2146,
+    percentage: 24.0,
+    color: "#7c3aed",
+    bgColor: "#f3e8ff",
+    borderColor: "#e9d5ff",
+    description: "24.0% of BOM parts assigned unique MSN sequence numbers for QR encoding",
+  },
+  {
+    key: "IR_GENERATED",
+    label: "IR No. Generated (% of BOM)",
+    count: 1430,
+    percentage: 16.0,
+    color: "#be123c",
+    bgColor: "#fff1f2",
+    borderColor: "#fecdd3",
+    description: "16.0% of BOM parts assigned unique IR tracking numbers for QR encoding",
+  },
+];
+
+export const INITIAL_QR_LIFECYCLE_ANALYTICS: QrLifecycleAnalyticsItem[] = [
+  {
+    key: "SCANNED",
+    label: "Scanned",
+    count: 8940,
+    percentage: 71.5,
+    color: "#0284c7",
+    bgColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+    iconType: "scanned",
+    description: "QR code labels physically scanned & validated during precheck workflow",
+  },
+  {
+    key: "STORED_IN",
+    label: "Stored In",
+    count: 5200,
+    percentage: 41.6,
+    color: "#16a34a",
+    bgColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+    iconType: "stored_in",
+    description: "Components physically received & registered in Store inventory bins",
+  },
+  {
+    key: "NOT_STORED_IN",
+    label: "Not Stored In",
+    count: 3587,
+    percentage: 28.7,
+    color: "#d97706",
+    bgColor: "#fffbeb",
+    borderColor: "#fde68a",
+    iconType: "not_stored_in",
+    description: "Components issued directly to shop floor, assembly line, or in-transit",
+  },
+  {
+    key: "UNSCANNED",
+    label: "Pending",
+    count: 3560,
+    percentage: 28.5,
+    color: "#0891b2",
+    bgColor: "#ecfeff",
+    borderColor: "#a5f3fc",
+    iconType: "scanned",
+    description: "QR codes generated but pending physical scan validation",
+  },
+  {
+    key: "REJECTED",
+    label: "Rejected",
+    count: 153,
+    percentage: 1.2,
+    color: "#dc2626",
+    bgColor: "#fef2f2",
+    borderColor: "#fecaca",
+    iconType: "rejected",
+    description: "QR codes flagged with QC defect, rework, or material requisition notice",
+  },
+];
+
+
 
 export const MOCK_TREND_DATA: TimeSeriesPoint[] = [
   { timeLabel: "08:00", verifiedCount: 180, rejectedCount: 4, swappedCount: 2, inProgressCount: 12, verifiedRate: 90.9, rejectedRate: 2.0, swappedRate: 1.0, inProgressRate: 6.1 },
