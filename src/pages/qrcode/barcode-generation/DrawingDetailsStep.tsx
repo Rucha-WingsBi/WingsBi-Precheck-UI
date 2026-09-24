@@ -380,7 +380,7 @@ function DrawingDetailsStep({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="PO Number *"
+                      label="Production Order Number *"
                       fullWidth
                       size="small"
                       inputRef={ref}

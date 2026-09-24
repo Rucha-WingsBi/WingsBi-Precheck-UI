@@ -1272,7 +1272,7 @@ const UpdateBarcode: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="PO Number"
+                    label="Production Order Number"
                       size="small"
                       onClick={() => setOpenPO(true)}
                       onFocus={(e) => {

@@ -29,7 +29,6 @@ import {
   Grid,
   Tooltip,
   CircularProgress,
-  Autocomplete,
   Select,
 } from "@mui/material";
 import {
@@ -1323,6 +1322,12 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "productionorder",
       headerName: "PO Number",
+      description: "Production Order Number",
+      renderHeader: () => (
+        <Tooltip title="Production Order Number" arrow placement="bottom">
+          <span>PO Number</span>
+        </Tooltip>
+      ),
       flex: 1,
       minWidth: 140,
       headerAlign: "center",
@@ -1464,19 +1469,25 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "productionOrderNumber",
       headerName: "PO Number",
+      description: "Production Order Number",
+      renderHeader: () => (
+        <Tooltip title="Production Order Number" arrow placement="bottom">
+          <span>PO Number</span>
+        </Tooltip>
+      ),
       flex: 1,
       minWidth: 130,
       headerAlign: "left",
       align: "left",
       renderCell: (params) => (
-        <Tooltip title={params.value || ""}>
+      
           <Typography
             variant="body2"
             sx={{ fontWeight: 700, color: "#101828", fontSize: "0.85rem" }}
           >
             {params.value}
           </Typography>
-        </Tooltip>
+       
       ),
     },
     {

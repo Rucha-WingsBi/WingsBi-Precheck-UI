@@ -1,11 +1,12 @@
 import React from "react";
-import { TableCell, Box } from "@mui/material";
+import { TableCell, Box, Tooltip } from "@mui/material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { COLOUR_ROLES } from "./tableStyles";
 
 export interface SortableTableHeaderProps {
   label: string;
+  tooltip?: string;
   columnKey?: string;
   sortKey?: string;
   sortColumn?: string | null;
@@ -20,6 +21,7 @@ export interface SortableTableHeaderProps {
 
 export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
   label,
+  tooltip,
   columnKey,
   sortKey,
   sortColumn,
@@ -40,6 +42,12 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
       onSort(effectiveKey);
     }
   };
+
+  const tooltipText =
+    tooltip ||
+    (label.trim().toLowerCase() === "po number" ? "Production Order Number" : undefined);
+
+  const labelContent = <span>{label}</span>;
 
   return (
     <TableCell
@@ -72,7 +80,13 @@ export const SortableTableHeader: React.FC<SortableTableHeaderProps> = ({
           width: "100%",
         }}
       >
-        <span>{label}</span>
+        {tooltipText ? (
+          <Tooltip title={tooltipText} arrow placement="bottom">
+            {labelContent}
+          </Tooltip>
+        ) : (
+          labelContent
+        )}
         {isSortable && onSort && (
           isSorted ? (
             sortDirection === "asc" ? (

@@ -651,7 +651,7 @@ export default function EditIRMSN() {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="PO Number"
+                    label="Production Order Number"
                     fullWidth
                     InputProps={{
                       ...params.InputProps,

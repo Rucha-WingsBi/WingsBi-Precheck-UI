@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useForm, Controller } from "react-hook-form";
 
@@ -1070,7 +1070,7 @@ export default function GenerateIRMSN() {
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="PO Number *"
+                          label="Production Order Number*"
                           fullWidth
                           size="small"
                           error={!!errors.poNumber}

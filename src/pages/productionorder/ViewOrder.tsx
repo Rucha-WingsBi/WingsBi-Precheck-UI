@@ -595,7 +595,7 @@ const ViewOrder: React.FC = () => {
               minWidth: 150,
             }}
             renderInput={(params) => (
-              <TextField {...params} label="PO Number *" size="small" placeholder="Select PO" />
+              <TextField {...params} label="Production Order Number *" size="small" placeholder="Select PO" />
             )}
           />
 

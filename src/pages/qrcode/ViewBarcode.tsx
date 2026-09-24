@@ -442,7 +442,11 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Build No</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Quantity</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>PO Number</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>
+                      <Tooltip title="Production Order Number" arrow placement="bottom">
+                        <span>PO Number</span>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Unit</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Disposition</TableCell>

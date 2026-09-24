@@ -30,6 +30,7 @@ import {
   RadioGroup,
   FormControlLabel,
   FormControl,
+  Tooltip,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
 
@@ -1344,8 +1345,14 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {col.label}
-                      </TableCell>
+                    {col.label.includes("PO Number") ? (
+                      <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
+                        <span>{col.label}</span>
+                      </Tooltip>
+                    ) : (
+                      col.label
+                    )}
+                  </TableCell>
                     ))}
                   </TableRow>
                 </TableHead>
@@ -1637,7 +1644,7 @@ const MaterialRequisition: React.FC = () => {
                           {...field}
                           fullWidth
                           size="small"
-                          label="PO Number"
+                          label="Production Order Number"
                           variant="outlined"
                         />
                       )}
@@ -1980,8 +1987,14 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {col.label}
-                      </TableCell>
+                    {col.label.includes("PO Number") ? (
+                      <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
+                        <span>{col.label}</span>
+                      </Tooltip>
+                    ) : (
+                      col.label
+                    )}
+                  </TableCell>
                     ))}
                   </TableRow>
                 </TableHead>

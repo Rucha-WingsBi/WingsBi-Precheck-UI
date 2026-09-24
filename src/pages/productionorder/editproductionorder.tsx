@@ -290,7 +290,7 @@ export default function EditProductionOrder() {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="PO Number"
+                    label="Production Order Number"
                     fullWidth
                     size="small"
                     disabled

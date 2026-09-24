@@ -278,7 +278,7 @@ const PrecheckFormControls: React.FC<PrecheckFormControlsProps> = ({
           },
         }}
         renderInput={(params) => (
-          <TextField {...params} label="PO Number *" fullWidth size="small" />
+          <TextField {...params} label="Production Order No *" fullWidth size="small" />
         )}
       />
 

@@ -945,7 +945,13 @@ const StoreIn: React.FC = () => {
                       px: 1.5,
                     }}
                   >
-                    {col}
+                    {col === "PO Number" ? (
+                      <Tooltip title="Production Order Number" arrow placement="bottom">
+                        <span>{col}</span>
+                      </Tooltip>
+                    ) : (
+                      col
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -1581,7 +1587,13 @@ const StoreIn: React.FC = () => {
                       px: 1.5,
                     }}
                   >
-                    {col}
+                    {col === "PO Number" ? (
+                      <Tooltip title="Production Order Number" arrow placement="bottom">
+                        <span>{col}</span>
+                      </Tooltip>
+                    ) : (
+                      col
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
