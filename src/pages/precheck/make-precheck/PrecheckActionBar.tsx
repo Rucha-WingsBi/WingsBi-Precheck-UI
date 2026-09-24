@@ -135,8 +135,8 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
         </Typography>
       </Box>
 
-      {/* Top Right "More v" Action Button */}
-      <Box>
+      {/* Top Right Actions: More, Export */}
+      <Stack direction="row" spacing={1} alignItems="center">
         <Button
           variant="outlined"
           size="small"
@@ -157,6 +157,29 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
           More
         </Button>
 
+        {onExport && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onExport}
+            disabled={!isSubmitEnabled || isLoadingLocal}
+            startIcon={<FileDownloadIcon fontSize="small" />}
+            sx={{
+              height: 34,
+              borderRadius: "6px",
+              borderColor: "grey.300",
+              color: "text.secondary",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              backgroundColor: "background.paper",
+              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
+            }}
+          >
+            Export
+          </Button>
+        )}
+
         {/* More Menu Dropdown */}
         <Menu
           anchorEl={moreMenuAnchor}
@@ -168,12 +191,12 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
             sx: {
               borderRadius: "12px",
               mt: 1,
-              minWidth: 210,
+              minWidth: 110,
               border: "1px solid #E5E7EB",
             },
           }}
         >
-          {onToggleFilter && (
+          {/* {onToggleFilter && (
             <MenuItem
               onClick={() => {
                 handleMoreMenuClose();
@@ -188,9 +211,9 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
                 primary={filterRemainingOnly ? "Show All Items" : "Remaining Precheck"}
               />
             </MenuItem>
-          )}
+          )} */}
 
-          <Divider sx={{ my: 0.5 }} />
+          {/* <Divider sx={{ my: 0.5 }} /> */}
 
           <MenuItem
             onClick={() => {
@@ -206,7 +229,7 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
                 <UploadIcon fontSize="small" sx={{ color: "#D97706" }} />
               )}
             </ListItemIcon>
-            <ListItemText primary={uploadInProgress ? "Uploading..." : "Bulk Precheck"} />
+            <ListItemText primary={uploadInProgress ? "Uploading..." : "Import"} />
           </MenuItem>
 
           <MenuItem
@@ -230,7 +253,7 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
 
          
         </Menu>
-      </Box>
+      </Stack>
     </Box>
   );
 };

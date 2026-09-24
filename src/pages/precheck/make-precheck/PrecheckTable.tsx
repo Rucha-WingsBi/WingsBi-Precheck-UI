@@ -38,6 +38,7 @@ import {
   FileDownload as FileDownloadIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
+  FilterList as FilterListIcon,
 } from "@mui/icons-material";
 import type { GridItem } from "./types";
 import { formatDate, formatQuantity, getStatusBadgeChip } from "./utils";
@@ -71,6 +72,8 @@ interface PrecheckTableProps {
   onRequestSort: (property: string) => void;
   onExportBom?: () => void;
   isExportEnabled?: boolean;
+  filterRemainingOnly?: boolean;
+  onToggleFilter?: () => void;
 }
 
 const PrecheckTable: React.FC<PrecheckTableProps> = ({
@@ -96,11 +99,28 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
   onRequestSort,
   onExportBom,
   isExportEnabled,
+  filterRemainingOnly = false,
+  onToggleFilter,
 }) => {
   const [menuAnchorEl, setMenuAnchorEl] = React.useState<HTMLElement | null>(null);
   const [activeMenuRow, setActiveMenuRow] = React.useState<{ item: GridItem; index: number } | null>(null);
   const [confirmUndoItem, setConfirmUndoItem] = React.useState<GridItem | null>(null);
   const [confirmDeleteItem, setConfirmDeleteItem] = React.useState<GridItem | null>(null);
+
+  const remainingCount = React.useMemo(() => {
+    if (!searchResults || searchResults.length === 0) return 0;
+    return searchResults.filter((item) => {
+      const status = (item.precheckStatus || "").toLowerCase();
+      const isRej = item.isRejected || status === "rejected";
+      const isComplete =
+        !isRej &&
+        (item.isPrecheckComplete ||
+          status === "verified" ||
+          status === "completed" ||
+          (item.remainingQuantity === 0 || item.remainingQuantity === null || item.remainingQuantity === undefined));
+      return !isRej && !isComplete;
+    }).length;
+  }, [searchResults]);
 
   const isEditDeleteEnabled = true;
   return (
@@ -133,51 +153,47 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Typography
-
             sx={{ fontWeight: 700, fontSize: "0.8rem", color: "#101828" }}
           >
-            BOM Parts
+             Parts To be verified 
           </Typography>
           <Typography
             variant="body2"
             sx={{ color: "#667085", fontSize: "0.8rem", fontWeight: 500 }}
           >
-            {searchResults.length > 0 ? `${searchResults.length} lines` : ""}
+            {searchResults.length > 0 ? `${searchResults.length} Parts` : ""}
           </Typography>
         </Box>
 
-        {onExportBom && (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={onExportBom}
-            disabled={isExportEnabled !== undefined ? !isExportEnabled : searchResults.length === 0}
-            startIcon={<FileDownloadIcon fontSize="small" />}
-            sx={{
-              height: 28,
-              borderRadius: "6px",
-              borderColor: "grey.300",
-              color: "text.secondary",
-              textTransform: "none",
-              fontWeight: 600,
-              fontSize: "0.75rem",
-              backgroundColor: "background.paper",
-              "& .MuiButton-startIcon": {
-                color: "#059669",
-              },
-              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
-              "&.Mui-disabled": {
-                borderColor: "grey.200",
-                color: "text.disabled",
-                "& .MuiButton-startIcon": {
-                  color: "action.disabled",
+        {/* Right End:   Filter Button */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {onToggleFilter && (
+            <Button
+              variant={filterRemainingOnly ? "contained" : "outlined"}
+              size="small"
+              onClick={onToggleFilter}
+              disabled={!searchResults || searchResults.length === 0}
+              startIcon={<FilterListIcon fontSize="small" />}
+              sx={{
+                height: 28,
+                borderRadius: "6px",
+                borderColor: filterRemainingOnly ? "primary.main" : "#D0D5DD",
+                backgroundColor: filterRemainingOnly ? "primary.main" : "#FFFFFF",
+                color: filterRemainingOnly ? "#FFFFFF" : "#344054",
+                textTransform: "none",
+                fontWeight: 600,
+                fontSize: "0.75rem",
+                px: 1.25,
+                "&:hover": {
+                  borderColor: filterRemainingOnly ? "primary.dark" : "#98A2B3",
+                  backgroundColor: filterRemainingOnly ? "primary.dark" : "#F9FAFB",
                 },
-              },
-            }}
-          >
-            Export 
-          </Button>
-        )}
+              }}
+            >
+              {filterRemainingOnly ? "All Parts" : `Pending Parts${remainingCount > 0 ? ` (${remainingCount})` : ""}`}
+            </Button>
+          )}
+        </Box>
       </Box>
 
       <TableContainer

@@ -26,6 +26,7 @@ import {
   Typography,
   IconButton,
   Button,
+  Snackbar,
 } from "@mui/material";
 import { Close as CloseIcon, FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import {
@@ -1685,16 +1686,21 @@ const MakePrecheck: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Alert */}
-      {showAlert && (
+      {/* Top Center Snackbar Alert */}
+      <Snackbar
+        open={showAlert}
+        autoHideDuration={4000}
+        onClose={() => setShowAlert(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
         <Alert
           severity={alertSeverity}
-          sx={{ mb: 2 }}
           onClose={() => setShowAlert(false)}
+          sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}
         >
           {alertMessage}
         </Alert>
-      )}
+      </Snackbar>
 
       {/* Page Title & More Action Button at Top Header */}
       <PrecheckHeaderBar
@@ -1858,6 +1864,8 @@ const MakePrecheck: React.FC = () => {
         onRequestSort={handleRequestSort}
         onExportBom={handleExport}
         isExportEnabled={isSubmitEnabled}
+        filterRemainingOnly={filterRemainingOnly}
+        onToggleFilter={() => setFilterRemainingOnly(!filterRemainingOnly)}
       />
 
       {/* Quantity Dialog */}
