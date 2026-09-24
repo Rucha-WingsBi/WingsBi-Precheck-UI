@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -28,15 +28,12 @@ import {
 import {
   FileDownload as DownloadIcon,
   Close as CloseIcon,
-  Edit as EditIcon,
 } from "@mui/icons-material";
-import * as XLSX from "xlsx";
 import { useForm } from "react-hook-form";
 import type { RootState, AppDispatch } from "../../store/store";
 import {
   getSopAssemblyData,
   exportSopAssemblyData,
-  getBomDetails,
   exportBomDetails,
   setSelectedAssemblyNumber,
   clearAssemblyData,
@@ -91,7 +88,6 @@ interface FormData {
 }
 
 const ViewSOP: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const [activeTab, setActiveTab] = useState<"sop" | "bom">(
@@ -116,7 +112,6 @@ const ViewSOP: React.FC = () => {
   const {
     assemblyData,
     bomData,
-    searchCriteria,
     selectedAssemblyNumber,
     isLoading,
     isExporting,
@@ -133,6 +128,18 @@ const ViewSOP: React.FC = () => {
   const [prodSeriesInputText, setProdSeriesInputText] = useState("");
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const treeTableRef = useRef<any>(null);
+
+  // Export Options Dialog State
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
+
+  const activeExportColumns = useMemo(() => {
+    return activeTab === "sop" ? ALL_SOP_EXPORT_COLUMNS : ALL_BOM_EXPORT_COLUMNS;
+  }, [activeTab]);
+
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
+    ALL_SOP_EXPORT_COLUMNS.map((c) => c.key)
+  );
 
   // Debounce drawing number query
   useEffect(() => {
@@ -622,17 +629,7 @@ const ViewSOP: React.FC = () => {
     [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText, exportMode]
   );
 
-  // Export Options Dialog State
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [exportMode, setExportMode] = useState<"all" | "custom">("all");
 
-  const activeExportColumns = useMemo(() => {
-    return activeTab === "sop" ? ALL_SOP_EXPORT_COLUMNS : ALL_BOM_EXPORT_COLUMNS;
-  }, [activeTab]);
-
-  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
-    ALL_SOP_EXPORT_COLUMNS.map((c) => c.key)
-  );
 
   const handleOpenExportDialog = useCallback(() => {
     const hasData =
@@ -766,11 +763,6 @@ const ViewSOP: React.FC = () => {
     if (!treeData.length) return 0;
     return Math.max(...treeData.map((d: any) => d.level || 0)) + 1;
   }, [treeData]);
-
-  const selectedChildCount = useMemo(() => {
-    if (!selectedNode || !treeData.length) return 0;
-    return treeData.filter((d: any) => d.parentId === selectedNode.id || d.parentDrawingNumber === selectedNode.drawingNumber).length;
-  }, [selectedNode, treeData]);
 
   return (
     <Box

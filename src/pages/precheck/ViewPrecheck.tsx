@@ -892,7 +892,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", sm: "center" }}
           spacing={1}
-          sx={{ mb: 0.5 }}
+          sx={{ mb: 0.5, mt: 0.5 }}
         >
           <Box>
             <Typography
@@ -900,11 +900,11 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               sx={{
                 fontWeight: 700,
                 color: "primary.main",
-                fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
                 lineHeight: 1.2,
               }}
             >
-              Precheck History
+              Verification History
             </Typography>
             <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
               {activeTab === "consumed"
@@ -966,8 +966,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             },
           }}
         >
-          <Tab label="Prechecks" value="precheck" />
-          <Tab label="Consumed In" value="consumed" />
+          <Tab label="View Parts" value="precheck" />
+          <Tab label="Consumed In Parts" value="consumed" />
         </Tabs>
       </Box>
 

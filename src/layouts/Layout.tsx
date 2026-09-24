@@ -23,7 +23,7 @@ import {
   MenuItem,
   Stack,
   Collapse,
- 
+
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -54,6 +54,8 @@ import {
   Warehouse as WarehouseIcon,
   MoveToInbox as MoveToInboxIcon,
   Inventory as InventoryIcon,
+  PlaylistAddCheck as PlaylistAddCheckIcon,
+  PlaylistAddCheck,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -270,21 +272,21 @@ export default function Layout() {
       ],
     },
     {
-      text: "Precheck",
+      text: "Verification",
       pageName: "Precheck",
       icon: <FactCheckIcon />,
       path: "/precheck",
       subItems: [
         {
-          text: "Precheck History",
-          pageName: "Precheck History",
+          text: "Verification History",
+          pageName: "Verification History",
           icon: <HistoryIcon />,
           path: "/precheck/view",
         },
         {
-          text: "Run Precheck",
-          pageName: "Run Precheck",
-          icon: <PlayArrowIcon />,
+          text: "Part Verification",
+          pageName: "Part Verification",
+          icon: < PlaylistAddCheck />,
           path: "/precheck/make",
         },
         {
@@ -295,7 +297,7 @@ export default function Layout() {
         },
       ],
     },
-   
+
     {
       text: "Assembly",
       pageName: "Assembly",
@@ -597,91 +599,91 @@ export default function Layout() {
                       }}
                     />
 
-                  {item.subItems &&
-                    item.subItems.length > 0 &&
-                    (isSidebarOpen || !isDesktopVersion) && (
-                      <Box sx={{ ml: "auto", display: "flex", alignItems: "center" }}>
-                        {expandedItems.includes(item.text) ? (
-                          <ExpandLessIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
-                        ) : (
-                          <ExpandMoreIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
-                        )}
-                      </Box>
-                    )}
-                </ListItemButton>
-              </Tooltip>
-            </ListItem>
-
-            {item.subItems && item.subItems.length > 0 && (
-              <Collapse
-                in={
-                  expandedItems.includes(item.text) &&
-                  (isSidebarOpen || !isDesktopVersion)
-                }
-                timeout="auto"
-                unmountOnExit
-              >
-                <List component="div" disablePadding>
-                  {item.subItems.map((subItem) => (
-                    <ListItemButton
-                      key={subItem.text}
-                      onClick={() => handleSubItemClick(subItem)}
-                      sx={{
-                        pl: 3.5,
-                        pr: 1.5,
-                        py: 1,
-                        mx: 1,
-                        mb: 0.5,
-                        borderRadius: 2,
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          backgroundColor: "rgba(109, 42, 143, 0.05)",
-                          transform: "translateX(4px)",
-                        },
-                        backgroundColor:
-                          location.pathname === subItem.path
-                            ? "rgba(109, 42, 143, 0.1)"
-                            : "transparent",
-                      }}
-                    >
-                      {subItem.icon && (
-                        <ListItemIcon
-                          sx={{
-                            minWidth: 32,
-                            color:
-                              location.pathname === subItem.path
-                                ? "#6D2A8F"
-                                : "text.secondary",
-                          }}
-                        >
-                          {subItem.icon}
-                        </ListItemIcon>
+                    {item.subItems &&
+                      item.subItems.length > 0 &&
+                      (isSidebarOpen || !isDesktopVersion) && (
+                        <Box sx={{ ml: "auto", display: "flex", alignItems: "center" }}>
+                          {expandedItems.includes(item.text) ? (
+                            <ExpandLessIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
+                          ) : (
+                            <ExpandMoreIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
+                          )}
+                        </Box>
                       )}
-                      <ListItemText
-                        primary={subItem.text}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+
+              {item.subItems && item.subItems.length > 0 && (
+                <Collapse
+                  in={
+                    expandedItems.includes(item.text) &&
+                    (isSidebarOpen || !isDesktopVersion)
+                  }
+                  timeout="auto"
+                  unmountOnExit
+                >
+                  <List component="div" disablePadding>
+                    {item.subItems.map((subItem) => (
+                      <ListItemButton
+                        key={subItem.text}
+                        onClick={() => handleSubItemClick(subItem)}
                         sx={{
-                          "& .MuiListItemText-primary": {
-                            fontSize: "0.825rem",
-                            fontWeight:
-                              location.pathname === subItem.path ? 600 : 400,
-                            color:
-                              location.pathname === subItem.path
-                                ? "#6D2A8F"
-                                : "text.secondary",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
+                          pl: 3.5,
+                          pr: 1.5,
+                          py: 1,
+                          mx: 1,
+                          mb: 0.5,
+                          borderRadius: 2,
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: "rgba(109, 42, 143, 0.05)",
+                            transform: "translateX(4px)",
                           },
+                          backgroundColor:
+                            location.pathname === subItem.path
+                              ? "rgba(109, 42, 143, 0.1)"
+                              : "transparent",
                         }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Collapse>
-            )}
-          </Box>
-        );
-      })}
+                      >
+                        {subItem.icon && (
+                          <ListItemIcon
+                            sx={{
+                              minWidth: 32,
+                              color:
+                                location.pathname === subItem.path
+                                  ? "#6D2A8F"
+                                  : "text.secondary",
+                            }}
+                          >
+                            {subItem.icon}
+                          </ListItemIcon>
+                        )}
+                        <ListItemText
+                          primary={subItem.text}
+                          sx={{
+                            "& .MuiListItemText-primary": {
+                              fontSize: "0.825rem",
+                              fontWeight:
+                                location.pathname === subItem.path ? 600 : 400,
+                              color:
+                                location.pathname === subItem.path
+                                  ? "#6D2A8F"
+                                  : "text.secondary",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            },
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              )}
+            </Box>
+          );
+        })}
       </List>
     </>
   );

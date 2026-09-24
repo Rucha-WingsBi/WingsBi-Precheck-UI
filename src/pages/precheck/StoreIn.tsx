@@ -113,7 +113,7 @@ const StoreIn: React.FC = () => {
   const { data: pageAccessData } = usePageAccess(
     user?.roleid ? Number(user.roleid) : null
   );
-  const hasMakeAccess = useHasPermission("Run Precheck");
+  const hasMakeAccess = useHasPermission("Part Verification");
 
   // Production Series hook for filter
   const { data: productionSeriesData = [] } = useProductionSeries();
@@ -1646,7 +1646,7 @@ const StoreIn: React.FC = () => {
                               },
                             }}
                           >
-                            Run Precheck
+                            Part Verification
                           </Button>
                         </span>
                       </Tooltip>

@@ -195,7 +195,7 @@ const RowActionsMenu: React.FC<{
   };
 
   const hasViewAccess = useHasPermission("Manage Orders");
-  const hasMakeAccess = useHasPermission("Run Precheck");
+  const hasMakeAccess = useHasPermission("Part Verification");
   const isConfirming = deleteConfirmId === row.id;
   const canDeleteOrEdit = row.precheckStatus === 1 || row.precheckStatus === 4;
 
@@ -293,7 +293,7 @@ const RowActionsMenu: React.FC<{
               <ListItemIcon>
                 <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
               </ListItemIcon>
-              <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+              <ListItemText primary="Part Verification" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
             </MenuItem>
           </span>
         </Tooltip>

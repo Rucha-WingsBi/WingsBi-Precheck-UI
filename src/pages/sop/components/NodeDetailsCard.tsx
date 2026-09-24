@@ -265,7 +265,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
           }}
         >
           <PlayIcon sx={{ fontSize: 13, flexShrink: 0 }} />
-          <span>Run Precheck</span>
+          <span>Part Verification</span>
         </Button> */}
       </Stack>
     </Paper>

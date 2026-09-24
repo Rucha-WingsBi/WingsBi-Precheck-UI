@@ -74,8 +74,8 @@ const Dashboard: React.FC = () => {
       route: "/qrcode/generate",
     },
     {
-      title: "Run Precheck",
-      pageName: "Run Precheck",
+      title: "Part Verification",
+      pageName: "Part Verification",
       description: "Access and manage make pre-check related tasks",
       icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#2196F3",
@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "View Precheck",
-      pageName: "Precheck History",
+      pageName: "Verification History",
       description: "Access and view precheck details and status",
       icon: <FactCheckIcon sx={{ fontSize: 40 }} />,
       color: "#3F51B5",
@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Material Requisition",
-      pageName: "Run Precheck",
+      pageName: "Part Verification",
       description: "Add and view Material Requisition details",
       icon: <ReceiptLongIcon sx={{ fontSize: 40 }} />,
       color: "#3fb1b5ff",

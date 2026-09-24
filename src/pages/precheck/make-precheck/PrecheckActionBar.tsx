@@ -128,7 +128,7 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
             fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
-          Run Precheck
+          Part Verification
         </Typography>
         <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
           Scan items, verify component quality, and complete precheck.

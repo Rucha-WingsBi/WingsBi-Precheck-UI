@@ -18,9 +18,9 @@ const routeToPageMap: Record<string, string> = {
   '/qrcode/generate-new': 'New QR Code',
   '/qrcode/view': 'QR Code List',
 
-  '/precheck/view': 'Precheck History',
-  '/precheck/make': 'Run Precheck',
-  '/precheck/pending': 'Run Precheck',
+  '/precheck/view': 'Verification History',
+  '/precheck/make': 'Part Verification',
+  '/precheck/pending': 'Part Verification',
   '/precheck/store-in': 'Store In',
   '/precheck/stored-components': 'Store In',
   '/precheck/available-in-store': 'Available In Store',
@@ -43,8 +43,8 @@ const routeToPageMap: Record<string, string> = {
   '/adminmaster/addcomponents': 'Master Data',
   '/adminmaster/add-components': 'Master Data',
 
-  '/materialrequisition': 'Run Precheck',
-  '/material-requisition': 'Run Precheck',
+  '/materialrequisition': 'Part Verification',
+  '/material-requisition': 'Part Verification',
 
   '/sop/view': 'Assembly Explorer',
   '/sop/viewBOM': 'Assembly Explorer',
