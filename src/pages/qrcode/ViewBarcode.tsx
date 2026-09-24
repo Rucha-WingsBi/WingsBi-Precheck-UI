@@ -39,6 +39,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import EditIcon from '@mui/icons-material/Edit';
@@ -358,10 +359,10 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
                 sx={{ fontSize: '0.85rem', py: 0.75 }}
               >
                 <ListItemIcon sx={{ minWidth: '28px !important' }}>
-                  {open ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+                  {open ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
                 </ListItemIcon>
                 <ListItemText
-                  primary={open ? "Hide Details" : "View Details"}
+                  primary={open ? "Hide Additional Details" : "Additional Details"}
                   primaryTypographyProps={{ fontSize: '0.85rem' }}
                 />
               </MenuItem>
@@ -405,74 +406,61 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
       </TableRow>
 
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={showBatchId ? 11 : 10}>
+        <TableCell style={{ padding: 0 }} colSpan={showBatchId ? 11 : 10}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 0.75,
-                }}
-              >
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
-                  Additional Details
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => setOpen(false)}
-                  title="Close Additional Details"
-                  sx={{
-                    p: 0.25,
-                    color: "#667085",
-                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
-                  }}
-                >
-                  <KeyboardArrowUpIcon fontSize="small" />
-                </IconButton>
-              </Box>
+            <Box sx={{ width: "100%", backgroundColor: "#F8FAFC", borderTop: "1px solid #EAECF0", borderBottom: "1px solid #EAECF0" }}>
               <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>IR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>MSN Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>MRIR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Build No</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>
+                  <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>IR Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>MSN Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>MRIR Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Build No</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Quantity</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>
                       <Tooltip title="Production Order Number" arrow placement="bottom">
                         <span>PO Number</span>
                       </Tooltip>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Unit</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Disposition</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Username</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Created Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Assembly Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remarks</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Unit</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Disposition</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Username</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Created Date</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Assembly Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Remarks</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "1px solid #EAECF0" }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setOpen(false)}
+                        title="Hide Additional Details"
+                        sx={{ p: 0.25, color: "#667085", "&:hover": { color: "#101828", backgroundColor: "#E4E7EC" } }}
+                      >
+                        <KeyboardArrowUpIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <TableRow sx={{ height: 36 }}>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{renderStatusBadge(barcodeDetails?.qrCodeStatus)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.irNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.msnNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.mrirNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.buildNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{formatQuantity(barcodeDetails?.quantity)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.remainingQuantity ?? '-'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.productionOrderNumber || barcodeDetails?.poNumber || barcodeDetails?.purchaseOrderNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.unitName || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.fan || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.department || barcodeDetails?.desposition || barcodeDetails?.disposition || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.users || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{formatDate(barcodeDetails?.createdDate)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.assemblyNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.remark || barcodeDetails?.remarks || 'N/A'}</TableCell>
+                  <TableRow sx={{ backgroundColor: "#FFFFFF", height: 36 }}>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{renderStatusBadge(barcodeDetails?.qrCodeStatus)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.irNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.msnNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.mrirNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.buildNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatQuantity(barcodeDetails?.quantity)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.remainingQuantity ?? '-'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.productionOrderNumber || barcodeDetails?.poNumber || barcodeDetails?.purchaseOrderNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.unitName || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.fan || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.department || barcodeDetails?.desposition || barcodeDetails?.disposition || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.users || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatDate(barcodeDetails?.createdDate)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.assemblyNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.remark || barcodeDetails?.remarks || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "none" }} />
                   </TableRow>
                 </TableBody>
               </Table>

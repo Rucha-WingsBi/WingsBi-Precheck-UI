@@ -1841,6 +1841,8 @@ const MakePrecheck: React.FC = () => {
         orderBy={orderBy}
         order={order}
         onRequestSort={handleRequestSort}
+        onExportBom={handleExport}
+        isExportEnabled={isSubmitEnabled}
       />
 
       {/* Quantity Dialog */}

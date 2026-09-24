@@ -190,21 +190,6 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
             </MenuItem>
           )}
 
-          {onExport && (
-            <MenuItem
-              onClick={() => {
-                handleMoreMenuClose();
-                onExport();
-              }}
-              disabled={!isSubmitEnabled}
-            >
-              <ListItemIcon>
-                <FileDownloadIcon fontSize="small" sx={{ color: "#059669" }} />
-              </ListItemIcon>
-              <ListItemText primary="Export BOM" />
-            </MenuItem>
-          )}
-
           <Divider sx={{ my: 0.5 }} />
 
           <MenuItem

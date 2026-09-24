@@ -36,6 +36,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -195,9 +196,9 @@ const DrawingNumberRowComponent = ({
 
             <MenuItem onClick={handleToggleDetails} sx={{ py: 0.75, px: 1.5 }}>
               <ListItemIcon sx={{ minWidth: 28 }}>
-                {openDetails ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
+                {openDetails ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
               </ListItemIcon>
-              <ListItemText primary={openDetails ? "Hide Details" : "View Details"} primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
+              <ListItemText primary={openDetails ? "Hide Additional Details" : "Additional Details"} primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
             </MenuItem>
 
             <MenuItem onClick={handleDelete} sx={{ py: 0.75, px: 1.5 }}>
@@ -211,52 +212,39 @@ const DrawingNumberRowComponent = ({
       </TableRow>
 
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+        <TableCell style={{ padding: 0 }} colSpan={8}>
           <Collapse in={openDetails} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 0.75,
-                }}
-              >
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
-                  Additional Details
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={handleToggleDetails}
-                  title="Close Additional Details"
-                  sx={{
-                    p: 0.25,
-                    color: "#667085",
-                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
-                  }}
-                >
-                  <KeyboardArrowUpIcon fontSize="small" />
-                </IconButton>
-              </Box>
+            <Box sx={{ width: "100%", backgroundColor: "#F8FAFC", borderTop: "1px solid #EAECF0", borderBottom: "1px solid #EAECF0" }}>
               <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Assembly Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Component Code</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Rack Location</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Has Expiry</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Created Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Updated On</TableCell>
+                  <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Assembly Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Component Code</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Rack Location</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Has Expiry</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Created Date</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Updated On</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "1px solid #EAECF0" }}>
+                      <IconButton
+                        size="small"
+                        onClick={handleToggleDetails}
+                        title="Hide Additional Details"
+                        sx={{ p: 0.25, color: "#667085", "&:hover": { color: "#101828", backgroundColor: "#E4E7EC" } }}
+                      >
+                        <KeyboardArrowUpIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <TableRow>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.parentDrawingNumbers?.join(", ") || drawingData?.assemblyNumber || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.componentCode || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.location || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.isExpiry ? "Yes" : "No"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{formatDate(drawingData?.createdDate)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}</TableCell>
+                  <TableRow sx={{ backgroundColor: "#FFFFFF" }}>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.parentDrawingNumbers?.join(", ") || drawingData?.assemblyNumber || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.componentCode || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.location || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.isExpiry ? "Yes" : "No"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatDate(drawingData?.createdDate)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "none" }} />
                   </TableRow>
                 </TableBody>
               </Table>

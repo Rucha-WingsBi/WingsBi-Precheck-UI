@@ -88,6 +88,15 @@ interface MenuItem {
   subItems?: MenuItem[];
 }
 
+const isItemActive = (item: MenuItem, currentPath: string): boolean => {
+  if (item.subItems && item.subItems.length > 0) {
+    return item.subItems.some(
+      (sub) => currentPath === sub.path || currentPath.startsWith(sub.path + "/")
+    );
+  }
+  return currentPath === item.path || currentPath.startsWith(item.path + "/");
+};
+
 const Main = styled("main")(({ theme }) => ({
   flexGrow: 1,
   padding: 0,
@@ -252,6 +261,12 @@ export default function Layout() {
           icon: <AddIcon />,
           path: "/qrcode/generate",
         },
+        {
+          text: "Store In",
+          pageName: "Store In",
+          icon: <StoreIcon />,
+          path: "/precheck/store-in",
+        },
       ],
     },
     {
@@ -272,28 +287,15 @@ export default function Layout() {
           icon: <PlayArrowIcon />,
           path: "/precheck/make",
         },
-      ],
-    },
-    {
-      text: "Store",
-      pageName: "Store",
-      icon: <StoreIcon />,
-      path: "/store",
-      subItems: [
         {
-          text: "Store In",
-          pageName: "Store In",
-          icon: <MoveToInboxIcon />,
-          path: "/precheck/store-in",
-        },
-        {
-          text: "Available In Store",
-          pageName: "Available In Store",
-          icon: <InventoryIcon />,
-          path: "/precheck/available-in-store",
+          text: "Material Requisition",
+          pageName: "Material Requisition",
+          icon: <AssignmentIcon />,
+          path: "/material-requisition",
         },
       ],
     },
+   
     {
       text: "Assembly",
       pageName: "Assembly",
@@ -531,67 +533,69 @@ export default function Layout() {
       </LogoBox>
 
       <List sx={{ flex: 1, py: 1 }}>
-        {getFilteredMenuItems().map((item) => (
-          <Box key={item.text}>
-            <ListItem disablePadding sx={{ display: "block" }}>
-              <Tooltip
-                title={!isSidebarOpen && isDesktopVersion ? item.text : ""}
-                placement="right"
-                arrow
-              >
-                <ListItemButton
-                  onClick={() => handleItemClick(item)}
-                  sx={{
-                    minHeight: 46,
-                    px: isSidebarOpen || !isDesktopVersion ? 2.5 : 1.5,
-                    justifyContent: isSidebarOpen || !isDesktopVersion ? "initial" : "center",
-                    mx: 1,
-                    mb: 0.5,
-                    borderRadius: 2,
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      backgroundColor: "rgba(109, 42, 143, 0.08)",
-                      transform: "translateX(4px)",
-                    },
-                    backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(109, 42, 143, 0.12)"
-                      : "transparent",
-                  }}
+        {getFilteredMenuItems().map((item) => {
+          const isActive = isItemActive(item, location.pathname);
+          return (
+            <Box key={item.text}>
+              <ListItem disablePadding sx={{ display: "block" }}>
+                <Tooltip
+                  title={!isSidebarOpen && isDesktopVersion ? item.text : ""}
+                  placement="right"
+                  arrow
                 >
-                  {item.icon && (
-                    <ListItemIcon
-                      sx={{
-                        minWidth: 0,
-                        mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
-                        justifyContent: "center",
-                        color: location.pathname.startsWith(item.path)
-                          ? "#6D2A8F"
-                          : "text.secondary",
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                  )}
-                  <ListItemText
-                    primary={item.text}
+                  <ListItemButton
+                    onClick={() => handleItemClick(item)}
                     sx={{
-                      flex: 1,
-                      opacity: isSidebarOpen || !isDesktopVersion ? 1 : 0,
-                      display: isSidebarOpen || !isDesktopVersion ? "block" : "none",
-                      "& .MuiListItemText-primary": {
-                        fontSize: "0.9rem",
-                        fontWeight: location.pathname.startsWith(item.path)
-                          ? 600
-                          : 500,
-                        color: location.pathname.startsWith(item.path)
-                          ? "#6D2A8F"
-                          : "text.primary",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                      minHeight: 46,
+                      px: isSidebarOpen || !isDesktopVersion ? 2.5 : 1.5,
+                      justifyContent: isSidebarOpen || !isDesktopVersion ? "initial" : "center",
+                      mx: 1,
+                      mb: 0.5,
+                      borderRadius: 2,
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: "rgba(109, 42, 143, 0.08)",
+                        transform: "translateX(4px)",
                       },
+                      backgroundColor: isActive
+                        ? "rgba(109, 42, 143, 0.12)"
+                        : "transparent",
                     }}
-                  />
+                  >
+                    {item.icon && (
+                      <ListItemIcon
+                        sx={{
+                          minWidth: 0,
+                          mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
+                          justifyContent: "center",
+                          color: isActive
+                            ? "#6D2A8F"
+                            : "text.secondary",
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                    )}
+                    <ListItemText
+                      primary={item.text}
+                      sx={{
+                        flex: 1,
+                        opacity: isSidebarOpen || !isDesktopVersion ? 1 : 0,
+                        display: isSidebarOpen || !isDesktopVersion ? "block" : "none",
+                        "& .MuiListItemText-primary": {
+                          fontSize: "0.9rem",
+                          fontWeight: isActive
+                            ? 600
+                            : 500,
+                          color: isActive
+                            ? "#6D2A8F"
+                            : "text.primary",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        },
+                      }}
+                    />
 
                   {item.subItems &&
                     item.subItems.length > 0 &&
@@ -676,7 +680,8 @@ export default function Layout() {
               </Collapse>
             )}
           </Box>
-        ))}
+        );
+      })}
       </List>
     </>
   );

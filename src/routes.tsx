@@ -117,6 +117,8 @@ export default function AppRoutes() {
               <Route path="view-consumed" element={<ViewConsumedIn />} />
               <Route path="store-in" element={<StoreIn />} />
               <Route path="stored-components" element={<StoredInComponents />} />
+              <Route path="material-requisition" element={<MaterialRequisition />} />
+              <Route path="materialrequisition" element={<MaterialRequisition />} />
             </Route>
 
             
@@ -136,6 +138,7 @@ export default function AppRoutes() {
               <Route path="generate-new" element={<BarcodeGeneration />} />
               <Route path="view" element={<ViewBarcode />} />
               <Route path="update/:id" element={<UpdateBarcode />} />
+              <Route path="store-in" element={<StoreIn />} />
             </Route>
 
             {/* SOP Module */}

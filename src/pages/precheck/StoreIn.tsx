@@ -913,7 +913,7 @@ const StoreIn: React.FC = () => {
           </Typography>
         </Box>
 
-        <TableContainer sx={{ overflowX: "auto" }}>
+        <TableContainer sx={{ overflowX: "auto", maxHeight: 200 }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow sx={{ height: 42 }}>
@@ -995,48 +995,16 @@ const StoreIn: React.FC = () => {
                       </TableCell>
                     </TableRow>
                     <TableRow sx={{ height: "auto" }}>
-                      <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+                      <TableCell style={{ padding: 0 }} colSpan={9}>
                         <Collapse in={expandedRow === row.qrCodeNumber} timeout="auto" unmountOnExit>
                           <Box
                             sx={{
-                              margin: 1,
-                              p: 1.5,
-                              backgroundColor: "#F9FAFB",
-                              borderRadius: "6px",
-                              border: "1px solid #EAECF0",
+                              width: "100%",
+                              backgroundColor: "#F8FAFC",
+                              borderTop: "1px solid #EAECF0",
+                              borderBottom: "1px solid #EAECF0",
                             }}
                           >
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                mb: 0.75,
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontWeight: 700,
-                                  color: "primary.main",
-                                  fontSize: "0.75rem",
-                                }}
-                              >
-                                Additional Details
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleExpandClick(row.qrCodeNumber)}
-                                title="Close Additional Details"
-                                sx={{
-                                  p: 0.25,
-                                  color: "#667085",
-                                  "&:hover": { color: "#101828", backgroundColor: "#EAECF0" },
-                                }}
-                              >
-                                <KeyboardArrowUpIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
                             <Table size="small" sx={{ width: "100%" }}>
                               <TableHead>
                                 <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
@@ -1054,11 +1022,13 @@ const StoreIn: React.FC = () => {
                                       key={subCol}
                                       align={subCol === "Consumed in Part" ? "left" : "center"}
                                       sx={{
-                                        fontWeight: 600,
+                                        fontWeight: 700,
                                         color: "#344054",
                                         fontSize: "0.75rem",
-                                        py: 0.5,
+                                        py: 1,
+                                        px: 1,
                                         borderBottom: "1px solid #EAECF0",
+                                        whiteSpace: "nowrap",
                                       }}
                                     >
                                       {subCol}
@@ -1067,11 +1037,11 @@ const StoreIn: React.FC = () => {
                                 </TableRow>
                               </TableHead>
                               <TableBody>
-                                <TableRow>
-                                  <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                <TableRow sx={{ backgroundColor: "#FFFFFF" }}>
+                                  <TableCell sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.consumedInDrawing || "-"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ py: 0.5 }}>
+                                  <TableCell align="center" sx={{ py: 1, px: 1 }}>
                                     <Chip
                                       label={row.qrCodeStatus || "N/A"}
                                       size="small"
@@ -1084,22 +1054,22 @@ const StoreIn: React.FC = () => {
                                       sx={{ height: 20, fontSize: "0.7rem", fontWeight: 600 }}
                                     />
                                   </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.irNumber || "-"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.msnNumber || "-"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.mrirNumber || "-"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.desposition || "-"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.users || "-"}
                                   </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: "0.75rem", py: 0.5 }}>
+                                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                     {row.createdDate ? formatDate(row.createdDate) : "-"}
                                   </TableCell>
                                 </TableRow>
@@ -1112,7 +1082,7 @@ const StoreIn: React.FC = () => {
                   </React.Fragment>
                 ))
               ) : (
-                <EmptyState colSpan={9} title="Apply filter to see results" />
+                <EmptyState colSpan={9} title="Scan QR to see results" height={100} />
               )}
             </TableBody>
           </Table>
@@ -1686,7 +1656,7 @@ const StoreIn: React.FC = () => {
               ) : (
                 <EmptyState
                   colSpan={11}
-                  title={hasAnyFilter || storeInList.length > 0 ? "No Matching Records found" : "Apply filter to see results"}
+                  title={hasAnyFilter || storeInList.length > 0 ? "No Matching Records found" : "Scan QR code to see results"}
                 />
               )}
             </TableBody>

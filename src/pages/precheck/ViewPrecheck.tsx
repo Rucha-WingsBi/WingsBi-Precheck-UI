@@ -1826,90 +1826,86 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         <TableRow sx={{ height: "auto" }}>
                           <TableCell
                             colSpan={visibleColumns.length}
-                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                            style={{ padding: 0 }}
                           >
                             <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                               <Box
                                 sx={{
-                                  margin: 1,
-                                  p: 1.5,
-                                  backgroundColor: "grey.50",
-                                  borderRadius: "6px",
-                                  border: "1px solid",
-                                  borderColor: "grey.200",
+                                  width: "100%",
+                                  backgroundColor: "#F8FAFC",
+                                  borderTop: "1px solid #EAECF0",
+                                  borderBottom: "1px solid #EAECF0",
                                 }}
                               >
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontWeight: 700,
-                                    color: "primary.main",
-                                    display: "block",
-                                    mb: 0.75,
-                                    fontSize: "0.8rem",
-                                  }}
-                                >
-                                  Additional Details
-                                </Typography>
                                 <Table size="small" sx={{ width: "100%" }}>
                                   <TableHead>
-                                    <TableRow sx={{ backgroundColor: "grey.100" }}>
+                                    <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         MRIR Number
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         Item Description
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         Remarks
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         User
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         Date
@@ -1917,20 +1913,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
-                                    <TableRow>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                    <TableRow sx={{ backgroundColor: "#FFFFFF" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.mrirNumber || "-"}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.nomenclature || "-"}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.remarks || <Typography component="span" sx={{ color: "#98A2B3", fontStyle: "italic", fontSize: "0.75rem" }}>No remarks</Typography>}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.username || "-"}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.modifiedDate || "-"}
                                       </TableCell>
                                     </TableRow>
