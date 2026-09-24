@@ -1091,9 +1091,28 @@ const ViewBarcode: React.FC = () => {
 
       if (exportViewQrCode.fulfilled.match(result)) {
         setExportDialogOpen(false);
+        const isFiltersApplied = Boolean(
+          searchQuery.trim() !== "" ||
+          appliedProductionSeries.length > 0 ||
+          appliedStatus.length > 0 ||
+          appliedGeneratedBy.length > 0 ||
+          appliedFromDate !== null ||
+          appliedToDate !== null ||
+          selectedQRCodes.length > 0
+        );
+
+        let successMsg = "Data exported successfully.";
+        if (isFiltersApplied && exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected filters and columns.";
+        } else if (isFiltersApplied) {
+          successMsg = "Data exported successfully based on the selected filters.";
+        } else if (exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected columns.";
+        }
+
         setSnackbar({
           open: true,
-          message: "QR codes exported successfully!",
+          message: successMsg,
           severity: "success",
         });
       } else if (exportViewQrCode.rejected.match(result)) {

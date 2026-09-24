@@ -1300,7 +1300,25 @@ const ProductionOrderUpload: React.FC = () => {
       }
 
       setExportDialogOpen(false);
-      showSnackbar("Data exported successfully to Excel");
+
+      const isFiltersApplied = Boolean(
+        searchQuery.trim() !== "" ||
+        appliedProductionSeries.length > 0 ||
+        appliedStatusList.length > 0 ||
+        appliedFromDate !== null ||
+        appliedToDate !== null
+      );
+
+      let successMessage = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        successMessage = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        successMessage = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        successMessage = "Data exported successfully based on the selected columns.";
+      }
+
+      showSnackbar(successMessage);
     } catch (err) {
       console.error("Export error:", err);
       showSnackbar("Failed to export data. Please try again.", "error");

@@ -1533,6 +1533,21 @@ const MakePrecheck: React.FC = () => {
       .unwrap()
       .then(() => {
         setExportDialogOpen(false);
+        const isFiltersApplied = Boolean(
+          selectedPO?.productionOrderNumber ||
+          selectedProductionSeries?.id ||
+          idNumber ||
+          selectedDrawing?.id
+        );
+        let successMsg = "Data exported successfully.";
+        if (isFiltersApplied && exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected filters and columns.";
+        } else if (isFiltersApplied) {
+          successMsg = "Data exported successfully based on the selected filters.";
+        } else if (exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected columns.";
+        }
+        showAlertMessage(successMsg, "success");
       })
       .catch((error) => {
         alert(error.message || "Failed to export precheck details");

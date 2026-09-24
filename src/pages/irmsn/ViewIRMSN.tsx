@@ -422,9 +422,27 @@ const ViewIRMSN: React.FC = () => {
         link.remove();
         window.URL.revokeObjectURL(url);
 
+        const isFiltersApplied = Boolean(
+          drawingOrLnSearch.trim() ||
+          selectedDepartments.length > 0 ||
+          selectedProductionSeries.length > 0 ||
+          fromDate ||
+          toDate ||
+          (typeFilter && typeFilter !== "All")
+        );
+
+        let successMsg = "Data exported successfully.";
+        if (isFiltersApplied && exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected filters and columns.";
+        } else if (isFiltersApplied) {
+          successMsg = "Data exported successfully based on the selected filters.";
+        } else if (exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected columns.";
+        }
+
         setStatusMessage({
           type: "success",
-          message: "Export downloaded successfully.",
+          message: successMsg,
         });
       } else {
         throw new Error("No content received from export API");

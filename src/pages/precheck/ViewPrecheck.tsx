@@ -513,8 +513,31 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         selectedColumns: selectedCols,
       };
 
+      const isFiltersApplied = Boolean(
+        combinedSearch.trim() ||
+        selectedProductionSeries.length > 0 ||
+        selectedStatus.length > 0 ||
+        dateFrom ||
+        dateTo
+      );
+      let successMsg = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        successMsg = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected columns.";
+      }
+
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
+        .then(() => {
+          setSnackbar({
+            open: true,
+            message: successMsg,
+            severity: "success",
+          });
+        })
         .catch((err: any) => {
           setSnackbar({
             open: true,
@@ -539,8 +562,32 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         selectedColumns: selectedCols,
       };
 
+      const isFiltersApplied = Boolean(
+        idNumber.trim() ||
+        combinedSearch.trim() ||
+        selectedProductionSeries.length > 0 ||
+        selectedDrawing.length > 0 ||
+        selectedPO.length > 0 ||
+        selectedLnItemCode.length > 0
+      );
+      let successMsg = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        successMsg = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected columns.";
+      }
+
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
+        .then(() => {
+          setSnackbar({
+            open: true,
+            message: successMsg,
+            severity: "success",
+          });
+        })
         .catch((err: any) => {
           setSnackbar({
             open: true,

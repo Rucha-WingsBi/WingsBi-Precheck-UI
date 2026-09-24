@@ -600,13 +600,26 @@ const ViewSOP: React.FC = () => {
         };
 
         await dispatch(exportSopAssemblyData(request) as any);
-        setSuccessMessage("Export completed successfully!");
+        const isFiltersApplied = Boolean(
+          values.drawingNumberId > 0 ||
+          values.prodSeriesId > 0 ||
+          values.assemblyNumber
+        );
+        let msg = "Data exported successfully.";
+        if (isFiltersApplied && exportMode === "custom") {
+          msg = "Data exported successfully based on the selected filters and columns.";
+        } else if (isFiltersApplied) {
+          msg = "Data exported successfully based on the selected filters.";
+        } else if (exportMode === "custom") {
+          msg = "Data exported successfully based on the selected columns.";
+        }
+        setSuccessMessage(msg);
       } catch (error) {
         console.error("Error during export:", error);
         setSuccessMessage("Error during export");
       }
     },
-    [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText]
+    [dispatch, validateRequiredFields, assemblyData, getValues, selectedDrawingNumber, drwDisplayText, exportMode]
   );
 
   // Export Options Dialog State
@@ -675,8 +688,18 @@ const ViewSOP: React.FC = () => {
         selectedColumn: colsToExport,
       };
 
+      const isFiltersApplied = Boolean(activeBomDrawing || drwDisplayText);
+      let msg = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        msg = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        msg = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        msg = "Data exported successfully based on the selected columns.";
+      }
+
       await dispatch(exportBomDetails(request) as any);
-      setSuccessMessage("BOM export completed successfully!");
+      setSuccessMessage(msg);
     }
   };
 
@@ -811,7 +834,7 @@ const ViewSOP: React.FC = () => {
               "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
             }}
           >
-            Export tree
+            Export
           </Button>
         </Stack>
       </Stack>
