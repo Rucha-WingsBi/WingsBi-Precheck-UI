@@ -945,13 +945,13 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
                     <TableCell align="center">
                       <ComponentTypeChip type={parent.componentType} />
                     </TableCell>
-                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem" }}>
                       {parent.qty}
                     </TableCell>
-                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem" }}>
                       {parent.findNo}
                     </TableCell>
-                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem" }}>
+                    <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem" }}>
                       {parent.assemblyNo}
                     </TableCell>
                     <TableCell sx={{ width: 80, textAlign: "center" }}>

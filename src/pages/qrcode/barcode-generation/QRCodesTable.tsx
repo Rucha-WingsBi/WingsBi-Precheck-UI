@@ -162,12 +162,12 @@ const QRCodesTable = ({
         </Stack>
 
         <TableContainer component={Paper} variant="outlined">
-          <Table stickyHeader>
+          <Table stickyHeader size="small">
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ height: 40 }}>
                 <TableCell
                   padding="checkbox"
-                  sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                  sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                 >
                   <Checkbox
                     checked={
@@ -179,38 +179,39 @@ const QRCodesTable = ({
                       selectedBarcodes.length < displayedQRCodes.length
                     }
                     onChange={(e) => onSelectAll(e.target.checked)}
+                    size="small"
                   />
                 </TableCell>
                 <TableCell
-                  sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                  sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                 >
                   Sr. No
                 </TableCell>
                 <TableCell
-                  sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                  sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                 >
                   QR Code
                 </TableCell>
                 <TableCell
-                  sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                  sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                 >
                   ID Number
                 </TableCell>
                 {showBatchIdColumn && (
                   <TableCell
-                    sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                    sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                   >
                     Batch ID
                   </TableCell>
                 )}
                 <TableCell
-                  sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                  sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                 >
                   Status
                 </TableCell>
                 <TableCell
                   align="center"
-                  sx={{ fontWeight: 600, backgroundColor: "grey.200" }}
+                  sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 0.75, px: 1.25 }}
                 >
                   Actions
                 </TableCell>
@@ -229,7 +230,9 @@ const QRCodesTable = ({
                     }
                     hover
                     sx={{
+                      height: 36,
                       backgroundColor: item.isSplitRow ? "#f5f5f5" : "inherit",
+                      "& td": { borderBottom: "1px solid #F2F4F7", fontSize: "0.775rem", color: "#344054", py: 0.5, px: 1.25 },
                     }}
                   >
                     <TableCell padding="checkbox">
@@ -244,6 +247,7 @@ const QRCodesTable = ({
                             e.target.checked
                           );
                         }}
+                        size="small"
                       />
                     </TableCell>
                     <TableCell>
@@ -252,7 +256,7 @@ const QRCodesTable = ({
                     <TableCell>
                       <Typography
                         variant="body2"
-                        sx={{ fontFamily: "monospace" }}
+                        sx={{ fontFamily: "monospace", fontSize: "0.775rem", fontWeight: 600, color: "#101828" }}
                       >
                         {item.qrCodeNumber || item.serialNumber}
                       </Typography>
@@ -266,6 +270,7 @@ const QRCodesTable = ({
                         label={item.isNewQrCode ? "New" : "Existing"}
                         color={item.isNewQrCode ? "success" : "default"}
                         size="small"
+                        sx={{ height: 22, fontSize: "0.75rem" }}
                       />
                     </TableCell>
                     <TableCell align="center">

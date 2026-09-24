@@ -205,7 +205,7 @@ const Row = ({ component, sr }: { component: StoredComponent; sr: number }) => {
           '& td': {
             borderBottom: '1px solid',
             borderColor: 'grey.100',
-            fontSize: '0.8rem',
+            fontSize: '0.775rem',
             color: '#344054',
             py: 0.75,
             px: 1.5,
@@ -213,7 +213,7 @@ const Row = ({ component, sr }: { component: StoredComponent; sr: number }) => {
           },
         }}
       >
-        <TableCell sx={{ textAlign: 'center', width: '45px', color: 'text.muted', fontSize: '0.8rem' }}>{sr}</TableCell>
+        <TableCell sx={{ textAlign: 'center', width: '45px', color: 'text.muted', fontSize: '0.775rem' }}>{sr}</TableCell>
         <TableCell sx={{ textAlign: 'center', fontWeight: 600, color: '#101828' }}>{component?.qrCodeNumber || 'N/A'}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}>{component?.productionOrderNumber || 'N/A'}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}>{component?.projectNumber || 'N/A'}</TableCell>

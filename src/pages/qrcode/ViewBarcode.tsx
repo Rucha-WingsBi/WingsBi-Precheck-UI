@@ -300,36 +300,36 @@ const Row = ({ sr, barcodeDetails, isSelected, onSelect, onSplit, showBatchId, o
             sx={{ color: '#d0d5dd', '&.Mui-checked': { color: 'primary.main' } }}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', minWidth: '55px', py: '4px', px: '8px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#475467' }}>
+        <TableCell sx={{ textAlign: 'center', minWidth: '55px', py: '4px', px: '8px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#475467' }}>
           {sr !== undefined ? sr : '-'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '140px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', fontWeight: 600, color: '#101828' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '140px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', fontWeight: 600, color: '#101828' }}>
           {barcodeDetails?.qrCodeNumber || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.productionSeries || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.lnItemCode || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.drawingNumber || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '160px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '160px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.nomenclature || 'N/A'}
         </TableCell>
         <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '2px', px: '12px', whiteSpace: 'nowrap' }}>
           <ComponentTypeChip type={barcodeDetails?.componentType} />
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.consumedInDrawing || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.idNumber || 'N/A'}
         </TableCell>
 
         {showBatchId && (
-          <TableCell sx={{ textAlign: 'left', minWidth: '110px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          <TableCell sx={{ textAlign: 'left', minWidth: '110px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
             {barcodeDetails?.batchId || barcodeDetails?.batchID || 'N/A'}
           </TableCell>
         )}
@@ -377,21 +377,7 @@ const Row = ({ sr, barcodeDetails, isSelected, onSelect, onSplit, showBatchId, o
                 </MenuItem>
               )}
 
-              <MenuItem
-                onClick={() => {
-                  handleMenuClose();
-                  setOpen(!open);
-                }}
-                sx={{ fontSize: '0.85rem', py: 0.75 }}
-              >
-                <ListItemIcon sx={{ minWidth: '28px !important' }}>
-                  {open ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
-                </ListItemIcon>
-                <ListItemText
-                  primary={open ? "Hide Additional Details" : "Additional Details"}
-                  primaryTypographyProps={{ fontSize: '0.85rem' }}
-                />
-              </MenuItem>
+
 
               {canSplit && (
                 <MenuItem
@@ -426,6 +412,21 @@ const Row = ({ sr, barcodeDetails, isSelected, onSelect, onSplit, showBatchId, o
                   <ListItemText primary="Disable QR" primaryTypographyProps={{ fontSize: '0.85rem' }} />
                 </MenuItem>
               )}
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  setOpen(!open);
+                }}
+                sx={{ fontSize: '0.85rem', py: 0.75 }}
+              >
+                <ListItemIcon sx={{ minWidth: '28px !important' }}>
+                  {open ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={open ? "Hide Additional Details" : "Additional Details"}
+                  primaryTypographyProps={{ fontSize: '0.85rem' }}
+                />
+              </MenuItem>
             </Menu>
           </Box>
         </TableCell>

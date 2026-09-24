@@ -1601,7 +1601,7 @@ const StoreIn: React.FC = () => {
                       sx={{
                         height: 44,
                         "&:hover": { backgroundColor: "#F9FAFB" },
-                        "& td": { borderBottom: "1px solid #F2F4F7", fontSize: "0.825rem" },
+                        "& td": { borderBottom: "1px solid #F2F4F7", fontSize: "0.775rem" },
                       }}
                     >
                       <TableCell align="center">

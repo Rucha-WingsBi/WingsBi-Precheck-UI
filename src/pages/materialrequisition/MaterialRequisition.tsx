@@ -1379,7 +1379,7 @@ const MaterialRequisition: React.FC = () => {
                             : {},
                           "& td": {
                             borderBottom: "1px solid #F2F4F7",
-                            fontSize: "0.8rem",
+                            fontSize: "0.775rem",
                             color: "#344054",
                             py: 0.4,
                             px: 1,
@@ -1397,7 +1397,7 @@ const MaterialRequisition: React.FC = () => {
                         <TableCell align="left">
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#101828", fontSize: "0.8rem" }}
+                            sx={{ fontWeight: 600, color: "#101828", fontSize: "0.775rem" }}
                           >
                             {item.requestId}
                           </Typography>

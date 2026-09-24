@@ -33,7 +33,6 @@ import {
   Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -140,25 +139,25 @@ const DrawingNumberRowComponent = ({
           "&:hover": { backgroundColor: "grey.50" },
         }}
       >
-        <TableCell sx={{ textAlign: "center", minWidth: 55, color: "text.muted", fontSize: "0.8rem" }}>
+        <TableCell sx={{ textAlign: "center", minWidth: 55, color: "text.muted", fontSize: "0.775rem" }}>
           {(drawingData as any)._srNo ?? (index + 1)}
         </TableCell>
-        <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600, minWidth: 160, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.primary", fontSize: "0.775rem", fontWeight: 600, minWidth: 160, whiteSpace: "nowrap" }}>
           {drawingData?.drawingNumber || "N/A"}
         </TableCell>
-        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", minWidth: 150, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.775rem", minWidth: 150, whiteSpace: "nowrap" }}>
           {drawingData?.lnItemCode || "N/A"}
         </TableCell>
-        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", minWidth: 220, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.775rem", minWidth: 220, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {drawingData?.nomenclature || "N/A"}
         </TableCell>
         <TableCell sx={{ textAlign: "center", minWidth: 95 }}>
           <ComponentTypeChip type={drawingData?.componentType} />
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 100, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem", minWidth: 100, whiteSpace: "nowrap" }}>
           {drawingData?.unitName || "N/A"}
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 110, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem", minWidth: 110, whiteSpace: "nowrap" }}>
           {drawingData?.productionSeries || drawingData?.availableFor || "N/A"}
         </TableCell>
 

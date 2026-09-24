@@ -1083,7 +1083,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   },
                                   "& td": {
                                     borderBottom: "1px solid #F2F4F7",
-                                    fontSize: "0.85rem",
+                                    fontSize: "0.775rem",
                                     color: "#344054",
                                     py: 0.75,
                                     px: 1.5,
@@ -1097,7 +1097,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                 <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
                                  <TableCell align="center">
                                   <Tooltip title={row.productionOrderNumber || "N/A"} arrow placement="top">
-                                    <Typography component="span" sx={{ fontSize: "0.85rem", color: "#344054" }}>
+                                    <Typography component="span" sx={{ fontSize: "0.775rem", color: "#344054" }}>
                                       {row.productionOrderNumber || "N/A"}
                                     </Typography>
                                   </Tooltip>
@@ -1207,7 +1207,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   "&:hover": { backgroundColor: "#F9FAFB" },
                                   "& td": {
                                     borderBottom: "1px solid #F2F4F7",
-                                    fontSize: "0.85rem",
+                                    fontSize: "0.775rem",
                                     color: "#344054",
                                     py: 0.75,
                                     px: 1.5,

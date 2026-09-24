@@ -384,7 +384,7 @@ const ViewOrder: React.FC = () => {
                       },
                       "& td": {
                         borderBottom: "1px solid #F2F4F7",
-                        fontSize: "0.85rem",
+                        fontSize: "0.775rem",
                         color: "#344054",
                         py: 0.75,
                         px: 1.5,
@@ -787,7 +787,7 @@ const ViewOrder: React.FC = () => {
                               "&:hover": { backgroundColor: "#F9FAFB" },
                               "& td": {
                                 borderBottom: "1px solid #F2F4F7",
-                                fontSize: "0.85rem",
+                                fontSize: "0.775rem",
                                 color: "#344054",
                                 py: 0.75,
                                 px: 1.5,
