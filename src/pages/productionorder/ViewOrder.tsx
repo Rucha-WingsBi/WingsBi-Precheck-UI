@@ -544,250 +544,129 @@ const ViewOrder: React.FC = () => {
           }}
         >
           {/* PO Number Dropdown */}
-          <FormControl
+          <Autocomplete
             size="small"
+            options={poOptions}
+            getOptionLabel={(option: any) =>
+              typeof option === "string" ? option : option.productionOrderNumber || ""
+            }
+            value={selectedPO}
+            loading={poLoading}
+            onInputChange={(_, value) => setPoSearchText(value)}
+            onChange={(_, newValue) => {
+              const item = typeof newValue === "string" ? null : newValue;
+              setSelectedPO(item);
+              if (item?.productionOrderNumber) {
+                handleFetchDetails(item.productionOrderNumber);
+              }
+            }}
+            isOptionEqualToValue={(option: any, val: any) =>
+              option.productionOrderNumber === (typeof val === "string" ? val : val?.productionOrderNumber)
+            }
+            renderOption={(props: any, option: any) => {
+              const { key, ...optionProps } = props;
+              const poNum = typeof option === "string" ? option : option.productionOrderNumber || "";
+              const lnCode = option?.lnItemCode || option?.lnitemcode || "";
+              const dwgNum = option?.drawingNumber || "";
+              const nom = option?.nomenclature || option?.itemDescription || "";
+              const compType = option?.componentType || "";
+
+              return (
+                <li {...optionProps} key={key}>
+                  <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
+                      {poNum}
+                    </Typography>
+                    {(lnCode || dwgNum || nom || compType) && (
+                      <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
+                        {lnCode ? `Item Code: ${lnCode}` : ""}
+                        {dwgNum ? `${lnCode ? " | " : ""}Part No: ${dwgNum}` : ""}
+                        {nom ? ` | ${nom}` : ""}
+                        {compType ? ` | ${compType}` : ""}
+                      </Typography>
+                    )}
+                  </Box>
+                </li>
+              );
+            }}
+            ListboxProps={{ style: { maxHeight: "300px" } }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 },
               minWidth: 150,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "background.paper",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#98A2B3",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-                "&.Mui-focused": { color: "primary.main" },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-              },
             }}
-          >
-            <Autocomplete
-              size="small"
-              options={poOptions}
-              getOptionLabel={(option: any) =>
-                typeof option === "string" ? option : option.productionOrderNumber || ""
-              }
-              value={selectedPO}
-              loading={poLoading}
-              onInputChange={(_, value) => setPoSearchText(value)}
-              onChange={(_, newValue) => {
-                const item = typeof newValue === "string" ? null : newValue;
-                setSelectedPO(item);
-                if (item?.productionOrderNumber) {
-                  handleFetchDetails(item.productionOrderNumber);
-                }
-              }}
-              isOptionEqualToValue={(option: any, val: any) =>
-                option.productionOrderNumber === (typeof val === "string" ? val : val?.productionOrderNumber)
-              }
-              renderOption={(props: any, option: any) => {
-                const { key, ...optionProps } = props;
-                const poNum = typeof option === "string" ? option : option.productionOrderNumber || "";
-                const lnCode = option?.lnItemCode || option?.lnitemcode || "";
-                const dwgNum = option?.drawingNumber || "";
-                const nom = option?.nomenclature || option?.itemDescription || "";
-                const compType = option?.componentType || "";
-
-                return (
-                  <li {...optionProps} key={key}>
-                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
-                        {poNum}
-                      </Typography>
-                      {(lnCode || dwgNum || nom || compType) && (
-                        <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
-                          {lnCode ? `Item Code: ${lnCode}` : ""}
-                          {dwgNum ? `${lnCode ? " | " : ""}Part No: ${dwgNum}` : ""}
-                          {nom ? ` | ${nom}` : ""}
-                          {compType ? ` | ${compType}` : ""}
-                        </Typography>
-                      )}
-                    </Box>
-                  </li>
-                );
-              }}
-              ListboxProps={{ style: { maxHeight: "300px" } }}
-              renderInput={(params) => (
-                <TextField {...params} label="PO Number *" size="small" placeholder="Select PO" />
-              )}
-            />
-          </FormControl>
-
-
+            renderInput={(params) => (
+              <TextField {...params} label="PO Number *" size="small" placeholder="Select PO" />
+            )}
+          />
 
           {/* Drawing Number Field (Read-only, auto-populated on PO selection) */}
-          <FormControl
+          <TextField
             size="small"
+            label="Part Number"
+            value={drawingNumberValue}
+            placeholder="Auto-populated"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+              style: { backgroundColor: "#F9FAFB" },
+            }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 160px", md: 1.2 },
               minWidth: 140,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "#F9FAFB",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#667085",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-                color: "#344054",
-                fontWeight: 500,
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="Part Number"
-              value={drawingNumberValue}
-              placeholder="Auto-populated"
-              variant="outlined"
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </FormControl>
+          />
 
           {/* LN Item Code Field (Read-only, auto-populated on PO selection) */}
-          <FormControl
+          <TextField
             size="small"
+            label="Item Code"
+            value={lnItemCodeValue}
+            placeholder="Auto-populated"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+              style: { backgroundColor: "#F9FAFB" },
+            }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 160px", md: 1.2 },
               minWidth: 140,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "#F9FAFB",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#667085",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-                color: "#344054",
-                fontWeight: 500,
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="Item Code"
-              value={lnItemCodeValue}
-              placeholder="Auto-populated"
-              variant="outlined"
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </FormControl>
+          />
 
           {/* Prod Series Field (Read-only, auto-populated on PO selection) */}
-          <FormControl
+          <TextField
             size="small"
+            label="Prod Series"
+            value={prodSeriesValue}
+            placeholder="Auto-populated"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+              style: { backgroundColor: "#F9FAFB" },
+            }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 120px", md: 1.0 },
               minWidth: 100,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "#F9FAFB",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#667085",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-                color: "#344054",
-                fontWeight: 500,
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="Prod Series"
-              value={prodSeriesValue}
-              placeholder="Auto-populated"
-              variant="outlined"
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </FormControl>
+          />
 
-          {/* ID Number (TextField ONLY, matching Make Precheck) */}
-          <FormControl
+          {/* ID Number Field */}
+          <TextField
             size="small"
+            label="ID Number"
+            value={idNumber}
+            onChange={(e) => setIdNumber(e.target.value)}
+            placeholder="Enter ID"
+            variant="outlined"
+            fullWidth
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 110px", md: 0.9 },
               minWidth: 95,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "background.paper",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#98A2B3",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-                "&.Mui-focused": { color: "primary.main" },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="ID Number"
-              value={idNumber}
-              onChange={(e) => setIdNumber(e.target.value)}
-              placeholder="Enter ID"
-              variant="outlined"
-              fullWidth
-            />
-          </FormControl>
+          />
 
           {/* Actions */}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto", flex: "0 0 auto" }}>

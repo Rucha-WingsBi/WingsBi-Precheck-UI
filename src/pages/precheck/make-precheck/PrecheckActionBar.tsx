@@ -131,7 +131,7 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
           Run Precheck
         </Typography>
         <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
-          Scan items, verify component quality, and complete precheck inspection logs.
+          Scan items, verify component quality, and complete precheck.
         </Typography>
       </Box>
 
@@ -221,7 +221,7 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
                 <UploadIcon fontSize="small" sx={{ color: "#D97706" }} />
               )}
             </ListItemIcon>
-            <ListItemText primary={uploadInProgress ? "Uploading..." : "Upload Excel..."} />
+            <ListItemText primary={uploadInProgress ? "Uploading..." : "Bulk Precheck"} />
           </MenuItem>
 
           <MenuItem
@@ -239,26 +239,11 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
               )}
             </ListItemIcon>
             <ListItemText
-              primary={downloadTemplateInProgress ? "Downloading..." : "Download Template"}
+              primary={downloadTemplateInProgress ? "Downloading..." : "Template"}
             />
           </MenuItem>
 
-          <Divider sx={{ my: 0.5 }} />
-
-          {onReject && (
-            <MenuItem
-              onClick={() => {
-                handleMoreMenuClose();
-                onReject();
-              }}
-              disabled={isLoadingLocal}
-            >
-              <ListItemIcon>
-                <CancelIcon fontSize="small" sx={{ color: "#DC2626" }} />
-              </ListItemIcon>
-              <ListItemText primary="Reject Order" />
-            </MenuItem>
-          )}
+         
         </Menu>
       </Box>
     </Box>
@@ -524,7 +509,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                   variant="subtitle2"
                   sx={{ fontWeight: 700, color: "#111827", fontSize: "0.8125rem" }}
                 >
-                  {`${stats.verified} of ${stats.total} lines verified`}
+                  {`${stats.verified} of ${stats.total} Parts Completed`}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -594,7 +579,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                     sx={{ width: 7, height: 7, borderRadius: "1px", backgroundColor: "#059669" }}
                   />
                   <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.7rem" }}>
-                    {stats.verified} verified
+                    {stats.verified} Completed
                   </Typography>
                 </Box>
 
@@ -603,7 +588,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                     sx={{ width: 7, height: 7, borderRadius: "1px", backgroundColor: "#D97706" }}
                   />
                   <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.7rem" }}>
-                    {stats.short} short
+                    {stats.short} Partial
                   </Typography>
                 </Box>
 
@@ -621,7 +606,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                     sx={{ width: 7, height: 7, borderRadius: "1px", backgroundColor: "#9CA3AF" }}
                   />
                   <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.7rem" }}>
-                    {stats.notScanned} not scanned
+                    {stats.notScanned} Pending
                   </Typography>
                 </Box>
               </Stack>
