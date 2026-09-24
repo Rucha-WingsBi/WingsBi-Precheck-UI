@@ -141,7 +141,7 @@ const DrawingNumberRowComponent = ({
         }}
       >
         <TableCell sx={{ textAlign: "center", minWidth: 55, color: "text.muted", fontSize: "0.8rem" }}>
-          {index + 1}
+          {(drawingData as any)._srNo ?? (index + 1)}
         </TableCell>
         <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600, minWidth: 160, whiteSpace: "nowrap" }}>
           {drawingData?.drawingNumber || "N/A"}
@@ -431,13 +431,19 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
     const serverTotalRecords = (drawingNumbersData as any)?.totalRecords ?? (drawingNumbersData as any)?.totalCount;
 
-    let result = [...rawList];
+    let result = rawList.map((item: any, idx: number) => ({
+      ...item,
+      _srNo: idx + 1,
+    }));
 
     // Sorting functionality
     result.sort((a: any, b: any) => {
       let aVal: any = "";
       let bVal: any = "";
-      if (sortColumn === "modifiedDate") {
+      if (sortColumn === "srNo" || sortColumn === "sr") {
+        aVal = a._srNo ?? 0;
+        bVal = b._srNo ?? 0;
+      } else if (sortColumn === "modifiedDate") {
         aVal = new Date(a.modifiedDate || a.createdDate || 0).getTime();
         bVal = new Date(b.modifiedDate || b.createdDate || 0).getTime();
       } else {
@@ -856,13 +862,13 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
           <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1100 }}>
             <TableHead>
               <TableRow sx={{ height: 36 }}>
-                <SortableTableHeader label="Sr.No" columnKey="srNo" align="center" minWidth={55} isSortable={false} />
+                <SortableTableHeader label="Sr.No" columnKey="srNo" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={55} isSortable={true} />
                 <SortableTableHeader label="Part Number" columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={160} />
                 <SortableTableHeader label="Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={150} />
-                <SortableTableHeader label="Item Description" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={220} />
-                <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={95} />
-                <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={100} />
-                <SortableTableHeader label="Prod. Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={110} />
+                <SortableTableHeader label="Item Description" columnKey="nomenclature" minWidth={220} isSortable={false} />
+                <SortableTableHeader label="Type" columnKey="componentType" align="center" minWidth={95} isSortable={false} />
+                <SortableTableHeader label="Unit" columnKey="unitName" align="center" minWidth={100} isSortable={false} />
+                <SortableTableHeader label="Prod. Series" columnKey="productionSeries" align="center" minWidth={110} isSortable={false} />
                 <SortableTableHeader label="Actions" columnKey="actions" align="center" minWidth={65} isSortable={false} />
               </TableRow>
             </TableHead>

@@ -720,7 +720,7 @@ const ViewBarcode: React.FC = () => {
 
     const indexedArray = detailsArray.map((item: any, idx: number) => ({
       ...item,
-      _srNo: item._srNo ?? item.srNo ?? item.sr ?? (page * rowsPerPage + idx + 1),
+      _srNo: page * rowsPerPage + idx + 1,
     }));
 
     return [...indexedArray].sort((a, b) => {
@@ -869,7 +869,7 @@ const ViewBarcode: React.FC = () => {
     const newRows = [];
 
     for (let i = 2; i <= qty; i++) {
-      newRows.push({
+      const splitRow = {
         ...item,
         quantity: 1,
         batchId: `${i}/${qty}`,
@@ -877,7 +877,9 @@ const ViewBarcode: React.FC = () => {
         parentId: item.qrCodeNumber || item.id,
         qrCodeNumber: item.qrCodeNumber,
         id: `${item.qrCodeNumber || item.id}-split-${i}`
-      });
+      };
+      delete splitRow._srNo;
+      newRows.push(splitRow);
     }
 
     const newData = [...displayedData];
@@ -917,7 +919,7 @@ const ViewBarcode: React.FC = () => {
         });
 
         for (let i = 2; i <= qty; i++) {
-          newData.push({
+          const splitRow = {
             ...item,
             quantity: 1,
             batchId: `${i}/${qty}`,
@@ -925,7 +927,9 @@ const ViewBarcode: React.FC = () => {
             parentId: item.qrCodeNumber || item.id,
             qrCodeNumber: item.qrCodeNumber,
             id: `${item.qrCodeNumber || item.id}-split-${i}`
-          });
+          };
+          delete splitRow._srNo;
+          newData.push(splitRow);
         }
       } else {
         newData.push(item);

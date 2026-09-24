@@ -396,18 +396,23 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     severity: 'success'
   });
 
-  // Filter components based on search query
+  // Filter components based on search query and attach sequential _srNo
   const filteredComponents = React.useMemo(() => {
-    if (!searchQuery.trim()) return storedComponents;
-
-    const query = searchQuery.toLowerCase();
-    return storedComponents.filter(component =>
-      component.qrCodeNumber?.toLowerCase().includes(query) ||
-      component.drawingNumber?.toLowerCase().includes(query) ||
-      component.nomenclature?.toLowerCase().includes(query) ||
-      component.productionSeries?.toLowerCase().includes(query) ||
-      component.idNumber?.toLowerCase().includes(query)
-    );
+    let list = storedComponents;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      list = storedComponents.filter(component =>
+        component.qrCodeNumber?.toLowerCase().includes(query) ||
+        component.drawingNumber?.toLowerCase().includes(query) ||
+        component.nomenclature?.toLowerCase().includes(query) ||
+        component.productionSeries?.toLowerCase().includes(query) ||
+        component.idNumber?.toLowerCase().includes(query)
+      );
+    }
+    return list.map((item: any, idx: number) => ({
+      ...item,
+      _srNo: idx + 1,
+    }));
   }, [storedComponents, searchQuery]);
 
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -427,6 +432,20 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
     return [...filteredComponents].sort((a: any, b: any) => {
       let aVal = a[sortColumn] ?? "";
       let bVal = b[sortColumn] ?? "";
+
+      if (sortColumn === "sr" || sortColumn === "id" || sortColumn === "srNo") {
+        aVal = a._srNo ?? a.id ?? 0;
+        bVal = b._srNo ?? b.id ?? 0;
+      } else if (sortColumn === "poNumber" || sortColumn === "productionOrderNumber") {
+        aVal = a.productionOrderNumber ?? a.poNumber ?? "";
+        bVal = b.productionOrderNumber ?? b.poNumber ?? "";
+      } else if (sortColumn === "drawingNumber") {
+        aVal = a.drawingNumber ?? "";
+        bVal = b.drawingNumber ?? "";
+      } else if (sortColumn === "qrCodeNumber" || sortColumn === "qrCode") {
+        aVal = a.qrCodeNumber ?? a.qrCode ?? "";
+        bVal = b.qrCodeNumber ?? b.qrCode ?? "";
+      }
 
       if (typeof aVal === "number" && typeof bVal === "number") {
         return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
@@ -811,15 +830,15 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                 <Table stickyHeader size="small">
                   <TableHead>
                     <TableRow>
-                      <SortableTableHeader label="Sr.No" sortKey="id" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
-                      <TableCell align="center" sx={commonTableHeaderStyle}>QRCode ID</TableCell>
+                      <SortableTableHeader label="Sr.No" sortKey="sr" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
+                      <SortableTableHeader label="QRCode ID" sortKey="qrCodeNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="center" />
                       <SortableTableHeader label="PO Number" sortKey="poNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
                       <TableCell align="left" sx={commonTableHeaderStyle}>Project Number</TableCell>
-                      <SortableTableHeader label="Prod Series" sortKey="productionSeries" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="left" sx={commonTableHeaderStyle}>Prod Series</TableCell>
                       <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
                       <TableCell align="center" sx={commonTableHeaderStyle}>ID</TableCell>
                       <TableCell align="center" sx={commonTableHeaderStyle}>Qty</TableCell>
-                      <SortableTableHeader label="Item Description" sortKey="nomenclature" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
+                      <TableCell align="left" sx={commonTableHeaderStyle}>Item Description</TableCell>
                       <TableCell align="center" sx={commonTableHeaderStyle}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -846,7 +865,7 @@ const StoredInComponents: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = f
                         <Row
                           key={`${component.qrCodeNumber}-${index}`}
                           component={component}
-                          sr={page * rowsPerPage + index + 1}
+                          sr={(component as any)._srNo ?? (page * rowsPerPage + index + 1)}
                         />
                       ))
                     ) : (

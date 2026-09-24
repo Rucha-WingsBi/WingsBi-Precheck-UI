@@ -35,8 +35,25 @@ import { format } from "date-fns";
 import api from "../../services/api";
 import { useProductionSeries } from "../../hooks/useMasterData";
 import { useDebounce } from "../../hooks/useDebounce";
+import { SortableTableHeader } from "../../components/SortableTableHeader";
 
 const StoredInComponents = React.lazy(() => import("./StoredInComponents"));
+
+// Helper function to format date
+const formatDateToIST = (dateString: string | undefined | null) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return String(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return "N/A";
+  }
+};
 
 // Helper function to render status badge in QR table
 const renderQrStatusBadge = (statusStr: string | undefined) => {
@@ -217,13 +234,77 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     }));
   }, [results, bomItems, selectedBomRowIndex]);
 
+  // Sorting states for BOM Items table
+  const [bomSortColumn, setBomSortColumn] = useState<string | null>(null);
+  const [bomSortDirection, setBomSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleBomSort = (col: string) => {
+    if (bomSortColumn === col) {
+      setBomSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setBomSortColumn(col);
+      setBomSortDirection("asc");
+    }
+  };
+
+  const indexedBomItems = useMemo(() => {
+    return bomItems.map((item: any, idx: number) => ({
+      ...item,
+      _srNo: idx + 1,
+    }));
+  }, [bomItems]);
+
+  const sortedBomItems = useMemo(() => {
+    if (!bomSortColumn) return indexedBomItems;
+    return [...indexedBomItems].sort((a: any, b: any) => {
+      let valA = a[bomSortColumn] ?? "";
+      let valB = b[bomSortColumn] ?? "";
+
+      if (bomSortColumn === "sr" || bomSortColumn === "srNo") {
+        valA = a._srNo ?? 0;
+        valB = b._srNo ?? 0;
+      } else if (bomSortColumn === "lnitemcode" || bomSortColumn === "lnItemCode") {
+        valA = a.lnitemcode || a.lnItemCode || "";
+        valB = b.lnitemcode || b.lnItemCode || "";
+      } else if (bomSortColumn === "drawingNumber") {
+        valA = a.drawingNumber || "";
+        valB = b.drawingNumber || "";
+      } else if (bomSortColumn === "poNumber" || bomSortColumn === "productionOrderNumber") {
+        valA = a.productionOrderNumber || a.poNumber || "";
+        valB = b.productionOrderNumber || b.poNumber || "";
+      }
+
+      if (typeof valA === "number" && typeof valB === "number") {
+        return bomSortDirection === "asc" ? valA - valB : valB - valA;
+      }
+      const strA = String(valA || "").toLowerCase().trim();
+      const strB = String(valB || "").toLowerCase().trim();
+      return bomSortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [indexedBomItems, bomSortColumn, bomSortDirection]);
+
   const paginatedBomItems = useMemo(() => {
     if (isServerPaginated) {
-      return bomItems;
+      return sortedBomItems;
     }
     const startIndex = bomPage * bomRowsPerPage;
-    return bomItems.slice(startIndex, startIndex + bomRowsPerPage);
-  }, [bomItems, bomPage, bomRowsPerPage, isServerPaginated]);
+    return sortedBomItems.slice(startIndex, startIndex + bomRowsPerPage);
+  }, [sortedBomItems, bomPage, bomRowsPerPage, isServerPaginated]);
+
+  // Sorting states for Available QR Codes table
+  const [qrSortColumn, setQrSortColumn] = useState<string | null>(null);
+  const [qrSortDirection, setQrSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleQrSort = (col: string) => {
+    if (qrSortColumn === col) {
+      setQrSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setQrSortColumn(col);
+      setQrSortDirection("asc");
+    }
+  };
 
   const displayQrCodes = useMemo(() => {
     if (overrideQrCodes !== null) {
@@ -232,10 +313,35 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     return [];
   }, [overrideQrCodes]);
 
+  const sortedQrCodes = useMemo(() => {
+    if (!qrSortColumn) return displayQrCodes;
+    return [...displayQrCodes].sort((a: any, b: any) => {
+      let valA = a[qrSortColumn] ?? "";
+      let valB = b[qrSortColumn] ?? "";
+
+      if (qrSortColumn === "qrCodeNumber" || qrSortColumn === "qrCode") {
+        valA = a.qrCodeNumber || a.qrCode || "";
+        valB = b.qrCodeNumber || b.qrCode || "";
+      } else if (qrSortColumn === "createdDate" || qrSortColumn === "createdAt" || qrSortColumn === "date") {
+        valA = a.createdDate || a.createdAt || a.date ? new Date(a.createdDate || a.createdAt || a.date).getTime() : 0;
+        valB = b.createdDate || b.createdAt || b.date ? new Date(b.createdDate || b.createdAt || b.date).getTime() : 0;
+      }
+
+      if (typeof valA === "number" && typeof valB === "number") {
+        return qrSortDirection === "asc" ? valA - valB : valB - valA;
+      }
+      const strA = String(valA || "").toLowerCase().trim();
+      const strB = String(valB || "").toLowerCase().trim();
+      return qrSortDirection === "asc"
+        ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: "base" })
+        : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [displayQrCodes, qrSortColumn, qrSortDirection]);
+
   const paginatedQrCodes = useMemo(() => {
     const startIndex = qrPage * qrRowsPerPage;
-    return displayQrCodes.slice(startIndex, startIndex + qrRowsPerPage);
-  }, [displayQrCodes, qrPage, qrRowsPerPage]);
+    return sortedQrCodes.slice(startIndex, startIndex + qrRowsPerPage);
+  }, [sortedQrCodes, qrPage, qrRowsPerPage]);
 
   // Keep references to satisfy TypeScript's noUnusedLocals compile check
   if (false as boolean) {
@@ -576,17 +682,18 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                   flexWrap: "nowrap",
                   width: "100%",
                   overflowX: "auto",
-                  overflowY: "hidden",
+                  overflowY: "visible",
                   scrollbarWidth: "none",
                   msOverflowStyle: "none",
-                  py: 0.25,
+                  pt: 0.75,
+                  pb: 0.5,
                   "&::-webkit-scrollbar": { display: "none" },
                 }}
               >
                 {/* Combined Search Bar */}
                 <TextField
                   size="small"
-                  placeholder="Search Part Number, Item Code..."
+                  placeholder="Search Part Number, Item Code, Po Number..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   InputProps={{
@@ -687,6 +794,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       "&.MuiInputLabel-shrink": {
                         fontSize: "0.75rem",
                         color: "#667085",
+                        transform: "translate(12px, -7px) scale(0.75)",
                       },
                       "&.Mui-focused": { color: "primary.main" },
                     },
@@ -779,6 +887,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       "&.MuiInputLabel-shrink": {
                         fontSize: "0.75rem",
                         color: "#667085",
+                        transform: "translate(12px, -7px) scale(0.75)",
                       },
                       "&.Mui-focused": { color: "primary.main" },
                     },
@@ -940,17 +1049,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                     <Table stickyHeader size="small" sx={{ width: "100%" }}>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Sr</TableCell>
-                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Item Code</TableCell>
-                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Part Number</TableCell>
-                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">
-                            <Tooltip title="Production Order Number" arrow placement="top">
-                              <span>PO Number</span>
-                            </Tooltip>
-                          </TableCell>
+                          <SortableTableHeader label="Sr No" sortKey="sr" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
+                          <SortableTableHeader label="Item Code" sortKey="lnitemcode" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
+                          <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
+                          <SortableTableHeader label="PO Number" sortKey="poNumber" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Prod. Series</TableCell>
                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Type</TableCell>
-                         
                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Code</TableCell>
                         </TableRow>
                       </TableHead>
@@ -986,7 +1090,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   },
                                 }}
                               >
-                                <TableCell align="center">{globalIndex + 1}</TableCell>
+                                <TableCell align="center">{row._srNo ?? (globalIndex + 1)}</TableCell>
                                 <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
                                   {row.lnitemcode || row.lnItemCode || "N/A"}
                                 </TableCell>
@@ -1077,12 +1181,13 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       <Table stickyHeader size="small" sx={{ width: "100%" }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">QR Code Number</TableCell>
+                            <SortableTableHeader label="QR Code Number" sortKey="qrCodeNumber" activeSortColumn={qrSortColumn} sortDirection={qrSortDirection} onSort={handleQrSort} align="center" />
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">ID</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Qty</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Location</TableCell>
+                            <SortableTableHeader label="Created On" sortKey="createdDate" activeSortColumn={qrSortColumn} sortDirection={qrSortDirection} onSort={handleQrSort} align="center" />
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1117,10 +1222,11 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                 <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
                                 <TableCell align="center">{renderQrStatusBadge(row.status)}</TableCell>
                                 <TableCell align="center">{row.location || "N/A"}</TableCell>
+                                <TableCell align="center">{formatDateToIST(row.createdDate || row.createdAt || row.date)}</TableCell>
                               </TableRow>
                             ))
                           ) : (
-                            <EmptyState colSpan={6} />
+                            <EmptyState colSpan={7} />
                           )}
                         </TableBody>
                       </Table>
