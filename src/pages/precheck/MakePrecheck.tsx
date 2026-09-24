@@ -1457,6 +1457,7 @@ const MakePrecheck: React.FC = () => {
         productionOrderNumber: item.productionOrderNumber || selectedPO?.productionOrderNumber || "NA",
         idNumber: parseInt(idNumber, 10),
         drawingNumberId: item.drawingNumberId,
+        QrIdNumber: item.qrCode,
       };
 
       console.log("Calling removePrecheckDetails API with payload:", payload);

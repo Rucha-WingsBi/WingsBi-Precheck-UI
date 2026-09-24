@@ -758,6 +758,7 @@ export const removePrecheckDetails = createAsyncThunk(
       productionOrderNumber: string;
       idNumber: number;
       drawingNumberId: number;
+      QrIdNumber?: string;
     },
     { rejectWithValue },
   ) => {

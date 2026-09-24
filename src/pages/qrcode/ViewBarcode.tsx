@@ -40,7 +40,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
@@ -171,6 +170,26 @@ const renderStatusBadge = (statusStr: string) => {
 
 
 
+const isAllowedSortColumn = (labelStr: string, keyStr?: string): boolean => {
+  const normLabel = (labelStr || "").toLowerCase().trim();
+  const normKey = (keyStr || "").toLowerCase().trim();
+
+  if (normLabel.startsWith("sr") || normKey === "sr") {
+    return true;
+  }
+  if (normLabel.includes("qrcode") || normKey === "qrcodenumber") {
+    return true;
+  }
+  if (normLabel.includes("item code") || normKey === "lnitemcode") {
+    return true;
+  }
+  if (normLabel.includes("part number") || normKey === "drawingnumber") {
+    return true;
+  }
+
+  return false;
+};
+
 const TableHeaderSortable = ({
   label,
   columnKey,
@@ -186,10 +205,11 @@ const TableHeaderSortable = ({
   onSort: (col: string) => void;
   minWidth?: string;
 }) => {
-  const isSorted = sortColumn === columnKey;
+  const canSort = isAllowedSortColumn(label, columnKey);
+  const isSorted = canSort && sortColumn === columnKey;
   return (
     <TableCell
-      onClick={() => onSort(columnKey)}
+      onClick={() => canSort && onSort(columnKey)}
       sx={{
         fontWeight: 600,
         minWidth,
@@ -199,30 +219,33 @@ const TableHeaderSortable = ({
         whiteSpace: 'nowrap',
         color: '#475467',
         fontSize: '0.8rem',
-        cursor: 'pointer',
+        cursor: canSort ? 'pointer' : 'default',
         userSelect: 'none',
         borderBottom: '1px solid #eaecf0',
         bgcolor: '#f9fafb !important',
-        '&:hover': { color: '#101828' },
+        '&:hover': { color: canSort ? '#101828' : '#475467' },
       }}
     >
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {label}
-        {isSorted ? (
-          sortDirection === 'asc' ? (
-            <ArrowUpwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+        {canSort && (
+          isSorted ? (
+            sortDirection === 'asc' ? (
+              <ArrowUpwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+            ) : (
+              <ArrowDownwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+            )
           ) : (
-            <ArrowDownwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+            <ArrowDownwardIcon sx={{ fontSize: 14, color: '#98a2b3', opacity: 0.5 }} />
           )
-        ) : (
-          <ArrowDownwardIcon sx={{ fontSize: 14, color: '#98a2b3', opacity: 0.5 }} />
         )}
       </Box>
     </TableCell>
   );
 };
 
-const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, returnFilters }: {
+const Row = ({ sr, barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, returnFilters }: {
+  sr?: number;
   barcodeDetails: any;
   isSelected: boolean;
   onSelect: (checked: boolean) => void;
@@ -276,6 +299,9 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
             size="small"
             sx={{ color: '#d0d5dd', '&.Mui-checked': { color: 'primary.main' } }}
           />
+        </TableCell>
+        <TableCell sx={{ textAlign: 'center', minWidth: '55px', py: '4px', px: '8px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#475467' }}>
+          {sr !== undefined ? sr : '-'}
         </TableCell>
         <TableCell sx={{ textAlign: 'left', minWidth: '140px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', fontWeight: 600, color: '#101828' }}>
           {barcodeDetails?.qrCodeNumber || 'N/A'}
@@ -406,7 +432,7 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
       </TableRow>
 
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ padding: 0 }} colSpan={showBatchId ? 11 : 10}>
+        <TableCell style={{ padding: 0 }} colSpan={showBatchId ? 12 : 11}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ width: "100%", backgroundColor: "#F8FAFC", borderTop: "1px solid #EAECF0", borderBottom: "1px solid #EAECF0" }}>
               <Table size="small" sx={{ width: "100%" }}>
@@ -691,19 +717,28 @@ const ViewBarcode: React.FC = () => {
     } else {
       detailsArray = [barcodeDetails];
     }
-    return [...detailsArray].sort((a, b) => {
+
+    const indexedArray = detailsArray.map((item: any, idx: number) => ({
+      ...item,
+      _srNo: item._srNo ?? item.srNo ?? item.sr ?? (page * rowsPerPage + idx + 1),
+    }));
+
+    return [...indexedArray].sort((a, b) => {
       let valA = a[sortColumn];
       let valB = b[sortColumn];
 
-      if (sortColumn === 'createdDate') {
+      if (sortColumn === 'sr') {
+        valA = a._srNo;
+        valB = b._srNo;
+      } else if (sortColumn === 'createdDate') {
         valA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
         valB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
       } else if (sortColumn === 'qrCodeNumber') {
-        valA = a.qrCodeNumber || a.id || '';
-        valB = b.qrCodeNumber || b.id || '';
+        valA = a.qrCodeNumber ?? '';
+        valB = b.qrCodeNumber ?? '';
       } else if (sortColumn === 'productionOrderNumber') {
-        valA = a.productionOrderNumber || a.poNumber || '';
-        valB = b.productionOrderNumber || b.poNumber || '';
+        valA = a.productionOrderNumber ?? '';
+        valB = b.productionOrderNumber ?? '';
       }
 
       if (typeof valA === "number" && typeof valB === "number") {
@@ -716,7 +751,7 @@ const ViewBarcode: React.FC = () => {
         ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
         : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [barcodeDetails, sortColumn, sortDirection]);
+  }, [barcodeDetails, sortColumn, sortDirection, page, rowsPerPage]);
 
   const filteredBarcodeDetails = React.useMemo(() => {
     let list = sortedBarcodeDetails;
@@ -1446,7 +1481,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1460,7 +1495,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1537,7 +1572,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1551,7 +1586,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1977,6 +2012,7 @@ const ViewBarcode: React.FC = () => {
                     />
                   </TableCell>
 
+                  <TableHeaderSortable label="Sr.No" columnKey="sr" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="65px" />
                   <TableHeaderSortable label="QRCode Number" columnKey="qrCodeNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="140px" />
                   <TableHeaderSortable label="Prod Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
                   <TableHeaderSortable label="Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
@@ -1998,7 +2034,7 @@ const ViewBarcode: React.FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow sx={{ height: '260px' }}>
-                    <TableCell colSpan={showBatchIdColumn ? 11 : 10} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
+                    <TableCell colSpan={showBatchIdColumn ? 12 : 11} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
                         <CircularProgress size={32} color="primary" />
                         <Typography variant="body2" sx={{ color: '#667085', fontWeight: 500 }}>
@@ -2013,6 +2049,7 @@ const ViewBarcode: React.FC = () => {
                     return (
                       <Row
                         key={item.id || `${item.qrCodeNumber}-${index}`}
+                        sr={item._srNo ?? (globalIndex + 1)}
                         barcodeDetails={item}
                         isSelected={selectedQRCodes.includes(item.qrCodeNumber || item.id)}
                         onSelect={(checked) => handleSelectQRCode(item.qrCodeNumber || item.id, checked)}
@@ -2024,7 +2061,7 @@ const ViewBarcode: React.FC = () => {
                     );
                   })
                 ) : (
-                  <EmptyState colSpan={showBatchIdColumn ? 11 : 10} />
+                  <EmptyState colSpan={showBatchIdColumn ? 12 : 11} />
                 )}
               </TableBody>
             </Table>

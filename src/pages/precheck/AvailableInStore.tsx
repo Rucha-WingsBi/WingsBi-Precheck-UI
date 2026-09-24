@@ -15,19 +15,23 @@ import {
   TableHead,
   TableRow,
   Alert,
-  Tabs,
-  Tab,
   Stack,
   InputAdornment,
+  IconButton,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
 import { MultiSelectFilter } from "../../components/MultiSelectFilter";
+import { ComponentTypeChip } from "../../components/ComponentTypeChip";
 
 import {
   Search as SearchIcon,
+  CalendarToday as CalendarTodayIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
+import { format } from "date-fns";
 import api from "../../services/api";
 import { useProductionSeries } from "../../hooks/useMasterData";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -113,6 +117,10 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const [selectedSeries, setSelectedSeries] = useState<(string | number)[]>([]);
   const [selectedDocumentType, setSelectedDocumentType] = useState<string[]>([]);
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
+  const [fromDateFocused, setFromDateFocused] = useState(false);
+  const [toDateFocused, setToDateFocused] = useState(false);
 
   // Pagination states for BOM Items table
   const [bomPage, setBomPage] = useState(0);
@@ -126,17 +134,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const [overrideQrCodes, setOverrideQrCodes] = useState<any[] | null>(null);
   const [isQrLoading, setIsQrLoading] = useState(false);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-    setSearchQuery("");
-    prevSearchQueryRef.current = "";
-    setSelectedSeries([]);
-    setSelectedDocumentType([]);
-    setSelectedUnits([]);
-    setBomPage(0);
-    setQrPage(0);
-    setOverrideQrCodes(null);
-  };
 
   // Active Filter Chips
   const activeChips = useMemo(() => {
@@ -158,9 +155,38 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         onRemove: () => setSelectedSeries((prev) => prev.filter((s) => s !== ser)),
       });
     });
+    if (fromDate && toDate) {
+      chips.push({
+        id: "dateRange",
+        label: `From: ${format(fromDate, "dd/MM/yyyy")} - To: ${format(toDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setFromDate(null);
+          setToDate(null);
+          handleSearch(searchQuery, activeTab, selectedSeries, undefined, undefined, null, null);
+        },
+      });
+    } else if (fromDate) {
+      chips.push({
+        id: "fromDateChip",
+        label: `From: ${format(fromDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setFromDate(null);
+          handleSearch(searchQuery, activeTab, selectedSeries, undefined, undefined, null, toDate);
+        },
+      });
+    } else if (toDate) {
+      chips.push({
+        id: "toDateChip",
+        label: `To: ${format(toDate, "dd/MM/yyyy")}`,
+        onRemove: () => {
+          setToDate(null);
+          handleSearch(searchQuery, activeTab, selectedSeries, undefined, undefined, fromDate, null);
+        },
+      });
+    }
 
     return chips;
-  }, [searchQuery, selectedSeries, seriesOptions]);
+  }, [searchQuery, selectedSeries, seriesOptions, fromDate, toDate]);
 
   // API Call and Result states
   const [masterData, setMasterData] = useState<any | null>(null);
@@ -221,13 +247,17 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     overrideQrType?: number,
     overrideSeries?: (string | number)[],
     targetPage?: number,
-    targetPageSize?: number
+    targetPageSize?: number,
+    overrideFromDate?: Date | null,
+    overrideToDate?: Date | null
   ) => {
     const queryStr = overrideQuery !== undefined ? overrideQuery : searchQuery;
     const qrType = overrideQrType !== undefined ? overrideQrType : activeTab;
     const seriesList = overrideSeries !== undefined ? overrideSeries : selectedSeries;
     const pNum = targetPage !== undefined ? targetPage : bomPage;
     const pSize = targetPageSize !== undefined ? targetPageSize : bomRowsPerPage;
+    const fromDateVal = overrideFromDate !== undefined ? overrideFromDate : fromDate;
+    const toDateVal = overrideToDate !== undefined ? overrideToDate : toDate;
 
     prevSearchQueryRef.current = queryStr?.trim() || "";
 
@@ -256,10 +286,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       const pageNumber = pNum + 1;
       const pageSize = pSize;
 
-      const searchPayload = {
+      const searchPayload: any = {
         searchQuery: queryStr?.trim() || "",
         prodSeries: seriesArr,
         QrType: qrType,
+        fromDate: fromDateVal ? format(fromDateVal, "yyyy-MM-dd") : null,
+        toDate: toDateVal ? format(toDateVal, "yyyy-MM-dd") : null,
       };
 
       const response = await api.post(
@@ -307,6 +339,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
               drawingNumber: drawingNum,
               lnitemcode: lnCode,
               lnItemCode: lnCode,
+              componentType: item.componentType || item.componenttype || item.type || "N/A",
+              poNumber: item.poNumber || item.poNo || item.purchaseOrderNumber || item.productionOrderNumber || "N/A",
               unit: item.unit || "NOS",
               totalQuantity: 0,
               availableQuantity: 0,
@@ -374,7 +408,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchQuery]);
 
-  const isDropdownFilterSelected = selectedSeries.length > 0 || selectedDocumentType.length > 0 || selectedUnits.length > 0;
+  const isDropdownFilterSelected =
+    selectedSeries.length > 0 ||
+    selectedDocumentType.length > 0 ||
+    selectedUnits.length > 0 ||
+    !!fromDate ||
+    !!toDate;
 
   const initialTabFetchedRef = useRef<number | null>(null);
 
@@ -393,10 +432,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     setSelectedSeries([]);
     setSelectedDocumentType([]);
     setSelectedUnits([]);
+    setFromDate(null);
+    setToDate(null);
     setError(null);
     setBomPage(0);
     setQrPage(0);
-    handleSearch("", activeTab, []);
+    handleSearch("", activeTab, [], 0, bomRowsPerPage, null, null);
   };
 
   const fetchAvailableComponents = async (
@@ -432,6 +473,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           qrCodeNumber: item.qrCodeNumber || item.qrCode || "N/A",
           id: item.idNumber || item.id || "N/A",
           qty: item.quantity !== undefined ? item.quantity : (item.qty !== undefined ? item.qty : 0),
+          unit: item.unit || "N/A",
           status: item.status || "N/A",
           location: item.location || item.storeLocation || "N/A",
         }));
@@ -453,8 +495,13 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   };
 
   const handleBomRowClick = (bomItem: any, index: number) => {
-    setSelectedBomRowIndex(index);
-    fetchAvailableComponents(bomItem);
+    if (selectedBomRowIndex === index) {
+      setSelectedBomRowIndex(null);
+      setOverrideQrCodes(null);
+    } else {
+      setSelectedBomRowIndex(index);
+      fetchAvailableComponents(bomItem);
+    }
   };
 
   const formatQuantity = (qty: any) => {
@@ -490,375 +537,507 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                 fontSize: { xs: "1.15rem", sm: "1.35rem" },
               }}
             >
-              {storeTab === "available" ? "Available In Store" : "Stored In Components"}
+              Available In Store
             </Typography>
             <Typography variant="body2" sx={{ color: "#667085", mt: 0.25, fontSize: "0.8rem" }}>
               View and filter available components and QR codes in store.
             </Typography>
           </Box>
-
-          <Tabs
-            value={storeTab}
-            onChange={(_, newValue) => setStoreTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              minHeight: 36,
-              "& .MuiTab-root": {
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "none",
-                minWidth: 120,
-                minHeight: 36,
-                py: 0.5,
-                px: 1.5,
-              },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main" },
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-            }}
-          >
-            <Tab label="Available In Store" value="available" />
-            <Tab label="Stored In Components" value="stored" />
-          </Tabs>
         </Stack>
       )}
+      <>
 
-      {storeTab === "stored" ? (
-        <React.Suspense fallback={<CircularProgress sx={{ display: "block", mx: "auto", my: 4 }} />}>
-          <StoredInComponents hideHeader />
-        </React.Suspense>
-      ) : (
-        <>
-          {/* Tabs for RM Store & CFG Store */}
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-              mb: 1,
-              minHeight: 32,
-              borderBottom: "1px solid #eaecf0",
-              "& .MuiTabs-indicator": {
-                backgroundColor: "primary.main",
-                height: 3,
-                borderRadius: "3px 3px 0 0",
-              },
-              "& .MuiTab-root": {
-                textTransform: "none",
-                fontWeight: 600,
-                fontSize: "0.825rem",
-                color: "#667085",
-                px: 2,
-                py: 0.5,
-                minWidth: 90,
-                minHeight: 32,
-                "&.Mui-selected": {
-                  color: "primary.main",
-                },
-              },
-            }}
-          >
-            <Tab label="RM Store" value={1} />
-            <Tab label="CFG Store" value={2} />
-          </Tabs>
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 1, py: 0.25, borderRadius: "6px" }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-          {/* Error Alert */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 1, py: 0.25, borderRadius: "6px" }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
+        {/* Main Dashboard Layout */}
+        <Grid container spacing={2}>
+          {/* Search Filter Controls Card */}
+          <Grid item xs={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.25,
+                borderRadius: "12px",
+                border: "1px solid #eaecf0",
+                backgroundColor: "#ffffff",
+              }}
+            >
 
-          {/* Main Dashboard Layout */}
-          <Grid container spacing={1.5}>
-            {/* Search Filter Controls Card */}
-            <Grid item xs={12}>
-              <Paper
-                elevation={0}
+              <Box
                 sx={{
-                  p: 1.25,
-                  borderRadius: "12px",
-                  border: "1px solid #eaecf0",
-                  backgroundColor: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.25,
+                  flexWrap: "nowrap",
+                  width: "100%",
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  py: 0.25,
+                  "&::-webkit-scrollbar": { display: "none" },
                 }}
               >
-                <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, color: "#101828", fontSize: "0.88rem" }}>
-                  Filter & Search Available QR Codes
-                </Typography>
+                {/* Combined Search Bar */}
+                <TextField
+                  size="small"
+                  placeholder="Search Part Number, Item Code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    flex: "1 1 250px",
+                    minWidth: 200,
+                    "& .MuiOutlinedInput-root": {
+                      fontSize: "0.825rem",
+                      height: 38,
+                    },
+                  }}
+                />
 
+                {/* Production Series MultiSelect Dropdown */}
+                <MultiSelectFilter
+                  label="Prod. Series"
+                  value={selectedSeries}
+                  options={seriesOptions}
+                  onChange={(newValue) => setSelectedSeries(newValue)}
+                  flex="0 0 160px"
+                  minWidth={130}
+                />
+
+                {/* From Date */}
+                <TextField
+                  size="small"
+                  type={fromDateFocused || Boolean(fromDate) ? "date" : "text"}
+                  label="From Date"
+                  InputLabelProps={{ shrink: Boolean(fromDateFocused || fromDate) }}
+                  value={fromDate ? format(fromDate, "yyyy-MM-dd") : ""}
+                  onFocus={() => setFromDateFocused(true)}
+                  onBlur={() => setFromDateFocused(false)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFromDate(val ? new Date(val) : null);
+                    setBomPage(0);
+                  }}
+                  inputProps={{ title: "From Date" }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                        <CalendarTodayIcon
+                          sx={{ fontSize: 16, color: "#667085" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFromDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch { }
+                                }
+                              }, 10);
+                            }
+                          }}
+                          onClick={(e) => {
+                            setFromDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch { }
+                                }
+                              }, 10);
+                            }
+                          }}
+                        />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    flex: "0 0 145px",
+                    minWidth: 130,
+                    position: "relative",
+                    "& .MuiOutlinedInput-root": {
+                      height: 38,
+                      backgroundColor: "background.paper",
+                      borderRadius: "6px",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.82rem",
+                      bgcolor: "#ffffff",
+                      px: 0.5,
+                      color: "#98A2B3",
+                      "&.MuiInputLabel-shrink": {
+                        fontSize: "0.75rem",
+                        color: "#667085",
+                      },
+                      "&.Mui-focused": { color: "primary.main" },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      py: "8.5px",
+                      px: 1.5,
+                      fontSize: "0.82rem",
+                      color: fromDate ? "#344054" : "#98A2B3",
+                    },
+                    "& input::-webkit-calendar-picker-indicator": {
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      width: 24,
+                      height: 24,
+                      opacity: 0,
+                      cursor: "pointer",
+                    },
+                  }}
+                />
+
+                {/* To Date */}
+                <TextField
+                  size="small"
+                  type={toDateFocused || Boolean(toDate) ? "date" : "text"}
+                  label="To Date"
+                  InputLabelProps={{ shrink: Boolean(toDateFocused || toDate) }}
+                  value={toDate ? format(toDate, "yyyy-MM-dd") : ""}
+                  onFocus={() => setToDateFocused(true)}
+                  onBlur={() => setToDateFocused(false)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setToDate(val ? new Date(val) : null);
+                    setBomPage(0);
+                  }}
+                  inputProps={{ title: "To Date" }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end" sx={{ cursor: "pointer" }}>
+                        <CalendarTodayIcon
+                          sx={{ fontSize: 16, color: "#667085" }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setToDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch { }
+                                }
+                              }, 10);
+                            }
+                          }}
+                          onClick={(e) => {
+                            setToDateFocused(true);
+                            const root = e.currentTarget.closest(".MuiInputBase-root") as HTMLElement;
+                            const input = root?.querySelector("input") as HTMLInputElement | null;
+                            if (input) {
+                              input.type = "date";
+                              input.focus();
+                              setTimeout(() => {
+                                if ("showPicker" in input) {
+                                  try { (input as any).showPicker(); } catch { }
+                                }
+                              }, 10);
+                            }
+                          }}
+                        />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    flex: "0 0 145px",
+                    minWidth: 130,
+                    position: "relative",
+                    "& .MuiOutlinedInput-root": {
+                      height: 38,
+                      backgroundColor: "background.paper",
+                      borderRadius: "6px",
+                      "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
+                    },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.82rem",
+                      bgcolor: "#ffffff",
+                      px: 0.5,
+                      color: "#98A2B3",
+                      "&.MuiInputLabel-shrink": {
+                        fontSize: "0.75rem",
+                        color: "#667085",
+                      },
+                      "&.Mui-focused": { color: "primary.main" },
+                    },
+                    "& .MuiOutlinedInput-input": {
+                      py: "8.5px",
+                      px: 1.5,
+                      fontSize: "0.82rem",
+                      color: toDate ? "#344054" : "#98A2B3",
+                    },
+                    "& input::-webkit-calendar-picker-indicator": {
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      width: 24,
+                      height: 24,
+                      opacity: 0,
+                      cursor: "pointer",
+                    },
+                  }}
+                />
+
+                {/* Apply Button */}
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => handleSearch()}
+                  disabled={!isDropdownFilterSelected || isSearchLoading}
+                  sx={{
+                    flex: "0 0 auto",
+                    backgroundColor: "primary.main",
+                    color: "#FFFFFF",
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    borderRadius: "6px",
+                    px: 2,
+                    height: 38,
+                    textTransform: "none",
+                    boxShadow: "none",
+                    minWidth: 65,
+                    "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+                    "&.Mui-disabled": {
+                      backgroundColor: "#EAECF0",
+                      color: "#98A2B3",
+                    },
+                  }}
+                >
+                  Apply
+                </Button>
+
+                {/* Clear Button */}
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleReset}
+                  sx={{
+                    flex: "0 0 auto",
+                    borderColor: "#D0D5DD",
+                    backgroundColor: "#ffffff",
+                    color: "#667085",
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    height: 38,
+                    px: 1.5,
+                    minWidth: 55,
+                    borderRadius: "6px",
+                    textTransform: "none",
+                    boxShadow: "none",
+                    "&:hover": {
+                      borderColor: "#98A2B3",
+                      backgroundColor: "#F9FAFB",
+                      color: "#101828",
+                    },
+                  }}
+                >
+                  Clear
+                </Button>
+              </Box>
+
+              {/* Active Chips Bar */}
+              {activeChips.length > 0 && (
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 1.25,
-                    flexWrap: "nowrap",
-                    width: "100%",
-                    overflowX: "auto",
-                    overflowY: "hidden",
-                    scrollbarWidth: "none",
-                    msOverflowStyle: "none",
-                    py: 0.25,
-                    "&::-webkit-scrollbar": { display: "none" },
+                    mt: 1,
+                    pt: 0.75,
+                    borderTop: "1px solid #F2F4F7",
+                    flexWrap: "wrap",
+                    gap: 0.75,
                   }}
                 >
-                  {/* Combined Search Bar */}
-                  <TextField
-                    size="small"
-                    placeholder="Search Part Number, Item Code..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon sx={{ color: "#98A2B3", fontSize: 18 }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{
-                      flex: "1 1 250px",
-                      minWidth: 200,
-                      "& .MuiOutlinedInput-root": {
-                        fontSize: "0.825rem",
-                        height: 38,
-                      },
-                    }}
-                  />
-
-                  {/* Production Series MultiSelect Dropdown */}
-                  <MultiSelectFilter
-                    label="Prod. Series"
-                    value={selectedSeries}
-                    options={seriesOptions}
-                    onChange={(newValue) => setSelectedSeries(newValue)}
-                    flex="0 0 160px"
-                    minWidth={130}
-                  />
-
-                  {/* Apply Button */}
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={() => handleSearch()}
-                    disabled={!isDropdownFilterSelected || isSearchLoading}
-                    sx={{
-                      flex: "0 0 auto",
-                      backgroundColor: "primary.main",
-                      color: "#FFFFFF",
-                      fontWeight: 600,
-                      fontSize: "0.82rem",
-                      borderRadius: "6px",
-                      px: 2,
-                      height: 38,
-                      textTransform: "none",
-                      boxShadow: "none",
-                      minWidth: 65,
-                      "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
-                      "&.Mui-disabled": {
-                        backgroundColor: "#EAECF0",
-                        color: "#98A2B3",
-                      },
-                    }}
-                  >
-                    Apply
-                  </Button>
-
-                  {/* Clear Button */}
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handleReset}
-                    sx={{
-                      flex: "0 0 auto",
-                      borderColor: "#D0D5DD",
-                      backgroundColor: "#ffffff",
-                      color: "#667085",
-                      fontWeight: 600,
-                      fontSize: "0.82rem",
-                      height: 38,
-                      px: 1.5,
-                      minWidth: 55,
-                      borderRadius: "6px",
-                      textTransform: "none",
-                      boxShadow: "none",
-                      "&:hover": {
-                        borderColor: "#98A2B3",
-                        backgroundColor: "#F9FAFB",
-                        color: "#101828",
-                      },
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </Box>
-
-                {/* Active Chips Bar */}
-                {activeChips.length > 0 && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      mt: 1,
-                      pt: 0.75,
-                      borderTop: "1px solid #F2F4F7",
-                      flexWrap: "wrap",
-                      gap: 0.75,
-                    }}
-                  >
-                    {activeChips.map((chip) => (
-                      <Chip
-                        key={chip.id}
-                        label={chip.label}
-                        onDelete={chip.onRemove}
-                        size="small"
-                        sx={{
-                          backgroundColor: "#F2F4F7",
-                          color: "#344054",
-                          fontWeight: 600,
-                          fontSize: "0.775rem",
-                          height: 24,
-                          borderRadius: "14px",
-                          border: "1px solid #E9EAEB",
-                        }}
-                      />
-                    ))}
-                    <Button
-                      variant="text"
+                  {activeChips.map((chip) => (
+                    <Chip
+                      key={chip.id}
+                      label={chip.label}
+                      onDelete={chip.onRemove}
                       size="small"
-                      onClick={handleReset}
                       sx={{
-                        color: "#6D2A8F",
+                        backgroundColor: "#F2F4F7",
+                        color: "#344054",
                         fontWeight: 600,
                         fontSize: "0.775rem",
-                        textTransform: "none",
-                        p: 0,
+                        height: 24,
+                        borderRadius: "14px",
+                        border: "1px solid #E9EAEB",
                       }}
-                    >
-                      Clear all
-                    </Button>
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
-
-            {searched ? (
-              <>
-                {/* Left Side: BOM Details */}
-                <Grid item xs={12} md={6}>
-                  <Paper
-                    elevation={0}
+                    />
+                  ))}
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleReset}
                     sx={{
-                      borderRadius: "12px",
-                      border: "1px solid #eaecf0",
-                      backgroundColor: "#ffffff",
-                      overflow: "hidden",
-                      minHeight: "450px",
-                      display: "flex",
-                      flexDirection: "column",
+                      color: "#6D2A8F",
+                      fontWeight: 600,
+                      fontSize: "0.775rem",
+                      textTransform: "none",
+                      p: 0,
                     }}
                   >
-                    <Box sx={{ p: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    Clear all
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+
+          {searched ? (
+            <>
+              {/* Left Side: BOM Details */}
+              <Grid item xs={12} md={selectedBomRowIndex !== null ? 6 : 12}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    borderRadius: "12px",
+                    border: "1px solid #eaecf0",
+                    backgroundColor: "#ffffff",
+                    overflow: "hidden",
+                    minHeight: "450px",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Box sx={{ height: 48, px: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                       <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem", fontWeight: 600 }}>
                         Material available in store
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-                        {bomItems.length} {bomItems.length === 1 ? "item" : "items"}
+                      <Typography variant="caption" sx={{ color: "#98A2B3", fontSize: "0.75rem", fontStyle: "italic" }}>
+                        (Click a row to view available QR codes)
                       </Typography>
                     </Box>
+                    <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+                      {bomItems.length} {bomItems.length === 1 ? "item" : "items"}
+                    </Typography>
+                  </Box>
 
-                    <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
-                      <Table stickyHeader size="small" sx={{ width: "100%" }}>
-                        <TableHead>
+                  <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
+                    <Table stickyHeader size="small" sx={{ width: "100%" }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Sr</TableCell>
+                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Item Code</TableCell>
+                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Part Number</TableCell>
+                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">
+                            <Tooltip title="Production Order Number" arrow placement="top">
+                              <span>PO Number</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Prod. Series</TableCell>
+                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Type</TableCell>
+                         
+                          <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Code</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {isSearchLoading ? (
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Sr</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Item Code</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Part Number</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Prod. Series</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total Qty</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Code</TableCell>
+                            <TableCell colSpan={7} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                              <CircularProgress size={28} color="primary" />
+                            </TableCell>
                           </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {isSearchLoading ? (
-                            <TableRow>
-                              <TableCell colSpan={7} align="center" sx={{ py: 6, borderBottom: "none" }}>
-                                <CircularProgress size={28} color="primary" />
-                              </TableCell>
-                            </TableRow>
-                          ) : bomItems.length > 0 ? (
-                            paginatedBomItems.map((row, index) => {
-                              const globalIndex = bomPage * bomRowsPerPage + index;
-                              const isSelected = selectedBomRowIndex === globalIndex;
-                              return (
-                                <TableRow
-                                  key={globalIndex}
-                                  hover
-                                  onClick={() => handleBomRowClick(row, globalIndex)}
-                                  sx={{
-                                    cursor: "pointer",
-                                    height: 40,
-                                    backgroundColor: isSelected ? "rgba(107, 40, 138, 0.06)" : "inherit",
-                                    "&:hover": {
-                                      backgroundColor: "#f9fafb",
-                                    },
-                                    "& td": {
-                                      borderBottom: "1px solid #F2F4F7",
-                                      fontSize: "0.85rem",
-                                      color: "#344054",
-                                      py: 0.75,
-                                      px: 1.5,
-                                    },
-                                  }}
-                                >
-                                  <TableCell align="center">{globalIndex + 1}</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
-                                    {row.lnitemcode || row.lnItemCode || "N/A"}
-                                  </TableCell>
-                                  <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
-                                  <TableCell align="center">{row.productionSeries || row.prodSeries || "N/A"}</TableCell>
-                                  <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
-                                  <TableCell align="center">
-                                    {formatQuantity(row.totalQrQuantity !== undefined && row.totalQrQuantity > 0 ? row.totalQrQuantity : row.totalQuantity)}
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    {row.totalQrNumber !== undefined && row.totalQrNumber > 0 ? row.totalQrNumber : (row.totalQrCount || 0)}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
-                          ) : (
-                            <EmptyState colSpan={7} />
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+                        ) : bomItems.length > 0 ? (
+                          paginatedBomItems.map((row, index) => {
+                            const globalIndex = bomPage * bomRowsPerPage + index;
+                            const isSelected = selectedBomRowIndex === globalIndex;
+                            return (
+                              <TableRow
+                                key={globalIndex}
+                                hover
+                                onClick={() => handleBomRowClick(row, globalIndex)}
+                                sx={{
+                                  cursor: "pointer",
+                                  height: 40,
+                                  backgroundColor: isSelected ? "rgba(107, 40, 138, 0.06)" : "inherit",
+                                  "&:hover": {
+                                    backgroundColor: "#f9fafb",
+                                  },
+                                  "& td": {
+                                    borderBottom: "1px solid #F2F4F7",
+                                    fontSize: "0.85rem",
+                                    color: "#344054",
+                                    py: 0.75,
+                                    px: 1.5,
+                                  },
+                                }}
+                              >
+                                <TableCell align="center">{globalIndex + 1}</TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
+                                  {row.lnitemcode || row.lnItemCode || "N/A"}
+                                </TableCell>
+                                <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
+                                 <TableCell align="center">
+                                  <Tooltip title={row.productionOrderNumber || "N/A"} arrow placement="top">
+                                    <Typography component="span" sx={{ fontSize: "0.85rem", color: "#344054" }}>
+                                      {row.productionOrderNumber || "N/A"}
+                                    </Typography>
+                                  </Tooltip>
+                                </TableCell>
+                                <TableCell align="center">{row.productionSeries || row.prodSeries || "N/A"}</TableCell>
+                                <TableCell align="center">
+                                  <ComponentTypeChip type={row.componentType} />
+                                </TableCell>
+                               
+                                <TableCell align="center">
+                                  {row.totalQrNumber !== undefined && row.totalQrNumber > 0 ? row.totalQrNumber : (row.totalQrCount || 0)}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <EmptyState colSpan={7} />
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
 
-                    {bomItems.length > 0 && (
-                      <CustomPagination
-                        page={bomPage}
-                        pageSize={bomRowsPerPage}
-                        totalCount={isServerPaginated && totalRecords > 0 ? totalRecords : bomItems.length}
-                        pageSizeOptions={[5, 10, 25, 50]}
-                        onPageChange={(newPage) => {
-                          setBomPage(newPage);
-                          handleSearch(searchQuery, activeTab, selectedSeries, newPage, bomRowsPerPage);
-                        }}
-                        onPageSizeChange={(newSize) => {
-                          setBomRowsPerPage(newSize);
-                          setBomPage(0);
-                          handleSearch(searchQuery, activeTab, selectedSeries, 0, newSize);
-                        }}
-                      />
-                    )}
-                  </Paper>
-                </Grid>
+                  {bomItems.length > 0 && (
+                    <CustomPagination
+                      page={bomPage}
+                      pageSize={bomRowsPerPage}
+                      totalCount={isServerPaginated && totalRecords > 0 ? totalRecords : bomItems.length}
+                      pageSizeOptions={[5, 10, 25, 50]}
+                      onPageChange={(newPage) => {
+                        setBomPage(newPage);
+                        handleSearch(searchQuery, activeTab, selectedSeries, newPage, bomRowsPerPage);
+                      }}
+                      onPageSizeChange={(newSize) => {
+                        setBomRowsPerPage(newSize);
+                        setBomPage(0);
+                        handleSearch(searchQuery, activeTab, selectedSeries, 0, newSize);
+                      }}
+                    />
+                  )}
+                </Paper>
+              </Grid>
 
-                {/* Right Side: Available QR Codes */}
+              {/* Right Side: Available QR Codes (Shown only when a row is clicked) */}
+              {selectedBomRowIndex !== null && (
                 <Grid item xs={12} md={6}>
                   <Paper
                     elevation={0}
@@ -872,13 +1051,26 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       flexDirection: "column",
                     }}
                   >
-                    <Box sx={{ p: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ height: 48, px: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
                       <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem", fontWeight: 600 }}>
                         Available QR Codes
                       </Typography>
-                      <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-                        {displayQrCodes.length} {displayQrCodes.length === 1 ? "QR code" : "QR codes"}
-                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+                          {displayQrCodes.length} {displayQrCodes.length === 1 ? "QR code" : "QR codes"}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setSelectedBomRowIndex(null);
+                            setOverrideQrCodes(null);
+                          }}
+                          sx={{ p: 0.25, color: "#667085", "&:hover": { color: "#101828", backgroundColor: "#F2F4F7" } }}
+                          title="Close QR details"
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     </Box>
 
                     <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
@@ -888,6 +1080,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">QR Code Number</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">ID</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Qty</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Status</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Location</TableCell>
                           </TableRow>
@@ -895,7 +1088,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                         <TableBody>
                           {isSearchLoading || isQrLoading ? (
                             <TableRow>
-                              <TableCell colSpan={5} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                              <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
                                 <CircularProgress size={28} color="primary" />
                               </TableCell>
                             </TableRow>
@@ -921,19 +1114,13 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                 </TableCell>
                                 <TableCell align="center">{row.id || "N/A"}</TableCell>
                                 <TableCell align="center">{formatQuantity(row.qty)}</TableCell>
+                                <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
                                 <TableCell align="center">{renderQrStatusBadge(row.status)}</TableCell>
                                 <TableCell align="center">{row.location || "N/A"}</TableCell>
                               </TableRow>
                             ))
                           ) : (
-                            <EmptyState
-                              colSpan={5}
-                              title={
-                                overrideQrCodes === null
-                                  ? "Click a material row to view available QR codes"
-                                  : undefined
-                              }
-                            />
+                            <EmptyState colSpan={6} />
                           )}
                         </TableBody>
                       </Table>
@@ -962,28 +1149,28 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                     )}
                   </Paper>
                 </Grid>
-              </>
-            ) : (
-              <Grid item xs={12}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 6,
-                    borderRadius: "12px",
-                    border: "1px solid #eaecf0",
-                    backgroundColor: "#ffffff",
-                    textAlign: "center",
-                    color: "#667085",
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  Please enter search criteria and click Search to display available QR codes.
-                </Paper>
-              </Grid>
-            )}
-          </Grid>
-        </>
-      )}
+              )}
+            </>
+          ) : (
+            <Grid item xs={12}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 6,
+                  borderRadius: "12px",
+                  border: "1px solid #eaecf0",
+                  backgroundColor: "#ffffff",
+                  textAlign: "center",
+                  color: "#667085",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Please enter search criteria and click Search to display available QR codes.
+              </Paper>
+            </Grid>
+          )}
+        </Grid>
+      </>
     </Box>
   );
 };
