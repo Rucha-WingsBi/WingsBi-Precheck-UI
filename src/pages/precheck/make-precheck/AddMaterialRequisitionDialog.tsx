@@ -26,6 +26,41 @@ interface AddMaterialRequisitionDialogProps {
   onSubmit: (payload: any) => Promise<void>;
 }
 
+const REASON_OPTIONS = [
+  "Rejected",
+  "Rework",
+  "Misplaced",
+  "Raw Material Defect",
+];
+
+const textFieldStyle = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "8px",
+    fontSize: "0.85rem",
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#D0D5DD",
+    },
+    "&:hover fieldset": {
+      borderColor: "#6D2A8F",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: "#6D2A8F",
+      borderWidth: "1.5px",
+    },
+  },
+  "& .MuiInputLabel-root": {
+    fontSize: "0.85rem",
+    color: "#667085",
+    "&.Mui-focused": {
+      color: "#6D2A8F",
+    },
+  },
+  "& .MuiOutlinedInput-input": {
+    fontSize: "0.85rem",
+    color: "#344054",
+  },
+};
+
 const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> = ({
   open,
   selectedRow,
@@ -47,6 +82,10 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
   const [selectedAssemblyPartNumber, setSelectedAssemblyPartNumber] = useState<any>(null);
   const [selectedAssemblyProdSeries, setSelectedAssemblyProdSeries] = useState<any>(null);
 
+  const [assemblyIdNumber, setAssemblyIdNumber] = useState("");
+  const [reasonForRejection, setReasonForRejection] = useState("");
+  const [remarks, setRemarks] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,10 +104,10 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
         ) ||
         (selectedRow.drawingNumber
           ? {
-              id: selectedRow.drawingNumberId || 0,
-              drawingNumber: selectedRow.drawingNumber,
-              lnItemCode: selectedRow.lnItemCode || "",
-            }
+            id: selectedRow.drawingNumberId || 0,
+            drawingNumber: selectedRow.drawingNumber,
+            lnItemCode: selectedRow.lnItemCode || "",
+          }
           : null);
       setSelectedRejectedDrawing(foundRejectedDwg);
 
@@ -119,8 +158,21 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
             (selectedPO?.productionSeries && ps.productionSeries === selectedPO.productionSeries)
         ) || selectedProductionSeries;
       setSelectedAssemblyProdSeries(foundProdSeries || null);
+
+      // 9. Assembly ID Number
+      setAssemblyIdNumber(
+        selectedPO?.startIdNumber !== undefined && selectedPO?.startIdNumber !== null
+          ? String(selectedPO.startIdNumber)
+          : selectedRow.idNumber !== undefined && selectedRow.idNumber !== null
+          ? String(selectedRow.idNumber)
+          : ""
+      );
+
+      // 10. Reason for Rejection & 11. Remarks
+      setReasonForRejection("");
+      setRemarks("");
     }
-  }, [open, selectedRow, selectedPO, selectedProductionSeries, allDrawingNumbers, poNumbersData, productionSeriesData]);
+  }, [open, selectedRow]);
 
   const handleCreate = async () => {
     setError("");
@@ -149,18 +201,25 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
 
     try {
       setIsSubmitting(true);
+      const poNumberStr = String(
+        selectedAssemblyPO?.productionOrderNumber ||
+        selectedPO?.productionOrderNumber ||
+        ""
+      );
+
       const payload = {
-        rejectedDrawingNumberId: rejDwgId,
-        prodSeriesId: prodSeriesId,
-        idNumber: String(rejectedIdNumber || selectedRow?.idNumber || ""),
-        remarks: `Rejected from Make Precheck: ${selectedRow?.drawingNumber || ""}`,
-        quantity: Number(quantity || 1),
-        nomenclature: String(rejectedItemDescription || selectedRow?.nomenclature || ""),
         assemblyDrawingNumberId: asmDwgId,
-        lnitemcode: String(assemblyItemCode || selectedAssemblyPO?.lnItemCode || ""),
-        reasonForRejection: `Rejected component ${selectedRow?.drawingNumber || ""}`,
+        idNumber: String(assemblyIdNumber || selectedAssemblyPO?.startIdNumber || selectedPO?.startIdNumber || selectedRow?.idNumber || "1"),
+        lnitemcode: String(assemblyItemCode || selectedAssemblyPO?.lnItemCode || selectedPO?.lnItemCode || ""),
+        nomenclature: String(rejectedItemDescription || selectedRow?.nomenclature || ""),
+        prodSeriesId: prodSeriesId,
+        productionOrderNumber: poNumberStr,
+        quantity: Number(quantity || 1),
+        reasonForRejection: String(reasonForRejection || ""),
+        rejectedDrawingNumberId: rejDwgId,
         rejectedIdNumber: String(rejectedIdNumber || selectedRow?.idNumber || ""),
-        status: "Pending",
+        remarks: String(remarks || ""),
+        status: "Pending-Planner",
       };
 
       await onSubmit(payload);
@@ -180,12 +239,12 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: "16px",
-          p: 1,
+          borderRadius: "12px",
+          p: 0.5,
         },
       }}
     >
-      <DialogTitle sx={{ color: "#7E22CE", fontWeight: 700, fontSize: "1.25rem", pb: 1, pt: 2.5, px: 3 }}>
+      <DialogTitle sx={{ color: "#6D2A8F", fontWeight: 700, fontSize: "1.15rem", pb: 1, pt: 2, px: 3 }}>
         Add New Material Requisition
       </DialogTitle>
       <DialogContent sx={{ maxHeight: "70vh", overflowY: "auto", py: 1, px: 3 }}>
@@ -223,7 +282,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
                   label="Rejected part Part Number *"
                   fullWidth
                   size="small"
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                  sx={textFieldStyle}
                 />
               )}
             />
@@ -237,7 +296,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
               label="Rejected part Item Description"
               value={rejectedItemDescription}
               onChange={(e) => setRejectedItemDescription(e.target.value)}
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+              sx={textFieldStyle}
             />
           </Grid>
 
@@ -250,7 +309,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+              sx={textFieldStyle}
             />
           </Grid>
 
@@ -262,7 +321,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
               label="Rejected Part ID Number *"
               value={rejectedIdNumber}
               onChange={(e) => setRejectedIdNumber(e.target.value)}
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+              sx={textFieldStyle}
             />
           </Grid>
 
@@ -289,6 +348,9 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
                     const foundPs = productionSeriesData.find((ps) => ps.id === newValue.prodSeriesId);
                     if (foundPs) setSelectedAssemblyProdSeries(foundPs);
                   }
+                  if (newValue.startIdNumber !== undefined && newValue.startIdNumber !== null) {
+                    setAssemblyIdNumber(String(newValue.startIdNumber));
+                  }
                 }
               }}
               isOptionEqualToValue={(option, value) =>
@@ -300,7 +362,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
                   label="Assembly PO Number *"
                   fullWidth
                   size="small"
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                  sx={textFieldStyle}
                 />
               )}
             />
@@ -314,7 +376,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
               label="Assembly Item Code"
               value={assemblyItemCode}
               onChange={(e) => setAssemblyItemCode(e.target.value)}
-              sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+              sx={textFieldStyle}
             />
           </Grid>
 
@@ -337,7 +399,7 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
                   label="Assembly Part Number"
                   fullWidth
                   size="small"
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                  sx={textFieldStyle}
                 />
               )}
             />
@@ -358,27 +420,72 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
                   label="Assembly Production Series *"
                   fullWidth
                   size="small"
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+                  sx={textFieldStyle}
                 />
               )}
+            />
+          </Grid>
+
+          {/* 9. Assembly ID Number * */}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Assembly ID Number *"
+              value={assemblyIdNumber}
+              onChange={(e) => setAssemblyIdNumber(e.target.value)}
+              sx={textFieldStyle}
+            />
+          </Grid>
+
+          {/* 10. Reason for Rejection */}
+          <Grid item xs={12}>
+            <Autocomplete
+              size="small"
+              options={REASON_OPTIONS}
+              value={reasonForRejection || null}
+              onChange={(_, newValue) => setReasonForRejection(newValue || "")}
+              isOptionEqualToValue={(option, value) => option === value}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Reason for Rejection"
+                  fullWidth
+                  size="small"
+                  sx={textFieldStyle}
+                />
+              )}
+            />
+          </Grid>
+
+          {/* 11. Remarks */}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Remarks"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              sx={textFieldStyle}
             />
           </Grid>
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
+      <DialogActions sx={{ px: 3, pb: 2, pt: 1.5, gap: 1 }}>
         <Button
           variant="outlined"
           onClick={onClose}
           disabled={isSubmitting}
           sx={{
-            borderRadius: "10px",
+            borderRadius: "8px",
             px: 3,
             height: 38,
             borderColor: "#D0D5DD",
             color: "#344054",
             textTransform: "none",
             fontWeight: 600,
+            fontSize: "0.85rem",
             "&:hover": { borderColor: "#98A2B3", backgroundColor: "#F9FAFB" },
           }}
         >
@@ -390,14 +497,16 @@ const AddMaterialRequisitionDialog: React.FC<AddMaterialRequisitionDialogProps> 
           disabled={isSubmitting}
           startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : null}
           sx={{
-            borderRadius: "10px",
+            borderRadius: "8px",
             px: 3,
             height: 38,
-            backgroundColor: "#7E22CE",
+            backgroundColor: "#6D2A8F",
             color: "#ffffff",
             textTransform: "none",
             fontWeight: 600,
-            "&:hover": { backgroundColor: "#6B21A8" },
+            fontSize: "0.85rem",
+            boxShadow: "none",
+            "&:hover": { backgroundColor: "#571F73", boxShadow: "none" },
           }}
         >
           Create

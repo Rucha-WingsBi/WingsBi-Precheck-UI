@@ -69,6 +69,26 @@ interface PrecheckTableProps {
   onRequestSort: (property: string) => void;
 }
 
+const isItemPrecheckCompleted = (item: GridItem): boolean => {
+  if (!item) return false;
+  const statusLower = (item.precheckStatus || "").toLowerCase();
+  if (item.isRejected || statusLower === "rejected") return false;
+  const remQtyNum =
+    item.remainingQuantity !== undefined && item.remainingQuantity !== null
+      ? Number(item.remainingQuantity)
+      : null;
+  const isZeroRemQty = remQtyNum !== null && remQtyNum === 0;
+
+  return (
+    statusLower === "completed" ||
+    statusLower === "verified" ||
+    statusLower === "complete" ||
+    isZeroRemQty ||
+    Boolean(item.isPrecheckComplete) ||
+    Boolean(item.precheckDetailsId && item.precheckDetailsId > 0)
+  );
+};
+
 const PrecheckTable: React.FC<PrecheckTableProps> = ({
   paginatedResults,
   filteredResults,
@@ -383,39 +403,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                         align="center"
                         sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
-                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            disabled={item.isRejected}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (onRejectClick) {
-                                onRejectClick(item);
-                              } else {
-                                onEditClick(item);
-                              }
-                            }}
-                            sx={{
-                              fontSize: "0.68rem",
-                              py: 0.1,
-                              px: 0.75,
-                              minWidth: "auto",
-                              height: 20,
-                              borderRadius: "4px",
-                              textTransform: "none",
-                              fontWeight: 600,
-                              boxShadow: "none",
-                              backgroundColor: item.isRejected ? "#EAECF0" : "#FEE2E2",
-                              color: item.isRejected ? "#98A2B3" : "#991B1B",
-                              "&:hover": {
-                                backgroundColor: item.isRejected ? "#EAECF0" : "#FCA5A5",
-                                color: item.isRejected ? "#98A2B3" : "#7F1D1D",
-                              },
-                            }}
-                          >
-                            Reject
-                          </Button>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <IconButton
                             size="small"
                             onClick={(e) => {
@@ -800,7 +788,39 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                 </MenuItem>
               )}
 
-            {/* Reject Component */}
+            {/* Reject */}
+            {!activeMenuRow.item.isRejected && (
+              <MenuItem
+                disabled={!isItemPrecheckCompleted(activeMenuRow.item)}
+                onClick={() => {
+                  if (onRejectClick) {
+                    onRejectClick(activeMenuRow.item);
+                  } else {
+                    onEditClick(activeMenuRow.item);
+                  }
+                  setMenuAnchorEl(null);
+                  setActiveMenuRow(null);
+                }}
+                sx={{ py: 0.75, px: 1.5 }}
+              >
+                <ListItemIcon sx={{ minWidth: 28 }}>
+                  <CancelIcon
+                    fontSize="small"
+                    color={isItemPrecheckCompleted(activeMenuRow.item) ? "error" : "disabled"}
+                  />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Reject Part"
+                  primaryTypographyProps={{
+                    fontSize: "0.8rem",
+                    fontWeight: 500,
+                    color: isItemPrecheckCompleted(activeMenuRow.item) ? "error.main" : "text.disabled",
+                  }}
+                />
+              </MenuItem>
+            )}
+
+            {/* Reject Component (Original - enabled when component is ready for rejection) */}
             {activeMenuRow.item.readyForRejection && !activeMenuRow.item.isRejected && (
               <MenuItem
                 onClick={() => {
