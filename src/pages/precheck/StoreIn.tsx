@@ -34,6 +34,9 @@ import {
   Tooltip,
   Tabs,
   Tab,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   QrCodeScanner as QrCodeScannerIcon,
@@ -50,10 +53,18 @@ import {
   Search as SearchIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
   CalendarToday as CalendarTodayIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  FileDownload as FileDownloadIcon,
+  CloudUpload as CloudUploadIcon,
+  Inventory as InventoryIcon,
 } from "@mui/icons-material";
 import { getStoreInData } from "../../store/slices/precheckSlice";
 import { format } from "date-fns";
-import { updateQrCodeDetails } from "../../store/slices/qrcodeSlice";
+import {
+  updateQrCodeDetails,
+  bulkStoreInFromExcel,
+  downloadBulkStoreInTemplate,
+} from "../../store/slices/qrcodeSlice";
 import type { AppDispatch, RootState } from "../../store/store";
 import { Html5Qrcode } from "html5-qrcode";
 import { usePageAccess, useProductionSeries } from "../../hooks/useMasterData";
@@ -251,7 +262,134 @@ const StoreIn: React.FC = () => {
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const bulkStoreInFileInputRef = useRef<HTMLInputElement | null>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+
+  // Bulk Store In Menu state
+  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
+  const isBulkMenuOpen = Boolean(bulkMenuAnchor);
+
+  const handleBulkMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setBulkMenuAnchor(event.currentTarget);
+  };
+
+  const handleBulkMenuClose = () => {
+    setBulkMenuAnchor(null);
+  };
+
+  const handleExportStoreIn = () => {
+    handleBulkMenuClose();
+    const listToExport = storeInList.length > 0 ? storeInList : qrCodeList;
+    if (!listToExport || listToExport.length === 0) {
+      setAlertMessage({
+        message: "No store-in data available to export.",
+        type: "info",
+      });
+      return;
+    }
+
+    const headers = [
+      "QR Code Number",
+      "Production Order Number",
+      "Project Number",
+      "Prod Series",
+      "Part Number",
+      "ID Number",
+      "Quantity",
+      "Description",
+      "Created Date",
+    ];
+
+    const rows = listToExport.map((row: any) => [
+      `"${row.qrCodeNumber || row.qrCode || ""}"`,
+      `"${row.productionOrderNumber || ""}"`,
+      `"${row.projectNumber || ""}"`,
+      `"${row.productionSeries || ""}"`,
+      `"${row.drawingNumber || ""}"`,
+      `"${row.idNumber || ""}"`,
+      `"${row.quantity || ""}"`,
+      `"${(row.nomenclature || "").replace(/"/g, '""')}"`,
+      `"${row.createdDate || ""}"`,
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Store_In_Export_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setAlertMessage({
+      message: "Store-in data exported successfully.",
+      type: "success",
+    });
+  };
+
+  const handleDownloadStoreInTemplate = async () => {
+    handleBulkMenuClose();
+    setIsLoading(true);
+    setAlertMessage({
+      message: "Downloading Bulk Store In template...",
+      type: "info",
+    });
+    try {
+      await dispatch(downloadBulkStoreInTemplate()).unwrap();
+      setAlertMessage({
+        message: "Bulk Store In template downloaded successfully.",
+        type: "success",
+      });
+    } catch (err: any) {
+      console.error("Error downloading template:", err);
+      setAlertMessage({
+        message: getErrorMessage(err, "Failed to download Bulk Store In template"),
+        type: "error",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkImportFile = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    setAlertMessage({
+      message: `Uploading ${file.name} for Bulk Store In...`,
+      type: "info",
+    });
+
+    try {
+      const result = await dispatch(bulkStoreInFromExcel(file)).unwrap();
+      const messageStr =
+        typeof result === "string"
+          ? result
+          : result?.message || `Bulk Store In file ${file.name} imported successfully.`;
+      setAlertMessage({
+        message: messageStr,
+        type: "success",
+      });
+      fetchStoreInData();
+    } catch (err: any) {
+      console.error("Error performing bulk store in:", err);
+      setAlertMessage({
+        message: getErrorMessage(err, "Failed to process Bulk Store In Excel file"),
+        type: "error",
+      });
+    } finally {
+      setIsLoading(false);
+      if (event.target) event.target.value = "";
+    }
+  };
 
   // Check camera permission on mount
   useEffect(() => {
@@ -654,7 +792,7 @@ const StoreIn: React.FC = () => {
     } catch (error: any) {
       console.error("Error processing QR Code:", error);
       setAlertMessage({
-        message: `Error processing QR Code ${qrCode}: ${error.message || error}`,
+        message: getErrorMessage(error, `Error processing QR Code ${qrCode}`),
         type: "error",
       });
     } finally {
@@ -726,7 +864,7 @@ const StoreIn: React.FC = () => {
           }}
         >
           <Tab label="Store In" value="store-in" />
-          <Tab label="Stored In Components" value="available" />
+          <Tab label="Stored Components" value="available" />
         </Tabs>
       </Stack>
 
@@ -854,28 +992,89 @@ const StoreIn: React.FC = () => {
               </Button>
             </Stack>
 
-            {/* Session Stat Box */}
+            {/* Bulk Store In Menu Button */}
             <Box
               sx={{
                 display: "flex",
-                flexDirection: "column",
-                pl: { xs: 0, md: 3 },
+                alignItems: "center",
+                pl: { xs: 0, md: 2 },
                 borderLeft: { xs: "none", md: "1px solid #EAECF0" },
-                minWidth: 170,
               }}
             >
-              <Typography
-                variant="caption"
-                sx={{ color: "#667085", fontSize: "0.775rem", fontWeight: 500 }}
+              <Button
+                variant="outlined"
+                onClick={handleBulkMenuOpen}
+                endIcon={<KeyboardArrowDownIcon />}
+
+                sx={{
+                  height: 48,
+                  px: 2.5,
+                  borderRadius: "10px",
+                  border: "2px solid",
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                  fontWeight: 700,
+                  fontSize: "0.9375rem",
+                  textTransform: "none",
+                  backgroundColor: "#FFFFFF",
+                  whiteSpace: "nowrap",
+                  "&:hover": {
+                    border: "2px solid",
+                    borderColor: "primary.main",
+                    backgroundColor: "action.hover",
+                  },
+                }}
               >
-                Stored this session
-              </Typography>
-              <Typography
-                variant="h4"
-                sx={{ fontWeight: 700, color: "#101828", fontSize: "1.75rem", lineHeight: 1.1, my: 0.25 }}
+                Bulk Store In
+              </Button>
+
+              <Menu
+                anchorEl={bulkMenuAnchor}
+                open={isBulkMenuOpen}
+                onClose={handleBulkMenuClose}
+                transitionDuration={150}
+                PaperProps={{
+                  elevation: 3,
+                  sx: {
+                    borderRadius: "10px",
+                    mt: 1,
+                    minWidth: 160,
+                    border: "1px solid #EAECF0",
+                    py: 0.5,
+                  },
+                }}
               >
-                {qrCodeList.length}
-              </Typography>
+                <MenuItem
+                  onClick={() => {
+                    handleBulkMenuClose();
+                    bulkStoreInFileInputRef.current?.click();
+                  }}
+                  sx={{ py: 1, px: 2, fontSize: "0.875rem", fontWeight: 600, color: "#344054" }}
+                >
+                  <ListItemIcon sx={{ color: "#D97706", minWidth: 32 }}>
+                    <CloudUploadIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Import" primaryTypographyProps={{ fontWeight: 600, fontSize: "0.875rem" }} />
+                </MenuItem>
+                <MenuItem
+                  onClick={handleDownloadStoreInTemplate}
+                  sx={{ py: 1, px: 2, fontSize: "0.875rem", fontWeight: 600, color: "#344054" }}
+                >
+                  <ListItemIcon sx={{ color: "#4B5563", minWidth: 32 }}>
+                    <FileDownloadIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Template" primaryTypographyProps={{ fontWeight: 600, fontSize: "0.875rem" }} />
+                </MenuItem>
+              </Menu>
+
+              {/* Hidden file input for Bulk Store In import */}
+              <input
+                type="file"
+                accept=".xlsx, .xls, .csv, .txt"
+                ref={bulkStoreInFileInputRef}
+                style={{ display: "none" }}
+                onChange={handleBulkImportFile}
+              />
             </Box>
           </Box>
 

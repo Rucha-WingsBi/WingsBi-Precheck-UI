@@ -13,19 +13,30 @@ export const getErrorMessage = (
   if (!error) return defaultFallback;
 
   // 1. Connection / Network Failures
-  if (!error.response && error.message === "Network Error") {
+  if (!error.response && (error.message === "Network Error" || error === "Network Error")) {
     return "Unable to connect to the server. Please check your network connection.";
   }
 
   const status = error.response?.status;
   const serverData = error.response?.data;
 
-  // 2. Server Crash (500 Internal Server Error) - Sanitize technical traces
+  // 2. Handle 404 Not Found specifically
+  if (status === 404) {
+    if (serverData && typeof serverData.message === "string" && serverData.message.trim()) {
+      return sanitizeTechnicalMessage(serverData.message);
+    }
+    if (serverData && typeof serverData === "string" && serverData.trim() && !serverData.includes("<!DOCTYPE")) {
+      return sanitizeTechnicalMessage(serverData);
+    }
+    return "Requested item  not found.";
+  }
+
+  // 3. Server Crash (500 Internal Server Error) - Sanitize technical traces
   if (status && status >= 500) {
     return "A server error occurred. Please try again later.";
   }
 
-  // 3. Business / Domain / Validation Errors (400, 404, 409, 422) - Show specific message
+  // 4. Business / Domain / Validation Errors (400, 404, 409, 422) - Show specific message
   if (serverData) {
     // Custom backend message: { message: "..." }
     if (typeof serverData.message === "string" && serverData.message.trim()) {
@@ -46,12 +57,12 @@ export const getErrorMessage = (
       return sanitizeTechnicalMessage(serverData.title);
     }
     // Plain string error response
-    if (typeof serverData === "string" && serverData.trim()) {
+    if (typeof serverData === "string" && serverData.trim() && !serverData.includes("<!DOCTYPE")) {
       return sanitizeTechnicalMessage(serverData);
     }
   }
 
-  // 4. Axios error message or provided string
+  // 5. Axios error message or provided string
   if (typeof error === "string" && error.trim()) {
     return sanitizeTechnicalMessage(error);
   }
@@ -91,6 +102,22 @@ const TECHNICAL_ERROR_PATTERNS = [
 ];
 
 const sanitizeTechnicalMessage = (message: string): string => {
+  if (!message) return "";
+
+  // Sanitize raw status code error strings (e.g. "Request failed with status code 404")
+  if (/status code 404/i.test(message)) {
+    return "Requested item or not found.";
+  }
+  if (/status code 500/i.test(message) || (/status code/i.test(message) && /50\d/.test(message))) {
+    return "A server error occurred. Please try again later.";
+  }
+  if (/status code 400/i.test(message)) {
+    return "Invalid request. Please verify the entered data.";
+  }
+  if (/status code 401/i.test(message) || /status code 403/i.test(message)) {
+    return "Session expired or access denied. Please refresh and try again.";
+  }
+
   const isTechnical = TECHNICAL_ERROR_PATTERNS.some((pattern) =>
     pattern.test(message)
   );

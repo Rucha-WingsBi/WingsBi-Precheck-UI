@@ -230,6 +230,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       id: item.idNumber || item.id || "N/A",
       qty: item.quantity !== undefined ? item.quantity : 0,
       status: item.status || "N/A",
+      productionOrderNumber: item.productionOrderNumber || item.poNumber || item.poNo || item.purchaseOrderNumber || "N/A",
       location: item.location || "N/A",
     }));
   }, [results, bomItems, selectedBomRowIndex]);
@@ -580,7 +581,9 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           qty: item.quantity !== undefined ? item.quantity : (item.qty !== undefined ? item.qty : 0),
           unit: item.unit || "N/A",
           status: item.status || "N/A",
+          productionOrderNumber: item.productionOrderNumber || item.poNumber || item.poNo || item.purchaseOrderNumber || "N/A",
           location: item.location || item.storeLocation || "N/A",
+          createdDate: item.createdDate || item.createdAt || item.date || null,
         }));
         setOverrideQrCodes(mappedData);
       } else {
@@ -692,7 +695,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                 {/* Combined Search Bar */}
                 <TextField
                   size="small"
-                  placeholder="Search Part Number, Item Code, Po Number..."
+                  placeholder="Search Part Number, Item Code..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   InputProps={{
@@ -1051,7 +1054,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                           <SortableTableHeader label="Sr No" sortKey="sr" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
                           <SortableTableHeader label="Item Code" sortKey="lnitemcode" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
                           <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
-                          <SortableTableHeader label="PO Number" sortKey="poNumber" activeSortColumn={bomSortColumn} sortDirection={bomSortDirection} onSort={handleBomSort} align="center" />
                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Prod. Series</TableCell>
                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Type</TableCell>
                           <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Code</TableCell>
@@ -1060,7 +1062,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       <TableBody>
                         {isSearchLoading ? (
                           <TableRow>
-                            <TableCell colSpan={7} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                            <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
                               <CircularProgress size={28} color="primary" />
                             </TableCell>
                           </TableRow>
@@ -1094,14 +1096,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   {row.lnitemcode || row.lnItemCode || "N/A"}
                                 </TableCell>
                                 <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
-                                <TableCell align="center">
-                                  <Tooltip title={row.productionOrderNumber || "N/A"} arrow placement="top">
-                                    <Typography component="span" sx={{ fontSize: "0.775rem", color: "#344054" }}>
-                                      {row.productionOrderNumber || "N/A"}
-                                    </Typography>
-                                  </Tooltip>
-                                </TableCell>
-                                <TableCell align="center">{row.productionSeries || row.prodSeries || "N/A"}</TableCell>
+                                <TableCell align="center">{row.productionSeries || "N/A"}</TableCell>
                                 <TableCell align="center">
                                   <ComponentTypeChip type={row.componentType} />
                                 </TableCell>
@@ -1113,7 +1108,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                             );
                           })
                         ) : (
-                          <EmptyState colSpan={7} />
+                          <EmptyState colSpan={6} />
                         )}
                       </TableBody>
                     </Table>
@@ -1184,7 +1179,11 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">ID</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Qty</TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
-                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">
+                              <Tooltip title="Production Order Number" arrow placement="bottom">
+                                <span>PO Number</span>
+                              </Tooltip>
+                            </TableCell>
                             <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Location</TableCell>
                             <SortableTableHeader label="Created On" sortKey="createdDate" activeSortColumn={qrSortColumn} sortDirection={qrSortDirection} onSort={handleQrSort} align="center" />
                           </TableRow>
@@ -1192,7 +1191,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                         <TableBody>
                           {isSearchLoading || isQrLoading ? (
                             <TableRow>
-                              <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                              <TableCell colSpan={7} align="center" sx={{ py: 6, borderBottom: "none" }}>
                                 <CircularProgress size={28} color="primary" />
                               </TableCell>
                             </TableRow>
@@ -1219,7 +1218,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                 <TableCell align="center">{row.id || "N/A"}</TableCell>
                                 <TableCell align="center">{formatQuantity(row.qty)}</TableCell>
                                 <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
-                                <TableCell align="center">{renderQrStatusBadge(row.status)}</TableCell>
+                                <TableCell align="center">{row.productionOrderNumber || "N/A"}</TableCell>
                                 <TableCell align="center">{row.location || "N/A"}</TableCell>
                                 <TableCell align="center">{formatDateToIST(row.createdDate || row.createdAt || row.date)}</TableCell>
                               </TableRow>
