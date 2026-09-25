@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -20,6 +19,7 @@ import {
   IconButton,
   Chip,
   Tooltip,
+  Snackbar,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
 import { EmptyState } from "../../components/EmptyState";
@@ -37,7 +37,6 @@ import { useProductionSeries } from "../../hooks/useMasterData";
 import { useDebounce } from "../../hooks/useDebounce";
 import { SortableTableHeader } from "../../components/SortableTableHeader";
 
-const StoredInComponents = React.lazy(() => import("./StoredInComponents"));
 
 // Helper function to format date
 const formatDateToIST = (dateString: string | undefined | null) => {
@@ -55,70 +54,11 @@ const formatDateToIST = (dateString: string | undefined | null) => {
   }
 };
 
-// Helper function to render status badge in QR table
-const renderQrStatusBadge = (statusStr: string | undefined) => {
-  const status = (statusStr || "N/A").toLowerCase();
-  let bg = "#f4f5f7";
-  let color = "#344054";
-  let borderColor = "#d0d5dd";
 
-  if (status.includes("available") || status.includes("ready") || status.includes("complete")) {
-    bg = "#ecfdf5";
-    color = "#047857";
-    borderColor = "#a7f3d0";
-  } else if (status.includes("pending") || status.includes("hold")) {
-    bg = "#fffbeb";
-    color = "#d97706";
-    borderColor = "#fde68a";
-  } else if (status.includes("used") || status.includes("consumed")) {
-    bg = "#eff6ff";
-    color = "#2563eb";
-    borderColor = "#bfdbfe";
-  } else if (status.includes("reject") || status.includes("scrap")) {
-    bg = "#fef2f2";
-    color = "#b91c1c";
-    borderColor = "#fecaca";
-  }
-
-  return (
-    <Box
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 0.75,
-        px: 1.25,
-        py: 0.25,
-        borderRadius: "12px",
-        bgcolor: bg,
-        color: color,
-        border: `1px solid ${borderColor}`,
-        fontWeight: 600,
-        fontSize: "0.75rem",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <Box
-        sx={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          bgcolor: color,
-        }}
-      />
-      {statusStr || "N/A"}
-    </Box>
-  );
-};
 
 const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [storeTab, setStoreTab] = useState<"available" | "stored">(
-    hideHeader ? "available" : (location.pathname.includes("stored") || location.pathname.includes("store-in") ? "stored" : "available")
-  );
-
   // Tab state: 1 = RM Store, 2 = RFG Store
-  const [activeTab, setActiveTab] = useState<number>(1);
+  const activeTab = 1;
 
   // Production Series hook for filter
   const { data: productionSeriesList = [] } = useProductionSeries();
@@ -211,13 +151,33 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const [results, setResults] = useState<any[]>([]);
   const [selectedBomRowIndex, setSelectedBomRowIndex] = useState<number | null>(null);
   const [totalRecords, setTotalRecords] = useState<number>(0);
-  const [isServerPaginated, setIsServerPaginated] = useState<boolean>(false);
   const [totalQrRecords, setTotalQrRecords] = useState<number>(0);
-  const [isQrServerPaginated, setIsQrServerPaginated] = useState<boolean>(false);
 
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  const showSnackbar = (
+    message: string,
+    severity: "success" | "error" | "warning" | "info" = "info"
+  ) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
 
   const qrCodes = useMemo(() => {
     if (selectedBomRowIndex === null || bomItems.length === 0) {
@@ -348,7 +308,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
 
   const handleSearch = async (
     overrideQuery?: string,
-    overrideQrType?: number,
+    _overrideQrType?: number,
     overrideSeries?: (string | number)[],
     targetPage?: number,
     targetPageSize?: number,
@@ -356,7 +316,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     overrideToDate?: Date | null
   ) => {
     const queryStr = overrideQuery !== undefined ? overrideQuery : searchQuery;
-    const qrType = overrideQrType !== undefined ? overrideQrType : activeTab;
     const seriesList = overrideSeries !== undefined ? overrideSeries : selectedSeries;
     const pNum = targetPage !== undefined ? targetPage : bomPage;
     const pSize = targetPageSize !== undefined ? targetPageSize : bomRowsPerPage;
@@ -405,7 +364,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       const responseData = response.data;
       const qrCodesList = responseData?.data || [];
       const totalCount = responseData?.totalRecords || 0;
-      setIsServerPaginated(true);
       setTotalRecords(totalCount);
 
       if (qrCodesList.length > 0) {
@@ -438,11 +396,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       }
     } catch (err: any) {
       console.error("API error fetching available QR codes:", err);
-      setError(
+      const errMsg =
         err.response?.data?.message ||
         err.message ||
-        "An error occurred while fetching available QR codes."
-      );
+        "An error occurred while fetching available QR codes.";
+      setError(errMsg);
+      showSnackbar(errMsg, "error");
       setResults([]);
       setMasterData(null);
       setBomItems([]);
@@ -544,7 +503,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       if (Array.isArray(responseData)) {
         rawList = responseData;
         totalCount = responseData.length;
-        setIsQrServerPaginated(false);
       } else if (responseData && typeof responseData === "object") {
         if (Array.isArray(responseData.data)) {
           rawList = responseData.data;
@@ -554,7 +512,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           rawList = responseData.qrCodes;
         }
         totalCount = responseData.totalRecords ?? (responseData.totalCount ?? rawList.length);
-        setIsQrServerPaginated(responseData.totalRecords !== undefined || responseData.totalPages !== undefined);
       }
 
       setTotalQrRecords(totalCount);
@@ -566,9 +523,9 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           qty: item.quantity !== undefined ? item.quantity : (item.qty !== undefined ? item.qty : 0),
           unit: item.unit || "-",
           status: item.status || "-",
-          productionOrderNumber: item.productionOrderNumber || item.poNumber || item.poNo || item.purchaseOrderNumber || "-",
-          location: item.location || item.storeLocation || "-",
-          createdDate: item.createdDate || item.createdAt || item.date || null,
+          productionOrderNumber: item.productionOrderNumber || "-",
+          location: item.location || "-",
+          manufacturingDate: item.manufacturingDate || null,
         }));
         setOverrideQrCodes(mappedData);
       } else {
@@ -576,11 +533,12 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       }
     } catch (err: any) {
       console.error("Error fetching components on click:", err);
-      setError(
+      const errMsg =
         err.response?.data?.message ||
         err.message ||
-        "Failed to fetch available components from API."
-      );
+        "Failed to fetch available components from API.";
+      setError(errMsg);
+      showSnackbar(errMsg, "error");
       setOverrideQrCodes([]);
       setTotalQrRecords(0);
     } finally {
@@ -641,12 +599,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       )}
       <>
 
-        {/* Error Alert */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 1, py: 0.25, borderRadius: "6px" }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
 
         {/* Main Dashboard Layout */}
         <Grid container spacing={2}>
@@ -1261,6 +1213,16 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
           )}
         </Grid>
       </>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={snackbar.severity === "error" ? 5000 : 4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
