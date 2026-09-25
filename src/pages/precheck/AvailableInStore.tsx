@@ -511,8 +511,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     targetQrRowsPerPage?: number
   ) => {
     if (!bomItem) return;
-    const drawingNumberId = bomItem.drawingnumberId || bomItem.drawingNumberId || bomItem.drawingId || bomItem.id || 0;
-    let activeSeriesId = bomItem.prodSeriesId || (selectedSeries.length > 0 ? selectedSeries[0] : 0);
+    const drawingNumberId = bomItem.drawingNumberId || null;
+    const activeSeriesId = bomItem.prodSeriesId || null;
     const pNum = targetQrPage !== undefined ? targetQrPage : qrPage;
     const pSize = targetQrRowsPerPage !== undefined ? targetQrRowsPerPage : qrRowsPerPage;
 
@@ -530,10 +530,10 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       const response = await api.post(
         `/api/Precheck/GetAvailablComponents?pageNumber=${pageNumber}&pageSize=${pageSize}`,
         {
-          prodSeriesId: Number(activeSeriesId) || 0,
-          drawingNumberId: Number(drawingNumberId) || 0,
-          quantity: Number(bomItem.totalQuantity) || 0,
-          totalQrQty: Number(bomItem.qrCount) || 0,
+          prodSeriesId: activeSeriesId ? Number(activeSeriesId) : null,
+          drawingNumberId: drawingNumberId ? Number(drawingNumberId) : null,
+          quantity: bomItem.totalQuantity !== undefined && bomItem.totalQuantity !== null ? Number(bomItem.totalQuantity) : null,
+          totalQrQty: bomItem.qrCount !== undefined && bomItem.qrCount !== null ? Number(bomItem.qrCount) : null,
         }
       );
 
