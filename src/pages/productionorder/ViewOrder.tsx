@@ -16,35 +16,22 @@ import {
   Paper,
   IconButton,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   Button,
-  Chip,
-  Tooltip,
   TextField,
   Autocomplete,
-  FormControl,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
-import { usePONumbers, type ProductionOrderMaster } from "../../hooks/usePONumbers";
+import { usePONumbers } from "../../hooks/usePONumbers";
 
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
-  OpenInNew as OpenInNewIcon,
-  Inventory as InventoryIcon,
-  QrCode2 as QrCodeIcon,
 } from "@mui/icons-material";
 import type { RootState, AppDispatch } from "../../store/store";
 import {
   getAvailableComponentsForBOM,
   getProductionOrderDetails,
 } from "../../store/slices/precheckSlice";
-import { StatusChip } from "../../components/StatusChip";
-import { ComponentTypeChip } from "../../components/ComponentTypeChip";
-import { SortableTableHeader } from "../../components/SortableTableHeader";
-import { commonTableHeaderStyle, commonTableRowStyle } from "../../components/tableStyles";
 
 interface BOMItem {
   sr: number;
@@ -101,7 +88,6 @@ const ViewOrder: React.FC = () => {
   const [bomLoading, setBomLoading] = useState(false);
   const [poMasterDetails, setPoMasterDetails] = useState<any>(() => navigationState || null);
   const fetchedPoRef = useRef<string | null>(null);
-  const [openBomDialog, setOpenBomDialog] = useState(false);
 
   // Filter controls state
   const [poSearchText, setPoSearchText] = useState("");
@@ -162,10 +148,6 @@ const ViewOrder: React.FC = () => {
     return Boolean(selectedPO?.productionOrderNumber || poSearchText.trim());
   }, [selectedPO, poSearchText]);
 
-  const isClearEnabled = useMemo(() => {
-    return Boolean(selectedPO || poSearchText || idNumber || poMasterDetails);
-  }, [selectedPO, poSearchText, idNumber, poMasterDetails]);
-
   const handleApplyFilters = () => {
     const poNumToFetch = selectedPO?.productionOrderNumber || poSearchText.trim();
     if (poNumToFetch) {
@@ -184,17 +166,8 @@ const ViewOrder: React.FC = () => {
   };
 
   // Sorting state for BOM table
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  const handleSort = (col: string) => {
-    if (sortColumn === col) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(col);
-      setSortDirection("asc");
-    }
-  };
+  const [sortColumn] = useState<string | null>(null);
+  const [sortDirection] = useState<"asc" | "desc">("asc");
 
   const sortedBomData = useMemo(() => {
     if (!sortColumn) return bomData;
@@ -304,16 +277,7 @@ const ViewOrder: React.FC = () => {
     }
   };
 
-  const handleQrChangePage = (_event: unknown, newPage: number) => {
-    setQrPage(newPage);
-  };
 
-  const handleQrChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setQrRowsPerPage(parseInt(event.target.value, 10));
-    setQrPage(0);
-  };
 
   const paginatedQrResults = useMemo(() => {
     const startIndex = qrPage * qrRowsPerPage;
@@ -321,83 +285,85 @@ const ViewOrder: React.FC = () => {
     return qrCodeData.slice(startIndex, endIndex);
   }, [qrCodeData, qrPage, qrRowsPerPage]);
 
-  const renderStatusChip = (status: string) => {
-    const stLower = (status || "").toLowerCase();
-    let bg = "#F2F4F7";
+  const renderStatusChip = (statusStr: string | undefined) => {
+    const status = (statusStr || "N/A").toLowerCase();
+    let bg = "#f4f5f7";
     let color = "#344054";
+    let borderColor = "#d0d5dd";
 
-    if (stLower.includes("avail")) {
-      bg = "#ECFDF3";
-      color = "#027A48";
-    } else if (stLower.includes("reserv") || stLower.includes("progress") || stLower.includes("partial")) {
-      bg = "#FFFAEB";
-      color = "#B54708";
-    } else if (stLower.includes("issue") || stLower.includes("complet") || stLower.includes("used")) {
-      bg = "#F4EBFF";
-      color = "#6D2A8F";
-    } else if (stLower.includes("reject") || stLower.includes("scrap") || stLower.includes("expired")) {
-      bg = "#FEF3F2";
-      color = "#B42318";
+    if (status.includes("available") || status.includes("ready") || status.includes("complete")) {
+      bg = "#ecfdf5";
+      color = "#047857";
+      borderColor = "#a7f3d0";
+    } else if (status.includes("pending") || status.includes("hold")) {
+      bg = "#fffbeb";
+      color = "#d97706";
+      borderColor = "#fde68a";
+    } else if (status.includes("used") || status.includes("consumed")) {
+      bg = "#eff6ff";
+      color = "#2563eb";
+      borderColor = "#bfdbfe";
+    } else if (status.includes("reject") || status.includes("scrap")) {
+      bg = "#fef2f2";
+      color = "#b91c1c";
+      borderColor = "#fecaca";
     }
 
     return (
-      <Chip
-        label={status || "Available"}
-        size="small"
+      <Box
         sx={{
-          backgroundColor: bg,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.75,
+          px: 1.25,
+          py: 0.25,
+          borderRadius: "12px",
+          bgcolor: bg,
           color: color,
+          border: `1px solid ${borderColor}`,
           fontWeight: 600,
           fontSize: "0.75rem",
-          borderRadius: "16px",
-          height: 22,
+          whiteSpace: "nowrap",
         }}
-      />
+      >
+        <Box
+          sx={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            bgcolor: color,
+          }}
+        />
+        {statusStr || "N/A"}
+      </Box>
     );
   };
 
-  const renderBomTable = (isExpanded: boolean = false) => (
+  const renderBomTable = () => (
     <TableContainer
       sx={{
-        maxHeight: isExpanded ? "65vh" : { xs: 380, sm: 480, md: 520 },
-        borderRadius: "8px",
-        border: "1px solid #EAECF0",
-        "& ::-webkit-scrollbar": {
-          height: "8px",
-          width: "8px",
-        },
-        "& ::-webkit-scrollbar-track": {
-          backgroundColor: "#F2F4F7",
-          borderRadius: "4px",
-        },
-        "& ::-webkit-scrollbar-thumb": {
-          backgroundColor: "#98A2B3",
-          borderRadius: "4px",
-          "&:hover": { backgroundColor: "#667085" },
-        },
+        overflowX: "auto",
+        flexGrow: 1,
       }}
     >
-      <Table stickyHeader size="small">
+      <Table stickyHeader size="small" sx={{ width: "100%" }}>
         <TableHead>
           <TableRow>
-            <SortableTableHeader label="Sr" sortKey="sr" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-            <SortableTableHeader label="Item Code" sortKey="lnitemcode" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-            <SortableTableHeader label="Part Number" sortKey="drawingNumber" activeSortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} align="left" />
-            <TableCell sx={{ ...commonTableHeaderStyle, width: 55 }}>Unit</TableCell>
-            <TableCell sx={{ ...commonTableHeaderStyle, width: 70 }} align="center">Qty / <br /> Assm</TableCell>
-            <TableCell sx={{ ...commonTableHeaderStyle, width: 75 }} align="center">Total <br /> Req Qty</TableCell>
-            <TableCell sx={{ ...commonTableHeaderStyle, width: 80 }} align="center">Total <br /> QR Qty</TableCell>
-            <TableCell sx={{ ...commonTableHeaderStyle, width: 80 }} align="center">Available <br /> Store Qty</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Sr</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Item Code</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Part Number</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Unit</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Qty / Assembly</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total Req Qty</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Total QR Qty</TableCell>
+            <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Available Store Qty</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {bomLoading ? (
             <TableRow>
-              <TableCell colSpan={8} align="center" sx={{ py: 2, borderBottom: "none" }}>
-                <CircularProgress size={24} />
-                <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-                  Loading BOM details...
-                </Typography>
+              <TableCell colSpan={8} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                <CircularProgress size={28} color="primary" />
               </TableCell>
             </TableRow>
           ) : (
@@ -411,39 +377,34 @@ const ViewOrder: React.FC = () => {
                     onClick={() => handleBomRowClick(item, index)}
                     sx={{
                       cursor: "pointer",
-                      backgroundColor: isSelected ? "#EFF8FF" : "inherit",
-                      borderLeft: isSelected ? "3px solid #1570EF" : "3px solid transparent",
-                      transition: "background-color 0.15s ease",
+                      height: 40,
+                      backgroundColor: isSelected ? "rgba(107, 40, 138, 0.06)" : "inherit",
                       "&:hover": {
-                        backgroundColor: isSelected ? "#E4F2FF" : "#F9FAFB",
+                        backgroundColor: "#f9fafb",
                       },
                       "& td": {
                         borderBottom: "1px solid #F2F4F7",
-                        fontSize: "0.85rem",
-                        color: isSelected ? "#175CD3" : "#344054",
-                        fontWeight: isSelected ? 600 : 400,
-                        py: 0.6,
+                        fontSize: "0.775rem",
+                        color: "#344054",
+                        py: 0.75,
+                        px: 1.5,
                       },
                     }}
                   >
-                    <TableCell>{item.sr}</TableCell>
-                    <TableCell>{item.lnitemcode}</TableCell>
-                    <TableCell>{item.drawingNumber}</TableCell>
-                    <TableCell>{item.unit || "-"}</TableCell>
+                    <TableCell align="center">{item.sr}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">{item.lnitemcode}</TableCell>
+                    <TableCell align="center">{item.drawingNumber}</TableCell>
+                    <TableCell align="center">{item.unit || "-"}</TableCell>
                     <TableCell align="center">{item.qty}</TableCell>
                     <TableCell align="center">{item.totalQuantity}</TableCell>
-                    <TableCell align="center">
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: "#027A48", fontSize: "0.85rem" }}>
-                        {item.totalQrQty}
-                      </Typography>
-                    </TableCell>
+                    <TableCell align="center">{item.totalQrQty}</TableCell>
                     <TableCell align="center">{item.availableQuantity}</TableCell>
                   </TableRow>
                 );
               })}
               {bomData.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4, borderBottom: "none" }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6, borderBottom: "none" }}>
                     <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
                       No BOM details available for this production order
                     </Typography>
@@ -457,11 +418,7 @@ const ViewOrder: React.FC = () => {
     </TableContainer>
   );
 
-  const currentPoNumber = poMasterDetails?.productionOrderNumber || navigationState?.productionOrderNumber || poFromState || "-";
-  const currentDrawingNumber = poMasterDetails?.drawingNumber || navigationState?.drawingNumber || "-";
-  const currentLnItemCode = poMasterDetails?.lnItemCode || navigationState?.lnItemCode || "-";
-  const currentSeries = poMasterDetails?.productionSeries || navigationState?.productionSeries || "-";
-  const currentStartId = poMasterDetails?.startIdNumber ?? poMasterDetails?.idNumber ?? navigationState?.startIdNumber ?? navigationState?.idNumber ?? "-";
+
 
   return (
     <Box
@@ -484,30 +441,28 @@ const ViewOrder: React.FC = () => {
         spacing={2}
         sx={{ mb: 1 }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton
             onClick={() => navigate(-1)}
             sx={{
               color: "primary.main",
               p: 0.5,
+              ml: -1,
               "&:hover": { backgroundColor: "grey.100" },
             }}
           >
             <ArrowBackIcon />
           </IconButton>
-          <Box>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: "primary.main",
-                fontSize: { xs: "1.25rem", sm: "1.5rem" },
-              }}
-            >
-              View Available QR Codes {poFromState ? `— ${poFromState}` : ""}
-            </Typography>
-
-          </Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            View Available QR Codes {poFromState ? `— ${poFromState}` : ""}
+          </Typography>
         </Box>
       </Stack>
 
@@ -544,250 +499,129 @@ const ViewOrder: React.FC = () => {
           }}
         >
           {/* PO Number Dropdown */}
-          <FormControl
+          <Autocomplete
             size="small"
+            options={poOptions}
+            getOptionLabel={(option: any) =>
+              typeof option === "string" ? option : option.productionOrderNumber || ""
+            }
+            value={selectedPO}
+            loading={poLoading}
+            onInputChange={(_, value) => setPoSearchText(value)}
+            onChange={(_, newValue) => {
+              const item = typeof newValue === "string" ? null : newValue;
+              setSelectedPO(item);
+              if (item?.productionOrderNumber) {
+                handleFetchDetails(item.productionOrderNumber);
+              }
+            }}
+            isOptionEqualToValue={(option: any, val: any) =>
+              option.productionOrderNumber === (typeof val === "string" ? val : val?.productionOrderNumber)
+            }
+            renderOption={(props: any, option: any) => {
+              const { key, ...optionProps } = props;
+              const poNum = typeof option === "string" ? option : option.productionOrderNumber || "";
+              const lnCode = option?.lnItemCode || option?.lnitemcode || "";
+              const dwgNum = option?.drawingNumber || "";
+              const nom = option?.nomenclature || option?.itemDescription || "";
+              const compType = option?.componentType || "";
+
+              return (
+                <li {...optionProps} key={key}>
+                  <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
+                      {poNum}
+                    </Typography>
+                    {(lnCode || dwgNum || nom || compType) && (
+                      <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
+                        {lnCode ? `Item Code: ${lnCode}` : ""}
+                        {dwgNum ? `${lnCode ? " | " : ""}Part No: ${dwgNum}` : ""}
+                        {nom ? ` | ${nom}` : ""}
+                        {compType ? ` | ${compType}` : ""}
+                      </Typography>
+                    )}
+                  </Box>
+                </li>
+              );
+            }}
+            ListboxProps={{ style: { maxHeight: "300px" } }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 180px", md: 1.4 },
               minWidth: 150,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "background.paper",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#98A2B3",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-                "&.Mui-focused": { color: "primary.main" },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-              },
             }}
-          >
-            <Autocomplete
-              size="small"
-              options={poOptions}
-              getOptionLabel={(option: any) =>
-                typeof option === "string" ? option : option.productionOrderNumber || ""
-              }
-              value={selectedPO}
-              loading={poLoading}
-              onInputChange={(_, value) => setPoSearchText(value)}
-              onChange={(_, newValue) => {
-                const item = typeof newValue === "string" ? null : newValue;
-                setSelectedPO(item);
-                if (item?.productionOrderNumber) {
-                  handleFetchDetails(item.productionOrderNumber);
-                }
-              }}
-              isOptionEqualToValue={(option: any, val: any) =>
-                option.productionOrderNumber === (typeof val === "string" ? val : val?.productionOrderNumber)
-              }
-              renderOption={(props: any, option: any) => {
-                const { key, ...optionProps } = props;
-                const poNum = typeof option === "string" ? option : option.productionOrderNumber || "";
-                const lnCode = option?.lnItemCode || option?.lnitemcode || "";
-                const dwgNum = option?.drawingNumber || "";
-                const nom = option?.nomenclature || option?.itemDescription || "";
-                const compType = option?.componentType || "";
-
-                return (
-                  <li {...optionProps} key={key}>
-                    <Box sx={{ display: "flex", flexDirection: "column", py: 0.5, width: "100%" }}>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main", fontSize: "0.875rem" }}>
-                        {poNum}
-                      </Typography>
-                      {(lnCode || dwgNum || nom || compType) && (
-                        <Typography variant="caption" sx={{ color: "#667085", fontSize: "0.75rem" }}>
-                          {lnCode ? `Item Code: ${lnCode}` : ""}
-                          {dwgNum ? `${lnCode ? " | " : ""}Part No: ${dwgNum}` : ""}
-                          {nom ? ` | ${nom}` : ""}
-                          {compType ? ` | ${compType}` : ""}
-                        </Typography>
-                      )}
-                    </Box>
-                  </li>
-                );
-              }}
-              ListboxProps={{ style: { maxHeight: "300px" } }}
-              renderInput={(params) => (
-                <TextField {...params} label="PO Number *" size="small" placeholder="Select PO" />
-              )}
-            />
-          </FormControl>
-
-
+            renderInput={(params) => (
+              <TextField {...params} label="Production Order Number *" size="small" placeholder="Select PO" />
+            )}
+          />
 
           {/* Drawing Number Field (Read-only, auto-populated on PO selection) */}
-          <FormControl
+          <TextField
             size="small"
+            label="Part Number"
+            value={drawingNumberValue}
+            placeholder="Auto-populated"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+              style: { backgroundColor: "#F9FAFB" },
+            }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 160px", md: 1.2 },
               minWidth: 140,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "#F9FAFB",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#667085",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-                color: "#344054",
-                fontWeight: 500,
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="Part Number"
-              value={drawingNumberValue}
-              placeholder="Auto-populated"
-              variant="outlined"
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </FormControl>
+          />
 
           {/* LN Item Code Field (Read-only, auto-populated on PO selection) */}
-          <FormControl
+          <TextField
             size="small"
+            label="Item Code"
+            value={lnItemCodeValue}
+            placeholder="Auto-populated"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+              style: { backgroundColor: "#F9FAFB" },
+            }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 160px", md: 1.2 },
               minWidth: 140,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "#F9FAFB",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#667085",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-                color: "#344054",
-                fontWeight: 500,
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="Item Code"
-              value={lnItemCodeValue}
-              placeholder="Auto-populated"
-              variant="outlined"
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </FormControl>
+          />
 
           {/* Prod Series Field (Read-only, auto-populated on PO selection) */}
-          <FormControl
+          <TextField
             size="small"
+            label="Prod Series"
+            value={prodSeriesValue}
+            placeholder="Auto-populated"
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              readOnly: true,
+              style: { backgroundColor: "#F9FAFB" },
+            }}
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 120px", md: 1.0 },
               minWidth: 100,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "#F9FAFB",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#667085",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-                color: "#344054",
-                fontWeight: 500,
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="Prod Series"
-              value={prodSeriesValue}
-              placeholder="Auto-populated"
-              variant="outlined"
-              fullWidth
-              InputProps={{ readOnly: true }}
-            />
-          </FormControl>
+          />
 
-          {/* ID Number (TextField ONLY, matching Make Precheck) */}
-          <FormControl
+          {/* ID Number Field */}
+          <TextField
             size="small"
+            label="ID Number"
+            value={idNumber}
+            onChange={(e) => setIdNumber(e.target.value)}
+            placeholder="Enter ID"
+            variant="outlined"
+            fullWidth
             sx={{
               flex: { xs: "1 1 100%", sm: "1 1 110px", md: 0.9 },
               minWidth: 95,
-              "& .MuiOutlinedInput-root": {
-                height: 38,
-                backgroundColor: "background.paper",
-                borderRadius: "6px",
-                "& .MuiOutlinedInput-notchedOutline": { borderColor: "#D0D5DD" },
-              },
-              "& .MuiInputLabel-root": {
-                fontSize: "0.82rem",
-                color: "#98A2B3",
-                bgcolor: "transparent",
-                px: 0.5,
-                "&.MuiInputLabel-shrink": {
-                  fontSize: "0.75rem",
-                  color: "#667085",
-                  bgcolor: "#ffffff",
-                },
-                "&.Mui-focused": { color: "primary.main" },
-              },
-              "& .MuiOutlinedInput-input": {
-                fontSize: "0.82rem",
-              },
             }}
-          >
-            <TextField
-              size="small"
-              label="ID Number"
-              value={idNumber}
-              onChange={(e) => setIdNumber(e.target.value)}
-              placeholder="Enter ID"
-              variant="outlined"
-              fullWidth
-            />
-          </FormControl>
+          />
 
           {/* Actions */}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto", flex: "0 0 auto" }}>
@@ -851,64 +685,32 @@ const ViewOrder: React.FC = () => {
       {/* Main Content Area: BOM Details & Available QRs */}
       <Grid container spacing={1.5} sx={{ flexGrow: 1 }}>
         {/* Left Panel: BOM Details */}
-        <Grid item xs={12} lg={5}>
+        <Grid item xs={12} lg={selectedBomRow !== null ? 6 : 12}>
           <Paper
             elevation={0}
             sx={{
-              p: 1.5,
-              borderRadius: "10px",
-              border: "1px solid #E9EAEB",
+              borderRadius: "12px",
+              border: "1px solid #eaecf0",
               backgroundColor: "#ffffff",
-              height: "100%",
+              overflow: "hidden",
+              minHeight: "450px",
               display: "flex",
               flexDirection: "column",
-              boxSizing: "border-box",
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 1,
-              }}
-            >
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <InventoryIcon sx={{ color: "primary.main", fontSize: 20 }} />
-                <Typography
-                  variant="subtitle1"
-                  sx={{ fontWeight: 700, color: "#101828" }}
-                >
-                  BOM Details
+            <Box sx={{ height: 48, px: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem", fontWeight: 600 }}>
+                  Material available in store
                 </Typography>
-                {bomData.length > 0 && (
-                  <Chip
-                    label={`${bomData.length} items`}
-                    size="small"
-                    sx={{
-                      backgroundColor: "#F2F4F7",
-                      color: "#344054",
-                      fontWeight: 600,
-                      fontSize: "0.72rem",
-                      height: 20,
-                    }}
-                  />
-                )}
-              </Stack>
-
+                <Typography variant="caption" sx={{ color: "#98A2B3", fontSize: "0.75rem", fontStyle: "italic" }}>
+                  (Click a row to view available QR codes)
+                </Typography>
+              </Box>
               <Stack direction="row" alignItems="center" spacing={0.5}>
-                <IconButton
-                  onClick={() => setOpenBomDialog(true)}
-                  size="small"
-                  title="Expand Table"
-                  sx={{
-                    color: "#667085",
-                    borderRadius: "6px",
-                    "&:hover": { backgroundColor: "#F2F4F7" },
-                  }}
-                >
-                  <OpenInNewIcon fontSize="small" />
-                </IconButton>
+                <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+                  {bomData.length} {bomData.length === 1 ? "item" : "items"}
+                </Typography>
               </Stack>
             </Box>
 
@@ -916,254 +718,122 @@ const ViewOrder: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Right Panel: Available QR Codes */}
-        <Grid item xs={12} lg={7}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 1.5,
-              borderRadius: "10px",
-              border: "1px solid #E9EAEB",
-              backgroundColor: "#ffffff",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              boxSizing: "border-box",
-            }}
-          >
-            <Box
+        {/* Right Panel: Available QR Codes (Shown only when a row is clicked) */}
+        {selectedBomRow !== null && (
+          <Grid item xs={12} lg={6}>
+            <Paper
+              elevation={0}
               sx={{
+                borderRadius: "12px",
+                border: "1px solid #eaecf0",
+                backgroundColor: "#ffffff",
+                overflow: "hidden",
+                minHeight: "450px",
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 1,
+                flexDirection: "column",
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <QrCodeIcon sx={{ color: "primary.main", fontSize: 20 }} />
-                <Typography
-                  variant="subtitle1"
-                  sx={{ fontWeight: 700, color: "#101828" }}
-                >
+              <Box sx={{ height: 48, px: 1.5, borderBottom: "1px solid #eaecf0", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
+                <Typography variant="body2" sx={{ color: "#475467", fontSize: "0.85rem", fontWeight: 600 }}>
                   Available QR Codes
                 </Typography>
-                {qrCodeData.length > 0 && (
-                  <Chip
-                    label={`${qrCodeData.length} QRs`}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
+                    {qrCodeData.length} {qrCodeData.length === 1 ? "QR code" : "QR codes"}
+                  </Typography>
+                  <IconButton
                     size="small"
-                    sx={{
-                      backgroundColor: "#ECFDF3",
-                      color: "#027A48",
-                      fontWeight: 600,
-                      fontSize: "0.72rem",
-                      height: 20,
+                    onClick={() => {
+                      setSelectedBomRow(null);
+                      setQrCodeData([]);
                     }}
-                  />
-                )}
-              </Stack>
-            </Box>
+                    title="Close QR details"
+                    sx={{ p: 0.25, color: "#667085", "&:hover": { color: "#101828", backgroundColor: "#F2F4F7" } }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
 
-            <TableContainer
-              sx={{
-                flexGrow: 1,
-                maxHeight: { xs: 380, sm: 480, md: 520 },
-                borderRadius: "8px",
-                border: "1px solid #EAECF0",
-                "& ::-webkit-scrollbar": {
-                  height: "8px",
-                  width: "8px",
-                },
-                "& ::-webkit-scrollbar-track": {
-                  backgroundColor: "#F2F4F7",
-                  borderRadius: "4px",
-                },
-                "& ::-webkit-scrollbar-thumb": {
-                  backgroundColor: "#98A2B3",
-                  borderRadius: "4px",
-                  "&:hover": { backgroundColor: "#667085" },
-                },
-              }}
-            >
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
-                        fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 0.75,
-                      }}
-                    >
-                      QR Code Number
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
-                        fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 0.75,
-                      }}
-                    >
-                      ID
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
-                        fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 0.75,
-                        textAlign: "center",
-                      }}
-                    >
-                      Qty
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
-                        fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 0.75,
-                        textAlign: "center",
-                      }}
-                    >
-                      Status
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
-                        fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 0.75,
-                      }}
-                    >
-                      Location
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: "#F9FAFB",
-                        color: "#475467",
-                        fontSize: "0.8rem",
-                        borderBottom: "1px solid #EAECF0",
-                        py: 0.75,
-                      }}
-                    >
-                      Remarks
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {qrCodeLoading ? (
+              <TableContainer sx={{ overflowX: "auto", flexGrow: 1 }}>
+                <Table stickyHeader size="small" sx={{ width: "100%" }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 2, borderBottom: "none" }}>
-                        <CircularProgress size={24} />
-                        <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-                          Fetching available QR components...
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">QR Code Number</TableCell>
+                      <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">ID</TableCell>
+                      <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Qty</TableCell>
+                      <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Status</TableCell>
+                      <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Location</TableCell>
+                      <TableCell sx={{ fontWeight: 700, backgroundColor: "#F9FAFB !important", color: "#475467", fontSize: "0.8rem", borderBottom: "1px solid #EAECF0", py: 1, px: 1.5 }} align="center">Remarks</TableCell>
                     </TableRow>
-                  ) : (
-                    <>
-                      {paginatedQrResults.map((item, index) => (
-                        <TableRow
-                          key={index}
-                          hover
-                          sx={{
-                            "&:hover": { backgroundColor: "#F9FAFB" },
-                            "& td": { borderBottom: "1px solid #F2F4F7", fontSize: "0.85rem", color: "#344054", py: 0.6 },
-                          }}
-                        >
-                          <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: "#101828", fontSize: "0.85rem" }}>
-                              {item.qrCodeNumber}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{item.id}</TableCell>
-                          <TableCell align="center">{formatQuantity(item.remainingQuantity)}</TableCell>
-                          <TableCell align="center">{renderStatusChip(item.status)}</TableCell>
-                          <TableCell>{item.location || "-"}</TableCell>
-                          <TableCell>{item.remarks || "-"}</TableCell>
-                        </TableRow>
-                      ))}
-                      {qrCodeData.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 2, borderBottom: "none" }}>
-                            <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
-                              {selectedBomRow !== null
-                                ? "No available QR components found for selected BOM item"
-                                : "Click a BOM row on the left to view matching QR codes"}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <CustomPagination
-              page={qrPage}
-              pageSize={qrRowsPerPage}
-              totalCount={qrCodeData.length}
-              pageSizeOptions={[5, 10, 25, 50]}
-              onPageChange={(newPage) => setQrPage(newPage)}
-              onPageSizeChange={(newSize) => {
-                setQrRowsPerPage(newSize);
-                setQrPage(0);
-              }}
-            />
+                  </TableHead>
+                  <TableBody>
+                    {qrCodeLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                          <CircularProgress size={28} color="primary" />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      <>
+                        {paginatedQrResults.map((item, index) => (
+                          <TableRow
+                            key={index}
+                            hover
+                            sx={{
+                              height: 40,
+                              "&:hover": { backgroundColor: "#F9FAFB" },
+                              "& td": {
+                                borderBottom: "1px solid #F2F4F7",
+                                fontSize: "0.775rem",
+                                color: "#344054",
+                                py: 0.75,
+                                px: 1.5,
+                              },
+                            }}
+                          >
+                            <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
+                              {item.qrCodeNumber || "N/A"}
+                            </TableCell>
+                            <TableCell align="center">{item.id || "N/A"}</TableCell>
+                            <TableCell align="center">{formatQuantity(item.remainingQuantity)}</TableCell>
+                            <TableCell align="center">{renderStatusChip(item.status)}</TableCell>
+                            <TableCell align="center">{item.location || "N/A"}</TableCell>
+                            <TableCell align="center">{item.remarks || "N/A"}</TableCell>
+                          </TableRow>
+                        ))}
+                        {qrCodeData.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 6, borderBottom: "none" }}>
+                              <Typography variant="body2" sx={{ color: "#667085", fontWeight: 500 }}>
+                                {selectedBomRow !== null
+                                  ? "No available QR components found for selected BOM item"
+                                  : "Click a BOM row on the left to view matching QR codes"}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <CustomPagination
+                page={qrPage}
+                pageSize={qrRowsPerPage}
+                totalCount={qrCodeData.length}
+                pageSizeOptions={[5, 10, 25, 50]}
+                onPageChange={(newPage) => setQrPage(newPage)}
+                onPageSizeChange={(newSize) => {
+                  setQrRowsPerPage(newSize);
+                  setQrPage(0);
+                }}
+              />
 
-          </Paper>
-        </Grid>
+            </Paper>
+          </Grid>
+        )}
       </Grid>
-
-      {/* Expanded BOM Table Dialog */}
-      <Dialog
-        open={openBomDialog}
-        onClose={() => setOpenBomDialog(false)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: "16px", p: 1 },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pb: 1,
-          }}
-        >
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <InventoryIcon sx={{ color: "primary.main", fontSize: 22 }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
-              BOM Details (Expanded View)
-            </Typography>
-          </Stack>
-          <IconButton
-            onClick={() => setOpenBomDialog(false)}
-            size="small"
-            sx={{ color: "#667085", "&:hover": { backgroundColor: "#F2F4F7" } }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ borderColor: "#EAECF0", p: 2 }}>
-          {renderBomTable(true)}
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 };

@@ -30,11 +30,12 @@ import {
   RadioGroup,
   FormControlLabel,
   FormControl,
+  Tooltip,
 } from "@mui/material";
 import { CustomPagination } from "../../components/CustomPagination";
 
 import {
- 
+
   Close as CloseIcon,
   Download as DownloadIcon,
   SwapHoriz as SwapHorizIcon,
@@ -1028,19 +1029,20 @@ const MaterialRequisition: React.FC = () => {
           mb: 1,
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <IconButton
-            onClick={() => navigate("/precheck/make")}
-            sx={{
-              color: "primary.main",
-              p: 0.5,
-              "&:hover": { backgroundColor: "grey.100" },
-            }}
-            title="Back to Make Precheck"
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Box>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <IconButton
+              onClick={() => navigate("/verification/parts")}
+              sx={{
+                color: "primary.main",
+                p: 0.5,
+                ml: -1,
+                "&:hover": { backgroundColor: "grey.100" },
+              }}
+              title="Back to Make Precheck"
+            >
+              <ArrowBackIcon />
+            </IconButton>
             <Typography
               variant="h5"
               sx={{
@@ -1051,11 +1053,11 @@ const MaterialRequisition: React.FC = () => {
             >
               Material Requisition
             </Typography>
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
-              Create, track, swap, and manage material requisition requests.
-            </Typography>
           </Box>
-        </Stack>
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.25, pl: "32px" }}>
+            Create, track, swap, and manage material requisition requests.
+          </Typography>
+        </Box>
 
         <Stack direction="row" spacing={1}>
           <Button
@@ -1344,7 +1346,13 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {col.label}
+                        {col.label.includes("PO Number") ? (
+                          <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
+                            <span>{col.label}</span>
+                          </Tooltip>
+                        ) : (
+                          col.label
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1372,7 +1380,7 @@ const MaterialRequisition: React.FC = () => {
                             : {},
                           "& td": {
                             borderBottom: "1px solid #F2F4F7",
-                            fontSize: "0.8rem",
+                            fontSize: "0.775rem",
                             color: "#344054",
                             py: 0.4,
                             px: 1,
@@ -1390,7 +1398,7 @@ const MaterialRequisition: React.FC = () => {
                         <TableCell align="left">
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#101828", fontSize: "0.8rem" }}
+                            sx={{ fontWeight: 600, color: "#101828", fontSize: "0.775rem" }}
                           >
                             {item.requestId}
                           </Typography>
@@ -1637,7 +1645,7 @@ const MaterialRequisition: React.FC = () => {
                           {...field}
                           fullWidth
                           size="small"
-                          label="PO Number"
+                          label="Production Order Number"
                           variant="outlined"
                         />
                       )}
@@ -1980,7 +1988,13 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {col.label}
+                        {col.label.includes("PO Number") ? (
+                          <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
+                            <span>{col.label}</span>
+                          </Tooltip>
+                        ) : (
+                          col.label
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>

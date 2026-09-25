@@ -128,15 +128,15 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
             fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
-          Run Precheck
+          Part Verification
         </Typography>
         <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
-          Scan items, verify component quality, and complete precheck inspection logs.
+          Scan items, verify component quality, and complete precheck.
         </Typography>
       </Box>
 
-      {/* Top Right "More v" Action Button */}
-      <Box>
+      {/* Top Right Actions: More, Export */}
+      <Stack direction="row" spacing={1} alignItems="center">
         <Button
           variant="outlined"
           size="small"
@@ -157,6 +157,29 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
           More
         </Button>
 
+        {onExport && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onExport}
+            disabled={!isSubmitEnabled || isLoadingLocal}
+            startIcon={<FileDownloadIcon fontSize="small" />}
+            sx={{
+              height: 34,
+              borderRadius: "6px",
+              borderColor: "grey.300",
+              color: "text.secondary",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              backgroundColor: "background.paper",
+              "&:hover": { borderColor: "grey.400", backgroundColor: "grey.50" },
+            }}
+          >
+            Export
+          </Button>
+        )}
+
         {/* More Menu Dropdown */}
         <Menu
           anchorEl={moreMenuAnchor}
@@ -168,12 +191,12 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
             sx: {
               borderRadius: "12px",
               mt: 1,
-              minWidth: 210,
+              minWidth: 110,
               border: "1px solid #E5E7EB",
             },
           }}
         >
-          {onToggleFilter && (
+          {/* {onToggleFilter && (
             <MenuItem
               onClick={() => {
                 handleMoreMenuClose();
@@ -188,24 +211,9 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
                 primary={filterRemainingOnly ? "Show All Items" : "Remaining Precheck"}
               />
             </MenuItem>
-          )}
+          )} */}
 
-          {onExport && (
-            <MenuItem
-              onClick={() => {
-                handleMoreMenuClose();
-                onExport();
-              }}
-              disabled={!isSubmitEnabled}
-            >
-              <ListItemIcon>
-                <FileDownloadIcon fontSize="small" sx={{ color: "#059669" }} />
-              </ListItemIcon>
-              <ListItemText primary="Export BOM" />
-            </MenuItem>
-          )}
-
-          <Divider sx={{ my: 0.5 }} />
+          {/* <Divider sx={{ my: 0.5 }} /> */}
 
           <MenuItem
             onClick={() => {
@@ -221,7 +229,7 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
                 <UploadIcon fontSize="small" sx={{ color: "#D97706" }} />
               )}
             </ListItemIcon>
-            <ListItemText primary={uploadInProgress ? "Uploading..." : "Upload Excel..."} />
+            <ListItemText primary={uploadInProgress ? "Uploading..." : "Import"} />
           </MenuItem>
 
           <MenuItem
@@ -239,28 +247,13 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
               )}
             </ListItemIcon>
             <ListItemText
-              primary={downloadTemplateInProgress ? "Downloading..." : "Download Template"}
+              primary={downloadTemplateInProgress ? "Downloading..." : "Template"}
             />
           </MenuItem>
 
-          <Divider sx={{ my: 0.5 }} />
-
-          {onReject && (
-            <MenuItem
-              onClick={() => {
-                handleMoreMenuClose();
-                onReject();
-              }}
-              disabled={isLoadingLocal}
-            >
-              <ListItemIcon>
-                <CancelIcon fontSize="small" sx={{ color: "#DC2626" }} />
-              </ListItemIcon>
-              <ListItemText primary="Reject Order" />
-            </MenuItem>
-          )}
+         
         </Menu>
-      </Box>
+      </Stack>
     </Box>
   );
 };
@@ -524,7 +517,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                   variant="subtitle2"
                   sx={{ fontWeight: 700, color: "#111827", fontSize: "0.8125rem" }}
                 >
-                  {`${stats.verified} of ${stats.total} lines verified`}
+                  {`${stats.verified} of ${stats.total} Parts Completed`}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -594,7 +587,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                     sx={{ width: 7, height: 7, borderRadius: "1px", backgroundColor: "#059669" }}
                   />
                   <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.7rem" }}>
-                    {stats.verified} verified
+                    {stats.verified} Completed
                   </Typography>
                 </Box>
 
@@ -603,7 +596,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                     sx={{ width: 7, height: 7, borderRadius: "1px", backgroundColor: "#D97706" }}
                   />
                   <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.7rem" }}>
-                    {stats.short} short
+                    {stats.short} Partial
                   </Typography>
                 </Box>
 
@@ -621,7 +614,7 @@ const PrecheckActionBar: React.FC<PrecheckActionBarProps> = ({
                     sx={{ width: 7, height: 7, borderRadius: "1px", backgroundColor: "#9CA3AF" }}
                   />
                   <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600, fontSize: "0.7rem" }}>
-                    {stats.notScanned} not scanned
+                    {stats.notScanned} Pending
                   </Typography>
                 </Box>
               </Stack>

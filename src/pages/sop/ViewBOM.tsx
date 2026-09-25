@@ -433,7 +433,7 @@ const ViewBOM: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => 
                       (bomData && bomData.length > 0
                         ? bomData[0]?.lnItemCode || ""
                         : "");
-                    navigate("/components/assembly", {
+                    navigate("/assembly/editbom", {
                       state: {
                         drawingNumber: activeDwg,
                         lnItemCode: activeLn,

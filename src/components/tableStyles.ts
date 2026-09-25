@@ -164,7 +164,7 @@ export const adminDataGridSx = {
     visibility: "hidden !important",
   },
   "& .MuiDataGrid-cell": {
-    fontSize: "0.835rem",
+    fontSize: "0.775rem",
     color: "#1E293B",
     borderBottom: "1px solid #F1F5F9",
     display: "flex",

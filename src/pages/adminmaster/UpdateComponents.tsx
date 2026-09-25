@@ -458,7 +458,7 @@ export default function InsertMappings() {
       } else {
         // In edit mode, navigate back after delay
         setTimeout(() => {
-          navigate("/components");
+          navigate("/assembly/components");
         }, 1500);
       }
     } catch (error: any) {
@@ -511,20 +511,19 @@ export default function InsertMappings() {
           spacing={2}
           sx={{ mb: 1 }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {fromView && (
+          <Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <IconButton
                 onClick={() => navigate(-1)}
                 sx={{
                   color: "primary.main",
                   p: 0.5,
+                  ml: -1,
                   "&:hover": { backgroundColor: "grey.100" },
                 }}
               >
                 <ArrowBackIcon />
               </IconButton>
-            )}
-            <Box>
               <Typography
                 variant="h5"
                 sx={{
@@ -535,10 +534,8 @@ export default function InsertMappings() {
               >
                 {isEditMode ? "Update Component" : "Add Component"}
               </Typography>
-              <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-                {isEditMode ? "Update master component details and item mappings." : "Add a new component master to the system."}
-              </Typography>
             </Box>
+           
           </Box>
         </Stack>
 
@@ -566,8 +563,7 @@ export default function InsertMappings() {
         {/* Main Form */}
         <Card elevation={2} sx={{ mb: 3 }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <form onSubmit={handleSubmit(onSubmit)}>
-              {/* Ln item code , Drawing Number, Nomenclature*/}
+            <form onSubmit={handleSubmit(onSubmit)}>              {/* Ln item code , Drawing Number, Nomenclature*/}
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={12} md={4}>
                   {!isEditMode ? (
@@ -1311,7 +1307,7 @@ export default function InsertMappings() {
               setPrecheckDialogOpen(false);
               setSavedFormData(null);
               setTimeout(() => {
-                navigate("/components");
+                navigate("/assembly/components");
               }, 500);
             }}
             variant="outlined"
@@ -1347,7 +1343,7 @@ export default function InsertMappings() {
                 setPrecheckDialogOpen(false);
                 setSavedFormData(null);
                 setTimeout(() => {
-                  navigate("/components");
+                  navigate("/assembly/components");
                 }, 1500);
               }
             }}

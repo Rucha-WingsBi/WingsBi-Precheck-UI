@@ -26,6 +26,7 @@ import {
   Typography,
   IconButton,
   Button,
+  Snackbar,
 } from "@mui/material";
 import { Close as CloseIcon, FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import {
@@ -1456,6 +1457,7 @@ const MakePrecheck: React.FC = () => {
         productionOrderNumber: item.productionOrderNumber || selectedPO?.productionOrderNumber || "NA",
         idNumber: parseInt(idNumber, 10),
         drawingNumberId: item.drawingNumberId,
+        QrIdNumber: item.qrCode,
       };
 
       console.log("Calling removePrecheckDetails API with payload:", payload);
@@ -1533,6 +1535,21 @@ const MakePrecheck: React.FC = () => {
       .unwrap()
       .then(() => {
         setExportDialogOpen(false);
+        const isFiltersApplied = Boolean(
+          selectedPO?.productionOrderNumber ||
+          selectedProductionSeries?.id ||
+          idNumber ||
+          selectedDrawing?.id
+        );
+        let successMsg = "Data exported successfully.";
+        if (isFiltersApplied && exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected filters and columns.";
+        } else if (isFiltersApplied) {
+          successMsg = "Data exported successfully based on the selected filters.";
+        } else if (exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected columns.";
+        }
+        showAlertMessage(successMsg, "success");
       })
       .catch((error) => {
         alert(error.message || "Failed to export precheck details");
@@ -1670,16 +1687,21 @@ const MakePrecheck: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Alert */}
-      {showAlert && (
+      {/* Top Center Snackbar Alert */}
+      <Snackbar
+        open={showAlert}
+        autoHideDuration={4000}
+        onClose={() => setShowAlert(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
         <Alert
           severity={alertSeverity}
-          sx={{ mb: 2 }}
           onClose={() => setShowAlert(false)}
+          sx={{ width: "100%", borderRadius: "8px", boxShadow: 3 }}
         >
           {alertMessage}
         </Alert>
-      )}
+      </Snackbar>
 
       {/* Page Title & More Action Button at Top Header */}
       <PrecheckHeaderBar
@@ -1689,7 +1711,7 @@ const MakePrecheck: React.FC = () => {
         onReset={handleReset}
         onUploadExcel={() => excelFileInputRef.current?.click()}
         onDownloadTemplate={handleDownloadTemplate}
-        onReject={() => navigate("/materialrequisition")}
+        onReject={() => navigate("/verification/material-requisition")}
         isSubmitEnabled={isSubmitEnabled}
         uploadInProgress={uploadInProgress}
         downloadTemplateInProgress={downloadTemplateInProgress}
@@ -1810,7 +1832,7 @@ const MakePrecheck: React.FC = () => {
         onDownloadTemplate={handleDownloadTemplate}
         onMakePrecheck={handleMakePrecheck}
         onSubmitPrecheck={handleSubmitPrecheck}
-        onReject={() => navigate("/materialrequisition")}
+        onReject={() => navigate("/verification/material-requisition")}
         isAdminOrHead={isAdminOrHead}
         isAddEnabled={isSubmitEnabled}
         onAddBomDrawingClick={() => setAddBomDrawingOpen(true)}
@@ -1841,6 +1863,10 @@ const MakePrecheck: React.FC = () => {
         orderBy={orderBy}
         order={order}
         onRequestSort={handleRequestSort}
+        onExportBom={handleExport}
+        isExportEnabled={isSubmitEnabled}
+        filterRemainingOnly={filterRemainingOnly}
+        onToggleFilter={() => setFilterRemainingOnly(!filterRemainingOnly)}
       />
 
       {/* Quantity Dialog */}

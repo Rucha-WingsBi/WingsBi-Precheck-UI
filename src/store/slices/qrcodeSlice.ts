@@ -389,10 +389,10 @@ export const exportQRCode = createAsyncThunk(
     qrCodeIdOrObj:
       | string
       | {
-          qrCodeId: string;
-          batchId?: string;
-          selectedColumns?: string[];
-        },
+        qrCodeId: string;
+        batchId?: string;
+        selectedColumns?: string[];
+      },
     { rejectWithValue, getState },
   ) => {
     // Handle both old string format and new object format for backward compatibility
@@ -512,10 +512,10 @@ export const exportBulkQRCodes = createAsyncThunk(
     qrCodesOrObj:
       | string[]
       | {
-          qrCodes?: string[];
-          qrCodeNumbers?: string[];
-          selectedColumns?: string[];
-        },
+        qrCodes?: string[];
+        qrCodeNumbers?: string[];
+        selectedColumns?: string[];
+      },
     { rejectWithValue, getState },
   ) => {
     // Handle both old array format and new object format for backward compatibility
@@ -1098,6 +1098,64 @@ export const exportConsumedIn = createAsyncThunk(
         error.response?.data?.message ||
         error.message ||
         "Failed to export consumed in data",
+      );
+    }
+  }
+);
+
+// Bulk Store In from Excel
+export const bulkStoreInFromExcel = createAsyncThunk(
+  "qrcode/bulkStoreInFromExcel",
+  async (file: File, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post("/api/QRCode/BulkStoreInFromExcel", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Failed to process bulk store in from Excel"
+      );
+    }
+  }
+);
+
+// Download Bulk Store In Template
+export const downloadBulkStoreInTemplate = createAsyncThunk(
+  "qrcode/downloadBulkStoreInTemplate",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/api/QRCode/BulkStoreInTemplate", {
+        responseType: "blob",
+        headers: {
+          accept: "*/*",
+        },
+      });
+
+      if (response.data && response.data.size > 0) {
+        const url = window.URL.createObjectURL(
+          new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          })
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "BulkStoreInTemplate.xlsx");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        return { success: true, message: "Template downloaded successfully" };
+      } else {
+        throw new Error("No content received from API");
+      }
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Failed to download Bulk Store In template"
       );
     }
   }

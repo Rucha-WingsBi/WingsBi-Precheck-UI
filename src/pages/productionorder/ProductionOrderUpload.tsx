@@ -29,7 +29,6 @@ import {
   Grid,
   Tooltip,
   CircularProgress,
-  Autocomplete,
   Select,
 } from "@mui/material";
 import {
@@ -196,7 +195,7 @@ const RowActionsMenu: React.FC<{
   };
 
   const hasViewAccess = useHasPermission("Manage Orders");
-  const hasMakeAccess = useHasPermission("Run Precheck");
+  const hasMakeAccess = useHasPermission("Part Verification");
   const isConfirming = deleteConfirmId === row.id;
   const canDeleteOrEdit = row.precheckStatus === 1 || row.precheckStatus === 4;
 
@@ -288,13 +287,13 @@ const RowActionsMenu: React.FC<{
               disabled={!hasMakeAccess}
               onClick={(e) => {
                 e.stopPropagation();
-                handleNavigate("/precheck/make", row);
+                handleNavigate("/verification/parts", row);
               }}
             >
               <ListItemIcon>
                 <PlaylistAddCheckIcon fontSize="small" color={hasMakeAccess ? "success" : "disabled"} />
               </ListItemIcon>
-              <ListItemText primary="Run Precheck" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
+              <ListItemText primary="Part Verification" primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 500 }} />
             </MenuItem>
           </span>
         </Tooltip>
@@ -1301,7 +1300,25 @@ const ProductionOrderUpload: React.FC = () => {
       }
 
       setExportDialogOpen(false);
-      showSnackbar("Data exported successfully to Excel");
+
+      const isFiltersApplied = Boolean(
+        searchQuery.trim() !== "" ||
+        appliedProductionSeries.length > 0 ||
+        appliedStatusList.length > 0 ||
+        appliedFromDate !== null ||
+        appliedToDate !== null
+      );
+
+      let successMessage = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        successMessage = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        successMessage = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        successMessage = "Data exported successfully based on the selected columns.";
+      }
+
+      showSnackbar(successMessage);
     } catch (err) {
       console.error("Export error:", err);
       showSnackbar("Failed to export data. Please try again.", "error");
@@ -1317,16 +1334,24 @@ const ProductionOrderUpload: React.FC = () => {
       width: 65,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) =>
         params.api.getSortedRowIds().indexOf(params.id) + 1,
     },
     {
       field: "productionorder",
       headerName: "PO Number",
+      description: "Production Order Number",
+      renderHeader: () => (
+        <Tooltip title="Production Order Number" arrow placement="bottom">
+          <span>PO Number</span>
+        </Tooltip>
+      ),
       flex: 1,
       minWidth: 140,
       headerAlign: "center",
       align: "center",
+      sortable: true,
     },
     {
       field: "projectcode",
@@ -1335,6 +1360,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 120,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "projectdescription",
@@ -1343,6 +1369,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 180,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "itemcode",
@@ -1351,6 +1378,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 140,
       headerAlign: "center",
       align: "center",
+      sortable: true,
     },
     {
       field: "itemdescription",
@@ -1359,6 +1387,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 200,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "series",
@@ -1367,6 +1396,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 100,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "quantity",
@@ -1375,6 +1405,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 70,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "id_num",
@@ -1383,6 +1414,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "end_id",
@@ -1391,6 +1423,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "buildnumber",
@@ -1399,6 +1432,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1408,6 +1442,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 120,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1417,6 +1452,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 120,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1426,6 +1462,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 120,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "status",
@@ -1434,6 +1471,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 120,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "Uploaded",
     },
   ];
@@ -1457,26 +1495,32 @@ const ProductionOrderUpload: React.FC = () => {
     {
       field: "sr",
       headerName: "Sr.No",
-      width: 60,
+      width: 90,
       headerAlign: "center",
       align: "center",
+      
     },
     {
       field: "productionOrderNumber",
       headerName: "PO Number",
+      description: "Production Order Number",
+      renderHeader: () => (
+        <Tooltip title="Production Order Number" arrow placement="bottom">
+          <span>PO Number</span>
+        </Tooltip>
+      ),
       flex: 1,
       minWidth: 130,
       headerAlign: "left",
       align: "left",
+      sortable: true,
       renderCell: (params) => (
-        <Tooltip title={params.value || ""}>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 700, color: "#101828", fontSize: "0.85rem" }}
-          >
-            {params.value}
-          </Typography>
-        </Tooltip>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 700, color: "#101828", fontSize: "0.85rem" }}
+        >
+          {params.value}
+        </Typography>
       ),
     },
     {
@@ -1486,6 +1530,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "left",
       align: "left",
+      sortable: false,
     },
     {
       field: "lnItemCode",
@@ -1494,6 +1539,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 140,
       headerAlign: "left",
       align: "left",
+      sortable: true,
     },
     {
       field: "drawingNumber",
@@ -1502,6 +1548,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 150,
       headerAlign: "left",
       align: "left",
+      sortable: true,
     },
     {
       field: "productionSeries",
@@ -1510,6 +1557,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 85,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "quantity",
@@ -1518,6 +1566,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 50,
       headerAlign: "center",
       align: "center",
+      sortable: false,
     },
     {
       field: "startIdNumber",
@@ -1526,6 +1575,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1535,6 +1585,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1544,6 +1595,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 90,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1553,6 +1605,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 110,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params: any) => params.value || "-",
     },
     {
@@ -1562,6 +1615,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 130,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       renderCell: (params) => {
         const status = params.value || 1;
         const statusName = params.row.precheckStatusName || "Pending";
@@ -1602,6 +1656,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 130,
       headerAlign: "center",
       align: "center",
+      sortable: true,
       valueFormatter: (params) => formatDate(params.value),
     },
     {
@@ -1611,6 +1666,7 @@ const ProductionOrderUpload: React.FC = () => {
       minWidth: 80,
       headerAlign: "center",
       align: "center",
+      sortable: false,
       valueGetter: (params) => {
         if (!params.row.createdDate) return "-";
         const created = new Date(params.row.createdDate);
@@ -2008,6 +2064,23 @@ const ProductionOrderUpload: React.FC = () => {
                   "& .MuiDataGrid-row": {
                     minHeight: "32px !important",
                     maxHeight: "32px !important",
+                  },
+                  "& .MuiDataGrid-columnHeader--sortable .MuiDataGrid-iconButtonContainer": {
+                    visibility: "visible !important",
+                    width: "auto !important",
+                    opacity: "1 !important",
+                  },
+                  "& .MuiDataGrid-sortIcon": {
+                    opacity: "0.5 !important",
+                    color: "#98A2B3 !important",
+                  },
+                  "& .MuiDataGrid-columnHeader--sorted .MuiDataGrid-sortIcon": {
+                    opacity: "1 !important",
+                    color: "primary.main !important",
+                  },
+                  "& .MuiDataGrid-columnHeader:hover .MuiDataGrid-sortIcon": {
+                    opacity: "1 !important",
+                    color: "#344054 !important",
                   },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",
@@ -2474,6 +2547,23 @@ const ProductionOrderUpload: React.FC = () => {
                   "& .MuiDataGrid-row": {
                     minHeight: "32px !important",
                     maxHeight: "32px !important",
+                  },
+                  "& .MuiDataGrid-columnHeader--sortable .MuiDataGrid-iconButtonContainer": {
+                    visibility: "visible !important",
+                    width: "auto !important",
+                    opacity: "1 !important",
+                  },
+                  "& .MuiDataGrid-sortIcon": {
+                    opacity: "0.5 !important",
+                    color: "#98A2B3 !important",
+                  },
+                  "& .MuiDataGrid-columnHeader--sorted .MuiDataGrid-sortIcon": {
+                    opacity: "1 !important",
+                    color: "primary.main !important",
+                  },
+                  "& .MuiDataGrid-columnHeader:hover .MuiDataGrid-sortIcon": {
+                    opacity: "1 !important",
+                    color: "#344054 !important",
                   },
                   "& .MuiDataGrid-columnHeaders": {
                     backgroundColor: "#F9FAFB",

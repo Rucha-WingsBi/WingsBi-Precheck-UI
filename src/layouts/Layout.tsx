@@ -23,7 +23,7 @@ import {
   MenuItem,
   Stack,
   Collapse,
- 
+
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -54,6 +54,8 @@ import {
   Warehouse as WarehouseIcon,
   MoveToInbox as MoveToInboxIcon,
   Inventory as InventoryIcon,
+  PlaylistAddCheck as PlaylistAddCheckIcon,
+  PlaylistAddCheck,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import type { RootState } from "../store/store";
@@ -87,6 +89,15 @@ interface MenuItem {
   roles?: string[];
   subItems?: MenuItem[];
 }
+
+const isItemActive = (item: MenuItem, currentPath: string): boolean => {
+  if (item.subItems && item.subItems.length > 0) {
+    return item.subItems.some(
+      (sub) => currentPath === sub.path || currentPath.startsWith(sub.path + "/")
+    );
+  }
+  return currentPath === item.path || currentPath.startsWith(item.path + "/");
+};
 
 const Main = styled("main")(({ theme }) => ({
   flexGrow: 1,
@@ -198,7 +209,7 @@ export default function Layout() {
       text: "Bulk Import",
       pageName: "Bulk Import",
       icon: <CloudUploadIcon />,
-      path: "/scriptexecutor",
+      path: "/bulk-import",
     },
     {
       text: "Production Order",
@@ -210,7 +221,7 @@ export default function Layout() {
           text: "Manage Orders",
           pageName: "Manage Orders",
           icon: <AssignmentIcon />,
-          path: "/production-order/upload",
+          path: "/production-order/history",
         },
       ],
     },
@@ -224,13 +235,13 @@ export default function Layout() {
           text: "IR/MSN List",
           pageName: "IR/MSN List",
           icon: <ListAltIcon />,
-          path: "/irmsn/view",
+          path: "/irmsn/list",
         },
         {
           text: "New IR/MSN",
           pageName: "New IR/MSN",
           icon: <AddIcon />,
-          path: "/irmsn/generate",
+          path: "/irmsn/new",
         },
       ],
     },
@@ -244,73 +255,66 @@ export default function Layout() {
           text: "QR Code List",
           pageName: "QR Code List",
           icon: <ListAltIcon />,
-          path: "/qrcode/view",
+          path: "/qrcode/list",
         },
         {
           text: "New QR Code",
           pageName: "New QR Code",
           icon: <AddIcon />,
-          path: "/qrcode/generate",
+          path: "/qrcode/new",
         },
-      ],
-    },
-    {
-      text: "Precheck",
-      pageName: "Precheck",
-      icon: <FactCheckIcon />,
-      path: "/precheck",
-      subItems: [
-        {
-          text: "Precheck History",
-          pageName: "Precheck History",
-          icon: <HistoryIcon />,
-          path: "/precheck/view",
-        },
-        {
-          text: "Run Precheck",
-          pageName: "Run Precheck",
-          icon: <PlayArrowIcon />,
-          path: "/precheck/make",
-        },
-      ],
-    },
-    {
-      text: "Store",
-      pageName: "Store",
-      icon: <StoreIcon />,
-      path: "/store",
-      subItems: [
         {
           text: "Store In",
           pageName: "Store In",
-          icon: <MoveToInboxIcon />,
-          path: "/precheck/store-in",
-        },
-        {
-          text: "Available In Store",
-          pageName: "Available In Store",
-          icon: <InventoryIcon />,
-          path: "/precheck/available-in-store",
+          icon: <StoreIcon />,
+          path: "/qrcode/store-in",
         },
       ],
     },
+    {
+      text: "Verification",
+      pageName: "Precheck",
+      icon: <FactCheckIcon />,
+      path: "/verification",
+      subItems: [
+        {
+          text: "Verification History",
+          pageName: "Verification History",
+          icon: <HistoryIcon />,
+          path: "/verification/history",
+        },
+        {
+          text: "Part Verification",
+          pageName: "Part Verification",
+          icon: < PlaylistAddCheck />,
+          path: "/verification/parts",
+        },
+        {
+          text: "Material Requisition",
+          pageName: "Material Requisition",
+          icon: <AssignmentIcon />,
+          path: "/verification/material-requisition",
+        },
+      ],
+    },
+
     {
       text: "Assembly",
       pageName: "Assembly",
       icon: <MenuBookIcon />,
-      path: "/sop",
+      path: "/assembly",
       subItems: [
         {
           text: "Assembly Explorer",
           pageName: "Assembly Explorer",
           icon: <AccountTreeIcon />,
-          path: "/sop/view",
+          path: "/assembly/explorer",
         },
         {
           text: "Components",
           pageName: "Components",
           icon: <ExtensionIcon />,
-          path: "/components",
+          path: "/assembly/components",
         },
       ],
     },
@@ -324,19 +328,19 @@ export default function Layout() {
           text: "User Management",
           pageName: "User Management",
           icon: <PeopleIcon />,
-          path: "/adminmaster/usermanagement",
+          path: "/adminmaster/user-management",
         },
         {
           text: "Role Management",
           pageName: "Role Management",
           icon: <SettingsIcon />,
-          path: "/adminmaster/rolemanagement",
+          path: "/adminmaster/role-management",
         },
         {
           text: "Master Data",
           pageName: "Master Data",
           icon: <StorageIcon />,
-          path: "/adminmaster/addcomponents",
+          path: "/adminmaster/master-data",
         },
       ],
     },
@@ -454,7 +458,7 @@ export default function Layout() {
   };
 
   const handleNavigation = (path: string) => {
-    if (hasPendingScans && location.pathname === "/precheck/make") {
+    if (hasPendingScans && (location.pathname === "/verification/parts" || location.pathname === "/verification")) {
       setNextLocation(path);
       setNavigationDialogOpen(true);
     } else {
@@ -531,152 +535,155 @@ export default function Layout() {
       </LogoBox>
 
       <List sx={{ flex: 1, py: 1 }}>
-        {getFilteredMenuItems().map((item) => (
-          <Box key={item.text}>
-            <ListItem disablePadding sx={{ display: "block" }}>
-              <Tooltip
-                title={!isSidebarOpen && isDesktopVersion ? item.text : ""}
-                placement="right"
-                arrow
-              >
-                <ListItemButton
-                  onClick={() => handleItemClick(item)}
-                  sx={{
-                    minHeight: 46,
-                    px: isSidebarOpen || !isDesktopVersion ? 2.5 : 1.5,
-                    justifyContent: isSidebarOpen || !isDesktopVersion ? "initial" : "center",
-                    mx: 1,
-                    mb: 0.5,
-                    borderRadius: 2,
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      backgroundColor: "rgba(109, 42, 143, 0.08)",
-                      transform: "translateX(4px)",
-                    },
-                    backgroundColor: location.pathname.startsWith(item.path)
-                      ? "rgba(109, 42, 143, 0.12)"
-                      : "transparent",
-                  }}
+        {getFilteredMenuItems().map((item) => {
+          const isActive = isItemActive(item, location.pathname);
+          return (
+            <Box key={item.text}>
+              <ListItem disablePadding sx={{ display: "block" }}>
+                <Tooltip
+                  title={!isSidebarOpen && isDesktopVersion ? item.text : ""}
+                  placement="right"
+                  arrow
                 >
-                  {item.icon && (
-                    <ListItemIcon
-                      sx={{
-                        minWidth: 0,
-                        mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
-                        justifyContent: "center",
-                        color: location.pathname.startsWith(item.path)
-                          ? "#6D2A8F"
-                          : "text.secondary",
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                  )}
-                  <ListItemText
-                    primary={item.text}
+                  <ListItemButton
+                    onClick={() => handleItemClick(item)}
                     sx={{
-                      flex: 1,
-                      opacity: isSidebarOpen || !isDesktopVersion ? 1 : 0,
-                      display: isSidebarOpen || !isDesktopVersion ? "block" : "none",
-                      "& .MuiListItemText-primary": {
-                        fontSize: "0.9rem",
-                        fontWeight: location.pathname.startsWith(item.path)
-                          ? 600
-                          : 500,
-                        color: location.pathname.startsWith(item.path)
-                          ? "#6D2A8F"
-                          : "text.primary",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                      minHeight: 46,
+                      px: isSidebarOpen || !isDesktopVersion ? 2.5 : 1.5,
+                      justifyContent: isSidebarOpen || !isDesktopVersion ? "initial" : "center",
+                      mx: 1,
+                      mb: 0.5,
+                      borderRadius: 2,
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        backgroundColor: "rgba(109, 42, 143, 0.08)",
+                        transform: "translateX(4px)",
                       },
+                      backgroundColor: isActive
+                        ? "rgba(109, 42, 143, 0.12)"
+                        : "transparent",
                     }}
-                  />
-
-                  {item.subItems &&
-                    item.subItems.length > 0 &&
-                    (isSidebarOpen || !isDesktopVersion) && (
-                      <Box sx={{ ml: "auto", display: "flex", alignItems: "center" }}>
-                        {expandedItems.includes(item.text) ? (
-                          <ExpandLessIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
-                        ) : (
-                          <ExpandMoreIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
-                        )}
-                      </Box>
-                    )}
-                </ListItemButton>
-              </Tooltip>
-            </ListItem>
-
-            {item.subItems && item.subItems.length > 0 && (
-              <Collapse
-                in={
-                  expandedItems.includes(item.text) &&
-                  (isSidebarOpen || !isDesktopVersion)
-                }
-                timeout="auto"
-                unmountOnExit
-              >
-                <List component="div" disablePadding>
-                  {item.subItems.map((subItem) => (
-                    <ListItemButton
-                      key={subItem.text}
-                      onClick={() => handleSubItemClick(subItem)}
-                      sx={{
-                        pl: 3.5,
-                        pr: 1.5,
-                        py: 1,
-                        mx: 1,
-                        mb: 0.5,
-                        borderRadius: 2,
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          backgroundColor: "rgba(109, 42, 143, 0.05)",
-                          transform: "translateX(4px)",
-                        },
-                        backgroundColor:
-                          location.pathname === subItem.path
-                            ? "rgba(109, 42, 143, 0.1)"
-                            : "transparent",
-                      }}
-                    >
-                      {subItem.icon && (
-                        <ListItemIcon
-                          sx={{
-                            minWidth: 32,
-                            color:
-                              location.pathname === subItem.path
-                                ? "#6D2A8F"
-                                : "text.secondary",
-                          }}
-                        >
-                          {subItem.icon}
-                        </ListItemIcon>
-                      )}
-                      <ListItemText
-                        primary={subItem.text}
+                  >
+                    {item.icon && (
+                      <ListItemIcon
                         sx={{
-                          "& .MuiListItemText-primary": {
-                            fontSize: "0.825rem",
-                            fontWeight:
-                              location.pathname === subItem.path ? 600 : 400,
-                            color:
-                              location.pathname === subItem.path
-                                ? "#6D2A8F"
-                                : "text.secondary",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          },
+                          minWidth: 0,
+                          mr: isSidebarOpen || !isDesktopVersion ? 3 : 0,
+                          justifyContent: "center",
+                          color: isActive
+                            ? "#6D2A8F"
+                            : "text.secondary",
                         }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Collapse>
-            )}
-          </Box>
-        ))}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                    )}
+                    <ListItemText
+                      primary={item.text}
+                      sx={{
+                        flex: 1,
+                        opacity: isSidebarOpen || !isDesktopVersion ? 1 : 0,
+                        display: isSidebarOpen || !isDesktopVersion ? "block" : "none",
+                        "& .MuiListItemText-primary": {
+                          fontSize: "0.9rem",
+                          fontWeight: isActive
+                            ? 600
+                            : 500,
+                          color: isActive
+                            ? "#6D2A8F"
+                            : "text.primary",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        },
+                      }}
+                    />
+
+                    {item.subItems &&
+                      item.subItems.length > 0 &&
+                      (isSidebarOpen || !isDesktopVersion) && (
+                        <Box sx={{ ml: "auto", display: "flex", alignItems: "center" }}>
+                          {expandedItems.includes(item.text) ? (
+                            <ExpandLessIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
+                          ) : (
+                            <ExpandMoreIcon sx={{ color: "text.secondary", fontSize: "1.25rem" }} />
+                          )}
+                        </Box>
+                      )}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+
+              {item.subItems && item.subItems.length > 0 && (
+                <Collapse
+                  in={
+                    expandedItems.includes(item.text) &&
+                    (isSidebarOpen || !isDesktopVersion)
+                  }
+                  timeout="auto"
+                  unmountOnExit
+                >
+                  <List component="div" disablePadding>
+                    {item.subItems.map((subItem) => (
+                      <ListItemButton
+                        key={subItem.text}
+                        onClick={() => handleSubItemClick(subItem)}
+                        sx={{
+                          pl: 3.5,
+                          pr: 1.5,
+                          py: 1,
+                          mx: 1,
+                          mb: 0.5,
+                          borderRadius: 2,
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: "rgba(109, 42, 143, 0.05)",
+                            transform: "translateX(4px)",
+                          },
+                          backgroundColor:
+                            location.pathname === subItem.path
+                              ? "rgba(109, 42, 143, 0.1)"
+                              : "transparent",
+                        }}
+                      >
+                        {subItem.icon && (
+                          <ListItemIcon
+                            sx={{
+                              minWidth: 32,
+                              color:
+                                location.pathname === subItem.path
+                                  ? "#6D2A8F"
+                                  : "text.secondary",
+                            }}
+                          >
+                            {subItem.icon}
+                          </ListItemIcon>
+                        )}
+                        <ListItemText
+                          primary={subItem.text}
+                          sx={{
+                            "& .MuiListItemText-primary": {
+                              fontSize: "0.825rem",
+                              fontWeight:
+                                location.pathname === subItem.path ? 600 : 400,
+                              color:
+                                location.pathname === subItem.path
+                                  ? "#6D2A8F"
+                                  : "text.secondary",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            },
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Collapse>
+              )}
+            </Box>
+          );
+        })}
       </List>
     </>
   );
