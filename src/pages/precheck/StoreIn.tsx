@@ -1044,27 +1044,31 @@ const StoreIn: React.FC = () => {
                   },
                 }}
               >
-                <MenuItem
-                  onClick={() => {
-                    handleBulkMenuClose();
-                    bulkStoreInFileInputRef.current?.click();
-                  }}
-                  sx={{ py: 1, px: 2, fontSize: "0.875rem", fontWeight: 600, color: "#344054" }}
-                >
-                  <ListItemIcon sx={{ color: "#D97706", minWidth: 32 }}>
-                    <CloudUploadIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary="Import" primaryTypographyProps={{ fontWeight: 600, fontSize: "0.875rem" }} />
-                </MenuItem>
-                <MenuItem
-                  onClick={handleDownloadStoreInTemplate}
-                  sx={{ py: 1, px: 2, fontSize: "0.875rem", fontWeight: 600, color: "#344054" }}
-                >
-                  <ListItemIcon sx={{ color: "#4B5563", minWidth: 32 }}>
-                    <FileDownloadIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary="Template" primaryTypographyProps={{ fontWeight: 600, fontSize: "0.875rem" }} />
-                </MenuItem>
+                <Tooltip title="Import Excel file to bulk store in QR codes" placement="left" arrow>
+                  <MenuItem
+                    onClick={() => {
+                      handleBulkMenuClose();
+                      bulkStoreInFileInputRef.current?.click();
+                    }}
+                    sx={{ py: 1, px: 2, fontSize: "0.875rem", fontWeight: 600, color: "#344054" }}
+                  >
+                    <ListItemIcon sx={{ color: "#D97706", minWidth: 32 }}>
+                      <CloudUploadIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Import" primaryTypographyProps={{ fontWeight: 600, fontSize: "0.875rem" }} />
+                  </MenuItem>
+                </Tooltip>
+                <Tooltip title="Download Excel template for bulk store in QR codes" placement="left" arrow>
+                  <MenuItem
+                    onClick={handleDownloadStoreInTemplate}
+                    sx={{ py: 1, px: 2, fontSize: "0.875rem", fontWeight: 600, color: "#344054" }}
+                  >
+                    <ListItemIcon sx={{ color: "#4B5563", minWidth: 32 }}>
+                      <FileDownloadIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Template" primaryTypographyProps={{ fontWeight: 600, fontSize: "0.875rem" }} />
+                  </MenuItem>
+                </Tooltip>
               </Menu>
 
               {/* Hidden file input for Bulk Store In import */}

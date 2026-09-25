@@ -13,6 +13,7 @@ import {
   ListItemText,
   Divider,
   Grid,
+  Tooltip,
 } from "@mui/material";
 import {
   QrCodeScanner as QrCodeScannerIcon,
@@ -215,41 +216,49 @@ export const PrecheckHeaderBar: React.FC<PrecheckHeaderBarProps> = ({
 
           {/* <Divider sx={{ my: 0.5 }} /> */}
 
-          <MenuItem
-            onClick={() => {
-              handleMoreMenuClose();
-              onUploadExcel();
-            }}
-            disabled={uploadInProgress}
-          >
-            <ListItemIcon>
-              {uploadInProgress ? (
-                <CircularProgress size={18} color="primary" />
-              ) : (
-                <UploadIcon fontSize="small" sx={{ color: "#D97706" }} />
-              )}
-            </ListItemIcon>
-            <ListItemText primary={uploadInProgress ? "Uploading..." : "Import"} />
-          </MenuItem>
+          <Tooltip title="Import Excel file for bulk verification" placement="left" arrow>
+            <span>
+              <MenuItem
+                onClick={() => {
+                  handleMoreMenuClose();
+                  onUploadExcel();
+                }}
+                disabled={uploadInProgress}
+              >
+                <ListItemIcon>
+                  {uploadInProgress ? (
+                    <CircularProgress size={18} color="primary" />
+                  ) : (
+                    <UploadIcon fontSize="small" sx={{ color: "#D97706" }} />
+                  )}
+                </ListItemIcon>
+                <ListItemText primary={uploadInProgress ? "Uploading..." : "Import"} />
+              </MenuItem>
+            </span>
+          </Tooltip>
 
-          <MenuItem
-            onClick={() => {
-              handleMoreMenuClose();
-              onDownloadTemplate();
-            }}
-            disabled={downloadTemplateInProgress || uploadInProgress}
-          >
-            <ListItemIcon>
-              {downloadTemplateInProgress ? (
-                <CircularProgress size={18} color="primary" />
-              ) : (
-                <FileDownloadIcon fontSize="small" sx={{ color: "#4B5563" }} />
-              )}
-            </ListItemIcon>
-            <ListItemText
-              primary={downloadTemplateInProgress ? "Downloading..." : "Template"}
-            />
-          </MenuItem>
+          <Tooltip title="Download Excel template for bulk verification" placement="left" arrow>
+            <span>
+              <MenuItem
+                onClick={() => {
+                  handleMoreMenuClose();
+                  onDownloadTemplate();
+                }}
+                disabled={downloadTemplateInProgress || uploadInProgress}
+              >
+                <ListItemIcon>
+                  {downloadTemplateInProgress ? (
+                    <CircularProgress size={18} color="primary" />
+                  ) : (
+                    <FileDownloadIcon fontSize="small" sx={{ color: "#4B5563" }} />
+                  )}
+                </ListItemIcon>
+                <ListItemText
+                  primary={downloadTemplateInProgress ? "Downloading..." : "Template"}
+                />
+              </MenuItem>
+            </span>
+          </Tooltip>
 
          
         </Menu>
