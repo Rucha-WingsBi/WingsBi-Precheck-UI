@@ -41,7 +41,7 @@ const StoredInComponents = React.lazy(() => import("./StoredInComponents"));
 
 // Helper function to format date
 const formatDateToIST = (dateString: string | undefined | null) => {
-  if (!dateString) return "N/A";
+  if (!dateString) return "-";
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return String(dateString);
@@ -51,7 +51,7 @@ const formatDateToIST = (dateString: string | undefined | null) => {
       year: "numeric",
     });
   } catch {
-    return "N/A";
+    return "-";
   }
 };
 
@@ -212,6 +212,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   const [selectedBomRowIndex, setSelectedBomRowIndex] = useState<number | null>(null);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [isServerPaginated, setIsServerPaginated] = useState<boolean>(false);
+  const [totalQrRecords, setTotalQrRecords] = useState<number>(0);
+  const [isQrServerPaginated, setIsQrServerPaginated] = useState<boolean>(false);
 
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,12 +289,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   }, [indexedBomItems, bomSortColumn, bomSortDirection]);
 
   const paginatedBomItems = useMemo(() => {
-    if (isServerPaginated) {
-      return sortedBomItems;
-    }
-    const startIndex = bomPage * bomRowsPerPage;
-    return sortedBomItems.slice(startIndex, startIndex + bomRowsPerPage);
-  }, [sortedBomItems, bomPage, bomRowsPerPage, isServerPaginated]);
+    return sortedBomItems;
+  }, [sortedBomItems]);
 
   // Sorting states for Available QR Codes table
   const [qrSortColumn, setQrSortColumn] = useState<string | null>(null);
@@ -340,9 +338,8 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
   }, [displayQrCodes, qrSortColumn, qrSortDirection]);
 
   const paginatedQrCodes = useMemo(() => {
-    const startIndex = qrPage * qrRowsPerPage;
-    return sortedQrCodes.slice(startIndex, startIndex + qrRowsPerPage);
-  }, [sortedQrCodes, qrPage, qrRowsPerPage]);
+    return sortedQrCodes;
+  }, [sortedQrCodes]);
 
   // Keep references to satisfy TypeScript's noUnusedLocals compile check
   if (false as boolean) {
@@ -406,67 +403,29 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       );
 
       const responseData = response.data;
-      let qrCodesList: any[] | null = null;
-      let totalCount = 0;
-
-      if (Array.isArray(responseData)) {
-        qrCodesList = responseData;
-        totalCount = responseData.length;
-        setIsServerPaginated(false);
-      } else if (responseData && typeof responseData === "object") {
-        if (Array.isArray(responseData.data)) {
-          qrCodesList = responseData.data;
-        } else if (Array.isArray(responseData.qrCodes)) {
-          qrCodesList = responseData.qrCodes;
-        }
-        totalCount = responseData.totalRecords ?? (responseData.totalCount ?? (qrCodesList ? qrCodesList.length : 0));
-        setIsServerPaginated(responseData.totalRecords !== undefined || responseData.totalPages !== undefined);
-      }
-
+      const qrCodesList = responseData?.data || [];
+      const totalCount = responseData?.totalRecords || 0;
+      setIsServerPaginated(true);
       setTotalRecords(totalCount);
 
-      if (qrCodesList) {
+      if (qrCodesList.length > 0) {
         setResults(qrCodesList);
         setMasterData(null);
 
-        // Group by drawing/LN code to generate BOM items
-        const map = new Map<string, any>();
-        qrCodesList.forEach((item: any) => {
-          const drawingNum = item.drawingNumber || item.drawingnumber || "N/A";
-          const lnCode = item.lnItemCode || item.lnitemcode || "N/A";
-          const key = `${drawingNum}-${lnCode}`.toLowerCase();
-
-          if (!map.has(key)) {
-            map.set(key, {
-              id: item.drawingnumberId || item.drawingNumberId || item.id || 0,
-              drawingnumberId: item.drawingnumberId || item.drawingNumberId || item.id || 0,
-              prodSeriesId: item.prodseriesid || item.prodSeriesId || item.prodSeries || item.productionSeriesId || item.productionSeries || 0,
-              productionSeries: item.productionSeries || item.prodSeries || "N/A",
-              drawingNumber: drawingNum,
-              lnitemcode: lnCode,
-              lnItemCode: lnCode,
-              componentType: item.componentType || item.componenttype || item.type || "N/A",
-              poNumber: item.poNumber || item.poNo || item.purchaseOrderNumber || item.productionOrderNumber || "N/A",
-              unit: item.unit || "NOS",
-              totalQuantity: 0,
-              availableQuantity: 0,
-              totalQrQuantity: item.totalQrQuantity !== undefined && item.totalQrQuantity !== null ? item.totalQrQuantity : 0,
-              totalQrNumber: item.totalQrNumber !== undefined && item.totalQrNumber !== null ? item.totalQrNumber : 0,
-            });
-          }
-          const component = map.get(key);
-          component.totalQuantity += Number(item.quantity) || 0;
-          component.availableQuantity += Number(item.remainingQuantity) || 0;
-
-          if (item.totalQrQuantity !== undefined && item.totalQrQuantity !== null) {
-            component.totalQrQuantity = item.totalQrQuantity;
-          }
-          if (item.totalQrNumber !== undefined && item.totalQrNumber !== null) {
-            component.totalQrNumber = item.totalQrNumber;
-          }
-        });
-
-        const generatedBom = Array.from(map.values());
+        // Map response items directly matching API structure
+        const generatedBom = qrCodesList.map((item: any, idx: number) => ({
+          id: idx + 1,
+          drawingNumber: item.drawingNumber || "-",
+          lnItemCode: item.lnItemCode || "-",
+          lnitemcode: item.lnItemCode || "-",
+          productionSeries: item.productionSeries || "-",
+          componentType: item.componentType || "-",
+          totalQuantity: item.totalQuantity !== undefined ? Number(item.totalQuantity) : 0,
+          totalRemainingQuantity: item.totalRemainingQuantity !== undefined ? Number(item.totalRemainingQuantity) : 0,
+          availableQuantity: item.totalRemainingQuantity !== undefined ? Number(item.totalRemainingQuantity) : 0,
+          qrCount: item.qrCount !== undefined ? Number(item.qrCount) : 0,
+          totalQrNumber: item.qrCount !== undefined ? Number(item.qrCount) : 0,
+        }));
         setBomItems(generatedBom);
 
         setSelectedBomRowIndex(null);
@@ -565,24 +524,50 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
     }
 
     try {
-      const response = await api.post("/api/Precheck/GetAvailablComponents", {
-        prodSeriesId: Number(activeSeriesId) || 0,
-        drawingNumberId: Number(drawingNumberId) || 0,
-        quantity: Number(bomItem.totalQuantity || bomItem.quantity || bomItem.qty) || 1,
-        pageNumber: pNum + 1,
-        pageSize: pSize,
-      });
+      const pageNumber = pNum + 1;
+      const pageSize = pSize;
 
-      const data = response.data;
-      if (Array.isArray(data)) {
-        const mappedData = data.map((item: any) => ({
-          qrCodeNumber: item.qrCodeNumber || item.qrCode || "N/A",
-          id: item.idNumber || item.id || "N/A",
+      const response = await api.post(
+        `/api/Precheck/GetAvailablComponents?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+        {
+          prodSeriesId: Number(activeSeriesId) || 0,
+          drawingNumberId: Number(drawingNumberId) || 0,
+          quantity: Number(bomItem.totalQuantity) || 0,
+          totalQrQty: Number(bomItem.qrCount) || 0,
+        }
+      );
+
+      const responseData = response.data;
+      let rawList: any[] = [];
+      let totalCount = 0;
+
+      if (Array.isArray(responseData)) {
+        rawList = responseData;
+        totalCount = responseData.length;
+        setIsQrServerPaginated(false);
+      } else if (responseData && typeof responseData === "object") {
+        if (Array.isArray(responseData.data)) {
+          rawList = responseData.data;
+        } else if (Array.isArray(responseData.items)) {
+          rawList = responseData.items;
+        } else if (Array.isArray(responseData.qrCodes)) {
+          rawList = responseData.qrCodes;
+        }
+        totalCount = responseData.totalRecords ?? (responseData.totalCount ?? rawList.length);
+        setIsQrServerPaginated(responseData.totalRecords !== undefined || responseData.totalPages !== undefined);
+      }
+
+      setTotalQrRecords(totalCount);
+
+      if (rawList && rawList.length > 0) {
+        const mappedData = rawList.map((item: any) => ({
+          qrCodeNumber: item.qrCodeNumber || item.qrCode || "-",
+          id: item.idNumber || item.id || "-",
           qty: item.quantity !== undefined ? item.quantity : (item.qty !== undefined ? item.qty : 0),
-          unit: item.unit || "N/A",
-          status: item.status || "N/A",
-          productionOrderNumber: item.productionOrderNumber || item.poNumber || item.poNo || item.purchaseOrderNumber || "N/A",
-          location: item.location || item.storeLocation || "N/A",
+          unit: item.unit || "-",
+          status: item.status || "-",
+          productionOrderNumber: item.productionOrderNumber || item.poNumber || item.poNo || item.purchaseOrderNumber || "-",
+          location: item.location || item.storeLocation || "-",
           createdDate: item.createdDate || item.createdAt || item.date || null,
         }));
         setOverrideQrCodes(mappedData);
@@ -597,6 +582,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         "Failed to fetch available components from API."
       );
       setOverrideQrCodes([]);
+      setTotalQrRecords(0);
     } finally {
       setIsQrLoading(false);
     }
@@ -1043,7 +1029,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       </Typography>
                     </Box>
                     <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-                      {bomItems.length} {bomItems.length === 1 ? "item" : "items"}
+                      {totalRecords} {totalRecords === 1 ? "item" : "items"}
                     </Typography>
                   </Box>
 
@@ -1118,7 +1104,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                     <CustomPagination
                       page={bomPage}
                       pageSize={bomRowsPerPage}
-                      totalCount={isServerPaginated && totalRecords > 0 ? totalRecords : bomItems.length}
+                      totalCount={totalRecords}
                       pageSizeOptions={[5, 10, 25, 50]}
                       onPageChange={(newPage) => {
                         setBomPage(newPage);
@@ -1155,7 +1141,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       </Typography>
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.85rem", fontWeight: 500 }}>
-                          {displayQrCodes.length} {displayQrCodes.length === 1 ? "QR code" : "QR codes"}
+                          {totalQrRecords} {totalQrRecords === 1 ? "QR code" : "QR codes"}
                         </Typography>
                         <IconButton
                           size="small"
@@ -1213,13 +1199,13 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                 }}
                               >
                                 <TableCell sx={{ fontWeight: 600, color: "#101828" }} align="center">
-                                  {row.qrCodeNumber || "N/A"}
+                                  {row.qrCodeNumber || "-"}
                                 </TableCell>
-                                <TableCell align="center">{row.id || "N/A"}</TableCell>
+                                <TableCell align="center">{row.id || "-"}</TableCell>
                                 <TableCell align="center">{formatQuantity(row.qty)}</TableCell>
-                                <TableCell align="center">{row.unit || row.unitName || "N/A"}</TableCell>
-                                <TableCell align="center">{row.productionOrderNumber || "N/A"}</TableCell>
-                                <TableCell align="center">{row.location || "N/A"}</TableCell>
+                                <TableCell align="center">{row.unit || row.unitName || "-"}</TableCell>
+                                <TableCell align="center">{row.productionOrderNumber || "-"}</TableCell>
+                                <TableCell align="center">{row.location || "-"}</TableCell>
                                 <TableCell align="center">{formatDateToIST(row.createdDate || row.createdAt || row.date)}</TableCell>
                               </TableRow>
                             ))
@@ -1234,7 +1220,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                       <CustomPagination
                         page={qrPage}
                         pageSize={qrRowsPerPage}
-                        totalCount={displayQrCodes.length}
+                        totalCount={totalQrRecords}
                         pageSizeOptions={[5, 10, 25, 50]}
                         onPageChange={(newPage) => {
                           setQrPage(newPage);
