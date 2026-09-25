@@ -662,7 +662,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
               />
             </MenuItem>
 
-            {/* Undo Precheck */}
+            {/* Undo Verification */}
             {!activeMenuRow.item.isRejected &&
               activeMenuRow.item.precheckDetailsId &&
               activeMenuRow.item.precheckDetailsId > 0 &&
@@ -683,13 +683,13 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                     <UndoIcon fontSize="small" color="warning" />
                   </ListItemIcon>
                   <ListItemText
-                    primary="Undo Precheck"
+                    primary="Undo Verification"
                     primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }}
                   />
                 </MenuItem>
               )}
 
-            {/* Delete Precheck */}
+            {/* Delete Part */}
             {!activeMenuRow.item.isRejected &&
               activeMenuRow.item.precheckDetailsId &&
               activeMenuRow.item.precheckDetailsId > 0 &&
@@ -707,7 +707,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                     <DeleteIcon fontSize="small" color="error" />
                   </ListItemIcon>
                   <ListItemText
-                    primary="Delete Precheck"
+                    primary="Delete Part"
                     primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500, color: "error.main" }}
                   />
                 </MenuItem>
@@ -759,20 +759,42 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
         )}
       </Menu>
 
-      {/* Confirm Undo Precheck Dialog */}
+      {/* Confirm Undo Verification Dialog */}
       <Dialog
         open={Boolean(confirmUndoItem)}
         onClose={() => setConfirmUndoItem(null)}
         PaperProps={{ sx: { borderRadius: "12px", p: 1 } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem" }}>Confirm Undo Precheck</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem" }}>Confirm Undo Verification</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ fontSize: "0.875rem", color: "#344054" }}>
-            Are you sure you want to undo precheck for Part Number: <strong>{confirmUndoItem?.drawingNumber}</strong>?
+            Are you sure you want to Undo Verification for Part Number: <strong>{confirmUndoItem?.drawingNumber}</strong>?
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmUndoItem(null)} variant="outlined" color="inherit" size="small" sx={{ textTransform: "none" }}>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={() => setConfirmUndoItem(null)}
+            variant="outlined"
+            size="small"
+            sx={{
+              height: 36,
+              minWidth: 70,
+              px: 2,
+              borderRadius: "6px",
+              borderColor: "#D0D5DD",
+              backgroundColor: "#ffffff",
+              color: "#667085",
+              fontWeight: 600,
+              fontSize: "0.82rem",
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": {
+                borderColor: "#98A2B3",
+                backgroundColor: "#F9FAFB",
+                color: "#101828",
+              },
+            }}
+          >
             Cancel
           </Button>
           <Button
@@ -785,27 +807,58 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
             variant="contained"
             color="warning"
             size="small"
-            sx={{ textTransform: "none" }}
+            sx={{
+              height: 36,
+              minWidth: 70,
+              px: 2,
+              borderRadius: "6px",
+              fontWeight: 600,
+              fontSize: "0.82rem",
+              textTransform: "none",
+              boxShadow: "none",
+            }}
           >
-            Undo Precheck
+            Undo
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Confirm Delete Precheck Dialog */}
+      {/* Confirm Delete Part Dialog */}
       <Dialog
         open={Boolean(confirmDeleteItem)}
         onClose={() => setConfirmDeleteItem(null)}
         PaperProps={{ sx: { borderRadius: "12px", p: 1 } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem", color: "error.main" }}>Confirm Delete Precheck</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1rem", color: "error.main" }}>Confirm Delete Part</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ fontSize: "0.875rem", color: "#344054" }}>
-            Are you sure you want to delete precheck for Part Number: <strong>{confirmDeleteItem?.drawingNumber}</strong>? This action cannot be undone.
+            Are you sure you want to Delete Part for Part Number: <strong>{confirmDeleteItem?.drawingNumber}</strong>? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmDeleteItem(null)} variant="outlined" color="inherit" size="small" sx={{ textTransform: "none" }}>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={() => setConfirmDeleteItem(null)}
+            variant="outlined"
+            size="small"
+            sx={{
+              height: 36,
+              minWidth: 70,
+              px: 2,
+              borderRadius: "6px",
+              borderColor: "#D0D5DD",
+              backgroundColor: "#ffffff",
+              color: "#667085",
+              fontWeight: 600,
+              fontSize: "0.82rem",
+              textTransform: "none",
+              boxShadow: "none",
+              "&:hover": {
+                borderColor: "#98A2B3",
+                backgroundColor: "#F9FAFB",
+                color: "#101828",
+              },
+            }}
+          >
             Cancel
           </Button>
           <Button
@@ -818,9 +871,18 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
             variant="contained"
             color="error"
             size="small"
-            sx={{ textTransform: "none" }}
+            sx={{
+              height: 36,
+              minWidth: 70,
+              px: 2,
+              borderRadius: "6px",
+              fontWeight: 600,
+              fontSize: "0.82rem",
+              textTransform: "none",
+              boxShadow: "none",
+            }}
           >
-            Delete Precheck
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
