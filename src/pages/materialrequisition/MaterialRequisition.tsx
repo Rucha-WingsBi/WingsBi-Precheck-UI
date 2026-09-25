@@ -1029,19 +1029,20 @@ const MaterialRequisition: React.FC = () => {
           mb: 1,
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <IconButton
-            onClick={() => navigate("/verification/parts")}
-            sx={{
-              color: "primary.main",
-              p: 0.5,
-              "&:hover": { backgroundColor: "grey.100" },
-            }}
-            title="Back to Make Precheck"
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Box>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <IconButton
+              onClick={() => navigate("/verification/parts")}
+              sx={{
+                color: "primary.main",
+                p: 0.5,
+                ml: -1,
+                "&:hover": { backgroundColor: "grey.100" },
+              }}
+              title="Back to Make Precheck"
+            >
+              <ArrowBackIcon />
+            </IconButton>
             <Typography
               variant="h5"
               sx={{
@@ -1052,11 +1053,11 @@ const MaterialRequisition: React.FC = () => {
             >
               Material Requisition
             </Typography>
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.25 }}>
-              Create, track, swap, and manage material requisition requests.
-            </Typography>
           </Box>
-        </Stack>
+          <Typography variant="body2" sx={{ color: "#667085", mt: 0.25, pl: "32px" }}>
+            Create, track, swap, and manage material requisition requests.
+          </Typography>
+        </Box>
 
         <Stack direction="row" spacing={1}>
           <Button

@@ -441,30 +441,28 @@ const ViewOrder: React.FC = () => {
         spacing={2}
         sx={{ mb: 1 }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton
             onClick={() => navigate(-1)}
             sx={{
               color: "primary.main",
               p: 0.5,
+              ml: -1,
               "&:hover": { backgroundColor: "grey.100" },
             }}
           >
             <ArrowBackIcon />
           </IconButton>
-          <Box>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: "primary.main",
-                fontSize: { xs: "1.25rem", sm: "1.5rem" },
-              }}
-            >
-              View Available QR Codes {poFromState ? `— ${poFromState}` : ""}
-            </Typography>
-
-          </Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "primary.main",
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            }}
+          >
+            View Available QR Codes {poFromState ? `— ${poFromState}` : ""}
+          </Typography>
         </Box>
       </Stack>
 

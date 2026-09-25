@@ -195,16 +195,21 @@ export const getAvailableComponentsForBOM = createAsyncThunk(
   "precheck/getAvailableComponentsForBOM",
   async (
     requestData: {
-      prodSeriesId: number;
-      drawingNumberId: number;
-      quantity: number;
+      prodSeriesId?: number | string;
+      drawingNumberId?: number | string;
+      quantity?: number;
     },
     { rejectWithValue },
   ) => {
     try {
+      const payload = {
+        prodSeriesId: requestData.prodSeriesId && !isNaN(Number(requestData.prodSeriesId)) ? Number(requestData.prodSeriesId) : 0,
+        drawingNumberId: requestData.drawingNumberId && !isNaN(Number(requestData.drawingNumberId)) ? Number(requestData.drawingNumberId) : 0,
+        quantity: requestData.quantity && !isNaN(Number(requestData.quantity)) ? Number(requestData.quantity) : 0,
+      };
       const response = await api.post(
         "/api/Precheck/GetAvailablComponents",
-        requestData,
+        payload,
       );
       return response.data;
     } catch (error: any) {

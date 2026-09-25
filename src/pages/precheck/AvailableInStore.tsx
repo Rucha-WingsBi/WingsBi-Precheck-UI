@@ -373,9 +373,11 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
         // Map response items directly matching API structure
         const generatedBom = qrCodesList.map((item: any, idx: number) => ({
           id: idx + 1,
+          drawingNumberId: item.drawingNumberId ?? null,
           drawingNumber: item.drawingNumber || "-",
           lnItemCode: item.lnItemCode || "-",
           lnitemcode: item.lnItemCode || "-",
+          prodSeriesId: item.prodSeriesId ?? null,
           productionSeries: item.productionSeries || "-",
           componentType: item.componentType || "-",
           totalQuantity: item.totalQuantity !== undefined ? Number(item.totalQuantity) : 0,
@@ -486,13 +488,18 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       const pageNumber = pNum + 1;
       const pageSize = pSize;
 
+      const parsedProdSeriesId = activeSeriesId && !isNaN(Number(activeSeriesId)) ? Number(activeSeriesId) : 0;
+      const parsedDrawingNumberId = drawingNumberId && !isNaN(Number(drawingNumberId)) ? Number(drawingNumberId) : 0;
+      const parsedQuantity = bomItem.totalQuantity !== undefined && bomItem.totalQuantity !== null && !isNaN(Number(bomItem.totalQuantity)) ? Number(bomItem.totalQuantity) : 0;
+      const parsedTotalQrQty = bomItem.qrCount !== undefined && bomItem.qrCount !== null && !isNaN(Number(bomItem.qrCount)) ? Number(bomItem.qrCount) : 0;
+
       const response = await api.post(
         `/api/Precheck/GetAvailablComponents?pageNumber=${pageNumber}&pageSize=${pageSize}`,
         {
-          prodSeriesId: activeSeriesId ? Number(activeSeriesId) : null,
-          drawingNumberId: drawingNumberId ? Number(drawingNumberId) : null,
-          quantity: bomItem.totalQuantity !== undefined && bomItem.totalQuantity !== null ? Number(bomItem.totalQuantity) : null,
-          totalQrQty: bomItem.qrCount !== undefined && bomItem.qrCount !== null ? Number(bomItem.qrCount) : null,
+          prodSeriesId: parsedProdSeriesId,
+          drawingNumberId: parsedDrawingNumberId,
+          quantity: parsedQuantity,
+          totalQrQty: parsedTotalQrQty,
         }
       );
 

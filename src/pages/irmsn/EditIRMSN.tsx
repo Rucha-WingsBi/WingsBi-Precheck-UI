@@ -330,17 +330,13 @@ export default function EditIRMSN() {
       }}
     >
       {/* Header Section */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        spacing={1.5}
-        sx={{ mb: 2 }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <IconButton
           onClick={() => navigate(-1)}
           sx={{
             color: "primary.main",
             p: 0.5,
+            ml: -1,
             "&:hover": { backgroundColor: "grey.100" },
           }}
         >
@@ -356,7 +352,7 @@ export default function EditIRMSN() {
         >
           Edit {isIR ? "IR" : "MSN"} Number: {id}
         </Typography>
-      </Stack>
+      </Box>
 
       {/* Error Alert */}
       {apiError && (

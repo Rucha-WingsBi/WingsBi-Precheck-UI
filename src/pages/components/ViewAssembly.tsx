@@ -634,36 +634,37 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
             gap: 1,
           }}
         >
-          <IconButton
-            onClick={() => {
-              const dwg = (selectedDrawingOption?.drawingNumber || drawingInput || "").trim();
-              const ln = (selectedDrawingOption?.lnItemCode || lnInput || "").trim();
-              if (dwg) {
-                navigate("/assembly/explorer", { state: { tab: "bom", drawingNumber: dwg, lnItemCode: ln } });
-              } else {
-                navigate(-1);
-              }
-            }}
-            sx={{
-              color: "primary.main",
-              p: 0.5,
-              "&:hover": { backgroundColor: "grey.100" },
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
           <Box>
-            <Typography
-              variant="h5"
-              color="primary.main"
-              fontWeight={700}
-              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
-            >
-              Edit BOM Details
-            </Typography>
-            <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
-              View, search, and manage component assembly mappings and bill of materials.
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <IconButton
+                onClick={() => {
+                  const dwg = (selectedDrawingOption?.drawingNumber || drawingInput || "").trim();
+                  const ln = (selectedDrawingOption?.lnItemCode || lnInput || "").trim();
+                  if (dwg) {
+                    navigate("/assembly/explorer", { state: { tab: "bom", drawingNumber: dwg, lnItemCode: ln } });
+                  } else {
+                    navigate(-1);
+                  }
+                }}
+                sx={{
+                  color: "primary.main",
+                  p: 0.5,
+                  ml: -1,
+                  "&:hover": { backgroundColor: "grey.100" },
+                }}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+              <Typography
+                variant="h5"
+                color="primary.main"
+                fontWeight={700}
+                sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+              >
+                Edit BOM Details
+              </Typography>
+            </Box>
+            
           </Box>
           <Box sx={{ ml: "auto" }}>
             <Tooltip
