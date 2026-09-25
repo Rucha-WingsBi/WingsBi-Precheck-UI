@@ -107,13 +107,11 @@ const DrawingNumberRowComponent = ({
     setMenuAnchorEl(null);
   };
 
-  // Edit Row — close menu first, then navigate on next tick so MUI Menu
-  // close animation completes before the component unmounts (prevents menu
-  // briefly staying visible during the route transition).
+
   const handleEdit = () => {
     setMenuAnchorEl(null);
     setTimeout(() => {
-      navigate(`/adminmaster/updatecomponents/${drawingData.id}`, {
+      navigate(`/assembly/add-components/${drawingData.id}`, {
         state: { editRow: drawingData, fromView: true },
       });
     }, 0);
@@ -186,18 +184,18 @@ const DrawingNumberRowComponent = ({
               sx: { minWidth: 160, borderRadius: "8px", py: 0.5 },
             }}
           >
-            <MenuItem onClick={handleEdit} sx={{ py: 0.75, px: 1.5 }}>
-              <ListItemIcon sx={{ minWidth: 28 }}>
-                <EditIcon fontSize="small" color="primary" />
-              </ListItemIcon>
-              <ListItemText primary="Edit Component" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
-            </MenuItem>
-
             <MenuItem onClick={handleToggleDetails} sx={{ py: 0.75, px: 1.5 }}>
               <ListItemIcon sx={{ minWidth: 28 }}>
                 {openDetails ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
               </ListItemIcon>
               <ListItemText primary={openDetails ? "Hide Additional Details" : "Additional Details"} primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
+            </MenuItem>
+
+            <MenuItem onClick={handleEdit} sx={{ py: 0.75, px: 1.5 }}>
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                <EditIcon fontSize="small" color="primary" />
+              </ListItemIcon>
+              <ListItemText primary="Edit" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
             </MenuItem>
 
             <MenuItem onClick={handleDelete} sx={{ py: 0.75, px: 1.5 }}>
@@ -534,7 +532,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                   variant="contained"
                   size="small"
                   disabled={!hasAddComponentAccess}
-                  onClick={() => navigate("/adminmaster/update-components", { state: { fromView: true } })}
+                  onClick={() => navigate("/assembly/add-components", { state: { fromView: true } })}
                   startIcon={<AddIcon fontSize="small" />}
                   sx={{
                     height: 34,

@@ -134,8 +134,11 @@ export default function AppRoutes() {
               <Route index element={<ViewSOP />} />
               <Route path="explorer" element={<ViewSOP />} />
               <Route path="components" element={<ViewComponents />} />
-              <Route path="update-components/:id" element={<UpdateComponents />} />
-              <Route path="view-assembly" element={<ViewAssembly />} />
+              <Route path="add-components" element={<UpdateComponents />} />
+              <Route path="add-components/:id" element={<UpdateComponents />} />
+              <Route path="Add-components" element={<UpdateComponents />} />
+              <Route path="Add-components/:id" element={<UpdateComponents />} />
+              <Route path="editbom" element={<ViewAssembly />} />
             </Route>
 
             {/* Settings Module */}
@@ -156,7 +159,6 @@ export default function AppRoutes() {
               <Route path="user-management" element={<UserManagement />} />
               <Route path="role-management" element={<RoleManagement />} />
               <Route path="master-data" element={<AddComponents />} />
-              
             </Route>
 
             {/* Bulk Import Module */}

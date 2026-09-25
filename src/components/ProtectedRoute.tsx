@@ -27,13 +27,15 @@ const routeToPageMap: Record<string, string> = {
   '/production-order/edit': 'Manage Orders',
 
   '/adminmaster/master-data': 'Master Data',
-  '/adminmaster/update-components': 'Master Data',
   '/adminmaster/user-management': 'User Management',
   '/adminmaster/role-management': 'Role Management',
 
   '/assembly/explorer': 'Assembly Explorer',
   '/assembly/components': 'Components',
-  '/assembly/view-assembly': 'Components',
+  '/assembly/add-components': 'Master Data',
+  '/assembly/Add-components': 'Master Data',
+  '/assembly/update-components': 'Master Data',
+  '/assembly/editbom': 'Components',
   '/settings': 'Settings',
 };
 
@@ -86,8 +88,12 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const targetPageName = routeToPageMap[matchingRoute];
     let hasAccess = isPageAccessible(pageAccessData, targetPageName);
 
-    // Bypass page access for Update Components page
-    if (matchingRoute === '/adminmaster/update-components') {
+    // Bypass page access for Add/Update Components page
+    if (
+      matchingRoute === '/assembly/add-components' ||
+      matchingRoute === '/assembly/Add-components' ||
+      matchingRoute === '/assembly/update-components'
+    ) {
       hasAccess = true;
     }
 

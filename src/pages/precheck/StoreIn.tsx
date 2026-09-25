@@ -831,7 +831,7 @@ const StoreIn: React.FC = () => {
           >
             {storeTab === "store-in"
               ? "Store In"
-              : "Available In Store"}
+              : "Stored Components"}
           </Typography>
           <Typography
             variant="body2"

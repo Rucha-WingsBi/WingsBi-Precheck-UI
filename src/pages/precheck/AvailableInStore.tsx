@@ -589,10 +589,10 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                 fontSize: { xs: "1.15rem", sm: "1.35rem" },
               }}
             >
-              Available In Store
+             Stored Components
             </Typography>
             <Typography variant="body2" sx={{ color: "#667085", mt: 0.25, fontSize: "0.8rem" }}>
-              View and filter available components and QR codes in store.
+              View and filter Stored Components and QR codes.
             </Typography>
           </Box>
         </Stack>
