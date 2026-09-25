@@ -38,6 +38,8 @@ export interface GridItem {
   totalQrQty?: number;
   findNo?: string;
   hadOriginalRemainingQuantity?: boolean;
+  itemDescription?: string;
+  assemblyLnItemCode?: string;
 }
 
 export interface QuantityDialogProps {

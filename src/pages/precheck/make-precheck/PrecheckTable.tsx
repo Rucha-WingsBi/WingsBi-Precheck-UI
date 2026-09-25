@@ -62,7 +62,8 @@ interface PrecheckTableProps {
   onUndoScan: (item: GridItem) => void;
   onRemarksChange: (item: GridItem, newRemarks: string) => void;
   onUndoPrecheck: (item: GridItem) => void;
-  onDeletePrecheck: (item: GridItem) => void;
+  onDeletePrecheck?: (item: GridItem) => void;
+  onRejectClick?: (item: GridItem) => void;
   orderBy: string;
   order: "asc" | "desc";
   onRequestSort: (property: string) => void;
@@ -83,6 +84,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
   onRowExpand,
   onRowDoubleClick,
   onEditClick,
+  onRejectClick,
   onUndoScan,
   onUndoPrecheck,
   onDeletePrecheck,
@@ -381,21 +383,55 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
                         align="center"
                         sx={{ py: 0.1, px: 0.5, fontSize: "0.72rem" }}
                       >
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMenuAnchorEl(e.currentTarget);
-                            setActiveMenuRow({ item, index });
-                          }}
-                          sx={{
-                            color: "#667085",
-                            p: 0.25,
-                            "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
-                          }}
-                        >
-                          <MoreVertIcon fontSize="small" />
-                        </IconButton>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            disabled={item.isRejected}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onRejectClick) {
+                                onRejectClick(item);
+                              } else {
+                                onEditClick(item);
+                              }
+                            }}
+                            sx={{
+                              fontSize: "0.68rem",
+                              py: 0.1,
+                              px: 0.75,
+                              minWidth: "auto",
+                              height: 20,
+                              borderRadius: "4px",
+                              textTransform: "none",
+                              fontWeight: 600,
+                              boxShadow: "none",
+                              backgroundColor: item.isRejected ? "#EAECF0" : "#FEE2E2",
+                              color: item.isRejected ? "#98A2B3" : "#991B1B",
+                              "&:hover": {
+                                backgroundColor: item.isRejected ? "#EAECF0" : "#FCA5A5",
+                                color: item.isRejected ? "#98A2B3" : "#7F1D1D",
+                              },
+                            }}
+                          >
+                            Reject
+                          </Button>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMenuAnchorEl(e.currentTarget);
+                              setActiveMenuRow({ item, index });
+                            }}
+                            sx={{
+                              color: "#667085",
+                              p: 0.25,
+                              "&:hover": { backgroundColor: "#F2F4F7", color: "#101828" },
+                            }}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                     <TableRow sx={{ height: 'auto' }}>
@@ -861,7 +897,7 @@ const PrecheckTable: React.FC<PrecheckTableProps> = ({
           </Button>
           <Button
             onClick={() => {
-              if (confirmDeleteItem) {
+              if (confirmDeleteItem && onDeletePrecheck) {
                 onDeletePrecheck(confirmDeleteItem);
               }
               setConfirmDeleteItem(null);

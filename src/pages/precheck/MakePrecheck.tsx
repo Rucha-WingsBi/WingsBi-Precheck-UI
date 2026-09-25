@@ -59,6 +59,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 import type { RootState, AppDispatch } from "../../store/store";
 import debounce from "lodash.debounce";
 import { getErrorMessage } from "../../utils/errorUtils";
+import { createMaterialRequisition } from "../../store/slices/materialRequisitionSlice";
 
 // Sub-component imports
 import type { GridItem } from "./make-precheck/types";
@@ -77,6 +78,7 @@ import PrecheckTable from "./make-precheck/PrecheckTable";
 import { usePrecheckScanning } from "./make-precheck/usePrecheckScanning";
 import ExcelUploadResultDialog from "./make-precheck/ExcelUploadResultDialog";
 import AddBomDrawingDialog from "./make-precheck/AddBomDrawingDialog";
+import AddMaterialRequisitionDialog from "./make-precheck/AddMaterialRequisitionDialog";
 
 const MAKE_PRECHECK_EXPORT_COLUMNS = [
   { key: "lnItemCode", label: "Item Code" },
@@ -253,6 +255,10 @@ const MakePrecheck: React.FC = () => {
 
   // Add BOM Drawing dialog state
   const [addBomDrawingOpen, setAddBomDrawingOpen] = useState(false);
+
+  // Add Material Requisition dialog state
+  const [materialReqDialogOpen, setMaterialReqDialogOpen] = useState(false);
+  const [selectedRowForMaterialReq, setSelectedRowForMaterialReq] = useState<GridItem | null>(null);
 
   // Alert state
   const [alertMessage, setAlertMessage] = useState("");
@@ -1838,6 +1844,10 @@ const MakePrecheck: React.FC = () => {
         onRemarksChange={handleRemarksChange}
         onUndoPrecheck={handleRemovePrecheck}
         onDeletePrecheck={handleDeletePrecheck}
+        onRejectClick={(item) => {
+          setSelectedRowForMaterialReq(item);
+          setMaterialReqDialogOpen(true);
+        }}
         orderBy={orderBy}
         order={order}
         onRequestSort={handleRequestSort}
@@ -1895,6 +1905,36 @@ const MakePrecheck: React.FC = () => {
           showAlertMessage(msg || "BOM drawing item added successfully!", "success");
           if (hasLoadedData && selectedDrawing && selectedProductionSeries && idNumber) {
             executeMakePrecheck();
+          }
+        }}
+      />
+
+      {/* Add Material Requisition Dialog */}
+      <AddMaterialRequisitionDialog
+        open={materialReqDialogOpen}
+        selectedRow={selectedRowForMaterialReq}
+        selectedPO={selectedPO}
+        selectedProductionSeries={selectedProductionSeries}
+        allDrawingNumbers={allDrawingNumbers}
+        poNumbersData={poNumbers}
+        productionSeriesData={productionSeriesData}
+        onClose={() => {
+          setMaterialReqDialogOpen(false);
+          setSelectedRowForMaterialReq(null);
+        }}
+        onSubmit={async (payload) => {
+          try {
+            await dispatch(createMaterialRequisition(payload)).unwrap();
+            showAlertMessage("Material Requisition created successfully!", "success");
+            setMaterialReqDialogOpen(false);
+            setSelectedRowForMaterialReq(null);
+            if (hasLoadedData && selectedDrawing && selectedProductionSeries && idNumber) {
+              executeMakePrecheck();
+            }
+          } catch (err: any) {
+            console.error("Error creating material requisition:", err);
+            showAlertMessage(getErrorMessage(err, "Failed to create material requisition"), "error");
+            throw err;
           }
         }}
       />
