@@ -395,7 +395,6 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
       const searchPayload: any = {
         searchQuery: queryStr?.trim() || "",
         prodSeries: seriesArr,
-        QrType: qrType,
         fromDate: fromDateVal ? format(fromDateVal, "yyyy-MM-dd") : null,
         toDate: toDateVal ? format(toDateVal, "yyyy-MM-dd") : null,
       };
