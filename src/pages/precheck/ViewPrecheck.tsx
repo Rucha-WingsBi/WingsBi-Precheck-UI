@@ -900,7 +900,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               sx={{
                 fontWeight: 700,
                 color: "primary.main",
-                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
                 lineHeight: 1.2,
               }}
             >

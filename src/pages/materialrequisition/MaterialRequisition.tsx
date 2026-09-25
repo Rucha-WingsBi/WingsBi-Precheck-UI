@@ -35,7 +35,7 @@ import {
 import { CustomPagination } from "../../components/CustomPagination";
 
 import {
- 
+
   Close as CloseIcon,
   Download as DownloadIcon,
   SwapHoriz as SwapHorizIcon,
@@ -1345,14 +1345,14 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                    {col.label.includes("PO Number") ? (
-                      <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
-                        <span>{col.label}</span>
-                      </Tooltip>
-                    ) : (
-                      col.label
-                    )}
-                  </TableCell>
+                        {col.label.includes("PO Number") ? (
+                          <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
+                            <span>{col.label}</span>
+                          </Tooltip>
+                        ) : (
+                          col.label
+                        )}
+                      </TableCell>
                     ))}
                   </TableRow>
                 </TableHead>
@@ -1987,14 +1987,14 @@ const MaterialRequisition: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                    {col.label.includes("PO Number") ? (
-                      <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
-                        <span>{col.label}</span>
-                      </Tooltip>
-                    ) : (
-                      col.label
-                    )}
-                  </TableCell>
+                        {col.label.includes("PO Number") ? (
+                          <Tooltip title={col.label.replace("PO Number", "Production Order Number")} arrow placement="bottom">
+                            <span>{col.label}</span>
+                          </Tooltip>
+                        ) : (
+                          col.label
+                        )}
+                      </TableCell>
                     ))}
                   </TableRow>
                 </TableHead>

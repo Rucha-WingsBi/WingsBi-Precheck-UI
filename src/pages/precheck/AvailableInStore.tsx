@@ -1095,7 +1095,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                   {row.lnitemcode || row.lnItemCode || "N/A"}
                                 </TableCell>
                                 <TableCell align="center">{row.drawingNumber || "N/A"}</TableCell>
-                                 <TableCell align="center">
+                                <TableCell align="center">
                                   <Tooltip title={row.productionOrderNumber || "N/A"} arrow placement="top">
                                     <Typography component="span" sx={{ fontSize: "0.775rem", color: "#344054" }}>
                                       {row.productionOrderNumber || "N/A"}
@@ -1106,7 +1106,7 @@ const AvailableInStore: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = fal
                                 <TableCell align="center">
                                   <ComponentTypeChip type={row.componentType} />
                                 </TableCell>
-                               
+
                                 <TableCell align="center">
                                   {row.totalQrNumber !== undefined && row.totalQrNumber > 0 ? row.totalQrNumber : (row.totalQrCount || 0)}
                                 </TableCell>
