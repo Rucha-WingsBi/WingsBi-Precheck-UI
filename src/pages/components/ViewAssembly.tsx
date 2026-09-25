@@ -639,7 +639,7 @@ const ViewAssembly: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }
               const dwg = (selectedDrawingOption?.drawingNumber || drawingInput || "").trim();
               const ln = (selectedDrawingOption?.lnItemCode || lnInput || "").trim();
               if (dwg) {
-                navigate("/sop/view", { state: { tab: "bom", drawingNumber: dwg, lnItemCode: ln } });
+                navigate("/assembly/explorer", { state: { tab: "bom", drawingNumber: dwg, lnItemCode: ln } });
               } else {
                 navigate(-1);
               }

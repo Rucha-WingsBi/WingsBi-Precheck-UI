@@ -661,7 +661,7 @@ const ViewIRMSN: React.FC = () => {
                   size="small"
                   startIcon={<AddIcon fontSize="small" />}
                   disabled={!hasCreateAccess}
-                  onClick={() => navigate("/irmsn/generate")}
+                  onClick={() => navigate("/irmsn/new")}
                   sx={{
                     height: 34,
                     borderRadius: "6px",

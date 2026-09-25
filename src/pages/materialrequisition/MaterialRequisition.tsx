@@ -1031,7 +1031,7 @@ const MaterialRequisition: React.FC = () => {
       >
         <Stack direction="row" alignItems="center" spacing={1}>
           <IconButton
-            onClick={() => navigate("/precheck/make")}
+            onClick={() => navigate("/verification/parts")}
             sx={{
               color: "primary.main",
               p: 0.5,

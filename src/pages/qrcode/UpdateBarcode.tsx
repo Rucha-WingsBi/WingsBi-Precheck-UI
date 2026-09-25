@@ -345,7 +345,7 @@ const UpdateBarcode: React.FC = () => {
   // If user refreshes the page and state is lost, redirect back to view page
   useEffect(() => {
     if (!location.state && !formData.qrCodeNumber) {
-      navigate("/qrcode/view");
+      navigate("/qrcode/list");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -362,7 +362,7 @@ const UpdateBarcode: React.FC = () => {
 
   const handleCancel = () => {
     const returnFilters = (location.state as any)?.returnFilters;
-    navigate("/qrcode/view", { state: { returnFilters } });
+    navigate("/qrcode/list", { state: { returnFilters } });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -504,7 +504,7 @@ const UpdateBarcode: React.FC = () => {
       // Navigate back to view page after 1.5 seconds
       const returnFilters = (location.state as any)?.returnFilters;
       setTimeout(() => {
-        navigate("/qrcode/view", { state: { returnFilters } });
+        navigate("/qrcode/list", { state: { returnFilters } });
       }, 1500);
     } catch (err: any) {
       setSnackbarMessage(err || "Failed to update QR code");
@@ -520,7 +520,7 @@ const UpdateBarcode: React.FC = () => {
   const handleBack = () => {
     const returnFilters = (location.state as any)?.returnFilters;
     if (returnFilters) {
-      navigate("/qrcode/view", { state: { returnFilters } });
+      navigate("/qrcode/list", { state: { returnFilters } });
     } else {
       navigate(-1);
     }

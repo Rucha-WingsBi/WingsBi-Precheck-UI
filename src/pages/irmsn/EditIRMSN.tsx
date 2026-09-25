@@ -309,7 +309,7 @@ export default function EditIRMSN() {
         await dispatch(updateMSNNumber(payload)).unwrap();
       }
 
-      navigate("/irmsn/view");
+      navigate("/irmsn/list");
     } catch (err) {
       console.error("Failed to update:", err);
     }

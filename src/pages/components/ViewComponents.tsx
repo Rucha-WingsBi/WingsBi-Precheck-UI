@@ -534,7 +534,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                   variant="contained"
                   size="small"
                   disabled={!hasAddComponentAccess}
-                  onClick={() => navigate("/adminmaster/updatecomponents", { state: { fromView: true } })}
+                  onClick={() => navigate("/adminmaster/update-components", { state: { fromView: true } })}
                   startIcon={<AddIcon fontSize="small" />}
                   sx={{
                     height: 34,

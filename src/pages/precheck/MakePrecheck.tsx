@@ -1711,7 +1711,7 @@ const MakePrecheck: React.FC = () => {
         onReset={handleReset}
         onUploadExcel={() => excelFileInputRef.current?.click()}
         onDownloadTemplate={handleDownloadTemplate}
-        onReject={() => navigate("/materialrequisition")}
+        onReject={() => navigate("/verification/material-requisition")}
         isSubmitEnabled={isSubmitEnabled}
         uploadInProgress={uploadInProgress}
         downloadTemplateInProgress={downloadTemplateInProgress}
@@ -1832,7 +1832,7 @@ const MakePrecheck: React.FC = () => {
         onDownloadTemplate={handleDownloadTemplate}
         onMakePrecheck={handleMakePrecheck}
         onSubmitPrecheck={handleSubmitPrecheck}
-        onReject={() => navigate("/materialrequisition")}
+        onReject={() => navigate("/verification/material-requisition")}
         isAdminOrHead={isAdminOrHead}
         isAddEnabled={isSubmitEnabled}
         onAddBomDrawingClick={() => setAddBomDrawingOpen(true)}

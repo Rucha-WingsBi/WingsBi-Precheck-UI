@@ -1337,7 +1337,7 @@ const ViewBarcode: React.FC = () => {
                   size="small"
                   startIcon={<AddIcon fontSize="small" />}
                   disabled={!hasGenerateAccess}
-                  onClick={() => navigate('/qrcode/generate')}
+                  onClick={() => navigate('/qrcode/new')}
                   sx={{
                     height: 34,
                     borderRadius: '6px',

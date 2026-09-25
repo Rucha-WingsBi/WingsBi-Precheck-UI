@@ -104,48 +104,38 @@ export default function AppRoutes() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Precheck Module */}
-            <Route path="precheck">
+            {/* Verification Module */}
+            <Route path="verification">
               <Route index element={<MakePrecheck />} />
-              <Route path="make" element={<MakePrecheck />} />
-              <Route path="pending" element={<MakePrecheck />} />
-              <Route path="pending/*" element={<MakePrecheck />} />
-              <Route path="available-store" element={<AvailableInStore />} />
-              <Route path="available-in-store" element={<AvailableInStore />} />
-              <Route path="view" element={<ViewPrecheck />} />
-              <Route path="consumed" element={<ViewConsumedIn />} />
-              <Route path="view-consumed" element={<ViewConsumedIn />} />
-              <Route path="store-in" element={<StoreIn />} />
-              <Route path="stored-components" element={<StoredInComponents />} />
+              <Route path="parts" element={<MakePrecheck />} />
+              <Route path="history" element={<ViewPrecheck />} />
               <Route path="material-requisition" element={<MaterialRequisition />} />
-              <Route path="materialrequisition" element={<MaterialRequisition />} />
             </Route>
-
-            
 
             {/* IR/MSN Module */}
             <Route path="irmsn">
               <Route index element={<ViewIRMSN />} />
-              <Route path="generate" element={<GenerateIRMSN />} />
-              <Route path="view" element={<ViewIRMSN />} />
+              <Route path="list" element={<ViewIRMSN />} />
+              <Route path="new" element={<GenerateIRMSN />} />
               <Route path="edit/:type/:id" element={<EditIRMSN />} />
             </Route>
 
             {/* QR Code Module */}
             <Route path="qrcode">
               <Route index element={<ViewBarcode />} />
-              <Route path="generate" element={<BarcodeGeneration />} />
-              <Route path="generate-new" element={<BarcodeGeneration />} />
-              <Route path="view" element={<ViewBarcode />} />
-              <Route path="update/:id" element={<UpdateBarcode />} />
+              <Route path="list" element={<ViewBarcode />} />
+              <Route path="new" element={<BarcodeGeneration />} />
               <Route path="store-in" element={<StoreIn />} />
+              <Route path="update/:id" element={<UpdateBarcode />} />
             </Route>
 
-            {/* SOP Module */}
-            <Route path="sop">
+            {/* Assembly Module */}
+            <Route path="assembly">
               <Route index element={<ViewSOP />} />
-              <Route path="view" element={<ViewSOP />} />
-              <Route path="viewBOM" element={<ViewSOP />} />
+              <Route path="explorer" element={<ViewSOP />} />
+              <Route path="components" element={<ViewComponents />} />
+              <Route path="update-components/:id" element={<UpdateComponents />} />
+              <Route path="view-assembly" element={<ViewAssembly />} />
             </Route>
 
             {/* Settings Module */}
@@ -153,44 +143,24 @@ export default function AppRoutes() {
               <Route index element={<Settings />} />
             </Route>
 
-            {/* Components Module */}
-            <Route path="components">
-              <Route index element={<ViewComponents />} />
-              <Route path="view" element={<ViewComponents />} />
-              <Route path="assembly" element={<ViewAssembly />} />
-              <Route path="view-assembly" element={<ViewAssembly />} />
+            {/* Production Order Module */}
+            <Route path="production-order">
+              <Route index element={<ProductionOrderUpload />} />
+              <Route path="history" element={<ProductionOrderUpload />} />
+              <Route path="view" element={<ViewOrder />} />
+              <Route path="edit/:id" element={<EditProductionOrder />} />
             </Route>
 
             {/* AdminMaster Module */}
-            <Route path="production-order">
-              <Route index element={<ViewOrder />} />
-              <Route path="upload" element={<ProductionOrderUpload />} />
-              <Route path="view" element={<ViewOrder />} />
-              <Route path="edit/:id" element={<EditProductionOrder />} />
-             
-            </Route>
-
             <Route path="adminmaster">
-              <Route path="update-components" element={<UpdateComponents />} />
-              <Route path="updatecomponents" element={<UpdateComponents />} />
-              <Route path="updatecomponents/:id" element={<UpdateComponents />} />
-             
-              <Route path="add-components" element={<AddComponents />} />
-              <Route path="addcomponents" element={<AddComponents />} />
               <Route path="user-management" element={<UserManagement />} />
-              <Route path="usermanagement" element={<UserManagement />} />
               <Route path="role-management" element={<RoleManagement />} />
-              <Route path="rolemanagement" element={<RoleManagement />} />
+              <Route path="master-data" element={<AddComponents />} />
               
             </Route>
 
-            {/* Material Requisition Module */}
-            <Route path="material-requisition" element={<MaterialRequisition />} />
-            <Route path="materialrequisition" element={<MaterialRequisition />} />
-
-            {/* Script Executor Module */}
-            <Route path="script-executor" element={<ScriptExecutor />} />
-            <Route path="scriptexecutor" element={<ScriptExecutor />} />
+            {/* Bulk Import Module */}
+            <Route path="bulk-import" element={<ScriptExecutor />} />
           </Route>
         </Route>
 

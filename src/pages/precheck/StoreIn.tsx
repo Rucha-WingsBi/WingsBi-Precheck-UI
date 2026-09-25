@@ -1844,7 +1844,7 @@ const StoreIn: React.FC = () => {
                               variant="outlined"
                               size="small"
                               onClick={() =>
-                                navigate("/precheck/make", { state: row })
+                                navigate("/verification/parts", { state: row })
                               }
                               disabled={!hasMakeAccess}
                               sx={{

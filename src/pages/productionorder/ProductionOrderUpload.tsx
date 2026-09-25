@@ -287,7 +287,7 @@ const RowActionsMenu: React.FC<{
               disabled={!hasMakeAccess}
               onClick={(e) => {
                 e.stopPropagation();
-                handleNavigate("/precheck/make", row);
+                handleNavigate("/verification/parts", row);
               }}
             >
               <ListItemIcon>

@@ -165,7 +165,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
             <Button
               size="small"
               variant="text"
-              onClick={() => navigate("/precheck/available-store")}
+              onClick={() => navigate("/verification/available-in-store")}
               sx={{
                 p: 0,
                 minWidth: "auto",
@@ -214,7 +214,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
         <Button
           variant="outlined"
           size="small"
-          onClick={() => navigate("/components/view")}
+          onClick={() => navigate("/assembly/components")}
           sx={{
             flex: "1.35 1 0%",
             minWidth: 0,
@@ -241,7 +241,7 @@ export const NodeDetailsCard: React.FC<NodeDetailsCardProps> = ({
           variant="outlined"
           size="small"
           onClick={() =>
-            navigate("/precheck/make", {
+            navigate("/verification/parts", {
               state: { drawingNumber: drawingNo },
             })
           }

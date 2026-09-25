@@ -5,52 +5,36 @@ import type { RootState } from '../store/store';
 import { usePageAccess } from '../hooks/useMasterData';
 import { isPageAccessible } from '../utils/accessUtils';
 
-// Map routes to exact API page names
 const routeToPageMap: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/scriptexecutor': 'Bulk Import',
-  '/script-executor': 'Bulk Import',
+  '/bulk-import': 'Bulk Import',
 
-  '/irmsn/generate': 'New IR/MSN',
-  '/irmsn/view': 'IR/MSN List',
+  '/irmsn/new': 'New IR/MSN',
+  '/irmsn/list': 'IR/MSN List',
+  '/irmsn/edit': 'IR/MSN List',
 
-  '/qrcode/generate': 'New QR Code',
-  '/qrcode/generate-new': 'New QR Code',
-  '/qrcode/view': 'QR Code List',
+  '/qrcode/new': 'New QR Code',
+  '/qrcode/list': 'QR Code List',
+  '/qrcode/update': 'QR Code List',
+  '/qrcode/store-in': 'Store In',
 
-  '/precheck/view': 'Verification History',
-  '/precheck/make': 'Part Verification',
-  '/precheck/pending': 'Part Verification',
-  '/precheck/store-in': 'Store In',
-  '/precheck/stored-components': 'Store In',
-  '/precheck/available-in-store': 'Available In Store',
-  '/precheck/available-store': 'Available In Store',
-  '/precheck/consumed': 'Available In Store',
-  '/precheck/view-consumed': 'Available In Store',
+  '/verification/history': 'Verification History',
+  '/verification/parts': 'Part Verification',
+  '/verification/material-requisition': 'Material Requisition',
 
-  '/production-order/upload': 'Manage Orders',
+  '/production-order/history': 'Manage Orders',
   '/production-order/view': 'Manage Orders',
   '/production-order/edit': 'Manage Orders',
-  '/production-order': 'Manage Orders',
 
-  '/adminmaster/archive': 'Master Data',
-  '/adminmaster/updatecomponents': 'Master Data',
+  '/adminmaster/master-data': 'Master Data',
   '/adminmaster/update-components': 'Master Data',
-  '/adminmaster/usermanagement': 'User Management',
   '/adminmaster/user-management': 'User Management',
-  '/adminmaster/rolemanagement': 'Role Management',
   '/adminmaster/role-management': 'Role Management',
-  '/adminmaster/addcomponents': 'Master Data',
-  '/adminmaster/add-components': 'Master Data',
 
-  '/materialrequisition': 'Part Verification',
-  '/material-requisition': 'Part Verification',
-
-  '/sop/view': 'Assembly Explorer',
-  '/sop/viewBOM': 'Assembly Explorer',
-  '/components/view-assembly': 'Components',
-  '/components/assembly': 'Components',
-  '/components': 'Components',
+  '/assembly/explorer': 'Assembly Explorer',
+  '/assembly/components': 'Components',
+  '/assembly/view-assembly': 'Components',
+  '/settings': 'Settings',
 };
 
 interface ProtectedRouteProps {
@@ -103,7 +87,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     let hasAccess = isPageAccessible(pageAccessData, targetPageName);
 
     // Bypass page access for Update Components page
-    if (matchingRoute === '/adminmaster/updatecomponents') {
+    if (matchingRoute === '/adminmaster/update-components') {
       hasAccess = true;
     }
 

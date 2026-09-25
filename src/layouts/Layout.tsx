@@ -209,7 +209,7 @@ export default function Layout() {
       text: "Bulk Import",
       pageName: "Bulk Import",
       icon: <CloudUploadIcon />,
-      path: "/scriptexecutor",
+      path: "/bulk-import",
     },
     {
       text: "Production Order",
@@ -221,7 +221,7 @@ export default function Layout() {
           text: "Manage Orders",
           pageName: "Manage Orders",
           icon: <AssignmentIcon />,
-          path: "/production-order/upload",
+          path: "/production-order/history",
         },
       ],
     },
@@ -235,13 +235,13 @@ export default function Layout() {
           text: "IR/MSN List",
           pageName: "IR/MSN List",
           icon: <ListAltIcon />,
-          path: "/irmsn/view",
+          path: "/irmsn/list",
         },
         {
           text: "New IR/MSN",
           pageName: "New IR/MSN",
           icon: <AddIcon />,
-          path: "/irmsn/generate",
+          path: "/irmsn/new",
         },
       ],
     },
@@ -255,19 +255,19 @@ export default function Layout() {
           text: "QR Code List",
           pageName: "QR Code List",
           icon: <ListAltIcon />,
-          path: "/qrcode/view",
+          path: "/qrcode/list",
         },
         {
           text: "New QR Code",
           pageName: "New QR Code",
           icon: <AddIcon />,
-          path: "/qrcode/generate",
+          path: "/qrcode/new",
         },
         {
           text: "Store In",
           pageName: "Store In",
           icon: <StoreIcon />,
-          path: "/precheck/store-in",
+          path: "/qrcode/store-in",
         },
       ],
     },
@@ -275,25 +275,25 @@ export default function Layout() {
       text: "Verification",
       pageName: "Precheck",
       icon: <FactCheckIcon />,
-      path: "/precheck",
+      path: "/verification",
       subItems: [
         {
           text: "Verification History",
           pageName: "Verification History",
           icon: <HistoryIcon />,
-          path: "/precheck/view",
+          path: "/verification/history",
         },
         {
           text: "Part Verification",
           pageName: "Part Verification",
           icon: < PlaylistAddCheck />,
-          path: "/precheck/make",
+          path: "/verification/parts",
         },
         {
           text: "Material Requisition",
           pageName: "Material Requisition",
           icon: <AssignmentIcon />,
-          path: "/material-requisition",
+          path: "/verification/material-requisition",
         },
       ],
     },
@@ -302,19 +302,19 @@ export default function Layout() {
       text: "Assembly",
       pageName: "Assembly",
       icon: <MenuBookIcon />,
-      path: "/sop",
+      path: "/assembly",
       subItems: [
         {
           text: "Assembly Explorer",
           pageName: "Assembly Explorer",
           icon: <AccountTreeIcon />,
-          path: "/sop/view",
+          path: "/assembly/explorer",
         },
         {
           text: "Components",
           pageName: "Components",
           icon: <ExtensionIcon />,
-          path: "/components",
+          path: "/assembly/components",
         },
       ],
     },
@@ -328,19 +328,19 @@ export default function Layout() {
           text: "User Management",
           pageName: "User Management",
           icon: <PeopleIcon />,
-          path: "/adminmaster/usermanagement",
+          path: "/adminmaster/user-management",
         },
         {
           text: "Role Management",
           pageName: "Role Management",
           icon: <SettingsIcon />,
-          path: "/adminmaster/rolemanagement",
+          path: "/adminmaster/role-management",
         },
         {
           text: "Master Data",
           pageName: "Master Data",
           icon: <StorageIcon />,
-          path: "/adminmaster/addcomponents",
+          path: "/adminmaster/master-data",
         },
       ],
     },
@@ -458,7 +458,7 @@ export default function Layout() {
   };
 
   const handleNavigation = (path: string) => {
-    if (hasPendingScans && location.pathname === "/precheck/make") {
+    if (hasPendingScans && (location.pathname === "/verification/parts" || location.pathname === "/verification")) {
       setNextLocation(path);
       setNavigationDialogOpen(true);
     } else {

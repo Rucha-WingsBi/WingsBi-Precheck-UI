@@ -458,7 +458,7 @@ export default function InsertMappings() {
       } else {
         // In edit mode, navigate back after delay
         setTimeout(() => {
-          navigate("/components");
+          navigate("/assembly/components");
         }, 1500);
       }
     } catch (error: any) {
@@ -1311,7 +1311,7 @@ export default function InsertMappings() {
               setPrecheckDialogOpen(false);
               setSavedFormData(null);
               setTimeout(() => {
-                navigate("/components");
+                navigate("/assembly/components");
               }, 500);
             }}
             variant="outlined"
@@ -1347,7 +1347,7 @@ export default function InsertMappings() {
                 setPrecheckDialogOpen(false);
                 setSavedFormData(null);
                 setTimeout(() => {
-                  navigate("/components");
+                  navigate("/assembly/components");
                 }, 1500);
               }
             }}
