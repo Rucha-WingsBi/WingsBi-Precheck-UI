@@ -33,9 +33,9 @@ import {
   Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -107,13 +107,11 @@ const DrawingNumberRowComponent = ({
     setMenuAnchorEl(null);
   };
 
-  // Edit Row — close menu first, then navigate on next tick so MUI Menu
-  // close animation completes before the component unmounts (prevents menu
-  // briefly staying visible during the route transition).
+
   const handleEdit = () => {
     setMenuAnchorEl(null);
     setTimeout(() => {
-      navigate(`/adminmaster/updatecomponents/${drawingData.id}`, {
+      navigate(`/assembly/add-components/${drawingData.id}`, {
         state: { editRow: drawingData, fromView: true },
       });
     }, 0);
@@ -139,25 +137,25 @@ const DrawingNumberRowComponent = ({
           "&:hover": { backgroundColor: "grey.50" },
         }}
       >
-        <TableCell sx={{ textAlign: "center", minWidth: 55, color: "text.muted", fontSize: "0.8rem" }}>
-          {index + 1}
+        <TableCell sx={{ textAlign: "center", minWidth: 55, color: "text.muted", fontSize: "0.775rem" }}>
+          {(drawingData as any)._srNo ?? (index + 1)}
         </TableCell>
-        <TableCell sx={{ color: "text.primary", fontSize: "0.8rem", fontWeight: 600, minWidth: 160, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.primary", fontSize: "0.775rem", fontWeight: 600, minWidth: 160, whiteSpace: "nowrap" }}>
           {drawingData?.drawingNumber || "N/A"}
         </TableCell>
-        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", minWidth: 150, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.775rem", minWidth: 150, whiteSpace: "nowrap" }}>
           {drawingData?.lnItemCode || "N/A"}
         </TableCell>
-        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem", minWidth: 220, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <TableCell sx={{ color: "text.secondary", fontSize: "0.775rem", minWidth: 220, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {drawingData?.nomenclature || "N/A"}
         </TableCell>
         <TableCell sx={{ textAlign: "center", minWidth: 95 }}>
           <ComponentTypeChip type={drawingData?.componentType} />
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 100, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem", minWidth: 100, whiteSpace: "nowrap" }}>
           {drawingData?.unitName || "N/A"}
         </TableCell>
-        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.8rem", minWidth: 110, whiteSpace: "nowrap" }}>
+        <TableCell sx={{ textAlign: "center", color: "text.secondary", fontSize: "0.775rem", minWidth: 110, whiteSpace: "nowrap" }}>
           {drawingData?.productionSeries || drawingData?.availableFor || "N/A"}
         </TableCell>
 
@@ -186,18 +184,18 @@ const DrawingNumberRowComponent = ({
               sx: { minWidth: 160, borderRadius: "8px", py: 0.5 },
             }}
           >
+            <MenuItem onClick={handleToggleDetails} sx={{ py: 0.75, px: 1.5 }}>
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                {openDetails ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
+              </ListItemIcon>
+              <ListItemText primary={openDetails ? "Hide Additional Details" : "Additional Details"} primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
+            </MenuItem>
+
             <MenuItem onClick={handleEdit} sx={{ py: 0.75, px: 1.5 }}>
               <ListItemIcon sx={{ minWidth: 28 }}>
                 <EditIcon fontSize="small" color="primary" />
               </ListItemIcon>
-              <ListItemText primary="Edit Component" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
-            </MenuItem>
-
-            <MenuItem onClick={handleToggleDetails} sx={{ py: 0.75, px: 1.5 }}>
-              <ListItemIcon sx={{ minWidth: 28 }}>
-                {openDetails ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
-              </ListItemIcon>
-              <ListItemText primary={openDetails ? "Hide Details" : "View Details"} primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
+              <ListItemText primary="Edit" primaryTypographyProps={{ fontSize: "0.8rem", fontWeight: 500 }} />
             </MenuItem>
 
             <MenuItem onClick={handleDelete} sx={{ py: 0.75, px: 1.5 }}>
@@ -211,52 +209,39 @@ const DrawingNumberRowComponent = ({
       </TableRow>
 
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+        <TableCell style={{ padding: 0 }} colSpan={8}>
           <Collapse in={openDetails} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 0.75,
-                }}
-              >
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
-                  Additional Details
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={handleToggleDetails}
-                  title="Close Additional Details"
-                  sx={{
-                    p: 0.25,
-                    color: "#667085",
-                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
-                  }}
-                >
-                  <KeyboardArrowUpIcon fontSize="small" />
-                </IconButton>
-              </Box>
+            <Box sx={{ width: "100%", backgroundColor: "#F8FAFC", borderTop: "1px solid #EAECF0", borderBottom: "1px solid #EAECF0" }}>
               <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Assembly Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Component Code</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Rack Location</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Has Expiry</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Created Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5 }}>Updated On</TableCell>
+                  <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Assembly Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Component Code</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Rack Location</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Has Expiry</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Created Date</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Updated On</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "1px solid #EAECF0" }}>
+                      <IconButton
+                        size="small"
+                        onClick={handleToggleDetails}
+                        title="Hide Additional Details"
+                        sx={{ p: 0.25, color: "#667085", "&:hover": { color: "#101828", backgroundColor: "#E4E7EC" } }}
+                      >
+                        <KeyboardArrowUpIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <TableRow>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.parentDrawingNumbers?.join(", ") || drawingData?.assemblyNumber || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.componentCode || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.location || "N/A"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{drawingData?.isExpiry ? "Yes" : "No"}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{formatDate(drawingData?.createdDate)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5 }}>{formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}</TableCell>
+                  <TableRow sx={{ backgroundColor: "#FFFFFF" }}>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.parentDrawingNumbers?.join(", ") || drawingData?.assemblyNumber || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.componentCode || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.location || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{drawingData?.isExpiry ? "Yes" : "No"}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatDate(drawingData?.createdDate)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatDate(drawingData?.modifiedDate || drawingData?.createdDate)}</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "none" }} />
                   </TableRow>
                 </TableBody>
               </Table>
@@ -443,13 +428,19 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
 
     const serverTotalRecords = (drawingNumbersData as any)?.totalRecords ?? (drawingNumbersData as any)?.totalCount;
 
-    let result = [...rawList];
+    let result = rawList.map((item: any, idx: number) => ({
+      ...item,
+      _srNo: idx + 1,
+    }));
 
     // Sorting functionality
     result.sort((a: any, b: any) => {
       let aVal: any = "";
       let bVal: any = "";
-      if (sortColumn === "modifiedDate") {
+      if (sortColumn === "srNo" || sortColumn === "sr") {
+        aVal = a._srNo ?? 0;
+        bVal = b._srNo ?? 0;
+      } else if (sortColumn === "modifiedDate") {
         aVal = new Date(a.modifiedDate || a.createdDate || 0).getTime();
         bVal = new Date(b.modifiedDate || b.createdDate || 0).getTime();
       } else {
@@ -541,7 +532,7 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
                   variant="contained"
                   size="small"
                   disabled={!hasAddComponentAccess}
-                  onClick={() => navigate("/adminmaster/updatecomponents", { state: { fromView: true } })}
+                  onClick={() => navigate("/assembly/add-components", { state: { fromView: true } })}
                   startIcon={<AddIcon fontSize="small" />}
                   sx={{
                     height: 34,
@@ -868,13 +859,13 @@ const Components: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) 
           <Table stickyHeader size="small" sx={{ width: "100%", minWidth: 1100 }}>
             <TableHead>
               <TableRow sx={{ height: 36 }}>
-                <SortableTableHeader label="Sr.No" columnKey="srNo" align="center" minWidth={55} isSortable={false} />
+                <SortableTableHeader label="Sr.No" columnKey="srNo" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={55} isSortable={true} />
                 <SortableTableHeader label="Part Number" columnKey="drawingNumber" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={160} />
                 <SortableTableHeader label="Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={150} />
-                <SortableTableHeader label="Item Description" columnKey="nomenclature" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} minWidth={220} />
-                <SortableTableHeader label="Type" columnKey="componentType" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={95} />
-                <SortableTableHeader label="Unit" columnKey="unitName" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={100} />
-                <SortableTableHeader label="Prod. Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortOrder} onSort={handleSort} align="center" minWidth={110} />
+                <SortableTableHeader label="Item Description" columnKey="nomenclature" minWidth={220} isSortable={false} />
+                <SortableTableHeader label="Type" columnKey="componentType" align="center" minWidth={95} isSortable={false} />
+                <SortableTableHeader label="Unit" columnKey="unitName" align="center" minWidth={100} isSortable={false} />
+                <SortableTableHeader label="Prod. Series" columnKey="productionSeries" align="center" minWidth={110} isSortable={false} />
                 <SortableTableHeader label="Actions" columnKey="actions" align="center" minWidth={65} isSortable={false} />
               </TableRow>
             </TableHead>

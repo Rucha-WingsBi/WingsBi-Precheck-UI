@@ -1289,7 +1289,7 @@ export default function UserManagement() {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={handleUserDialogClose} variant="outlined"  size="small">
+          <Button onClick={handleUserDialogClose} variant="outlined" size="small">
             Cancel
           </Button>
           <Button

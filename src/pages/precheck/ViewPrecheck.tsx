@@ -513,8 +513,31 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         selectedColumns: selectedCols,
       };
 
+      const isFiltersApplied = Boolean(
+        combinedSearch.trim() ||
+        selectedProductionSeries.length > 0 ||
+        selectedStatus.length > 0 ||
+        dateFrom ||
+        dateTo
+      );
+      let successMsg = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        successMsg = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected columns.";
+      }
+
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
+        .then(() => {
+          setSnackbar({
+            open: true,
+            message: successMsg,
+            severity: "success",
+          });
+        })
         .catch((err: any) => {
           setSnackbar({
             open: true,
@@ -539,8 +562,32 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
         selectedColumns: selectedCols,
       };
 
+      const isFiltersApplied = Boolean(
+        idNumber.trim() ||
+        combinedSearch.trim() ||
+        selectedProductionSeries.length > 0 ||
+        selectedDrawing.length > 0 ||
+        selectedPO.length > 0 ||
+        selectedLnItemCode.length > 0
+      );
+      let successMsg = "Data exported successfully.";
+      if (isFiltersApplied && exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected filters and columns.";
+      } else if (isFiltersApplied) {
+        successMsg = "Data exported successfully based on the selected filters.";
+      } else if (exportMode === "custom") {
+        successMsg = "Data exported successfully based on the selected columns.";
+      }
+
       dispatch(exportViewPrecheckDetails(exportParams))
         .unwrap()
+        .then(() => {
+          setSnackbar({
+            open: true,
+            message: successMsg,
+            severity: "success",
+          });
+        })
         .catch((err: any) => {
           setSnackbar({
             open: true,
@@ -845,7 +892,7 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", sm: "center" }}
           spacing={1}
-          sx={{ mb: 0.5 }}
+          sx={{ mb: 0.5, mt: 0.5 }}
         >
           <Box>
             <Typography
@@ -853,11 +900,11 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
               sx={{
                 fontWeight: 700,
                 color: "primary.main",
-                fontSize: { xs: "1.2rem", sm: "1.4rem" },
+                fontSize: { xs: "1.25rem", sm: "1.5rem" },
                 lineHeight: 1.2,
               }}
             >
-              Precheck History
+              Verification History
             </Typography>
             <Typography variant="body2" sx={{ color: "#667085", mt: 0.5 }}>
               {activeTab === "consumed"
@@ -919,8 +966,8 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
             },
           }}
         >
-          <Tab label="Prechecks" value="precheck" />
-          <Tab label="Consumed In" value="consumed" />
+          <Tab label="View Parts" value="precheck" />
+          <Tab label="Consumed In Parts" value="consumed" />
         </Tabs>
       </Box>
 
@@ -1826,90 +1873,86 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                         <TableRow sx={{ height: "auto" }}>
                           <TableCell
                             colSpan={visibleColumns.length}
-                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                            style={{ padding: 0 }}
                           >
                             <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                               <Box
                                 sx={{
-                                  margin: 1,
-                                  p: 1.5,
-                                  backgroundColor: "grey.50",
-                                  borderRadius: "6px",
-                                  border: "1px solid",
-                                  borderColor: "grey.200",
+                                  width: "100%",
+                                  backgroundColor: "#F8FAFC",
+                                  borderTop: "1px solid #EAECF0",
+                                  borderBottom: "1px solid #EAECF0",
                                 }}
                               >
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontWeight: 700,
-                                    color: "primary.main",
-                                    display: "block",
-                                    mb: 0.75,
-                                    fontSize: "0.8rem",
-                                  }}
-                                >
-                                  Additional Details
-                                </Typography>
                                 <Table size="small" sx={{ width: "100%" }}>
                                   <TableHead>
-                                    <TableRow sx={{ backgroundColor: "grey.100" }}>
+                                    <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         MRIR Number
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         Item Description
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         Remarks
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         User
                                       </TableCell>
                                       <TableCell
+                                        align="center"
                                         sx={{
-                                          fontWeight: 600,
-                                          color: "text.primary",
+                                          fontWeight: 700,
+                                          color: "#344054",
                                           fontSize: "0.75rem",
-                                          py: 0.5,
-                                          px: 1.5,
-                                          textAlign: "center",
+                                          py: 1,
+                                          px: 1,
+                                          borderBottom: "1px solid #EAECF0",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         Date
@@ -1917,20 +1960,20 @@ export const ViewPrecheck: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = 
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
-                                    <TableRow>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                    <TableRow sx={{ backgroundColor: "#FFFFFF" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.mrirNumber || "-"}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.nomenclature || "-"}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.remarks || <Typography component="span" sx={{ color: "#98A2B3", fontStyle: "italic", fontSize: "0.75rem" }}>No remarks</Typography>}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.username || "-"}
                                       </TableCell>
-                                      <TableCell sx={{ fontSize: "0.75rem", color: "#344054", py: 0.5, px: 1.5, textAlign: "center" }}>
+                                      <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>
                                         {row.modifiedDate || "-"}
                                       </TableCell>
                                     </TableRow>

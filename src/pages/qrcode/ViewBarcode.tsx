@@ -39,7 +39,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import AddIcon from '@mui/icons-material/Add';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import RemoveIcon from '@mui/icons-material/Remove';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
@@ -170,6 +170,26 @@ const renderStatusBadge = (statusStr: string) => {
 
 
 
+const isAllowedSortColumn = (labelStr: string, keyStr?: string): boolean => {
+  const normLabel = (labelStr || "").toLowerCase().trim();
+  const normKey = (keyStr || "").toLowerCase().trim();
+
+  if (normLabel.startsWith("sr") || normKey === "sr") {
+    return true;
+  }
+  if (normLabel.includes("qrcode") || normKey === "qrcodenumber") {
+    return true;
+  }
+  if (normLabel.includes("item code") || normKey === "lnitemcode") {
+    return true;
+  }
+  if (normLabel.includes("part number") || normKey === "drawingnumber") {
+    return true;
+  }
+
+  return false;
+};
+
 const TableHeaderSortable = ({
   label,
   columnKey,
@@ -185,10 +205,11 @@ const TableHeaderSortable = ({
   onSort: (col: string) => void;
   minWidth?: string;
 }) => {
-  const isSorted = sortColumn === columnKey;
+  const canSort = isAllowedSortColumn(label, columnKey);
+  const isSorted = canSort && sortColumn === columnKey;
   return (
     <TableCell
-      onClick={() => onSort(columnKey)}
+      onClick={() => canSort && onSort(columnKey)}
       sx={{
         fontWeight: 600,
         minWidth,
@@ -198,30 +219,33 @@ const TableHeaderSortable = ({
         whiteSpace: 'nowrap',
         color: '#475467',
         fontSize: '0.8rem',
-        cursor: 'pointer',
+        cursor: canSort ? 'pointer' : 'default',
         userSelect: 'none',
         borderBottom: '1px solid #eaecf0',
         bgcolor: '#f9fafb !important',
-        '&:hover': { color: '#101828' },
+        '&:hover': { color: canSort ? '#101828' : '#475467' },
       }}
     >
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {label}
-        {isSorted ? (
-          sortDirection === 'asc' ? (
-            <ArrowUpwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+        {canSort && (
+          isSorted ? (
+            sortDirection === 'asc' ? (
+              <ArrowUpwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+            ) : (
+              <ArrowDownwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+            )
           ) : (
-            <ArrowDownwardIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+            <ArrowDownwardIcon sx={{ fontSize: 14, color: '#98a2b3', opacity: 0.5 }} />
           )
-        ) : (
-          <ArrowDownwardIcon sx={{ fontSize: 14, color: '#98a2b3', opacity: 0.5 }} />
         )}
       </Box>
     </TableCell>
   );
 };
 
-const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, returnFilters }: {
+const Row = ({ sr, barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDisable, returnFilters }: {
+  sr?: number;
   barcodeDetails: any;
   isSelected: boolean;
   onSelect: (checked: boolean) => void;
@@ -276,33 +300,36 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
             sx={{ color: '#d0d5dd', '&.Mui-checked': { color: 'primary.main' } }}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '140px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', fontWeight: 600, color: '#101828' }}>
+        <TableCell sx={{ textAlign: 'center', minWidth: '55px', py: '4px', px: '8px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#475467' }}>
+          {sr !== undefined ? sr : '-'}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'left', minWidth: '140px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', fontWeight: 600, color: '#101828' }}>
           {barcodeDetails?.qrCodeNumber || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.productionSeries || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '120px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.lnItemCode || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.drawingNumber || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '160px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '160px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.nomenclature || 'N/A'}
         </TableCell>
         <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '2px', px: '12px', whiteSpace: 'nowrap' }}>
           <ComponentTypeChip type={barcodeDetails?.componentType} />
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '150px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.consumedInDrawing || 'N/A'}
         </TableCell>
-        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+        <TableCell sx={{ textAlign: 'left', minWidth: '130px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
           {barcodeDetails?.idNumber || 'N/A'}
         </TableCell>
 
         {showBatchId && (
-          <TableCell sx={{ textAlign: 'left', minWidth: '110px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.85rem', color: '#344054' }}>
+          <TableCell sx={{ textAlign: 'left', minWidth: '110px', py: '4px', px: '12px', whiteSpace: 'nowrap', fontSize: '0.775rem', color: '#344054' }}>
             {barcodeDetails?.batchId || barcodeDetails?.batchID || 'N/A'}
           </TableCell>
         )}
@@ -350,21 +377,7 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
                 </MenuItem>
               )}
 
-              <MenuItem
-                onClick={() => {
-                  handleMenuClose();
-                  setOpen(!open);
-                }}
-                sx={{ fontSize: '0.85rem', py: 0.75 }}
-              >
-                <ListItemIcon sx={{ minWidth: '28px !important' }}>
-                  {open ? <KeyboardArrowUpIcon fontSize="small" /> : <KeyboardArrowDownIcon fontSize="small" />}
-                </ListItemIcon>
-                <ListItemText
-                  primary={open ? "Hide Details" : "View Details"}
-                  primaryTypographyProps={{ fontSize: '0.85rem' }}
-                />
-              </MenuItem>
+
 
               {canSplit && (
                 <MenuItem
@@ -399,76 +412,82 @@ const Row = ({ barcodeDetails, isSelected, onSelect, onSplit, showBatchId, onDis
                   <ListItemText primary="Disable QR" primaryTypographyProps={{ fontSize: '0.85rem' }} />
                 </MenuItem>
               )}
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  setOpen(!open);
+                }}
+                sx={{ fontSize: '0.85rem', py: 0.75 }}
+              >
+                <ListItemIcon sx={{ minWidth: '28px !important' }}>
+                  {open ? <RemoveIcon fontSize="small" color="primary" /> : <AddIcon fontSize="small" color="primary" />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={open ? "Hide Additional Details" : "Additional Details"}
+                  primaryTypographyProps={{ fontSize: '0.85rem' }}
+                />
+              </MenuItem>
             </Menu>
           </Box>
         </TableCell>
       </TableRow>
 
       <TableRow sx={{ height: 'auto' }}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={showBatchId ? 11 : 10}>
+        <TableCell style={{ padding: 0 }} colSpan={showBatchId ? 12 : 11}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1, p: 1.5, backgroundColor: "grey.50", borderRadius: "6px", border: "1px solid", borderColor: "grey.200" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 0.75,
-                }}
-              >
-                <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
-                  Additional Details
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => setOpen(false)}
-                  title="Close Additional Details"
-                  sx={{
-                    p: 0.25,
-                    color: "#667085",
-                    "&:hover": { color: "#101828", backgroundColor: "grey.200" },
-                  }}
-                >
-                  <KeyboardArrowUpIcon fontSize="small" />
-                </IconButton>
-              </Box>
+            <Box sx={{ width: "100%", backgroundColor: "#F8FAFC", borderTop: "1px solid #EAECF0", borderBottom: "1px solid #EAECF0" }}>
               <Table size="small" sx={{ width: "100%" }}>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>IR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>MSN Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>MRIR Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Build No</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>PO Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Unit</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Disposition</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Username</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Created Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Assembly Number</TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>Remarks</TableCell>
+                  <TableRow sx={{ backgroundColor: "#F2F4F7" }}>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>IR Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>MSN Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>MRIR Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Build No</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Quantity</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Remaining Qty</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>
+                      <Tooltip title="Production Order Number" arrow placement="bottom">
+                        <span>PO Number</span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Unit</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>FAN/MAN No</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Disposition</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Username</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Created Date</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Assembly Number</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#344054", fontSize: "0.75rem", py: 1, px: 1, borderBottom: "1px solid #EAECF0", whiteSpace: "nowrap" }}>Remarks</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "1px solid #EAECF0" }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setOpen(false)}
+                        title="Hide Additional Details"
+                        sx={{ p: 0.25, color: "#667085", "&:hover": { color: "#101828", backgroundColor: "#E4E7EC" } }}
+                      >
+                        <KeyboardArrowUpIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <TableRow sx={{ height: 36 }}>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{renderStatusBadge(barcodeDetails?.qrCodeStatus)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.irNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.msnNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.mrirNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.buildNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{formatQuantity(barcodeDetails?.quantity)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.remainingQuantity ?? '-'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.productionOrderNumber || barcodeDetails?.poNumber || barcodeDetails?.purchaseOrderNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.unitName || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.fan || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.department || barcodeDetails?.desposition || barcodeDetails?.disposition || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.users || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{formatDate(barcodeDetails?.createdDate)}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.assemblyNumber || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: "0.75rem", py: 0.5, whiteSpace: "nowrap" }}>{barcodeDetails?.remark || barcodeDetails?.remarks || 'N/A'}</TableCell>
+                  <TableRow sx={{ backgroundColor: "#FFFFFF", height: 36 }}>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{renderStatusBadge(barcodeDetails?.qrCodeStatus)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.irNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.msnNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.mrirNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.buildNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatQuantity(barcodeDetails?.quantity)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.remainingQuantity ?? '-'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.productionOrderNumber || barcodeDetails?.poNumber || barcodeDetails?.purchaseOrderNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.unitName || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.fan || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.department || barcodeDetails?.desposition || barcodeDetails?.disposition || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.users || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{formatDate(barcodeDetails?.createdDate)}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.assemblyNumber || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: "0.75rem", color: "#475467", py: 1, px: 1, whiteSpace: "nowrap" }}>{barcodeDetails?.remark || barcodeDetails?.remarks || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ width: 32, py: 0.5, px: 0.5, borderBottom: "none" }} />
                   </TableRow>
                 </TableBody>
               </Table>
@@ -699,19 +718,28 @@ const ViewBarcode: React.FC = () => {
     } else {
       detailsArray = [barcodeDetails];
     }
-    return [...detailsArray].sort((a, b) => {
+
+    const indexedArray = detailsArray.map((item: any, idx: number) => ({
+      ...item,
+      _srNo: page * rowsPerPage + idx + 1,
+    }));
+
+    return [...indexedArray].sort((a, b) => {
       let valA = a[sortColumn];
       let valB = b[sortColumn];
 
-      if (sortColumn === 'createdDate') {
+      if (sortColumn === 'sr') {
+        valA = a._srNo;
+        valB = b._srNo;
+      } else if (sortColumn === 'createdDate') {
         valA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
         valB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
       } else if (sortColumn === 'qrCodeNumber') {
-        valA = a.qrCodeNumber || a.id || '';
-        valB = b.qrCodeNumber || b.id || '';
+        valA = a.qrCodeNumber ?? '';
+        valB = b.qrCodeNumber ?? '';
       } else if (sortColumn === 'productionOrderNumber') {
-        valA = a.productionOrderNumber || a.poNumber || '';
-        valB = b.productionOrderNumber || b.poNumber || '';
+        valA = a.productionOrderNumber ?? '';
+        valB = b.productionOrderNumber ?? '';
       }
 
       if (typeof valA === "number" && typeof valB === "number") {
@@ -724,7 +752,7 @@ const ViewBarcode: React.FC = () => {
         ? strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' })
         : strB.localeCompare(strA, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [barcodeDetails, sortColumn, sortDirection]);
+  }, [barcodeDetails, sortColumn, sortDirection, page, rowsPerPage]);
 
   const filteredBarcodeDetails = React.useMemo(() => {
     let list = sortedBarcodeDetails;
@@ -842,7 +870,7 @@ const ViewBarcode: React.FC = () => {
     const newRows = [];
 
     for (let i = 2; i <= qty; i++) {
-      newRows.push({
+      const splitRow = {
         ...item,
         quantity: 1,
         batchId: `${i}/${qty}`,
@@ -850,7 +878,9 @@ const ViewBarcode: React.FC = () => {
         parentId: item.qrCodeNumber || item.id,
         qrCodeNumber: item.qrCodeNumber,
         id: `${item.qrCodeNumber || item.id}-split-${i}`
-      });
+      };
+      delete splitRow._srNo;
+      newRows.push(splitRow);
     }
 
     const newData = [...displayedData];
@@ -890,7 +920,7 @@ const ViewBarcode: React.FC = () => {
         });
 
         for (let i = 2; i <= qty; i++) {
-          newData.push({
+          const splitRow = {
             ...item,
             quantity: 1,
             batchId: `${i}/${qty}`,
@@ -898,7 +928,9 @@ const ViewBarcode: React.FC = () => {
             parentId: item.qrCodeNumber || item.id,
             qrCodeNumber: item.qrCodeNumber,
             id: `${item.qrCodeNumber || item.id}-split-${i}`
-          });
+          };
+          delete splitRow._srNo;
+          newData.push(splitRow);
         }
       } else {
         newData.push(item);
@@ -1099,9 +1131,28 @@ const ViewBarcode: React.FC = () => {
 
       if (exportViewQrCode.fulfilled.match(result)) {
         setExportDialogOpen(false);
+        const isFiltersApplied = Boolean(
+          searchQuery.trim() !== "" ||
+          appliedProductionSeries.length > 0 ||
+          appliedStatus.length > 0 ||
+          appliedGeneratedBy.length > 0 ||
+          appliedFromDate !== null ||
+          appliedToDate !== null ||
+          selectedQRCodes.length > 0
+        );
+
+        let successMsg = "Data exported successfully.";
+        if (isFiltersApplied && exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected filters and columns.";
+        } else if (isFiltersApplied) {
+          successMsg = "Data exported successfully based on the selected filters.";
+        } else if (exportMode === "custom") {
+          successMsg = "Data exported successfully based on the selected columns.";
+        }
+
         setSnackbar({
           open: true,
-          message: "QR codes exported successfully!",
+          message: successMsg,
           severity: "success",
         });
       } else if (exportViewQrCode.rejected.match(result)) {
@@ -1286,7 +1337,7 @@ const ViewBarcode: React.FC = () => {
                   size="small"
                   startIcon={<AddIcon fontSize="small" />}
                   disabled={!hasGenerateAccess}
-                  onClick={() => navigate('/qrcode/generate')}
+                  onClick={() => navigate('/qrcode/new')}
                   sx={{
                     height: 34,
                     borderRadius: '6px',
@@ -1435,7 +1486,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1449,7 +1500,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1526,7 +1577,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1540,7 +1591,7 @@ const ViewBarcode: React.FC = () => {
                             input.focus();
                             setTimeout(() => {
                               if ("showPicker" in input) {
-                                try { (input as any).showPicker(); } catch {}
+                                try { (input as any).showPicker(); } catch { }
                               }
                             }, 10);
                           }
@@ -1966,6 +2017,7 @@ const ViewBarcode: React.FC = () => {
                     />
                   </TableCell>
 
+                  <TableHeaderSortable label="Sr.No" columnKey="sr" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="65px" />
                   <TableHeaderSortable label="QRCode Number" columnKey="qrCodeNumber" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="140px" />
                   <TableHeaderSortable label="Prod Series" columnKey="productionSeries" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
                   <TableHeaderSortable label="Item Code" columnKey="lnItemCode" sortColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} minWidth="120px" />
@@ -1987,7 +2039,7 @@ const ViewBarcode: React.FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow sx={{ height: '260px' }}>
-                    <TableCell colSpan={showBatchIdColumn ? 11 : 10} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
+                    <TableCell colSpan={showBatchIdColumn ? 12 : 11} sx={{ textAlign: 'center', verticalAlign: 'middle', borderBottom: 'none', py: 6 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
                         <CircularProgress size={32} color="primary" />
                         <Typography variant="body2" sx={{ color: '#667085', fontWeight: 500 }}>
@@ -2002,6 +2054,7 @@ const ViewBarcode: React.FC = () => {
                     return (
                       <Row
                         key={item.id || `${item.qrCodeNumber}-${index}`}
+                        sr={item._srNo ?? (globalIndex + 1)}
                         barcodeDetails={item}
                         isSelected={selectedQRCodes.includes(item.qrCodeNumber || item.id)}
                         onSelect={(checked) => handleSelectQRCode(item.qrCodeNumber || item.id, checked)}
@@ -2013,7 +2066,7 @@ const ViewBarcode: React.FC = () => {
                     );
                   })
                 ) : (
-                  <EmptyState colSpan={showBatchIdColumn ? 11 : 10} />
+                  <EmptyState colSpan={showBatchIdColumn ? 12 : 11} />
                 )}
               </TableBody>
             </Table>

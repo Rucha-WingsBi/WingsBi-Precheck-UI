@@ -241,12 +241,13 @@ export default function EditProductionOrder() {
   return (
     <Box sx={{ py: 1.5, px: { xs: 1.5, sm: 2.5 }, bgcolor: 'background.paper', minHeight: '100vh' }}>
       {/* Header Section */}
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <IconButton
           onClick={handleBack}
           sx={{
             color: "primary.main",
             p: 0.5,
+            ml: -1,
             "&:hover": { backgroundColor: "grey.100" },
           }}
         >
@@ -262,7 +263,7 @@ export default function EditProductionOrder() {
         >
           Edit Production Order: {initialData.productionOrderNumber || id}
         </Typography>
-      </Stack>
+      </Box>
 
       {apiError && (
         <Alert severity="error" sx={{ mb: 2, borderRadius: "8px" }} onClose={() => dispatch(resetUploadState())}>
@@ -290,7 +291,7 @@ export default function EditProductionOrder() {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="PO Number"
+                    label="Production Order Number"
                     fullWidth
                     size="small"
                     disabled

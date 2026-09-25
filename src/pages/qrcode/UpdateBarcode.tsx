@@ -345,7 +345,7 @@ const UpdateBarcode: React.FC = () => {
   // If user refreshes the page and state is lost, redirect back to view page
   useEffect(() => {
     if (!location.state && !formData.qrCodeNumber) {
-      navigate("/qrcode/view");
+      navigate("/qrcode/list");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -362,7 +362,7 @@ const UpdateBarcode: React.FC = () => {
 
   const handleCancel = () => {
     const returnFilters = (location.state as any)?.returnFilters;
-    navigate("/qrcode/view", { state: { returnFilters } });
+    navigate("/qrcode/list", { state: { returnFilters } });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -504,7 +504,7 @@ const UpdateBarcode: React.FC = () => {
       // Navigate back to view page after 1.5 seconds
       const returnFilters = (location.state as any)?.returnFilters;
       setTimeout(() => {
-        navigate("/qrcode/view", { state: { returnFilters } });
+        navigate("/qrcode/list", { state: { returnFilters } });
       }, 1500);
     } catch (err: any) {
       setSnackbarMessage(err || "Failed to update QR code");
@@ -520,7 +520,7 @@ const UpdateBarcode: React.FC = () => {
   const handleBack = () => {
     const returnFilters = (location.state as any)?.returnFilters;
     if (returnFilters) {
-      navigate("/qrcode/view", { state: { returnFilters } });
+      navigate("/qrcode/list", { state: { returnFilters } });
     } else {
       navigate(-1);
     }
@@ -529,12 +529,13 @@ const UpdateBarcode: React.FC = () => {
   return (
     <Box sx={{ py: 1.5, px: { xs: 1.5, sm: 2.5 }, bgcolor: 'background.paper', minHeight: '100vh' }}>
       {/* Header Section */}
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <IconButton
           onClick={handleBack}
           sx={{
             color: "primary.main",
             p: 0.5,
+            ml: -1,
             "&:hover": { backgroundColor: "grey.100" },
           }}
         >
@@ -548,9 +549,9 @@ const UpdateBarcode: React.FC = () => {
             fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
-          {id ? "Update QR Code" : "QR Code Details"}
+          {id ? "Edit QR Code" : "QR Code Details"}
         </Typography>
-      </Stack>
+      </Box>
 
       <Card
         elevation={0}
@@ -1272,7 +1273,7 @@ const UpdateBarcode: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="PO Number"
+                    label="Production Order Number"
                       size="small"
                       onClick={() => setOpenPO(true)}
                       onFocus={(e) => {

@@ -14,7 +14,7 @@ interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({
   title = "No Matching Records found",
   subtitle,
-  icon = <SearchIcon sx={{ fontSize: 26, color: "#667085" }} />,
+  icon = <SearchIcon sx={{ fontSize: 24, color: "#667085" }} />,
   height = 260,
   colSpan,
 }) => {
@@ -28,19 +28,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         textAlign: "center",
         width: "100%",
         height: height,
-        py: 2,
+        py: 1,
       }}
     >
       <Box
         sx={{
-          width: 52,
-          height: 52,
+          width: 42,
+          height: 42,
           borderRadius: "50%",
           bgcolor: "#F2F4F7",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          mb: 1.5,
+          mb: 1,
         }}
       >
         {icon}
@@ -48,16 +48,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <Typography
         variant="subtitle1"
         sx={{
-          fontWeight: 700,
+          fontWeight: 600,
           color: "#101828",
-          fontSize: "0.95rem",
+          fontSize: "0.875rem",
           mb: subtitle ? 0.5 : 0,
         }}
       >
         {title}
       </Typography>
       {subtitle && (
-        <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.825rem" }}>
+        <Typography variant="body2" sx={{ color: "#667085", fontSize: "0.8rem" }}>
           {subtitle}
         </Typography>
       )}
@@ -67,7 +67,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   if (colSpan !== undefined) {
     return (
       <TableRow sx={{ height: typeof height === "number" ? `${height}px` : height }}>
-        <TableCell colSpan={colSpan} align="center" sx={{ borderBottom: "none", py: 2 }}>
+        <TableCell colSpan={colSpan} align="center" sx={{ borderBottom: "none", py: 0.5, px: 2 }}>
           {content}
         </TableCell>
       </TableRow>
